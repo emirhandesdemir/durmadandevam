@@ -5,6 +5,9 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -24,15 +27,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 const formSchema = z.object({
-  email: z.string().email({ message: "Invalid email address." }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+  email: z.string().email({ message: "Geçersiz e-posta adresi." }),
+  password: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır." }),
 });
 
 export default function LoginForm() {
     const { toast } = useToast();
     const router = useRouter();
+    const [isLoading, setIsLoading] = useState(false);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -42,25 +47,37 @@ export default function LoginForm() {
         },
     });
 
-    function onSubmit(values: z.infer<typeof formSchema>) {
-        console.log(values);
-        // Simulate a successful login
-        toast({
-            title: "Logged In",
-            description: "Redirecting to room creation...",
-        });
-        // Redirect to the create-room page after a short delay
-        setTimeout(() => {
+    async function onSubmit(values: z.infer<typeof formSchema>) {
+        setIsLoading(true);
+        try {
+            await signInWithEmailAndPassword(auth, values.email, values.password);
+            toast({
+                title: "Giriş Yapıldı",
+                description: "Oda oluşturma sayfasına yönlendiriliyorsunuz...",
+            });
             router.push('/create-room');
-        }, 1500);
+        } catch (error: any) {
+            console.error("Login error", error);
+            let errorMessage = "Giriş yapılırken bir hata oluştu.";
+            if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password" || error.code === "auth/invalid-credential") {
+                errorMessage = "E-posta veya şifre hatalı.";
+            }
+            toast({
+                title: "Hata",
+                description: errorMessage,
+                variant: "destructive",
+            });
+        } finally {
+            setIsLoading(false);
+        }
     }
 
     return (
         <Card className="w-full max-w-sm">
             <CardHeader>
-                <CardTitle className="font-headline text-2xl">Log In</CardTitle>
+                <CardTitle className="font-headline text-2xl">Giriş Yap</CardTitle>
                 <CardDescription>
-                    Enter your credentials to access your account.
+                    Hesabınıza erişmek için bilgilerinizi girin.
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -71,9 +88,9 @@ export default function LoginForm() {
                             name="email"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Email</FormLabel>
+                                    <FormLabel>E-posta</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="name@example.com" {...field} />
+                                        <Input placeholder="ornek@eposta.com" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -84,7 +101,7 @@ export default function LoginForm() {
                             name="password"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Password</FormLabel>
+                                    <FormLabel>Şifre</FormLabel>
                                     <FormControl>
                                         <Input type="password" placeholder="••••••••" {...field} />
                                     </FormControl>
@@ -92,13 +109,16 @@ export default function LoginForm() {
                                 </FormItem>
                             )}
                         />
-                        <Button type="submit" className="w-full">Log In</Button>
+                        <Button type="submit" className="w-full" disabled={isLoading}>
+                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Giriş Yap
+                        </Button>
                     </form>
                 </Form>
                 <div className="mt-4 text-center text-sm">
-                    Don't have an account?{" "}
+                    Hesabınız yok mu?{" "}
                     <Link href="/signup" className="font-medium text-primary underline-offset-4 hover:underline">
-                        Sign up
+                        Kayıt ol
                     </Link>
                 </div>
             </CardContent>

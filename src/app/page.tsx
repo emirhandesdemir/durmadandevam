@@ -13,20 +13,20 @@ export default function Home() {
           HiweWalk
         </h1>
         <p className="max-w-md text-lg text-muted-foreground">
-          Create and join public rooms. Share your thoughts, collaborate on ideas, and connect with others in real-time.
+          Herkese açık odalar oluşturun ve katılın. Düşüncelerinizi paylaşın, fikirler üzerinde işbirliği yapın ve başkalarıyla gerçek zamanlı olarak bağlantı kurun.
         </p>
       </div>
       <div className="mt-8 flex flex-col gap-4 sm:flex-row">
         <Button asChild size="lg" className="transition-transform hover:scale-105">
-          <Link href="/login">Log In</Link>
+          <Link href="/login">Giriş Yap</Link>
         </Button>
         <Button asChild size="lg" variant="outline" className="transition-transform hover:scale-105">
-          <Link href="/signup">Sign Up</Link>
+          <Link href="/signup">Kayıt Ol</Link>
         </Button>
       </div>
        <div className="mt-12">
          <Button asChild variant="link">
-           <Link href="/create-room">Create a Room (Test Link)</Link>
+           <Link href="/create-room">Oda Oluştur</Link>
          </Button>
       </div>
     </main>

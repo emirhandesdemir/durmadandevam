@@ -13,7 +13,7 @@ export default function SignUpPage() {
       >
         <Link href="/">
           <ChevronLeft className="mr-2 h-4 w-4" />
-          Back
+          Geri
         </Link>
       </Button>
       <SignUpForm />
