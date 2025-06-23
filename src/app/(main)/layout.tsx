@@ -1,6 +1,6 @@
 import BottomNav from "@/components/layout/bottom-nav";
 
-export default function HomeLayout({
+export default function MainAppLayout({
   children,
 }: {
   children: React.ReactNode;

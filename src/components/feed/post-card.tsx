@@ -8,9 +8,9 @@ import { MoreHorizontal, Trash2, Edit } from "lucide-react";
 import { Timestamp, doc, deleteDoc } from "firebase/firestore";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
-import { User } from "firebase/auth";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 import {
   DropdownMenu,
@@ -31,11 +31,11 @@ interface Room {
 
 interface PostCardProps {
     room: Room;
-    currentUser: User | null;
 }
 
-export default function PostCard({ room, currentUser }: PostCardProps) {
+export default function PostCard({ room }: PostCardProps) {
     const { toast } = useToast();
+    const { user: currentUser } = useAuth();
     
     const timeAgo = room.createdAt
         ? formatDistanceToNow(room.createdAt.toDate(), { addSuffix: true, locale: tr })
@@ -105,7 +105,7 @@ export default function PostCard({ room, currentUser }: PostCardProps) {
                 )}
             </CardHeader>
             <CardContent className="p-4 pt-2">
-                <Link href={`/rooms/${room.id}`} className="block rounded-lg -m-2 p-2 hover:bg-accent transition-colors">
+                <Link href={`/rooms/${room.id}`} className="block rounded-lg -m-2 p-2 hover:bg-accent/20 transition-colors">
                   <h3 className="font-bold text-base mb-1">{room.name}</h3>
                   <p className="text-sm text-muted-foreground">{room.topic}</p>
                 </Link>

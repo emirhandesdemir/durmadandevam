@@ -3,14 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { onAuthStateChanged, User } from "firebase/auth";
 import { collection, query, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/contexts/AuthContext";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import PostCard from "@/components/feed/post-card";
-import { Loader2, PenSquare, RadioTower } from "lucide-react";
+import { Loader2, PenSquare, Users } from "lucide-react";
 
 export interface Room {
     id: string;
@@ -23,21 +23,15 @@ export interface Room {
 
 export default function HomePage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading: authLoading } = useAuth();
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [roomsLoading, setRoomsLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-      } else {
-        router.push("/login");
-      }
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, [router]);
+    if (!authLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, authLoading, router]);
 
   useEffect(() => {
     if (user) {
@@ -48,46 +42,32 @@ export default function HomePage() {
           roomsData.push({ id: doc.id, ...doc.data() } as Room);
         });
         setRooms(roomsData);
+        setRoomsLoading(false);
       });
       return () => unsubscribe();
     }
   }, [user]);
 
-  if (loading || !user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
+  if (authLoading || !user) {
+    return null;
   }
 
   return (
     <div className="flex flex-col gap-4 p-4">
       <header className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">HiweWalk</h1>
+        <div className="flex items-center gap-2">
+            <Users className="h-7 w-7 text-primary" />
+            <h1 className="text-2xl font-bold tracking-tight">HiweWalk</h1>
+        </div>
       </header>
 
-      <Card className="bg-gradient-to-br from-purple-600 via-red-500 to-yellow-500 text-white">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-4">
-            <div className="rounded-full bg-white/20 p-3">
-                <RadioTower className="h-6 w-6 text-white"/>
-            </div>
-            <div>
-              <h2 className="text-xl font-bold">Merhaba, {user.displayName || "Kullanıcı"}!</h2>
-              <p className="text-sm opacity-90">Topluluğa hoş geldin. Yeni keşifler seni bekliyor!</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
       <Link href="/create-room">
-        <Card className="hover:bg-accent transition-colors">
+        <Card className="hover:bg-accent/20 transition-colors">
             <CardContent className="p-3">
               <div className="flex items-center justify-between">
                    <div className="flex items-center gap-3">
                       <Avatar>
-                          <AvatarImage src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} />
+                          <AvatarImage src={user.photoURL || undefined} />
                           <AvatarFallback>{user.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
                       </Avatar>
                       <span className="text-muted-foreground">Yeni bir oda oluştur...</span>
@@ -99,9 +79,22 @@ export default function HomePage() {
       </Link>
 
       <div className="flex flex-col gap-3">
-        {rooms.map((room) => (
-          <PostCard key={room.id} room={room} currentUser={user} />
-        ))}
+        {roomsLoading ? (
+            <div className="flex justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        ) : rooms.length === 0 ? (
+            <Card className="text-center p-8">
+                <CardContent className="p-0">
+                    <p className="text-muted-foreground">Henüz hiç oda oluşturulmamış.</p>
+                    <p className="text-muted-foreground">İlk odayı sen oluştur!</p>
+                </CardContent>
+            </Card>
+        ) : (
+            rooms.map((room) => (
+              <PostCard key={room.id} room={room} />
+            ))
+        )}
       </div>
     </div>
   );

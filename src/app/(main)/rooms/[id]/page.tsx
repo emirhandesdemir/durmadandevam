@@ -1,18 +1,16 @@
-
 "use client";
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, onSnapshot, DocumentData } from 'firebase/firestore';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { db, auth } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft, Loader2 } from 'lucide-react';
-import VoiceChatPanel from '@/components/rooms/voice-chat-panel';
-import TextChat from '@/components/rooms/text-chat';
+import VoiceChatPanel from '@/components/chat/voice-chat-panel';
+import TextChat from '@/components/chat/text-chat';
 
 export default function RoomPage() {
   const params = useParams();
@@ -20,20 +18,14 @@ export default function RoomPage() {
   const roomId = params.id as string;
   
   const [room, setRoom] = useState<DocumentData | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [roomLoading, setRoomLoading] = useState(true);
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    const authUnsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (!currentUser) {
-        router.push('/login');
-      } else {
-        setUser(currentUser);
-      }
-    });
-
-    return () => authUnsubscribe();
-  }, [router]);
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [authLoading, user, router]);
 
   useEffect(() => {
     if (!roomId) return;
@@ -46,13 +38,13 @@ export default function RoomPage() {
         console.log("No such document!");
         setRoom(null);
       }
-      setLoading(false);
+      setRoomLoading(false);
     });
 
     return () => roomUnsubscribe();
   }, [roomId]);
 
-  if (loading || !user) {
+  if (authLoading || roomLoading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -88,10 +80,10 @@ export default function RoomPage() {
       
       <main className="flex-1 grid md:grid-cols-3 gap-4 p-4 overflow-y-auto">
         <div className="md:col-span-2 flex flex-col gap-4">
-            <TextChat roomId={roomId} currentUser={user} />
+            <TextChat roomId={roomId} />
         </div>
         <div className="md:col-span-1">
-            <VoiceChatPanel currentUser={user} />
+            <VoiceChatPanel />
         </div>
       </main>
     </div>

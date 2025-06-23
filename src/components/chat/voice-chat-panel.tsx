@@ -1,36 +1,40 @@
 "use client";
 
 import { useState } from 'react';
-import { User } from 'firebase/auth';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Mic, MicOff, PhoneOff, Headphones, User as UserIcon } from 'lucide-react';
+import { Mic, MicOff, PhoneOff, Headphones } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-interface VoiceChatPanelProps {
-  currentUser: User | null;
-}
-
+// Mock data for demonstration purposes
 const mockParticipants = [
   { id: '1', name: 'Ayşe', avatar: 'https://i.pravatar.cc/150?u=ayse' },
   { id: '2', name: 'Mehmet', avatar: 'https://i.pravatar.cc/150?u=mehmet' },
   { id: '3', name: 'Zeynep', avatar: 'https://i.pravatar.cc/150?u=zeynep' },
 ];
 
-
-export default function VoiceChatPanel({ currentUser }: VoiceChatPanelProps) {
+export default function VoiceChatPanel() {
+  const { user: currentUser } = useAuth();
   const [isMuted, setIsMuted] = useState(false);
   const [isDeafened, setIsDeafened] = useState(false);
   const [isInVoiceChannel, setIsInVoiceChannel] = useState(false);
 
   const handleToggleMute = () => setIsMuted(!isMuted);
   const handleToggleDeafen = () => setIsDeafened(!isDeafened);
-  const handleToggleVoiceChannel = () => setIsInVoiceChannel(!isInVoiceChannel);
+  const handleToggleVoiceChannel = () => {
+    // In a real app, this would trigger WebRTC connection logic via Firestore
+    setIsInVoiceChannel(!isInVoiceChannel);
+  };
+  
+  if (!currentUser) return null;
 
-  const allParticipants = isInVoiceChannel && currentUser 
-    ? [{ id: currentUser.uid, name: currentUser.displayName || 'Siz', avatar: currentUser.photoURL || '' }, ...mockParticipants] 
-    : mockParticipants;
+  const selfParticipant = { id: currentUser.uid, name: currentUser.displayName || 'Siz', avatar: currentUser.photoURL || '' };
+  
+  const allParticipants = isInVoiceChannel 
+    ? [selfParticipant, ...mockParticipants] 
+    : [];
 
   return (
     <Card className="h-full flex flex-col">
@@ -40,26 +44,32 @@ export default function VoiceChatPanel({ currentUser }: VoiceChatPanelProps) {
       <CardContent className="flex-1 flex flex-col justify-between gap-4">
         <div className="space-y-4">
             <h3 className="text-sm font-semibold text-muted-foreground">KATILIMCILAR — {allParticipants.length}</h3>
-            <div className="grid grid-cols-3 gap-4">
-                {allParticipants.map(p => (
-                    <TooltipProvider key={p.id}>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <div className="flex flex-col items-center gap-2">
-                                    <Avatar className="h-16 w-16">
-                                        <AvatarImage src={p.avatar} />
-                                        <AvatarFallback>{p.name?.charAt(0).toUpperCase()}</AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-sm truncate">{p.name}</span>
-                                </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>{p.name}</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                ))}
-            </div>
+            {isInVoiceChannel ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {allParticipants.map(p => (
+                        <TooltipProvider key={p.id}>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div className="flex flex-col items-center gap-2">
+                                        <Avatar className="h-16 w-16">
+                                            <AvatarImage src={p.avatar} />
+                                            <AvatarFallback>{p.name?.charAt(0).toUpperCase()}</AvatarFallback>
+                                        </Avatar>
+                                        <span className="text-sm truncate w-full text-center">{p.name}</span>
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>{p.name}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    ))}
+                </div>
+            ) : (
+                <div className="text-center text-muted-foreground py-8">
+                    Sesli sohbete katılın.
+                </div>
+            )}
         </div>
 
         {isInVoiceChannel ? (

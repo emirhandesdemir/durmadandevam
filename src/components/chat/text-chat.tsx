@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { User } from 'firebase/auth';
+import { useAuth } from '@/contexts/AuthContext';
 import { collection, query, onSnapshot, orderBy, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { cn } from '@/lib/utils';
@@ -15,7 +15,6 @@ import { Send } from 'lucide-react';
 
 interface TextChatProps {
   roomId: string;
-  currentUser: User;
 }
 
 interface Message {
@@ -29,7 +28,8 @@ interface Message {
   createdAt: Timestamp;
 }
 
-export default function TextChat({ roomId, currentUser }: TextChatProps) {
+export default function TextChat({ roomId }: TextChatProps) {
+  const { user: currentUser } = useAuth();
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -50,8 +50,11 @@ export default function TextChat({ roomId, currentUser }: TextChatProps) {
   }, [roomId]);
 
   useEffect(() => {
-    if (scrollAreaRef.current) {
-        scrollAreaRef.current.scrollTo(0, scrollAreaRef.current.scrollHeight);
+     if (scrollAreaRef.current) {
+      const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
+      if (viewport) {
+        viewport.scrollTop = viewport.scrollHeight;
+      }
     }
   }, [messages])
 
@@ -74,15 +77,17 @@ export default function TextChat({ roomId, currentUser }: TextChatProps) {
         console.error("Error sending message: ", error);
     }
   };
+  
+  if (!currentUser) return null;
 
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
         <CardTitle>Metin Sohbeti</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 overflow-hidden">
-        <ScrollArea className="h-full pr-4" ref={scrollAreaRef}>
-          <div className="space-y-4">
+      <CardContent className="flex-1 overflow-hidden p-0">
+        <ScrollArea className="h-full" ref={scrollAreaRef}>
+          <div className="space-y-4 p-6">
             {messages.length === 0 && (
                 <div className="text-center text-muted-foreground py-8">
                     Sohbeti başlatmak için bir mesaj gönderin!
@@ -94,7 +99,7 @@ export default function TextChat({ roomId, currentUser }: TextChatProps) {
               return (
                 <div key={msg.id} className={cn("flex items-start gap-3", isCurrentUser && "flex-row-reverse")}>
                   <Avatar className="h-8 w-8">
-                      <AvatarImage src={msg.sender.photoURL || `https://i.pravatar.cc/150?u=${msg.sender.uid}`} />
+                      <AvatarImage src={msg.sender.photoURL || undefined} />
                       <AvatarFallback>{msg.sender.name?.charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div className={cn("flex flex-col", isCurrentUser && "items-end")}>
@@ -122,7 +127,7 @@ export default function TextChat({ roomId, currentUser }: TextChatProps) {
             placeholder="Bir mesaj yaz..."
             autoComplete="off"
           />
-          <Button type="submit" size="icon">
+          <Button type="submit" size="icon" disabled={!message.trim()}>
             <Send className="h-4 w-4" />
           </Button>
         </form>

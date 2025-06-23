@@ -4,9 +4,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, User } from "firebase/auth";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -37,29 +37,19 @@ const formSchema = z.object({
 export default function CreateRoomForm() {
     const { toast } = useToast();
     const router = useRouter();
-    const [user, setUser] = useState<User | null>(null);
+    const { user, loading: authLoading } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
-    const [authLoading, setAuthLoading] = useState(true);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            if (currentUser) {
-                setUser(currentUser);
-            } else {
-                 toast({
-                    title: "Giriş Gerekli",
-                    description: "Oda oluşturmak için giriş yapmalısınız. Yönlendiriliyor...",
-                    variant: "destructive",
-                });
-                 setTimeout(() => {
-                    router.push('/login');
-                }, 2000);
-            }
-            setAuthLoading(false);
-        });
-        return () => unsubscribe();
-    }, [router, toast]);
-
+        if (!authLoading && !user) {
+            toast({
+                title: "Giriş Gerekli",
+                description: "Oda oluşturmak için giriş yapmalısınız. Yönlendiriliyor...",
+                variant: "destructive",
+            });
+            router.push('/login');
+        }
+    }, [user, authLoading, router, toast]);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -110,9 +100,9 @@ export default function CreateRoomForm() {
         return (
              <Card className="w-full max-w-lg">
                 <CardHeader>
-                    <CardTitle className="font-headline text-2xl">Yeni Oda Oluştur</CardTitle>
+                    <CardTitle className="text-2xl">Yeni Oda Oluştur</CardTitle>
                     <CardDescription>
-                       Yükleniyor...
+                       Yetki kontrol ediliyor...
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -132,7 +122,7 @@ export default function CreateRoomForm() {
     return (
         <Card className="w-full max-w-lg">
             <CardHeader>
-                <CardTitle className="font-headline text-2xl">Yeni Oda Oluştur</CardTitle>
+                <CardTitle className="text-2xl">Yeni Oda Oluştur</CardTitle>
                 <CardDescription>
                     Yeni bir herkese açık oda başlatmak için aşağıdaki ayrıntıları doldurun.
                 </CardDescription>

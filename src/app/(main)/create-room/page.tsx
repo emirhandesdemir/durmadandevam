@@ -1,4 +1,4 @@
-import CreateRoomForm from "@/components/rooms/create-room-form";
+import CreateRoomForm from "@/components/chat/create-room-form";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
