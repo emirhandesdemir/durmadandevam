@@ -11,13 +11,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import PostCard from "@/components/feed/post-card";
-import { Loader2, Settings, Bell, Gem, Compass, PlusCircle, PenSquare } from "lucide-react";
+import { Loader2, Settings, Bell, Gem, Compass, PlusCircle, PenSquare, RadioTower } from "lucide-react";
 
-interface Room {
+export interface Room {
     id: string;
     name: string;
     topic: string;
     creatorName: string;
+    createdBy: string;
     createdAt: Timestamp;
 }
 
@@ -66,7 +67,7 @@ export default function HomePage() {
       {/* Header */}
       <header className="flex items-center justify-between">
         <h1 className="text-xl font-bold">HiweWalk</h1>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon">
             <Settings className="h-5 w-5" />
           </Button>
@@ -80,13 +81,8 @@ export default function HomePage() {
       <Card className="bg-gradient-to-br from-purple-600 via-red-500 to-yellow-500 text-white">
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
-            <div className="rounded-full bg-white/20 p-2">
-                <div className="rounded-full bg-white/30 p-2">
-                    <svg width="24" height="24" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="20" cy="20" r="17.5" stroke="white" strokeWidth="5"/>
-                        <circle cx="20" cy="20" r="7.5" stroke="white" strokeWidth="5"/>
-                    </svg>
-                </div>
+            <div className="rounded-full bg-white/20 p-3">
+                <RadioTower className="h-6 w-6 text-white"/>
             </div>
             <div>
               <h2 className="text-xl font-bold">Merhaba, {user.displayName || "Kullanıcı"}!</h2>
@@ -117,26 +113,28 @@ export default function HomePage() {
       </Card>
 
       {/* Share something */}
-      <Card>
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-                 <div className="flex items-center gap-3">
-                    <Avatar>
-                        <AvatarImage src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} />
-                        <AvatarFallback>{user.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <span className="text-muted-foreground">Bir şeyler paylaş, {user.displayName || "Kullanıcı"}...</span>
-                 </div>
-                 <PenSquare className="h-5 w-5 text-muted-foreground" />
-            </div>
-          </CardContent>
-      </Card>
+      <Link href="/create-room">
+        <Card className="hover:bg-accent transition-colors">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                   <div className="flex items-center gap-3">
+                      <Avatar>
+                          <AvatarImage src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} />
+                          <AvatarFallback>{user.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-muted-foreground">Bir şeyler paylaş, {user.displayName || "Kullanıcı"}...</span>
+                   </div>
+                   <PenSquare className="h-5 w-5 text-muted-foreground" />
+              </div>
+            </CardContent>
+        </Card>
+      </Link>
 
 
       {/* Feed */}
       <div className="flex flex-col gap-3">
         {rooms.map((room) => (
-          <PostCard key={room.id} room={room} />
+          <PostCard key={room.id} room={room} currentUser={user} />
         ))}
       </div>
     </div>

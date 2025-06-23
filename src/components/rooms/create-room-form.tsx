@@ -43,16 +43,22 @@ export default function CreateRoomForm() {
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser);
-            setAuthLoading(false);
-            if (!currentUser) {
+            if (currentUser) {
+                setUser(currentUser);
+            } else {
+                 toast({
+                    title: "Giriş Gerekli",
+                    description: "Oda oluşturmak için giriş yapmalısınız. Yönlendiriliyor...",
+                    variant: "destructive",
+                });
                  setTimeout(() => {
                     router.push('/login');
                 }, 2000);
             }
+            setAuthLoading(false);
         });
         return () => unsubscribe();
-    }, [router]);
+    }, [router, toast]);
 
 
     const form = useForm<z.infer<typeof formSchema>>({
@@ -85,9 +91,9 @@ export default function CreateRoomForm() {
 
             toast({
                 title: "Oda Oluşturuldu!",
-                description: `"${values.roomName}" odası "${values.topic}" konusuyla şimdi yayında.`,
+                description: `"${values.roomName}" odası başarıyla oluşturuldu.`,
             });
-            form.reset();
+            router.push('/home');
         } catch (error) {
             console.error("Error creating room: ", error);
             toast({
@@ -119,16 +125,7 @@ export default function CreateRoomForm() {
     }
     
     if (!user) {
-         return (
-             <Card className="w-full max-w-lg">
-                <CardHeader>
-                    <CardTitle className="font-headline text-2xl">Giriş Gerekli</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p>Oda oluşturmak için giriş yapmalısınız. Giriş sayfasına yönlendiriliyorsunuz...</p>
-                </CardContent>
-             </Card>
-        );
+         return null;
     }
 
 
@@ -171,7 +168,7 @@ export default function CreateRoomForm() {
                         />
                         <Button type="submit" className="w-full" disabled={isLoading}>
                              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                             Oda Oluştur
+                             Odayı Oluştur ve Başlat
                         </Button>
                     </form>
                 </Form>

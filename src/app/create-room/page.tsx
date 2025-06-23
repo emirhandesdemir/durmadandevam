@@ -13,7 +13,7 @@ export default function CreateRoomPage() {
       >
         <Link href="/home">
           <ChevronLeft className="mr-2 h-4 w-4" />
-          Geri
+          Ana Sayfa
         </Link>
       </Button>
       <CreateRoomForm />
