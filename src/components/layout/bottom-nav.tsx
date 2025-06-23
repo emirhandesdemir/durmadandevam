@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
     { href: "/home", label: "Akış", icon: Home },
     { href: "/create-room", label: "Oluştur", icon: PlusCircle },
-    { href: "#", label: "Profil", icon: User },
+    { href: "/profile", label: "Profil", icon: User },
 ]
 
 export default function BottomNav() {
@@ -18,7 +18,10 @@ export default function BottomNav() {
         <footer className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card">
             <nav className="grid h-16 grid-cols-3">
                 {navItems.map((item) => {
-                    const isActive = pathname === item.href || (item.href === "/home" && pathname.startsWith("/rooms"));
+                    const isHomeActive = item.href === "/home" && (pathname === "/home" || pathname.startsWith("/rooms"));
+                    const isOtherActive = item.href !== "/home" && pathname.startsWith(item.href);
+                    const isActive = isHomeActive || isOtherActive;
+                    
                     return (
                         <Link href={item.href} key={item.label}
                             className={cn(

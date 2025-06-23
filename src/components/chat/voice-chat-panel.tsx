@@ -8,13 +8,6 @@ import { Mic, MicOff, PhoneOff, Headphones } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-// Mock data for demonstration purposes
-const mockParticipants = [
-  { id: '1', name: 'Ayşe', avatar: 'https://i.pravatar.cc/150?u=ayse' },
-  { id: '2', name: 'Mehmet', avatar: 'https://i.pravatar.cc/150?u=mehmet' },
-  { id: '3', name: 'Zeynep', avatar: 'https://i.pravatar.cc/150?u=zeynep' },
-];
-
 export default function VoiceChatPanel() {
   const { user: currentUser } = useAuth();
   const [isMuted, setIsMuted] = useState(false);
@@ -32,8 +25,9 @@ export default function VoiceChatPanel() {
 
   const selfParticipant = { id: currentUser.uid, name: currentUser.displayName || 'Siz', avatar: currentUser.photoURL || '' };
   
+  // Only show real participants. In a real app, this list would be populated from Firestore.
   const allParticipants = isInVoiceChannel 
-    ? [selfParticipant, ...mockParticipants] 
+    ? [selfParticipant] 
     : [];
 
   return (
@@ -44,7 +38,7 @@ export default function VoiceChatPanel() {
       <CardContent className="flex-1 flex flex-col justify-between gap-4">
         <div className="space-y-4">
             <h3 className="text-sm font-semibold text-muted-foreground">KATILIMCILAR — {allParticipants.length}</h3>
-            {isInVoiceChannel ? (
+            {isInVoiceChannel && allParticipants.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                     {allParticipants.map(p => (
                         <TooltipProvider key={p.id}>
