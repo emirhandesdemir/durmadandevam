@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { User } from 'firebase/auth';
+import { collection, query, onSnapshot, orderBy, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { cn } from '@/lib/utils';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,23 +18,61 @@ interface TextChatProps {
   currentUser: User;
 }
 
-// Mock messages for UI display
-const mockMessages = [
-    { id: '1', text: 'Herkese selam! Oyun için hazır mısınız?', sender: { name: 'Ahmet', uid: 'abc' } },
-    { id: '2', text: 'Hazırım! Ne oynuyoruz?', sender: { name: 'Ayşe', uid: 'def' } },
-    { id: '3', text: 'Ben de geldim. Grup tamam mı?', sender: { name: 'Mehmet', uid: 'ghi' } },
-];
+interface Message {
+  id: string;
+  text: string;
+  sender: {
+    name: string;
+    uid: string;
+    photoURL?: string | null;
+  };
+  createdAt: Timestamp;
+}
 
 export default function TextChat({ roomId, currentUser }: TextChatProps) {
   const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState<Message[]>([]);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (!roomId) return;
+
+    const q = query(collection(db, "rooms", roomId, "messages"), orderBy("createdAt", "asc"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const msgs: Message[] = [];
+      querySnapshot.forEach((doc) => {
+        msgs.push({ id: doc.id, ...doc.data() } as Message);
+      });
+      setMessages(msgs);
+    });
+
+    return () => unsubscribe();
+  }, [roomId]);
+
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+        scrollAreaRef.current.scrollTo(0, scrollAreaRef.current.scrollHeight);
+    }
+  }, [messages])
+
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (message.trim() === '') return;
-    
-    // TODO: Implement Firestore message sending logic
-    console.log(`Sending message: "${message}" to room: ${roomId}`);
-    setMessage('');
+    if (message.trim() === '' || !currentUser) return;
+
+    try {
+      await addDoc(collection(db, "rooms", roomId, "messages"), {
+        text: message,
+        createdAt: serverTimestamp(),
+        sender: {
+          uid: currentUser.uid,
+          name: currentUser.displayName || 'Anonim',
+          photoURL: currentUser.photoURL,
+        }
+      });
+      setMessage('');
+    } catch (error) {
+        console.error("Error sending message: ", error);
+    }
   };
 
   return (
@@ -39,30 +81,36 @@ export default function TextChat({ roomId, currentUser }: TextChatProps) {
         <CardTitle>Metin Sohbeti</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden">
-        <ScrollArea className="h-full pr-4">
+        <ScrollArea className="h-full pr-4" ref={scrollAreaRef}>
           <div className="space-y-4">
-            {/* Placeholder for no messages */}
-            {mockMessages.length === 0 && (
+            {messages.length === 0 && (
                 <div className="text-center text-muted-foreground py-8">
                     Sohbeti başlatmak için bir mesaj gönderin!
                 </div>
             )}
 
-            {/* Displaying Mock Messages */}
-            {mockMessages.map(msg => (
-              <div key={msg.id} className="flex items-start gap-3">
-                 <Avatar className="h-8 w-8">
-                    <AvatarFallback>{msg.sender.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div>
-                    <p className="font-semibold text-sm">{msg.sender.name}</p>
-                    <div className="bg-secondary p-3 rounded-lg rounded-tl-none">
-                        <p className="text-sm">{msg.text}</p>
-                    </div>
+            {messages.map(msg => {
+              const isCurrentUser = msg.sender.uid === currentUser.uid;
+              return (
+                <div key={msg.id} className={cn("flex items-start gap-3", isCurrentUser && "flex-row-reverse")}>
+                  <Avatar className="h-8 w-8">
+                      <AvatarImage src={msg.sender.photoURL || `https://i.pravatar.cc/150?u=${msg.sender.uid}`} />
+                      <AvatarFallback>{msg.sender.name?.charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div className={cn("flex flex-col", isCurrentUser && "items-end")}>
+                      <p className="font-semibold text-sm">{isCurrentUser ? "Siz" : msg.sender.name}</p>
+                      <div className={cn(
+                          "p-3 rounded-lg max-w-xs md:max-w-md",
+                          isCurrentUser 
+                            ? "bg-primary text-primary-foreground rounded-br-none" 
+                            : "bg-secondary rounded-tl-none"
+                      )}>
+                          <p className="text-sm break-words">{msg.text}</p>
+                      </div>
+                  </div>
                 </div>
-              </div>
-            ))}
-
+              )
+            })}
           </div>
         </ScrollArea>
       </CardContent>
@@ -72,6 +120,7 @@ export default function TextChat({ roomId, currentUser }: TextChatProps) {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Bir mesaj yaz..."
+            autoComplete="off"
           />
           <Button type="submit" size="icon">
             <Send className="h-4 w-4" />
