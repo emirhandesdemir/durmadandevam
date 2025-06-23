@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Repeat, Heart, Upload, MoreHorizontal, Star, Trash2, Edit } from "lucide-react";
+import { MoreHorizontal, Trash2, Edit } from "lucide-react";
 import { Timestamp, doc, deleteDoc } from "firebase/firestore";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -66,7 +66,6 @@ export default function PostCard({ room, currentUser }: PostCardProps) {
     };
     
     const handleEdit = () => {
-        // TODO: Implement edit functionality
         toast({
             title: "Özellik Henüz Aktif Değil",
             description: "Oda düzenleme yakında gelecek!",
@@ -75,21 +74,19 @@ export default function PostCard({ room, currentUser }: PostCardProps) {
 
     return (
         <Card>
-            <CardHeader className="flex-row items-start gap-4 space-y-0 p-4">
+            <CardHeader className="flex-row items-center gap-4 space-y-0 p-4 pb-2">
                 <Avatar>
+                     <AvatarImage src={`https://i.pravatar.cc/150?u=${room.createdBy}`} />
                     <AvatarFallback>{creatorInitial}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                        <p className="font-semibold">{room.creatorName}</p>
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400"/>
-                    </div>
+                    <p className="font-semibold">{room.creatorName}</p>
                     <p className="text-xs text-muted-foreground">{timeAgo}</p>
                 </div>
                 {isOwner && (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
                                 <MoreHorizontal className="h-5 w-5" />
                             </Button>
                         </DropdownMenuTrigger>
@@ -107,27 +104,12 @@ export default function PostCard({ room, currentUser }: PostCardProps) {
                     </DropdownMenu>
                 )}
             </CardHeader>
-            <Link href={`/rooms/${room.id}`}>
-              <CardContent className="p-4 pt-0">
-                  <p>
-                      <span className="font-bold">{room.name} ✨</span> Yeni, etkileyici sesli sohbet deneyimi, sesli sohbet odalarında oyun deneyimi 💎
-                  </p>
-              </CardContent>
-            </Link>
-            <CardFooter className="flex justify-between p-4 pt-0">
-                <Button variant="ghost" size="sm" className="text-muted-foreground">
-                    <MessageCircle className="mr-2 h-4 w-4"/> 0
-                </Button>
-                <Button variant="ghost" size="sm" className="text-muted-foreground">
-                    <Repeat className="mr-2 h-4 w-4"/> 0
-                </Button>
-                <Button variant="ghost" size="sm" className="text-muted-foreground">
-                    <Heart className="mr-2 h-4 w-4"/> 0
-                </Button>
-                <Button variant="ghost" size="icon" className="text-muted-foreground">
-                    <Upload className="h-5 w-5"/>
-                </Button>
-            </CardFooter>
+            <CardContent className="p-4 pt-2">
+                <Link href={`/rooms/${room.id}`} className="block rounded-lg -m-2 p-2 hover:bg-accent transition-colors">
+                  <h3 className="font-bold text-base mb-1">{room.name}</h3>
+                  <p className="text-sm text-muted-foreground">{room.topic}</p>
+                </Link>
+            </CardContent>
         </Card>
     );
 }
