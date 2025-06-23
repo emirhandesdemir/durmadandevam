@@ -9,7 +9,7 @@ export default function Home() {
         <div className="rounded-full bg-primary/20 p-4 text-primary">
           <Users className="h-12 w-12" />
         </div>
-        <h1 className="font-headline text-5xl font-bold tracking-tight text-foreground md:text-6xl">
+        <h1 className="text-5xl font-bold tracking-tight text-foreground md:text-6xl">
           HiweWalk
         </h1>
         <p className="max-w-md text-lg text-muted-foreground">
@@ -23,11 +23,6 @@ export default function Home() {
         <Button asChild size="lg" variant="outline" className="transition-transform hover:scale-105">
           <Link href="/signup">Kayıt Ol</Link>
         </Button>
-      </div>
-       <div className="mt-12">
-         <Button asChild variant="link">
-           <Link href="/create-room">Oda Oluştur</Link>
-         </Button>
       </div>
     </main>
   );

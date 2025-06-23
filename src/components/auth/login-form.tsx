@@ -53,9 +53,9 @@ export default function LoginForm() {
             await signInWithEmailAndPassword(auth, values.email, values.password);
             toast({
                 title: "Giriş Yapıldı",
-                description: "Oda oluşturma sayfasına yönlendiriliyorsunuz...",
+                description: "Ana sayfaya yönlendiriliyorsunuz...",
             });
-            router.push('/create-room');
+            router.push('/home');
         } catch (error: any) {
             console.error("Login error", error);
             let errorMessage = "Giriş yapılırken bir hata oluştu.";
@@ -75,7 +75,7 @@ export default function LoginForm() {
     return (
         <Card className="w-full max-w-sm">
             <CardHeader>
-                <CardTitle className="font-headline text-2xl">Giriş Yap</CardTitle>
+                <CardTitle className="text-2xl">Giriş Yap</CardTitle>
                 <CardDescription>
                     Hesabınıza erişmek için bilgilerinizi girin.
                 </CardDescription>

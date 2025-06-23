@@ -11,9 +11,9 @@ export default function CreateRoomPage() {
         variant="ghost"
         className="absolute left-4 top-4 md:left-8 md:top-8"
       >
-        <Link href="/">
+        <Link href="/home">
           <ChevronLeft className="mr-2 h-4 w-4" />
-          Anasayfa
+          Geri
         </Link>
       </Button>
       <CreateRoomForm />

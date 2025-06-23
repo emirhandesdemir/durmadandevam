@@ -92,7 +92,7 @@ export default function SignUpForm() {
     return (
         <Card className="w-full max-w-sm">
             <CardHeader>
-                <CardTitle className="font-headline text-2xl">Hesap Oluştur</CardTitle>
+                <CardTitle className="text-2xl">Hesap Oluştur</CardTitle>
                 <CardDescription>
                     Hesabınızı oluşturmak için aşağıya bilgilerinizi girin.
                 </CardDescription>
