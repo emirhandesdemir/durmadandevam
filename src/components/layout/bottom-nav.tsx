@@ -6,7 +6,7 @@ import { Home, PlusCircle, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-    { href: "/home", label: "Akış", icon: Home },
+    { href: "/home", label: "Odalar", icon: Home },
     { href: "/create-room", label: "Oluştur", icon: PlusCircle },
     { href: "/profile", label: "Profil", icon: User },
 ]

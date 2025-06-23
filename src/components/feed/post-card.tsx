@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-interface Room {
+export interface Room {
     id: string;
     name: string;
     topic: string;
