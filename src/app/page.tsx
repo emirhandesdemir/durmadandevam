@@ -1,8 +1,26 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Users } from "lucide-react";
 import Link from "next/link";
 
 export default function Home() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace('/home');
+    }
+  }, [user, loading, router]);
+
+  if (loading || user) {
+    return null;
+  }
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8 text-center">
       <div className="flex flex-col items-center gap-4">
