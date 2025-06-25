@@ -1,48 +1,53 @@
+
 "use client";
 
-import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import { Loader2 } from "lucide-react";
 
-import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import RoomList from "@/components/feed/room-list";
-import { PenSquare, Users } from "lucide-react";
+import WelcomeCard from "@/components/home/WelcomeCard";
+import CreatePost from "@/components/home/CreatePost";
+import PostsFeed from "@/components/home/PostsFeed";
+import ActiveRooms from "@/components/home/ActiveRooms";
+
 
 export default function HomePage() {
   const { user, loading: authLoading } = useAuth();
   
-  if (authLoading || !user) {
+  if (authLoading) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+    );
+  }
+
+  if (!user) {
+    // Bu durum normalde AuthContext tarafından ele alınır, ancak ek bir güvenlik katmanıdır.
     return null;
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4">
-      <header className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-            <Users className="h-7 w-7 text-primary" />
-            <h1 className="text-2xl font-bold tracking-tight">HiweWalk</h1>
+    <div className="min-h-screen bg-muted/20">
+      <main className="container mx-auto grid grid-cols-12 gap-x-8 px-4 py-8">
+        {/* Ana İçerik - Gönderi Akışı */}
+        <div className="col-span-12 lg:col-span-8">
+          <section className="space-y-6">
+            <h2 className="text-2xl font-bold tracking-tight text-foreground">
+              Akış
+            </h2>
+            <CreatePost />
+            <PostsFeed />
+          </section>
         </div>
-      </header>
 
-      <Link href="/create-room">
-        <Card className="hover:bg-accent/20 transition-colors">
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between">
-                   <div className="flex items-center gap-3">
-                      <Avatar>
-                          <AvatarImage src={user.photoURL || undefined} />
-                          <AvatarFallback>{user.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-muted-foreground">Yeni bir oda oluştur...</span>
-                   </div>
-                   <PenSquare className="h-5 w-5 text-muted-foreground" />
-              </div>
-            </CardContent>
-        </Card>
-      </Link>
-      
-      <RoomList />
-
+        {/* Sağ Kenar Çubuğu - Hoşgeldin ve Aktif Odalar */}
+        <div className="col-span-12 mt-8 lg:col-span-4 lg:mt-0">
+          <aside className="sticky top-8 space-y-6">
+            <WelcomeCard name={user.displayName || "Kullanıcı"} />
+            <ActiveRooms />
+          </aside>
+        </div>
+      </main>
     </div>
   );
 }
