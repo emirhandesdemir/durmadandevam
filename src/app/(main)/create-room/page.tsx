@@ -1,11 +1,11 @@
-import CreateRoomForm from "@/components/chat/create-room-form";
+import CreateRoomForm from "@/components/rooms/CreateRoomForm";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function CreateRoomPage() {
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center p-4">
+    <main className="relative flex min-h-screen flex-col items-center justify-center p-4 bg-muted/20">
       <Button
         asChild
         variant="ghost"
@@ -13,7 +13,7 @@ export default function CreateRoomPage() {
       >
         <Link href="/home">
           <ChevronLeft className="mr-2 h-4 w-4" />
-          Ana Sayfa
+          Geri Dön
         </Link>
       </Button>
       <CreateRoomForm />
