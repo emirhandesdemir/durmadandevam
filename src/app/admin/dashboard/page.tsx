@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, getCountFromServer } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import StatCard from "@/components/admin/stat-card";
 import { Users, MessageSquare, FileText, Puzzle } from "lucide-react";
@@ -15,37 +15,58 @@ export default function DashboardPage() {
   const [userCount, setUserCount] = useState(0);
   const [roomCount, setRoomCount] = useState(0);
   const [postCount, setPostCount] = useState(0);
+  const [questionCount, setQuestionCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   // Firestore'dan verileri anlık olarak dinlemek için useEffect
   useEffect(() => {
     setIsLoading(true);
+    let active = true;
 
-    // Kullanıcı sayısını dinle
-    const userUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
-      setUserCount(snapshot.size);
-    });
+    // Tüm sayımları yapmak için bir async fonksiyon
+    const fetchCounts = async () => {
+        // Kullanıcı sayısını dinle
+        const userUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
+            if (active) setUserCount(snapshot.size);
+        });
 
-    // Oda sayısını dinle
-    const roomUnsub = onSnapshot(collection(db, "rooms"), (snapshot) => {
-      setRoomCount(snapshot.size);
-    });
+        // Oda sayısını dinle
+        const roomUnsub = onSnapshot(collection(db, "rooms"), (snapshot) => {
+            if (active) setRoomCount(snapshot.size);
+        });
 
-    // Gönderi sayısını dinle
-    const postUnsub = onSnapshot(collection(db, "posts"), (snapshot) => {
-      setPostCount(snapshot.size);
-    });
-    
-    // Tüm dinleyiciler kurulduktan bir süre sonra yükleme durumunu false yap
-    // Bu, tüm verilerin gelmesi için kısa bir zaman tanır.
-    const timer = setTimeout(() => setIsLoading(false), 500);
+        // Gönderi sayısını dinle
+        const postUnsub = onSnapshot(collection(db, "posts"), (snapshot) => {
+            if (active) setPostCount(snapshot.size);
+        });
 
-    // Component unmount olduğunda dinleyicileri temizle
+        // Soru sayısını dinle
+        const questionUnsub = onSnapshot(collection(db, "game_questions"), (snapshot) => {
+            if (active) setQuestionCount(snapshot.size);
+        });
+
+        if(active) {
+            // Tüm dinleyiciler kurulduktan bir süre sonra yükleme durumunu false yap
+            const timer = setTimeout(() => setIsLoading(false), 500);
+            return { userUnsub, roomUnsub, postUnsub, questionUnsub, timer };
+        }
+        return null;
+    }
+
+    const subscriptions = fetchCounts();
+
+    // Component unmount olduğunda dinleyicileri ve zamanlayıcıyı temizle
     return () => {
-      userUnsub();
-      roomUnsub();
-      postUnsub();
-      clearTimeout(timer);
+        active = false;
+        subscriptions.then(subs => {
+            if(subs) {
+                subs.userUnsub();
+                subs.roomUnsub();
+                subs.postUnsub();
+                subs.questionUnsub();
+                clearTimeout(subs.timer);
+            }
+        })
     };
   }, []);
 
@@ -63,7 +84,7 @@ export default function DashboardPage() {
         <StatCard title="Toplam Kullanıcı" value={userCount} icon={Users} isLoading={isLoading} />
         <StatCard title="Aktif Odalar" value={roomCount} icon={MessageSquare} isLoading={isLoading} />
         <StatCard title="Toplam Gönderi" value={postCount} icon={FileText} isLoading={isLoading} />
-        <StatCard title="Quiz Soruları" value="0" icon={Puzzle} isLoading={isLoading} />
+        <StatCard title="Quiz Soruları" value={questionCount} icon={Puzzle} isLoading={isLoading} />
       </div>
 
        {/* Hızlı Erişim Kartları */}
