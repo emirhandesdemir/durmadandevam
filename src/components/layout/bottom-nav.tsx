@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, PlusCircle, User } from "lucide-react";
+import { Home, MessageSquare, PlusCircle, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-    { href: "/home", label: "Odalar", icon: Home },
+    { href: "/home", label: "Anasayfa", icon: Home },
+    { href: "/rooms", label: "Odalar", icon: MessageSquare },
     { href: "/create-room", label: "Oluştur", icon: PlusCircle },
     { href: "/profile", label: "Profil", icon: User },
 ]
@@ -16,11 +17,12 @@ export default function BottomNav() {
 
     return (
         <footer className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card/80 backdrop-blur-sm">
-            <nav className="grid h-20 grid-cols-3">
+            <nav className="grid h-20 grid-cols-4">
                 {navItems.map((item) => {
-                    const isHomeActive = item.href === "/home" && (pathname === "/home" || pathname.startsWith("/rooms"));
-                    const isOtherActive = item.href !== "/home" && pathname.startsWith(item.href);
-                    const isActive = isHomeActive || isOtherActive;
+                    const isHomeActive = item.href === "/home" && (pathname === "/home");
+                    const isRoomsActive = item.href === "/rooms" && (pathname === "/rooms" || pathname.startsWith("/rooms/"));
+                    const isOtherActive = item.href !== "/home" && item.href !== "/rooms" && pathname.startsWith(item.href);
+                    const isActive = isHomeActive || isRoomsActive || isOtherActive;
                     
                     return (
                         <Link href={item.href} key={item.label}

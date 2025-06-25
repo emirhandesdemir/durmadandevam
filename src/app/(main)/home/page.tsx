@@ -4,18 +4,16 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
-import ActiveRooms from "@/components/home/ActiveRooms";
-import NewPost from "@/components/home/NewPost";
-import PostsFeed from "@/components/home/PostsFeed";
+import NewPostForm from "@/components/posts/NewPostForm";
+import PostsFeed from "@/components/posts/PostsFeed";
 
 /**
  * Ana Sayfa (Home Page)
  * 
  * Uygulamanın ana giriş sayfasıdır. Kullanıcı giriş yaptıktan sonra bu sayfayı görür.
- * Sayfa, 3 ana bileşenden oluşur:
- * 1. NewPost: Kullanıcının yeni gönderi oluşturabileceği alan.
+ * Sayfa, 2 ana bileşenden oluşur:
+ * 1. NewPostForm: Kullanıcının yeni gönderi oluşturabileceği alan.
  * 2. PostsFeed: Diğer kullanıcıların gönderilerinin listelendiği akış.
- * 3. ActiveRooms: Aktif sohbet odalarının gösterildiği bölüm.
  * 
  * Ayrıca, kullanıcıyı karşılayan bir animasyon içerir.
  */
@@ -64,13 +62,10 @@ export default function HomePage() {
           {/* Ana sayfanın dikey düzenini ve bileşenler arası boşluğu yöneten ana sarmalayıcı */}
           <div className="flex flex-col gap-8">
             {/* 1. Yeni gönderi oluşturma alanı */}
-            <NewPost />
+            <NewPostForm />
 
             {/* 2. Gönderi akışı */}
             <PostsFeed />
-
-            {/* 3. Aktif odalar listesi */}
-            <ActiveRooms />
           </div>
         </main>
       </div>
