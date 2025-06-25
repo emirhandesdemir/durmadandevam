@@ -72,7 +72,15 @@ export default function NewPostForm() {
     setIsLoading(true); // Yüklemeyi başlat
 
     try {
-      await addPost({ text, imageFile, user });
+      await addPost({
+        text,
+        imageFile,
+        user: {
+          uid: user.uid,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+        },
+      });
       
       // Formu sıfırla ve başarı bildirimi göster
       setText("");

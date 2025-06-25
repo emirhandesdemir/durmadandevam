@@ -8,16 +8,18 @@ import {
     serverTimestamp, 
     doc,
     deleteDoc,
-    updateDoc,
     writeBatch,
     increment
 } from "firebase/firestore";
-import type { User } from "firebase/auth";
 
 interface AddCommentArgs {
     postId: string;
     text: string;
-    user: User;
+    user: {
+        uid: string;
+        displayName: string | null;
+        photoURL: string | null;
+    };
     replyTo?: {
         commentId: string;
         username: string;
@@ -29,7 +31,7 @@ interface AddCommentArgs {
  * @param {AddCommentArgs} args - Yorum bilgileri.
  */
 export async function addComment({ postId, text, user, replyTo }: AddCommentArgs) {
-    if (!user) throw new Error("Yetkilendirme hatası.");
+    if (!user || !user.uid) throw new Error("Yetkilendirme hatası.");
     if (!text.trim()) throw new Error("Yorum metni boş olamaz.");
 
     const postRef = doc(db, "posts", postId);
@@ -41,7 +43,7 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
     const newCommentRef = doc(commentsColRef); // ID'yi önceden al
     batch.set(newCommentRef, {
         uid: user.uid,
-        username: user.displayName,
+        username: user.displayName || "Anonim Kullanıcı",
         userAvatar: user.photoURL,
         text: text,
         createdAt: serverTimestamp(),

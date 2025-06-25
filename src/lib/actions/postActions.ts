@@ -17,12 +17,15 @@ import {
     runTransaction
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
-import type { User } from "firebase/auth";
 
 interface AddPostArgs {
     text: string;
     imageFile: File | null;
-    user: User;
+    user: {
+        uid: string;
+        displayName: string | null;
+        photoURL: string | null;
+    };
 }
 
 /**
@@ -30,8 +33,8 @@ interface AddPostArgs {
  * @param {AddPostArgs} args - Gönderi metni, resim dosyası ve kullanıcı bilgileri.
  */
 export async function addPost({ text, imageFile, user }: AddPostArgs) {
-    if (!user) {
-        throw new Error("Yetkilendirme hatası: Kullanıcı giriş yapmamış.");
+    if (!user || !user.uid) {
+        throw new Error("Yetkilendirme hatası: Kullanıcı bilgileri eksik.");
     }
     
     let imageUrl = "";
@@ -45,7 +48,7 @@ export async function addPost({ text, imageFile, user }: AddPostArgs) {
     // Yeni gönderi dökümanını Firestore'a ekle
     await addDoc(collection(db, "posts"), {
         uid: user.uid,
-        username: user.displayName,
+        username: user.displayName || "Anonim Kullanıcı",
         userAvatar: user.photoURL,
         text: text,
         imageUrl: imageUrl,

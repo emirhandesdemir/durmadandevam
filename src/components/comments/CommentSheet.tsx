@@ -77,7 +77,11 @@ export default function CommentSheet({ open, onOpenChange, post }: CommentSheetP
             await addComment({
                 postId: post.id,
                 text: newCommentText,
-                user,
+                user: {
+                    uid: user.uid,
+                    displayName: user.displayName,
+                    photoURL: user.photoURL,
+                },
                 replyTo: replyingTo || undefined
             });
             setNewCommentText("");
