@@ -66,6 +66,7 @@ export default function CreateRoomForm() {
                 createdBy: {
                   uid: user.uid,
                   username: user.displayName || "Bilinmeyen Kullanıcı",
+                  photoURL: user.photoURL,
                 },
                 createdAt: serverTimestamp(),
                 participants: [],
@@ -78,7 +79,7 @@ export default function CreateRoomForm() {
                 title: "Oda Oluşturuldu!",
                 description: `"${values.name}" odası başarıyla oluşturuldu.`,
             });
-            router.push('/home');
+            router.push('/rooms');
         } catch (error) {
             console.error("Error creating room: ", error);
             toast({
@@ -92,10 +93,10 @@ export default function CreateRoomForm() {
     }
 
     return (
-        <Card className="w-full max-w-lg shadow-xl rounded-3xl border-0">
+        <Card className="w-full max-w-lg shadow-xl rounded-3xl border-0 bg-card/80 backdrop-blur-sm">
             <CardHeader className="text-center">
                 <CardTitle className="text-3xl font-bold">Yeni Oda Oluştur</CardTitle>
-                <CardDescription className="text-base">
+                <CardDescription className="text-base text-muted-foreground">
                     Yeni bir herkese açık oda başlatmak için aşağıdaki ayrıntıları doldurun.
                 </CardDescription>
             </CardHeader>

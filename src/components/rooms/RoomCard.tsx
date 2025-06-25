@@ -20,6 +20,7 @@ export interface Room {
     createdBy: {
         uid: string;
         username: string;
+        photoURL?: string | null;
     };
     createdAt: Timestamp;
     participants: { uid: string, username: string }[];
@@ -92,10 +93,10 @@ export default function RoomCard({ room }: RoomCardProps) {
     };
 
     return (
-        <Card className="flex flex-col transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-2 rounded-3xl border-0 shadow-lg shadow-black/5">
+        <Card className="flex flex-col transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1 rounded-3xl border-0 bg-card/80 backdrop-blur-sm shadow-lg shadow-black/5">
             <CardHeader className="flex-row items-start gap-4 space-y-0 p-6 pb-2">
                 <Avatar className="mt-1 h-12 w-12 border-2 border-white shadow-md">
-                     <AvatarImage src={`https://i.pravatar.cc/150?u=${room.createdBy.uid}`} />
+                     <AvatarImage src={room.createdBy.photoURL || undefined} />
                     <AvatarFallback className="bg-secondary text-secondary-foreground">{creatorInitial}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
