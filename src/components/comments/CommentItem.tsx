@@ -1,0 +1,147 @@
+// src/components/comments/CommentItem.tsx
+"use client";
+
+import { useAuth } from "@/contexts/AuthContext";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { MoreHorizontal, Trash2, Reply, Loader2 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { tr } from "date-fns/locale";
+import { useState } from "react";
+import { Timestamp } from "firebase/firestore";
+import { useToast } from "@/hooks/use-toast";
+import { deleteComment } from "@/lib/actions/commentActions";
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
+
+export interface Comment {
+    id: string;
+    uid: string;
+    username: string;
+    userAvatar?: string;
+    text: string;
+    createdAt: Timestamp;
+    replyTo?: {
+        commentId: string;
+        username: string;
+    } | null;
+}
+
+interface CommentItemProps {
+    comment: Comment;
+    postId: string;
+    onReply: (commentId: string, username: string) => void;
+}
+
+/**
+ * Tek bir yorumu ve onunla ilgili eylemleri (silme, cevaplama) gösteren bileşen.
+ */
+export default function CommentItem({ comment, postId, onReply }: CommentItemProps) {
+    const { user: currentUser } = useAuth();
+    const { toast } = useToast();
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    const isOwner = currentUser?.uid === comment.uid;
+    const timeAgo = comment.createdAt
+        ? formatDistanceToNow(comment.createdAt.toDate(), { addSuffix: true, locale: tr })
+        : "şimdi";
+    
+    // Yorumu silme fonksiyonu
+    const handleDelete = async () => {
+        if (!isOwner) return;
+        setIsDeleting(true);
+        try {
+            await deleteComment(postId, comment.id);
+            toast({ description: "Yorum silindi." });
+        } catch (error) {
+            console.error("Yorum silinirken hata:", error);
+            toast({ variant: "destructive", description: "Yorum silinirken bir hata oluştu." });
+        } finally {
+            setIsDeleting(false);
+            setShowDeleteConfirm(false);
+        }
+    };
+
+
+    return (
+        <div className="flex items-start gap-3">
+            <Avatar className="h-9 w-9">
+                <AvatarImage src={comment.userAvatar} />
+                <AvatarFallback>{comment.username?.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm">
+                        <span className="font-bold">{comment.username}</span>
+                        <span className="text-xs text-muted-foreground">{timeAgo}</span>
+                    </div>
+                    {isOwner && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem 
+                                    onClick={() => setShowDeleteConfirm(true)} 
+                                    className="text-destructive focus:text-destructive"
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <span>Sil</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
+                </div>
+                <div className={cn("p-3 rounded-xl bg-muted text-sm", comment.replyTo ? "mt-1" : "")}>
+                    {comment.replyTo && (
+                        <p className="text-xs text-muted-foreground italic border-l-2 border-primary pl-2 mb-2">
+                           @{comment.replyTo.username} adlı kullanıcıya yanıt olarak
+                        </p>
+                    )}
+                    <p className="whitespace-pre-wrap">{comment.text}</p>
+                </div>
+                <Button variant="ghost" size="sm" className="mt-1 text-muted-foreground" onClick={() => onReply(comment.id, comment.username)}>
+                    <Reply className="mr-2 h-4 w-4"/>
+                    Cevapla
+                </Button>
+            </div>
+             {/* Silme Onay Dialogu */}
+             <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>Emin misiniz?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Bu yorumu kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isDeleting}>İptal</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                        {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Sil
+                    </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </div>
+    );
+}

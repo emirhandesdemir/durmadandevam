@@ -3,10 +3,8 @@
 
 import { useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
+import { addPost } from "@/lib/actions/postActions";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -36,6 +34,11 @@ export default function NewPostForm() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      // Dosya boyutu kontrolü (örn: 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+          toast({ variant: "destructive", description: "Resim boyutu 5MB'dan büyük olamaz." });
+          return;
+      }
       setImageFile(file); // Dosyayı state'e kaydet
       setImagePreview(URL.createObjectURL(file)); // Önizleme için geçici URL oluştur
     }
@@ -69,27 +72,8 @@ export default function NewPostForm() {
     setIsLoading(true); // Yüklemeyi başlat
 
     try {
-      let imageUrl = "";
-      // Eğer bir resim dosyası seçildiyse, Firebase Storage'a yükle
-      if (imageFile) {
-        const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}_${imageFile.name}`);
-        const snapshot = await uploadBytes(imageRef, imageFile);
-        imageUrl = await getDownloadURL(snapshot.ref); // Yüklenen resmin URL'ini al
-      }
-
-      // Yeni gönderi dökümanını Firestore'a ekle
-      await addDoc(collection(db, "posts"), {
-        uid: user.uid,
-        username: user.displayName,
-        userAvatar: user.photoURL,
-        text: text,
-        imageUrl: imageUrl,
-        createdAt: serverTimestamp(),
-        likes: [],
-        likeCount: 0,
-        commentCount: 0,
-      });
-
+      await addPost({ text, imageFile, user });
+      
       // Formu sıfırla ve başarı bildirimi göster
       setText("");
       removeImage();
@@ -124,11 +108,13 @@ export default function NewPostForm() {
         {/* Resim önizleme alanı */}
         {imagePreview && (
             <div className="relative ml-16">
-                <img src={imagePreview} alt="Önizleme" className="max-h-60 rounded-xl object-cover" />
+                <div className="overflow-hidden rounded-xl border">
+                    <img src={imagePreview} alt="Önizleme" className="max-h-80 w-auto object-contain" />
+                </div>
                 <Button 
                     size="icon" 
                     variant="destructive" 
-                    className="absolute top-2 right-2 h-7 w-7 rounded-full"
+                    className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/50 hover:bg-black/70 border-0"
                     onClick={removeImage}
                     disabled={isLoading}
                 >
@@ -159,7 +145,7 @@ export default function NewPostForm() {
         <Button 
           className="rounded-full px-6 py-3 font-bold shadow-lg shadow-primary/30 transition-transform hover:scale-105"
           onClick={handleShare}
-          disabled={isLoading}
+          disabled={isLoading || (!text.trim() && !imageFile)}
         >
           {isLoading ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
