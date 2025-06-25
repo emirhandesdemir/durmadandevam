@@ -88,15 +88,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Context aracılığıyla paylaşılacak değerler
   const value = { user, userData, loading, handleLogout };
 
-  // Veri yüklenirken tam ekran bir yükleme göstergesi göster
-  if (loading && typeof window !== 'undefined' && !window.location.pathname.startsWith('/admin')) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
