@@ -1,11 +1,54 @@
 // src/app/admin/dashboard/page.tsx
-// Bu bileşen, Admin Paneli'nin ana başlangıç sayfasıdır.
-// Uygulama ile ilgili genel istatistikleri (toplam kullanıcı, oda sayısı vb.) kartlar halinde gösterir.
+"use client";
 
+import { useState, useEffect } from "react";
+import { collection, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import StatCard from "@/components/admin/stat-card";
-import { Users, MessageSquare, FileText, Puzzle, Palette, Settings } from "lucide-react";
+import { Users, MessageSquare, FileText, Puzzle } from "lucide-react";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function DashboardPage() {
+  // Veri sayımları ve yükleme durumu için state'ler
+  const [userCount, setUserCount] = useState(0);
+  const [roomCount, setRoomCount] = useState(0);
+  const [postCount, setPostCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Firestore'dan verileri anlık olarak dinlemek için useEffect
+  useEffect(() => {
+    setIsLoading(true);
+
+    // Kullanıcı sayısını dinle
+    const userUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
+      setUserCount(snapshot.size);
+    });
+
+    // Oda sayısını dinle
+    const roomUnsub = onSnapshot(collection(db, "rooms"), (snapshot) => {
+      setRoomCount(snapshot.size);
+    });
+
+    // Gönderi sayısını dinle
+    const postUnsub = onSnapshot(collection(db, "posts"), (snapshot) => {
+      setPostCount(snapshot.size);
+    });
+    
+    // Tüm dinleyiciler kurulduktan bir süre sonra yükleme durumunu false yap
+    // Bu, tüm verilerin gelmesi için kısa bir zaman tanır.
+    const timer = setTimeout(() => setIsLoading(false), 500);
+
+    // Component unmount olduğunda dinleyicileri temizle
+    return () => {
+      userUnsub();
+      roomUnsub();
+      postUnsub();
+      clearTimeout(timer);
+    };
+  }, []);
+
   return (
     <div>
       <h1 className="text-3xl font-bold tracking-tight text-foreground">
@@ -17,10 +60,10 @@ export default function DashboardPage() {
 
       {/* İstatistik Kartları */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-8">
-        <StatCard title="Toplam Kullanıcı" value="1,234" icon={Users} />
-        <StatCard title="Aktif Odalar" value="56" icon={MessageSquare} />
-        <StatCard title="Toplam Gönderi" value="8,912" icon={FileText} />
-        <StatCard title="Quiz Soruları" value="78" icon={Puzzle} />
+        <StatCard title="Toplam Kullanıcı" value={userCount} icon={Users} isLoading={isLoading} />
+        <StatCard title="Aktif Odalar" value={roomCount} icon={MessageSquare} isLoading={isLoading} />
+        <StatCard title="Toplam Gönderi" value={postCount} icon={FileText} isLoading={isLoading} />
+        <StatCard title="Quiz Soruları" value="0" icon={Puzzle} isLoading={isLoading} />
       </div>
 
        {/* Hızlı Erişim Kartları */}
@@ -30,36 +73,54 @@ export default function DashboardPage() {
            <Card className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-3">
-                        <Palette className="w-6 h-6 text-primary"/>
-                        Tema Ayarları
+                        <Users className="w-6 h-6 text-primary"/>
+                        Kullanıcı Yönetimi
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
                     <p className="text-muted-foreground text-sm">
-                        Uygulamanın renklerini, modlarını (karanlık/aydınlık) ve genel görünümünü özelleştirin.
+                        Kullanıcıları görüntüleyin, rollerini değiştirin veya hesaplarını yönetin.
                     </p>
                 </CardContent>
                 <CardFooter>
                     <Button asChild variant="outline">
-                        <Link href="/admin/theme">Temayı Yönet</Link>
+                        <Link href="/admin/users">Kullanıcıları Yönet</Link>
                     </Button>
                 </CardFooter>
             </Card>
              <Card className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-3">
-                        <Settings className="w-6 h-6 text-primary"/>
-                        Sistem Ayarları
+                        <MessageSquare className="w-6 h-6 text-primary"/>
+                        Oda Yönetimi
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
                     <p className="text-muted-foreground text-sm">
-                       Oda kapasitesi, günlük limitler gibi genel uygulama ayarlarını yapılandırın.
+                       Aktif odaları görüntüleyin, sohbetleri izleyin veya odaları kapatın.
                     </p>
                 </CardContent>
                 <CardFooter>
                     <Button asChild variant="outline">
-                        <Link href="/admin/system">Ayarları Yönet</Link>
+                        <Link href="/admin/rooms">Odaları Yönet</Link>
+                    </Button>
+                </CardFooter>
+            </Card>
+             <Card className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-3">
+                        <FileText className="w-6 h-6 text-primary"/>
+                        Gönderi Yönetimi
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground text-sm">
+                       Kullanıcı gönderilerini görüntüleyin veya yayından kaldırın.
+                    </p>
+                </CardContent>
+                <CardFooter>
+                    <Button asChild variant="outline">
+                        <Link href="/admin/posts">Gönderileri Yönet</Link>
                     </Button>
                 </CardFooter>
             </Card>
@@ -68,8 +129,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-// Ekstra bileşenler (normalde ui klasöründe olur ama burada örnek için)
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";

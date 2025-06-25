@@ -1,12 +1,51 @@
 // src/app/admin/posts/page.tsx
-// Bu bileşen, Admin Paneli'ndeki "Gönderi Yöneticisi" sayfasıdır.
-// Bu sayfa, gönderileri listelemek, düzenlemek veya silmek için kullanılacaktır.
-// Şu an için bir yer tutucu olarak tasarlanmıştır.
+"use client";
 
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { FileText } from "lucide-react";
+import { useState, useEffect } from "react";
+import { collection, onSnapshot, query, orderBy, Timestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { FileText, Loader2 } from "lucide-react";
+import PostsTable from "@/components/admin/PostsTable";
 
+// Post verisi için arayüz
+export interface AdminPostData {
+    id: string;
+    uid: string;
+    username: string;
+    text: string;
+    imageUrl?: string;
+    createdAt: Timestamp;
+    likeCount: number;
+    commentCount: number;
+}
+
+/**
+ * Gönderi Yöneticisi Sayfası
+ * 
+ * Firestore'daki tüm gönderileri listeler ve yönetmek için arayüz sağlar.
+ */
 export default function PostManagerPage() {
+    const [posts, setPosts] = useState<AdminPostData[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+        
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const postsData = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            } as AdminPostData));
+            setPosts(postsData);
+            setLoading(false);
+        }, (error) => {
+            console.error("Gönderileri çekerken hata:", error);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
   return (
     <div>
       <div className="flex items-center gap-4">
@@ -19,17 +58,15 @@ export default function PostManagerPage() {
         </div>
       </div>
 
-      <Card className="mt-8">
-        <CardHeader>
-          <CardTitle>Geliştirme Aşamasında</CardTitle>
-          <CardDescription>
-            Bu bölüm şu anda yapım aşamasındadır. Yakında gönderileri burada listeleyip yönetebileceksiniz.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-            <p className="text-muted-foreground">Özellikler yolda!</p>
-        </CardContent>
-      </Card>
+      <div className="mt-8">
+        {loading ? (
+            <div className="flex justify-center py-12">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            </div>
+        ) : (
+            <PostsTable posts={posts} />
+        )}
+      </div>
     </div>
   );
 }
