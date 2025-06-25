@@ -3,7 +3,7 @@
  */
 'use server';
 
-import { doc, deleteDoc, collection, getDocs, writeBatch, limit } from 'firebase/firestore';
+import { doc, deleteDoc, collection, getDocs, writeBatch, limit, query } from 'firebase/firestore';
 import { db } from './firebase';
 
 /**

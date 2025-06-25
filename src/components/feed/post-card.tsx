@@ -5,12 +5,12 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, Trash2, Edit } from "lucide-react";
-import { Timestamp, doc, deleteDoc } from "firebase/firestore";
+import { Timestamp } from "firebase/firestore";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
-import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { deleteRoomWithSubcollections } from "@/lib/firestoreUtils";
 
 import {
   DropdownMenu,
@@ -50,7 +50,7 @@ export default function PostCard({ room }: PostCardProps) {
         }
 
         try {
-            await deleteDoc(doc(db, "rooms", room.id));
+            await deleteRoomWithSubcollections(room.id);
             toast({
                 title: "Oda Silindi",
                 description: `'${room.name}' odası başarıyla silindi.`,
