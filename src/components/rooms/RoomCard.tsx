@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { LogIn, Users, Check, Loader2, AlertTriangle } from "lucide-react";
-import { Timestamp, arrayUnion, doc, updateDoc, writeBatch } from "firebase/firestore";
+import { Timestamp, arrayUnion, doc, writeBatch, collection } from "firebase/firestore";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -38,14 +38,17 @@ export default function RoomCard({ room }: RoomCardProps) {
     const { user: currentUser } = useAuth();
     const router = useRouter();
     const [isJoining, setIsJoining] = useState(false);
+
+    // Hata düzeltmesi: 'participants' undefined ise boş bir dizi olarak kabul et.
+    const participants = room.participants || [];
     
     const timeAgo = room.createdAt
         ? formatDistanceToNow(room.createdAt.toDate(), { addSuffix: true, locale: tr })
         : "az önce";
 
     const creatorInitial = room.createdBy.username?.charAt(0).toUpperCase() || '?';
-    const isFull = room.participants.length >= room.maxParticipants;
-    const isParticipant = room.participants.some(p => p.uid === currentUser?.uid);
+    const isFull = participants.length >= room.maxParticipants;
+    const isParticipant = participants.some(p => p.uid === currentUser?.uid);
 
     const handleJoinRoom = async () => {
         if (!currentUser) {
@@ -72,6 +75,8 @@ export default function RoomCard({ room }: RoomCardProps) {
             // Sisteme katılım mesajı gönder
             batch.set(doc(messagesRef), {
                 type: 'system',
+                uid: 'system',
+                username: 'System',
                 text: `${currentUser.displayName || 'Bir kullanıcı'} odaya katıldı.`,
                 createdAt: new Date(),
             });
@@ -109,11 +114,11 @@ export default function RoomCard({ room }: RoomCardProps) {
             <CardFooter className="flex justify-between items-center bg-muted/50 p-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                     <Users className="h-4 w-4" />
-                    <span>{room.participants.length} / {room.maxParticipants}</span>
+                    <span>{participants.length} / {room.maxParticipants}</span>
                 </div>
                 {isParticipant ? (
-                    <Button variant="outline" disabled>
-                        <Check className="mr-2" /> Katıldın
+                    <Button variant="outline" onClick={() => router.push(`/rooms/${room.id}`)}>
+                        <Check className="mr-2" /> Odaya Gir
                     </Button>
                 ) : (
                     <Button onClick={handleJoinRoom} disabled={isJoining || isFull}>
