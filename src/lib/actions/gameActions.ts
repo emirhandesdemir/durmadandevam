@@ -17,7 +17,9 @@ import {
     limit,
     Timestamp,
     increment,
-    where
+    where,
+    setDoc,
+    arrayUnion
 } from "firebase/firestore";
 import type { GameQuestion, GameSettings, ActiveGame } from "../types";
 import { revalidatePath } from "next/cache";
@@ -42,7 +44,8 @@ export async function getGameSettings(): Promise<GameSettings> {
 // Ayarları güncellemek için fonksiyon
 export async function updateGameSettings(settings: Partial<GameSettings>) {
     const settingsRef = doc(db, 'config', 'gameSettings');
-    await updateDoc(settingsRef, settings, { merge: true });
+    // Belge yoksa oluşturmak, varsa güncellemek için { merge: true } ile setDoc kullanılır.
+    await setDoc(settingsRef, settings, { merge: true });
     revalidatePath('/admin/system');
 }
 
