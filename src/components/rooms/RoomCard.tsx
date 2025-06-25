@@ -1,3 +1,4 @@
+// src/components/rooms/RoomCard.tsx
 "use client";
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +13,19 @@ import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/lib/firebase";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 
+/**
+ * Oda Listeleme Kartı (RoomCard)
+ * 
+ * Odalar listesinde tek bir odayı temsil eden kart bileşenidir.
+ * - Oda adı, açıklaması, kurucusu ve katılımcı sayısı gibi bilgileri gösterir.
+ * - Kullanıcının odaya katılması veya zaten katılmışsa girmesi için butonlar içerir.
+ * - Oda doluysa "Katıl" butonu devre dışı bırakılır.
+ * - Modern, renkli ve "havada süzülen" bir tasarıma sahiptir.
+ */
+
+// Oda verisinin arayüzü
 export interface Room {
     id: string;
     name: string;
@@ -31,15 +44,13 @@ interface RoomCardProps {
     room: Room;
 }
 
-/**
- * Oda listesinde tek bir odayı temsil eden kart.
- */
 export default function RoomCard({ room }: RoomCardProps) {
     const { toast } = useToast();
     const { user: currentUser } = useAuth();
     const router = useRouter();
     const [isJoining, setIsJoining] = useState(false);
 
+    // Güvenlik kontrolü: participants tanımsızsa boş dizi ata
     const participants = room.participants || [];
     
     const timeAgo = room.createdAt
@@ -50,12 +61,14 @@ export default function RoomCard({ room }: RoomCardProps) {
     const isFull = participants.length >= room.maxParticipants;
     const isParticipant = participants.some(p => p.uid === currentUser?.uid);
 
+    // Odaya katılma fonksiyonu
     const handleJoinRoom = async () => {
         if (!currentUser) {
             toast({ title: "Giriş Gerekli", description: "Odaya katılmak için giriş yapmalısınız.", variant: "destructive" });
+            router.push('/login');
             return;
         }
-        if (isFull || isParticipant) return;
+        if (isFull || isParticipant || isJoining) return;
 
         setIsJoining(true);
         const roomRef = doc(db, "rooms", room.id);
@@ -64,6 +77,7 @@ export default function RoomCard({ room }: RoomCardProps) {
         try {
             const batch = writeBatch(db);
 
+            // 1. Kullanıcıyı `participants` dizisine ekle
             batch.update(roomRef, {
                 participants: arrayUnion({
                     uid: currentUser.uid,
@@ -71,6 +85,7 @@ export default function RoomCard({ room }: RoomCardProps) {
                 })
             });
 
+            // 2. Odaya katıldığına dair bir sistem mesajı oluştur
             batch.set(doc(messagesRef), {
                 type: 'system',
                 uid: 'system',
@@ -79,6 +94,7 @@ export default function RoomCard({ room }: RoomCardProps) {
                 createdAt: serverTimestamp(),
             });
 
+            // Batch işlemini gerçekleştir
             await batch.commit();
 
             toast({ title: "Başarılı!", description: `"${room.name}" odasına katıldınız.` });
@@ -91,37 +107,54 @@ export default function RoomCard({ room }: RoomCardProps) {
             setIsJoining(false);
         }
     };
+    
+    // Odaya girme fonksiyonu (zaten katılımcıysa)
+    const handleEnterRoom = () => {
+        router.push(`/rooms/${room.id}`);
+    }
 
     return (
-        <Card className="flex flex-col transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1 rounded-3xl border-0 bg-card/80 backdrop-blur-sm shadow-lg shadow-black/5">
-            <CardHeader className="flex-row items-start gap-4 space-y-0 p-6 pb-2">
-                <Avatar className="mt-1 h-12 w-12 border-2 border-white shadow-md">
-                     <AvatarImage src={room.createdBy.photoURL || undefined} />
-                    <AvatarFallback className="bg-secondary text-secondary-foreground">{creatorInitial}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                    <CardTitle className="text-xl font-bold">{room.name}</CardTitle>
-                    <CardDescription className="text-xs text-muted-foreground">
-                        {room.createdBy.username} tarafından {timeAgo} oluşturuldu
-                    </CardDescription>
+        <Card className="flex flex-col transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1 rounded-3xl border-0 bg-card/80 backdrop-blur-sm shadow-lg shadow-black/5 overflow-hidden">
+            <CardHeader className="p-5">
+                <div className="flex items-center gap-3">
+                     <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
+                        <AvatarImage src={room.createdBy.photoURL || undefined} />
+                        <AvatarFallback className="bg-secondary text-secondary-foreground">{creatorInitial}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <CardTitle className="text-base font-bold leading-tight">{room.createdBy.username}</CardTitle>
+                        <CardDescription className="text-xs text-muted-foreground">
+                            {timeAgo} oluşturdu
+                        </CardDescription>
+                    </div>
                 </div>
             </CardHeader>
-            <CardContent className="p-6 pt-2 flex-1">
+            <CardContent className="p-5 pt-0 flex-1">
+              <h3 className="font-bold text-lg mb-1">{room.name}</h3>
               <p className="text-sm text-muted-foreground line-clamp-2">{room.description}</p>
             </CardContent>
-            <CardFooter className="flex justify-between items-center bg-muted/30 p-4 rounded-b-3xl">
+            <CardFooter className="flex justify-between items-center bg-muted/30 p-4 mt-auto">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                     <Users className="h-5 w-5 text-primary" />
                     <span className="font-semibold text-foreground">{participants.length} / {room.maxParticipants}</span>
                 </div>
                 {isParticipant ? (
-                    <Button variant="outline" className="rounded-full" onClick={() => router.push(`/rooms/${room.id}`)}>
-                        <Check className="mr-2" /> Odaya Gir
+                    <Button variant="outline" className="rounded-full" onClick={handleEnterRoom}>
+                        <Check className="mr-2 h-4 w-4" /> Odaya Gir
                     </Button>
                 ) : (
-                    <Button onClick={handleJoinRoom} disabled={isJoining || isFull} className="rounded-full shadow-lg shadow-primary/30 transition-transform hover:scale-105">
-                        {isJoining ? <Loader2 className="mr-2 animate-spin" /> : (isFull ? <AlertTriangle className="mr-2" /> : <LogIn className="mr-2" />)}
-                        {isFull ? 'Oda Dolu' : 'Odaya Katıl'}
+                    <Button 
+                      onClick={handleJoinRoom} 
+                      disabled={isJoining || isFull} 
+                      className={cn(
+                          "rounded-full shadow-lg transition-transform hover:scale-105 text-white",
+                          isFull 
+                            ? "bg-destructive" 
+                            : "bg-gradient-to-r from-purple-500 to-pink-500 shadow-primary/30"
+                      )}
+                    >
+                        {isJoining ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (isFull ? <AlertTriangle className="mr-2 h-4 w-4" /> : <LogIn className="mr-2 h-4 w-4" />)}
+                        {isJoining ? 'Katılıyor...' : (isFull ? 'Oda Dolu' : 'Odaya Katıl')}
                     </Button>
                 )}
             </CardFooter>

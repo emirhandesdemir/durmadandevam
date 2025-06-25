@@ -1,3 +1,4 @@
+// src/components/rooms/CreateRoomForm.tsx
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,6 +30,17 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
+/**
+ * Yeni Oda Oluşturma Formu
+ * 
+ * Kullanıcıların yeni bir oda oluşturmak için gerekli bilgileri
+ * (oda adı, açıklama) girdiği formdur.
+ * - Zod ile form validasyonu yapılır.
+ * - Form gönderildiğinde Firestore'a yeni bir oda dokümanı ekler.
+ * - Litmatch tarzı yuvarlak ve renkli bir tasarıma sahiptir.
+ */
+
+// Form validasyon şeması
 const formSchema = z.object({
   name: z.string().min(3, { message: "Oda adı en az 3 karakter olmalıdır." }).max(50, {message: "Oda adı en fazla 50 karakter olabilir."}),
   description: z.string().min(3, { message: "Açıklama en az 3 karakter olmalıdır." }).max(100, {message: "Açıklama en fazla 100 karakter olabilir."}),
@@ -48,6 +60,7 @@ export default function CreateRoomForm() {
         },
     });
 
+    // Form gönderme fonksiyonu
     async function onSubmit(values: z.infer<typeof formSchema>) {
         if (!user) {
             toast({
@@ -60,6 +73,7 @@ export default function CreateRoomForm() {
 
         setIsLoading(true);
         try {
+            // Firestore için yeni oda nesnesi
             const newRoom = {
                 name: values.name,
                 description: values.description,
@@ -69,17 +83,18 @@ export default function CreateRoomForm() {
                   photoURL: user.photoURL,
                 },
                 createdAt: serverTimestamp(),
-                participants: [],
-                maxParticipants: 7,
+                participants: [], // Başlangıçta boş katılımcı listesi
+                maxParticipants: 7, // Maksimum katılımcı sayısı
             };
             
+            // Firestore'a yeni odayı ekle
             await addDoc(collection(db, "rooms"), newRoom);
 
             toast({
                 title: "Oda Oluşturuldu!",
                 description: `"${values.name}" odası başarıyla oluşturuldu.`,
             });
-            router.push('/rooms');
+            router.push('/rooms'); // Odalar sayfasına yönlendir
         } catch (error) {
             console.error("Error creating room: ", error);
             toast({
@@ -97,7 +112,7 @@ export default function CreateRoomForm() {
             <CardHeader className="text-center">
                 <CardTitle className="text-3xl font-bold">Yeni Oda Oluştur</CardTitle>
                 <CardDescription className="text-base text-muted-foreground">
-                    Yeni bir herkese açık oda başlatmak için aşağıdaki ayrıntıları doldurun.
+                    Yeni bir sohbet odası başlatmak için ayrıntıları doldurun.
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -129,9 +144,14 @@ export default function CreateRoomForm() {
                                 </FormItem>
                             )}
                         />
-                        <Button type="submit" size="lg" className="w-full rounded-full py-6 text-lg font-semibold shadow-lg shadow-primary/30 transition-transform hover:scale-105" disabled={isLoading}>
+                        <Button 
+                            type="submit" 
+                            size="lg" 
+                            className="w-full rounded-full py-6 text-lg font-semibold bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg transition-transform hover:scale-105 disabled:opacity-75"
+                            disabled={isLoading}
+                        >
                              {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-                             Odayı Oluştur ve Başlat
+                             Odayı Oluştur
                         </Button>
                     </form>
                 </Form>
