@@ -6,7 +6,8 @@ import * as z from "zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
+// sendPasswordResetEmail'i içe aktar
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth"; 
 import { auth } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,8 @@ export default function LoginForm() {
     const { toast } = useToast();
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
+    // Şifre sıfırlama için yeni bir yükleme durumu
+    const [isResetting, setIsResetting] = useState(false); 
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -68,6 +71,41 @@ export default function LoginForm() {
         }
     }
 
+    // Şifre sıfırlama fonksiyonu
+    async function handlePasswordReset() {
+        const email = form.getValues("email"); // Formdaki e-posta değerini al
+        if (!email) {
+            toast({
+                title: "E-posta Gerekli",
+                description: "Şifrenizi sıfırlamak için lütfen e-posta adresinizi girin.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setIsResetting(true);
+        try {
+            await sendPasswordResetEmail(auth, email);
+            toast({
+                title: "E-posta Gönderildi",
+                description: "Şifrenizi sıfırlamak için e-posta kutunuzu kontrol edin."
+            });
+        } catch (error: any) {
+            console.error("Password reset error", error);
+            let errorMessage = "Şifre sıfırlama e-postası gönderilirken bir hata oluştu.";
+            if (error.code === 'auth/user-not-found') {
+                errorMessage = "Bu e-posta adresiyle kayıtlı bir kullanıcı bulunamadı.";
+            }
+            toast({
+                title: "Hata",
+                description: errorMessage,
+                variant: "destructive",
+            });
+        } finally {
+            setIsResetting(false);
+        }
+    }
+
     return (
         <Card className="w-full max-w-sm shadow-xl rounded-3xl border-0">
             <CardHeader className="text-center">
@@ -78,7 +116,7 @@ export default function LoginForm() {
             </CardHeader>
             <CardContent>
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                         <FormField
                             control={form.control}
                             name="email"
@@ -105,6 +143,18 @@ export default function LoginForm() {
                                 </FormItem>
                             )}
                         />
+                         <div className="flex items-center justify-end pr-4 -mt-2">
+                            <Button 
+                                type="button" 
+                                variant="link" 
+                                className="p-0 h-auto text-sm text-muted-foreground hover:text-primary"
+                                onClick={handlePasswordReset}
+                                disabled={isResetting}
+                            >
+                                {isResetting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                Şifremi Unuttum
+                            </Button>
+                        </div>
                         <Button type="submit" size="lg" className="w-full rounded-full py-6 text-lg font-semibold shadow-lg shadow-primary/30 transition-transform hover:scale-105" disabled={isLoading}>
                             {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
                             Giriş Yap
