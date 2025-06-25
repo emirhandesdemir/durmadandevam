@@ -10,7 +10,7 @@ import { Heart, MessageCircle, MoreHorizontal } from "lucide-react";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
-import { doc, updateDoc, arrayUnion, arrayRemove, writeBatch } from "firebase/firestore";
+import { doc, writeBatch, arrayUnion, arrayRemove } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -30,8 +30,8 @@ interface PostCardProps {
 export default function PostCard({ post }: PostCardProps) {
     const { user: currentUser } = useAuth(); // Mevcut kullanıcıyı al
     
-    // Geçerli kullanıcının bu gönderiyi beğenip beğenmediğini kontrol et
-    const isLiked = currentUser ? post.likes.includes(currentUser.uid) : false;
+    // Geçerli kullanıcının bu gönderiyi beğenip beğenmediğini kontrol et (post.likes tanımsız olabilir)
+    const isLiked = currentUser ? (post.likes || []).includes(currentUser.uid) : false;
     
     const [isLiking, setIsLiking] = useState(false); // Beğenme işlemi sırasında yükleme durumunu yönet
 
@@ -49,18 +49,19 @@ export default function PostCard({ post }: PostCardProps) {
 
         try {
             const batch = writeBatch(db); // Atomik işlemler için bir batch oluştur
+            const currentLikeCount = post.likeCount || 0;
 
             if (isLiked) {
                 // Eğer zaten beğenilmişse, beğeniyi geri al (UID'yi diziden çıkar)
                  batch.update(postRef, {
                     likes: arrayRemove(currentUser.uid),
-                    likeCount: post.likeCount - 1
+                    likeCount: currentLikeCount - 1
                 });
             } else {
                 // Eğer beğenilmemişse, beğen (UID'yi diziye ekle)
                  batch.update(postRef, {
                     likes: arrayUnion(currentUser.uid),
-                    likeCount: post.likeCount + 1
+                    likeCount: currentLikeCount + 1
                 });
             }
             await batch.commit(); // Değişiklikleri veritabanına işle
@@ -78,7 +79,7 @@ export default function PostCard({ post }: PostCardProps) {
                 <div className="flex items-center gap-4">
                     <Avatar className="h-12 w-12 border-2 border-white">
                         <AvatarImage src={post.userAvatar} />
-                        <AvatarFallback>{post.username.charAt(0)}</AvatarFallback>
+                        <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>
                         <p className="font-bold">{post.username}</p>
@@ -121,11 +122,11 @@ export default function PostCard({ post }: PostCardProps) {
                         "mr-2 transition-colors", 
                         isLiked && "fill-current"
                     )} />
-                    {post.likeCount}
+                    {post.likeCount || 0}
                 </Button>
                 <Button variant="ghost" className="group rounded-full px-4 text-muted-foreground hover:bg-blue-500/10 hover:text-blue-500">
                     <MessageCircle className="mr-2" />
-                    {post.commentCount}
+                    {post.commentCount || 0}
                 </Button>
             </CardFooter>
         </Card>
