@@ -7,17 +7,15 @@ import { cn } from '@/lib/utils';
 import ActiveRooms from "@/components/home/ActiveRooms";
 import NewPost from "@/components/home/NewPost";
 import PostsFeed from "@/components/home/PostsFeed";
-import WelcomeCard from "@/components/home/WelcomeCard";
 
 /**
  * Ana Sayfa (Home Page)
  * 
  * Uygulamanın ana giriş sayfasıdır. Kullanıcı giriş yaptıktan sonra bu sayfayı görür.
- * Sayfa, 4 ana bileşenden oluşur:
- * 1. WelcomeCard: Kullanıcıyı oda oluşturmaya teşvik eden kart.
- * 2. NewPost: Kullanıcının yeni gönderi oluşturabileceği alan.
- * 3. PostsFeed: Diğer kullanıcıların gönderilerinin listelendiği akış.
- * 4. ActiveRooms: Aktif sohbet odalarının gösterildiği bölüm.
+ * Sayfa, 3 ana bileşenden oluşur:
+ * 1. NewPost: Kullanıcının yeni gönderi oluşturabileceği alan.
+ * 2. PostsFeed: Diğer kullanıcıların gönderilerinin listelendiği akış.
+ * 3. ActiveRooms: Aktif sohbet odalarının gösterildiği bölüm.
  * 
  * Ayrıca, kullanıcıyı karşılayan bir animasyon içerir.
  */
@@ -65,16 +63,13 @@ export default function HomePage() {
         <main className="container mx-auto max-w-3xl px-4 py-6 md:py-8">
           {/* Ana sayfanın dikey düzenini ve bileşenler arası boşluğu yöneten ana sarmalayıcı */}
           <div className="flex flex-col gap-8">
-            {/* 1. Kullanıcıyı oda oluşturmaya teşvik eden kart */}
-            <WelcomeCard />
-
-            {/* 2. Yeni gönderi oluşturma alanı */}
+            {/* 1. Yeni gönderi oluşturma alanı */}
             <NewPost />
 
-            {/* 3. Gönderi akışı */}
+            {/* 2. Gönderi akışı */}
             <PostsFeed />
 
-            {/* 4. Aktif odalar listesi */}
+            {/* 3. Aktif odalar listesi */}
             <ActiveRooms />
           </div>
         </main>
