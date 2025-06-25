@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
@@ -59,21 +59,29 @@ export default function SignUpForm() {
             await updateProfile(user, {
                 displayName: values.username,
             });
+            
+            // Kullanıcı rolünü e-postaya göre belirle
+            const isAdmin = values.email === 'admin@example.com';
+            const userRole = isAdmin ? 'admin' : 'user';
 
+            // Firestore'a kullanıcı dökümanını rolüyle birlikte kaydet
             await setDoc(doc(db, "users", user.uid), {
                 uid: user.uid,
                 username: values.username,
                 email: values.email,
+                role: userRole,
+                createdAt: serverTimestamp(),
             });
 
             toast({
                 title: "Hesap Oluşturuldu",
-                description: "Harika! Artık yeni bilgilerinizle giriş yapabilirsiniz.",
+                description: `Harika! Artık giriş yapabilirsiniz. ${isAdmin ? 'Admin yetkilerine sahipsiniz.' : ''}`,
             });
             
             router.push('/login');
 
-        } catch (error: any) {
+        } catch (error: any)
+        {
             console.error("Signup error", error);
             let errorMessage = "Hesap oluşturulurken bir hata oluştu.";
             if (error.code === "auth/email-already-in-use") {
