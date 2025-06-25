@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, collection, query, where, getDocs } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,26 @@ export default function SignUpForm() {
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsLoading(true);
         try {
+             // Kullanıcı rolünü e-postaya göre belirle
+            const isAdminEmail = values.email === 'admin@example.com';
+            
+            // Eğer admin olarak kayıt olunmaya çalışılıyorsa, mevcut bir admin var mı diye kontrol et
+            if (isAdminEmail) {
+                const usersRef = collection(db, "users");
+                const q = query(usersRef, where("role", "==", "admin"));
+                const querySnapshot = await getDocs(q);
+
+                if (!querySnapshot.empty) {
+                    toast({
+                        title: "Kayıt Başarısız",
+                        description: "Yönetici hesabı zaten mevcut. Yeni bir yönetici hesabı oluşturulamaz.",
+                        variant: "destructive",
+                    });
+                    setIsLoading(false);
+                    return; // İşlemi durdur
+                }
+            }
+
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const user = userCredential.user;
             
@@ -60,9 +80,7 @@ export default function SignUpForm() {
                 displayName: values.username,
             });
             
-            // Kullanıcı rolünü e-postaya göre belirle
-            const isAdmin = values.email === 'admin@example.com';
-            const userRole = isAdmin ? 'admin' : 'user';
+            const userRole = isAdminEmail ? 'admin' : 'user';
 
             // Firestore'a kullanıcı dökümanını rolüyle birlikte kaydet
             await setDoc(doc(db, "users", user.uid), {
@@ -75,7 +93,7 @@ export default function SignUpForm() {
 
             toast({
                 title: "Hesap Oluşturuldu",
-                description: `Harika! Artık giriş yapabilirsiniz. ${isAdmin ? 'Admin yetkilerine sahipsiniz.' : ''}`,
+                description: `Harika! Artık giriş yapabilirsiniz. ${isAdminEmail ? 'Admin yetkilerine sahipsiniz.' : ''}`,
             });
             
             router.push('/login');
