@@ -66,8 +66,6 @@ export default function ActiveRooms() {
                                 id={room.id}
                                 name={room.name}
                                 topic={room.topic}
-                                participantCount={Math.floor(Math.random() * 8)} // Temsili veri
-                                capacity={8} // Temsili veri
                             />
                         ))}
                     </div>

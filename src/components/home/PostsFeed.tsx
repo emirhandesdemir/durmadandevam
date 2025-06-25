@@ -1,50 +1,62 @@
 
-import PostCard from './PostCard';
+"use client";
 
-// Bu kısım gelecekte Firestore'dan çekilecek gerçek verilerle değiştirilecektir.
-const DUMMY_POSTS = [
-    {
-        id: '1',
-        name: 'Elif Yılmaz',
-        avatar: 'https://i.pravatar.cc/150?u=elif',
-        time: '2 saat önce',
-        text: 'Harika bir gün! Yeni bir proje üzerinde çalışıyorum ve çok heyecanlıyım. 🚀 #kodlama #geliştirici',
-        image: 'https://placehold.co/600x400.png',
-        imageHint: 'code laptop',
-    },
-    {
-        id: '2',
-        name: 'Mehmet Kaya',
-        avatar: 'https://i.pravatar.cc/150?u=mehmet',
-        time: '5 saat önce',
-        text: 'Bu sabah doğa yürüyüşüne çıktım. Manzara inanılmazdı!',
-        image: 'https://placehold.co/600x300.png',
-        imageHint: 'nature landscape',
-    },
-    {
-        id: '3',
-        name: 'Zeynep Aydın',
-        avatar: 'https://i.pravatar.cc/150?u=zeynep',
-        time: '1 gün önce',
-        text: 'Yeni bir kitap okumaya başladım. Şimdiden çok sardı. Herkese tavsiye ederim.',
-    },
-];
+import { useEffect, useState } from 'react';
+import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import PostCard, { type Post } from './PostCard';
+import { Loader2 } from 'lucide-react';
+import { Card, CardContent } from '../ui/card';
 
 /**
  * Kullanıcı gönderilerini dikey bir akışta gösteren bileşen.
  */
 export default function PostsFeed() {
+    const [posts, setPosts] = useState<Post[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const postsData: Post[] = [];
+            querySnapshot.forEach((doc) => {
+                postsData.push({ id: doc.id, ...doc.data() } as Post);
+            });
+            setPosts(postsData);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching posts:", error);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="flex justify-center py-12">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            </div>
+        );
+    }
+    
+    if (posts.length === 0) {
+        return (
+             <Card className="text-center p-8">
+                <CardContent className="p-0">
+                  <p className="text-muted-foreground">Henüz hiç gönderi yok.</p>
+                  <p className="text-muted-foreground">İlk gönderiyi sen paylaş!</p>
+                </CardContent>
+             </Card>
+        )
+    }
+
     return (
         <div className="space-y-4">
-            {DUMMY_POSTS.map(post => (
+            {posts.map(post => (
                 <PostCard
                     key={post.id}
-                    avatar={post.avatar}
-                    name={post.name}
-                    time={post.time}
-                    text={post.text}
-                    image={post.image}
-                    imageHint={post.imageHint}
+                    post={post}
                 />
             ))}
         </div>

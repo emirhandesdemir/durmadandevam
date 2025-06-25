@@ -4,42 +4,57 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Heart, MessageCircle } from 'lucide-react';
 import Image from 'next/image';
+import { Timestamp } from 'firebase/firestore';
+import { formatDistanceToNow } from "date-fns";
+import { tr } from "date-fns/locale";
+
+export interface Post {
+    id: string;
+    authorId: string;
+    authorName: string;
+    authorPhotoURL: string | null;
+    content: string;
+    createdAt: Timestamp;
+    imageUrl?: string;
+    imageHint?: string;
+}
 
 interface PostCardProps {
-    avatar: string;
-    name: string;
-    time: string;
-    text: string;
-    image?: string;
-    imageHint?: string;
+    post: Post;
 }
 
 /**
  * Gönderi akışında tek bir gönderiyi temsil eden kart bileşeni.
  */
-export default function PostCard({ avatar, name, time, text, image, imageHint }: PostCardProps) {
+export default function PostCard({ post }: PostCardProps) {
+    const timeAgo = post.createdAt
+        ? formatDistanceToNow(post.createdAt.toDate(), { addSuffix: true, locale: tr })
+        : "şimdi";
+        
+    const authorInitial = post.authorName?.charAt(0).toUpperCase() || '?';
+
     return (
         <Card className="overflow-hidden shadow-md transition-shadow hover:shadow-lg">
             <CardHeader className="flex flex-row items-center gap-4 p-4">
                 <Avatar>
-                    <AvatarImage src={avatar} />
-                    <AvatarFallback>{name.charAt(0)}</AvatarFallback>
+                    <AvatarImage src={post.authorPhotoURL || undefined} />
+                    <AvatarFallback>{authorInitial}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                    <p className="font-semibold">{name}</p>
-                    <p className="text-xs text-muted-foreground">{time}</p>
+                    <p className="font-semibold">{post.authorName}</p>
+                    <p className="text-xs text-muted-foreground">{timeAgo}</p>
                 </div>
             </CardHeader>
             <CardContent className="space-y-4 p-4 pt-0">
-                <p className="whitespace-pre-wrap">{text}</p>
-                {image && (
+                <p className="whitespace-pre-wrap">{post.content}</p>
+                {post.imageUrl && (
                     <div className="relative aspect-video w-full overflow-hidden rounded-lg border">
                         <Image
-                            src={image}
+                            src={post.imageUrl}
                             alt="Gönderi resmi"
                             fill
                             className="object-cover"
-                            data-ai-hint={imageHint}
+                            data-ai-hint={post.imageHint}
                         />
                     </div>
                 )}
