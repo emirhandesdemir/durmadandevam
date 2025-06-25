@@ -92,26 +92,26 @@ export default function CreateRoomForm() {
     }
 
     return (
-        <Card className="w-full max-w-lg">
-            <CardHeader>
-                <CardTitle className="text-2xl">Yeni Oda Oluştur</CardTitle>
-                <CardDescription>
+        <Card className="w-full max-w-lg shadow-xl rounded-3xl border-0">
+            <CardHeader className="text-center">
+                <CardTitle className="text-3xl font-bold">Yeni Oda Oluştur</CardTitle>
+                <CardDescription className="text-base">
                     Yeni bir herkese açık oda başlatmak için aşağıdaki ayrıntıları doldurun.
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         <FormField
                             control={form.control}
                             name="name"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Oda Adı</FormLabel>
+                                    <FormLabel className="ml-4">Oda Adı</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="ör., Bilim Kurgu Kitap Kulübü" {...field} />
+                                        <Input className="rounded-full px-5 py-6" placeholder="ör., Bilim Kurgu Kitap Kulübü" {...field} />
                                     </FormControl>
-                                    <FormMessage />
+                                    <FormMessage className="ml-4" />
                                 </FormItem>
                             )}
                         />
@@ -120,16 +120,16 @@ export default function CreateRoomForm() {
                             name="description"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Konu</FormLabel>
+                                    <FormLabel className="ml-4">Konu</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="ör., Haftanın kitabı: Dune" {...field} />
+                                        <Input className="rounded-full px-5 py-6" placeholder="ör., Haftanın kitabı: Dune" {...field} />
                                     </FormControl>
-                                    <FormMessage />
+                                    <FormMessage className="ml-4" />
                                 </FormItem>
                             )}
                         />
-                        <Button type="submit" className="w-full" disabled={isLoading}>
-                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <Button type="submit" size="lg" className="w-full rounded-full py-6 text-lg font-semibold shadow-lg shadow-primary/30 transition-transform hover:scale-105" disabled={isLoading}>
+                             {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
                              Odayı Oluştur ve Başlat
                         </Button>
                     </form>

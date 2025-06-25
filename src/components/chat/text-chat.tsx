@@ -41,7 +41,6 @@ export default function TextChat({ roomId, canSendMessage }: TextChatProps) {
   useEffect(() => {
     if (!roomId) return;
 
-    // En son 50 mesajı dinle
     const q = query(collection(db, "rooms", roomId, "messages"), orderBy("createdAt", "asc"), limit(50));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const msgs: Message[] = [];
@@ -50,12 +49,14 @@ export default function TextChat({ roomId, canSendMessage }: TextChatProps) {
       });
       setMessages(msgs);
       setLoading(false);
+    }, (error) => {
+      console.error("Error listening to messages:", error);
+      setLoading(false);
     });
 
     return () => unsubscribe();
   }, [roomId]);
 
-  // Yeni mesaj geldiğinde en alta kaydır
   useEffect(() => {
      if (scrollAreaRef.current) {
       const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
@@ -63,7 +64,7 @@ export default function TextChat({ roomId, canSendMessage }: TextChatProps) {
         viewport.scrollTop = viewport.scrollHeight;
       }
     }
-  }, [messages])
+  }, [messages]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,9 +93,9 @@ export default function TextChat({ roomId, canSendMessage }: TextChatProps) {
   if (!currentUser) return null;
 
   return (
-    <div className="h-full flex flex-col bg-card rounded-lg shadow-sm">
-      <ScrollArea className="flex-1" ref={scrollAreaRef}>
-        <div className="space-y-6 p-4 md:p-6">
+    <div className="h-full flex flex-col">
+      <ScrollArea className="flex-1 pr-4" ref={scrollAreaRef}>
+        <div className="space-y-6 p-1 md:p-2">
           {loading && (
             <div className="flex justify-center py-10">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -106,37 +107,34 @@ export default function TextChat({ roomId, canSendMessage }: TextChatProps) {
               </div>
           )}
 
-          {messages.map(msg => {
+          {messages.map((msg, index) => {
             if (msg.type === 'system') {
               return (
-                <div key={msg.id} className="text-center text-xs text-muted-foreground italic my-4">
+                <div key={msg.id} className="text-center text-xs text-muted-foreground italic my-4 animate-in fade-in">
                   <span>{msg.text}</span>
-                  <span className="ml-2">
-                    {msg.createdAt ? format(msg.createdAt.toDate(), 'p', { locale: tr }) : ''}
-                  </span>
                 </div>
               )
             }
 
             const isCurrentUser = msg.uid === currentUser.uid;
             return (
-              <div key={msg.id} className={cn("flex items-start gap-3 w-full", isCurrentUser && "flex-row-reverse")}>
+              <div key={msg.id} className={cn("flex items-end gap-3 w-full animate-in fade-in slide-in-from-bottom-4 duration-500", isCurrentUser && "flex-row-reverse")}>
                 <Avatar className="h-8 w-8">
                     <AvatarImage src={msg.photoURL || undefined} />
                     <AvatarFallback>{msg.username?.charAt(0).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <div className={cn("flex flex-col gap-1 max-w-xs md:max-w-md", isCurrentUser && "items-end")}>
-                    <div className="flex items-center gap-2">
-                       <p className="font-semibold text-sm">{isCurrentUser ? "Siz" : msg.username}</p>
+                <div className={cn("flex flex-col gap-1 max-w-[70%]", isCurrentUser && "items-end")}>
+                    <div className={cn("flex items-center gap-2", isCurrentUser && "flex-row-reverse")}>
+                       <p className="font-bold text-sm">{isCurrentUser ? "Siz" : msg.username}</p>
                        <p className="text-xs text-muted-foreground">
                          {msg.createdAt ? format(msg.createdAt.toDate(), 'p', { locale: tr }) : ''}
                        </p>
                     </div>
                     <div className={cn(
-                        "p-3 rounded-lg",
+                        "p-3 rounded-2xl shadow-sm",
                         isCurrentUser 
-                          ? "bg-primary text-primary-foreground rounded-br-none" 
-                          : "bg-secondary rounded-bl-none"
+                          ? "bg-primary text-primary-foreground rounded-br-lg" 
+                          : "bg-card text-card-foreground rounded-bl-lg border"
                     )}>
                         <p className="text-sm break-words">{msg.text}</p>
                     </div>
@@ -146,7 +144,7 @@ export default function TextChat({ roomId, canSendMessage }: TextChatProps) {
           })}
         </div>
       </ScrollArea>
-      <div className="p-4 border-t">
+      <div className="p-4 bg-transparent sticky bottom-0">
         {canSendMessage ? (
           <form onSubmit={handleSendMessage} className="flex w-full items-center space-x-2">
             <Input 
@@ -154,8 +152,9 @@ export default function TextChat({ roomId, canSendMessage }: TextChatProps) {
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Bir mesaj yaz..."
               autoComplete="off"
+              className="rounded-full focus-visible:ring-offset-0 focus-visible:ring-2"
             />
-            <Button type="submit" size="icon" disabled={!message.trim()}>
+            <Button type="submit" size="icon" disabled={!message.trim()} className="rounded-full flex-shrink-0">
               <Send className="h-4 w-4" />
               <span className="sr-only">Gönder</span>
             </Button>

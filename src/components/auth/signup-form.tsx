@@ -68,7 +68,7 @@ export default function SignUpForm() {
 
             toast({
                 title: "Hesap Oluşturuldu",
-                description: "Artık yeni bilgilerinizle giriş yapabilirsiniz.",
+                description: "Harika! Artık yeni bilgilerinizle giriş yapabilirsiniz.",
             });
             
             router.push('/login');
@@ -90,26 +90,26 @@ export default function SignUpForm() {
     }
 
     return (
-        <Card className="w-full max-w-sm">
-            <CardHeader>
-                <CardTitle className="text-2xl">Hesap Oluştur</CardTitle>
+        <Card className="w-full max-w-sm shadow-xl rounded-3xl border-0">
+            <CardHeader className="text-center">
+                <CardTitle className="text-3xl font-bold">Hesap Oluştur</CardTitle>
                 <CardDescription>
-                    Hesabınızı oluşturmak için aşağıya bilgilerinizi girin.
+                    Aramıza katılmak için bilgilerinizi girin.
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         <FormField
                             control={form.control}
                             name="username"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Kullanıcı Adı</FormLabel>
+                                    <FormLabel className="ml-4">Kullanıcı Adı</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="hiwewalker" {...field} />
+                                        <Input className="rounded-full px-5 py-6" placeholder="hiwewalker" {...field} />
                                     </FormControl>
-                                    <FormMessage />
+                                    <FormMessage className="ml-4" />
                                 </FormItem>
                             )}
                         />
@@ -118,11 +118,11 @@ export default function SignUpForm() {
                             name="email"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>E-posta</FormLabel>
+                                    <FormLabel className="ml-4">E-posta</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="ornek@eposta.com" {...field} />
+                                        <Input className="rounded-full px-5 py-6" placeholder="ornek@eposta.com" {...field} />
                                     </FormControl>
-                                    <FormMessage />
+                                    <FormMessage className="ml-4" />
                                 </FormItem>
                             )}
                         />
@@ -131,23 +131,23 @@ export default function SignUpForm() {
                             name="password"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Şifre</FormLabel>
+                                    <FormLabel className="ml-4">Şifre</FormLabel>
                                     <FormControl>
-                                        <Input type="password" placeholder="••••••••" {...field} />
+                                        <Input className="rounded-full px-5 py-6" type="password" placeholder="••••••••" {...field} />
                                     </FormControl>
-                                    <FormMessage />
+                                    <FormMessage className="ml-4" />
                                 </FormItem>
                             )}
                         />
-                        <Button type="submit" className="w-full" disabled={isLoading}>
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <Button type="submit" size="lg" className="w-full rounded-full py-6 text-lg font-semibold shadow-lg shadow-primary/30 transition-transform hover:scale-105" disabled={isLoading}>
+                            {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
                             Hesap Oluştur
                         </Button>
                     </form>
                 </Form>
-                <div className="mt-4 text-center text-sm">
+                <div className="mt-6 text-center text-sm">
                     Zaten bir hesabınız var mı?{" "}
-                    <Link href="/login" className="font-medium text-primary underline-offset-4 hover:underline">
+                    <Link href="/login" className="font-medium text-primary hover:underline">
                         Giriş yap
                     </Link>
                 </div>

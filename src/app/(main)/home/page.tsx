@@ -8,9 +8,9 @@ import RoomList from "@/components/rooms/RoomList";
  */
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-muted/20">
+    <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 py-8">
-        <div className="space-y-8">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <CreateRoomCard />
           <RoomList />
         </div>

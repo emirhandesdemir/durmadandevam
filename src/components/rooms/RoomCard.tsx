@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { LogIn, Users, Check, Loader2, AlertTriangle } from "lucide-react";
-import { Timestamp, arrayUnion, doc, writeBatch, collection } from "firebase/firestore";
+import { Timestamp, arrayUnion, doc, writeBatch, collection, serverTimestamp } from "firebase/firestore";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -39,7 +39,6 @@ export default function RoomCard({ room }: RoomCardProps) {
     const router = useRouter();
     const [isJoining, setIsJoining] = useState(false);
 
-    // Hata düzeltmesi: 'participants' undefined ise boş bir dizi olarak kabul et.
     const participants = room.participants || [];
     
     const timeAgo = room.createdAt
@@ -64,7 +63,6 @@ export default function RoomCard({ room }: RoomCardProps) {
         try {
             const batch = writeBatch(db);
 
-            // Kullanıcıyı katılımcılar listesine ekle
             batch.update(roomRef, {
                 participants: arrayUnion({
                     uid: currentUser.uid,
@@ -72,13 +70,12 @@ export default function RoomCard({ room }: RoomCardProps) {
                 })
             });
 
-            // Sisteme katılım mesajı gönder
             batch.set(doc(messagesRef), {
                 type: 'system',
                 uid: 'system',
                 username: 'System',
                 text: `${currentUser.displayName || 'Bir kullanıcı'} odaya katıldı.`,
-                createdAt: new Date(),
+                createdAt: serverTimestamp(),
             });
 
             await batch.commit();
@@ -95,33 +92,33 @@ export default function RoomCard({ room }: RoomCardProps) {
     };
 
     return (
-        <Card className="flex flex-col transition-shadow hover:shadow-lg">
-            <CardHeader className="flex-row items-start gap-4 space-y-0 p-4 pb-2">
-                <Avatar className="mt-1">
+        <Card className="flex flex-col transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-2 rounded-3xl border-0 shadow-lg shadow-black/5">
+            <CardHeader className="flex-row items-start gap-4 space-y-0 p-6 pb-2">
+                <Avatar className="mt-1 h-12 w-12 border-2 border-white shadow-md">
                      <AvatarImage src={`https://i.pravatar.cc/150?u=${room.createdBy.uid}`} />
-                    <AvatarFallback>{creatorInitial}</AvatarFallback>
+                    <AvatarFallback className="bg-secondary text-secondary-foreground">{creatorInitial}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                    <CardTitle className="text-lg">{room.name}</CardTitle>
+                    <CardTitle className="text-xl font-bold">{room.name}</CardTitle>
                     <CardDescription className="text-xs text-muted-foreground">
                         {room.createdBy.username} tarafından {timeAgo} oluşturuldu
                     </CardDescription>
                 </div>
             </CardHeader>
-            <CardContent className="p-4 pt-2 flex-1">
-              <p className="text-sm text-muted-foreground">{room.description}</p>
+            <CardContent className="p-6 pt-2 flex-1">
+              <p className="text-sm text-muted-foreground line-clamp-2">{room.description}</p>
             </CardContent>
-            <CardFooter className="flex justify-between items-center bg-muted/50 p-4">
+            <CardFooter className="flex justify-between items-center bg-muted/30 p-4 rounded-b-3xl">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    <span>{participants.length} / {room.maxParticipants}</span>
+                    <Users className="h-5 w-5 text-primary" />
+                    <span className="font-semibold text-foreground">{participants.length} / {room.maxParticipants}</span>
                 </div>
                 {isParticipant ? (
-                    <Button variant="outline" onClick={() => router.push(`/rooms/${room.id}`)}>
+                    <Button variant="outline" className="rounded-full" onClick={() => router.push(`/rooms/${room.id}`)}>
                         <Check className="mr-2" /> Odaya Gir
                     </Button>
                 ) : (
-                    <Button onClick={handleJoinRoom} disabled={isJoining || isFull}>
+                    <Button onClick={handleJoinRoom} disabled={isJoining || isFull} className="rounded-full shadow-lg shadow-primary/30 transition-transform hover:scale-105">
                         {isJoining ? <Loader2 className="mr-2 animate-spin" /> : (isFull ? <AlertTriangle className="mr-2" /> : <LogIn className="mr-2" />)}
                         {isFull ? 'Oda Dolu' : 'Odaya Katıl'}
                     </Button>

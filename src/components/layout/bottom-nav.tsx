@@ -15,8 +15,8 @@ export default function BottomNav() {
     const pathname = usePathname();
 
     return (
-        <footer className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card">
-            <nav className="grid h-16 grid-cols-3">
+        <footer className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card/80 backdrop-blur-sm">
+            <nav className="grid h-20 grid-cols-3">
                 {navItems.map((item) => {
                     const isHomeActive = item.href === "/home" && (pathname === "/home" || pathname.startsWith("/rooms"));
                     const isOtherActive = item.href !== "/home" && pathname.startsWith(item.href);
@@ -25,10 +25,12 @@ export default function BottomNav() {
                     return (
                         <Link href={item.href} key={item.label}
                             className={cn(
-                                "flex flex-col items-center justify-center gap-1 text-xs text-muted-foreground transition-colors hover:text-primary",
-                                isActive && "text-primary"
+                                "flex flex-col items-center justify-center gap-1 text-xs font-medium text-muted-foreground transition-all duration-300",
+                                isActive ? "text-primary scale-110" : "hover:text-primary"
                             )}>
-                            <item.icon className="h-6 w-6"/>
+                            <div className={cn("p-2 rounded-full transition-all", isActive ? "bg-primary/10" : "")}>
+                                <item.icon className="h-6 w-6"/>
+                            </div>
                             <span>{item.label}</span>
                         </Link>
                     )

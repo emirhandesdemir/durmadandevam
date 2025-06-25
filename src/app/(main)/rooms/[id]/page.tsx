@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, onSnapshot, DocumentData, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
@@ -62,7 +62,7 @@ export default function RoomPage() {
 
   if (authLoading || roomLoading || !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
@@ -70,7 +70,7 @@ export default function RoomPage() {
 
   if (!room) {
      return (
-      <div className="flex flex-col min-h-screen items-center justify-center gap-4 p-4">
+      <div className="flex flex-col min-h-screen items-center justify-center gap-4 p-4 bg-background">
          <h2 className="text-2xl font-bold">Oda Bulunamadı</h2>
          <p className="text-muted-foreground">Aradığınız oda mevcut değil veya silinmiş olabilir.</p>
          <Button asChild>
@@ -81,10 +81,10 @@ export default function RoomPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen">
-      <header className="flex items-center justify-between p-4 border-b bg-card">
+    <div className="flex flex-col h-screen bg-background">
+      <header className="flex items-center justify-between p-4 border-b bg-card/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="icon" className="mr-2">
+          <Button asChild variant="ghost" size="icon" className="mr-2 rounded-full">
               <Link href="/home">
                   <ChevronLeft className="h-5 w-5" />
               </Link>
@@ -100,7 +100,7 @@ export default function RoomPage() {
         </div>
       </header>
       
-      <main className="flex-1 overflow-y-auto p-4 bg-muted/20">
+      <main className="flex-1 overflow-y-auto p-4">
         <TextChat roomId={roomId} canSendMessage={isParticipant} />
       </main>
     </div>

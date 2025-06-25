@@ -4,48 +4,48 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 240 50% 98%; /* Light Lavender White */
+    --foreground: 250 30% 25%; /* Dark Muted Purple */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 250 30% 25%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 173 80% 30%; /* Teal */
+    --popover-foreground: 250 30% 25%;
+    --primary: 260 85% 65%; /* Vibrant Lilac */
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 45 90% 55%; /* Gold */
-    --accent-foreground: 24 9.8% 10%;
+    --secondary: 340 80% 96%; /* Soft Pink */
+    --secondary-foreground: 340 60% 30%;
+    --muted: 240 20% 94%;
+    --muted-foreground: 240 10% 45%;
+    --accent: 340 90% 70%; /* Bright Pink */
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 173 80% 30%; /* Teal for ring */
-    --radius: 0.5rem;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 20% 90%;
+    --input: 240 20% 90%;
+    --ring: 260 85% 70%;
+    --radius: 1rem; /* More rounded corners */
   }
  
   .dark {
-    --background: 224 71% 4%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 47.4% 11.2%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 173 70% 40%; /* Lighter Teal for dark mode */
+    --background: 250 30% 12%; /* Deep Purple */
+    --foreground: 240 50% 98%;
+    --card: 250 30% 17%;
+    --card-foreground: 240 50% 98%;
+    --popover: 250 30% 12%;
+    --popover-foreground: 240 50% 98%;
+    --primary: 260 85% 65%; /* Vibrant Lilac */
     --primary-foreground: 0 0% 100%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 45 80% 60%; /* Lighter Gold for dark mode */
-    --accent-foreground: 24 9.8% 10%;
+    --secondary: 340 40% 25%; /* Muted Dark Pink */
+    --secondary-foreground: 340 80% 96%;
+    --muted: 250 30% 20%;
+    --muted-foreground: 240 10% 65%;
+    --accent: 340 90% 70%; /* Bright Pink */
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 173 70% 40%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 250 30% 25%;
+    --input: 250 30% 25%;
+    --ring: 260 85% 70%;
   }
 }
  

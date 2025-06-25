@@ -51,10 +51,6 @@ export default function LoginForm() {
         setIsLoading(true);
         try {
             await signInWithEmailAndPassword(auth, values.email, values.password);
-            toast({
-                title: "Giriş Yapıldı",
-                description: "Ana sayfaya yönlendiriliyorsunuz...",
-            });
             router.push('/home');
         } catch (error: any) {
             console.error("Login error", error);
@@ -73,26 +69,26 @@ export default function LoginForm() {
     }
 
     return (
-        <Card className="w-full max-w-sm">
-            <CardHeader>
-                <CardTitle className="text-2xl">Giriş Yap</CardTitle>
+        <Card className="w-full max-w-sm shadow-xl rounded-3xl border-0">
+            <CardHeader className="text-center">
+                <CardTitle className="text-3xl font-bold">Giriş Yap</CardTitle>
                 <CardDescription>
                     Hesabınıza erişmek için bilgilerinizi girin.
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         <FormField
                             control={form.control}
                             name="email"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>E-posta</FormLabel>
+                                    <FormLabel className="ml-4">E-posta</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="ornek@eposta.com" {...field} />
+                                        <Input className="rounded-full px-5 py-6" placeholder="ornek@eposta.com" {...field} />
                                     </FormControl>
-                                    <FormMessage />
+                                    <FormMessage className="ml-4" />
                                 </FormItem>
                             )}
                         />
@@ -101,23 +97,23 @@ export default function LoginForm() {
                             name="password"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Şifre</FormLabel>
+                                    <FormLabel className="ml-4">Şifre</FormLabel>
                                     <FormControl>
-                                        <Input type="password" placeholder="••••••••" {...field} />
+                                        <Input className="rounded-full px-5 py-6" type="password" placeholder="••••••••" {...field} />
                                     </FormControl>
-                                    <FormMessage />
+                                    <FormMessage className="ml-4" />
                                 </FormItem>
                             )}
                         />
-                        <Button type="submit" className="w-full" disabled={isLoading}>
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <Button type="submit" size="lg" className="w-full rounded-full py-6 text-lg font-semibold shadow-lg shadow-primary/30 transition-transform hover:scale-105" disabled={isLoading}>
+                            {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
                             Giriş Yap
                         </Button>
                     </form>
                 </Form>
-                <div className="mt-4 text-center text-sm">
+                <div className="mt-6 text-center text-sm">
                     Hesabınız yok mu?{" "}
-                    <Link href="/signup" className="font-medium text-primary underline-offset-4 hover:underline">
+                    <Link href="/signup" className="font-medium text-primary hover:underline">
                         Kayıt ol
                     </Link>
                 </div>
