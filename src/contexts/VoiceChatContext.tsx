@@ -31,7 +31,7 @@ interface VoiceChatContextType {
 
 const VoiceChatContext = createContext<VoiceChatContextType | undefined>(undefined);
 
-export function VoiceChatProvider({ children }: { children: React.ReactNode }) {
+export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const { user } = useAuth();
     const pathname = usePathname();
     const { toast } = useToast();
@@ -89,6 +89,9 @@ export function VoiceChatProvider({ children }: { children: React.ReactNode }) {
         return () => unsubscribe();
     }, [user, activeRoom, localStream]);
 
+    const self = participants.find(p => p.uid === user?.uid) || null;
+    const isConnected = !!self;
+
     // --- Peer Connection Yöneticisi ---
     useEffect(() => {
         if (!isConnected || !localStream || !user) return;
@@ -114,10 +117,6 @@ export function VoiceChatProvider({ children }: { children: React.ReactNode }) {
         });
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [participants, isConnected, localStream, user?.uid]);
-
-
-    const self = participants.find(p => p.uid === user?.uid) || null;
-    const isConnected = !!self;
 
     const sendSignal = async (to: string, type: string, data: any) => {
         if (!activeRoom || !user) return;
