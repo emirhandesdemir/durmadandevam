@@ -14,7 +14,8 @@ import {
     limit,
     serverTimestamp,
     increment,
-    deleteDoc
+    deleteDoc,
+    updateDoc
 } from 'firebase/firestore';
 import type { Room, VoiceParticipant } from '../types';
 
@@ -26,6 +27,7 @@ interface UserInfo {
 
 /**
  * Kullanıcının bir odanın sesli sohbetine katılması için sunucu eylemi.
+ * Bu, atomik bir işlemle kullanıcıyı ekler ve sayacı günceller.
  * @param roomId Katılınacak odanın ID'si.
  * @param user Katılan kullanıcı bilgileri.
  */
@@ -33,47 +35,43 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
     if (!user || !user.uid) throw new Error("Yetkilendirme hatası: Giriş yapmalısınız.");
 
     const roomRef = doc(db, 'rooms', roomId);
-    const userVoiceRef = doc(db, 'rooms', roomId, 'voiceParticipants', user.uid);
+    const userVoiceRef = doc(roomRef, 'voiceParticipants', user.uid);
 
     try {
-        const roomDoc = await getDoc(roomRef);
-        if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
+        await runTransaction(db, async (transaction) => {
+            const roomDoc = await transaction.get(roomRef);
+            if (!roomDoc.exists()) {
+                throw new Error("Oda bulunamadı.");
+            }
 
-        const roomData = roomDoc.data();
-        if (!roomData) throw new Error("Oda verisi bulunamadı.");
-        
-        // Katılımcı olup olmadığını ana `participants` dizisinden kontrol et
-        const isRoomParticipant = (roomData.participants || []).some((p: any) => p.uid === user.uid);
-        if (!isRoomParticipant) {
-             throw new Error("Sesli sohbete katılmak için önce odaya katılmalısınız.");
-        }
+            const roomData = roomDoc.data() as Room;
 
-        const voiceCount = roomData.voiceParticipantsCount || 0;
-        
-        const userVoiceDoc = await getDoc(userVoiceRef);
-        if (userVoiceDoc.exists()) {
-             console.log("Kullanıcı zaten sesli sohbette.");
-             return { success: true };
-        }
-        
-        if (voiceCount >= 8) throw new Error("Sesli sohbet dolu.");
-        
-        const isHost = roomData.createdBy.uid === user.uid;
-        
-        const participantData = {
-            uid: user.uid,
-            username: user.displayName || 'Anonim',
-            photoURL: user.photoURL,
-            isSpeaker: isHost, 
-            isMuted: !isHost,
-            joinedAt: serverTimestamp(),
-            lastSpokeAt: serverTimestamp(),
-        };
+            const userVoiceDoc = await transaction.get(userVoiceRef);
+            if (userVoiceDoc.exists()) {
+                // Kullanıcı zaten sohbette, bir şey yapma.
+                return; 
+            }
+            
+            const voiceCount = roomData.voiceParticipantsCount || 0;
+            if (voiceCount >= roomData.maxParticipants) {
+                throw new Error("Sesli sohbet dolu.");
+            }
+            
+            const isHost = roomData.createdBy.uid === user.uid;
+            
+            const participantData = {
+                uid: user.uid,
+                username: user.displayName || 'Anonim',
+                photoURL: user.photoURL,
+                isSpeaker: isHost, // Yönetici her zaman konuşmacıdır
+                isMuted: !isHost,  // Yönetici değilse varsayılan olarak sessizde başlar
+                joinedAt: serverTimestamp(),
+                lastSpokeAt: serverTimestamp(),
+            };
 
-        const batch = writeBatch(db);
-        batch.set(userVoiceRef, participantData);
-        batch.update(roomRef, { voiceParticipantsCount: increment(1) });
-        await batch.commit();
+            transaction.set(userVoiceRef, participantData);
+            transaction.update(roomRef, { voiceParticipantsCount: increment(1) });
+        });
 
         return { success: true };
     } catch (error: any) {
@@ -124,13 +122,11 @@ export async function toggleSelfMute(roomId: string, userId: string, isMuted: bo
     const userVoiceRef = doc(db, 'rooms', roomId, 'voiceParticipants', userId);
     
     try {
-        const batch = writeBatch(db);
-        batch.update(userVoiceRef, { 
+        await updateDoc(userVoiceRef, { 
             isMuted: isMuted,
             // Kullanıcı sesini açtığında aktivite zamanını güncelle
             lastSpokeAt: serverTimestamp()
         });
-        await batch.commit();
         return { success: true };
     } catch (error: any) {
         return { success: false, error: error.message };
