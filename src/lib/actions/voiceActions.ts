@@ -10,6 +10,7 @@ import {
     query,
     where,
     getDocs,
+    getDoc,
     limit,
     serverTimestamp,
     increment,
@@ -32,51 +33,55 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
     if (!user || !user.uid) throw new Error("Yetkilendirme hatası: Giriş yapmalısınız.");
 
     const roomRef = doc(db, 'rooms', roomId);
-    const voiceParticipantsRef = collection(roomRef, 'voiceParticipants');
-    const userVoiceRef = doc(voiceParticipantsRef, user.uid);
+    const userVoiceRef = doc(db, 'rooms', roomId, 'voiceParticipants', user.uid);
 
     try {
-        await runTransaction(db, async (transaction) => {
-            const roomDoc = await transaction.get(roomRef);
-            if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
-            
-            const roomData = roomDoc.data();
-            if (!roomData) throw new Error("Oda verisi bulunamadı.");
+        const roomDoc = await getDoc(roomRef);
+        if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
 
-            const voiceCount = roomData.voiceParticipantsCount || 0;
-            if (voiceCount >= 8) throw new Error("Sesli sohbet dolu.");
-            
-            const userDoc = await transaction.get(userVoiceRef);
-            if (userDoc.exists()) {
-                console.log("Kullanıcı zaten sesli sohbette.");
-                return; 
-            }
-            
-            const createdBy = roomData.createdBy;
-            if (!createdBy || !createdBy.uid) throw new Error("Oda kurucusu bilgisi eksik.");
-            
-            const isHost = createdBy.uid === user.uid;
-            
-            // Yeni katılımcı belgesini oluştur
-            transaction.set(userVoiceRef, {
-                uid: user.uid,
-                username: user.displayName || 'Anonim',
-                photoURL: user.photoURL,
-                isSpeaker: isHost, 
-                isMuted: !isHost,
-                joinedAt: serverTimestamp(),
-                lastSpokeAt: serverTimestamp(),
-            });
+        const roomData = roomDoc.data();
+        if (!roomData) throw new Error("Oda verisi bulunamadı.");
+        
+        // Katılımcı olup olmadığını ana `participants` dizisinden kontrol et
+        const isRoomParticipant = (roomData.participants || []).some((p: any) => p.uid === user.uid);
+        if (!isRoomParticipant) {
+             throw new Error("Sesli sohbete katılmak için önce odaya katılmalısınız.");
+        }
 
-            // Oda belgesindeki katılımcı sayısını artır
-            transaction.update(roomRef, { voiceParticipantsCount: increment(1) });
-        });
+        const voiceCount = roomData.voiceParticipantsCount || 0;
+        
+        const userVoiceDoc = await getDoc(userVoiceRef);
+        if (userVoiceDoc.exists()) {
+             console.log("Kullanıcı zaten sesli sohbette.");
+             return { success: true };
+        }
+        
+        if (voiceCount >= 8) throw new Error("Sesli sohbet dolu.");
+        
+        const isHost = roomData.createdBy.uid === user.uid;
+        
+        const participantData = {
+            uid: user.uid,
+            username: user.displayName || 'Anonim',
+            photoURL: user.photoURL,
+            isSpeaker: isHost, 
+            isMuted: !isHost,
+            joinedAt: serverTimestamp(),
+            lastSpokeAt: serverTimestamp(),
+        };
+
+        const batch = writeBatch(db);
+        batch.set(userVoiceRef, participantData);
+        batch.update(roomRef, { voiceParticipantsCount: increment(1) });
+        await batch.commit();
+
         return { success: true };
     } catch (error: any) {
         console.error("Sesli sohbete katılırken hata:", error);
         return { success: false, error: error.message };
     }
 }
+
 
 /**
  * Kullanıcının sesli sohbetten ayrılması için sunucu eylemi.

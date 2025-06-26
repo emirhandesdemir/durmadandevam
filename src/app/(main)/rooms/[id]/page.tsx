@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
 import type { Room } from '@/lib/types';
-import { ChevronLeft, Loader2, MoreHorizontal, Mic, MicOff, Plus, Users } from 'lucide-react';
+import { ChevronLeft, Loader2, MoreHorizontal, Mic, MicOff, Plus, Users, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TextChat, { type Message } from '@/components/chat/text-chat';
 import ChatMessageInput from '@/components/chat/ChatMessageInput';
@@ -106,7 +106,6 @@ export default function RoomPage() {
     const isRoomParticipant = room.participants?.some(p => p.uid === user?.uid);
     const hostParticipant = participants.find(p => p.uid === room.createdBy.uid);
     const otherParticipants = participants.filter(p => p.uid !== room.createdBy.uid);
-    const displayParticipants = hostParticipant ? [hostParticipant, ...otherParticipants] : otherParticipants;
 
     return (
         <>
@@ -132,30 +131,57 @@ export default function RoomPage() {
 
                 {/* Main Content (Voice Stage + Chat) */}
                 <main ref={chatContainerRef} className="flex-1 overflow-y-auto p-4">
-                    {/* Voice Stage */}
-                    <div className="grid grid-cols-4 gap-4 text-center mb-6">
-                        {Array.from({ length: 8 }).map((_, index) => {
-                            const participant = displayParticipants[index];
-                            if (participant) {
-                                return (
-                                    <VoiceUserIcon
-                                        key={participant.uid}
-                                        participant={participant}
-                                        isHost={isHost}
-                                        currentUserId={user!.uid}
-                                        roomId={roomId}
-                                        isParticipantTheHost={participant.uid === room.createdBy.uid}
-                                    />
-                                );
-                            } else {
-                                return (
-                                    <div key={`placeholder-${index}`} className="flex flex-col items-center justify-center aspect-square bg-gray-800/40 rounded-full">
-                                        <Plus className="h-6 w-6 text-gray-600" />
+                     {/* Voice Stage */}
+                    <div className="mb-6 space-y-8">
+                        {/* Host Area */}
+                        <div className="flex flex-col items-center">
+                            {hostParticipant ? (
+                                <VoiceUserIcon
+                                    key={hostParticipant.uid}
+                                    participant={hostParticipant}
+                                    isHost={isHost}
+                                    currentUserId={user!.uid}
+                                    roomId={roomId}
+                                    isParticipantTheHost={true}
+                                    size="lg" // Make host icon larger
+                                />
+                            ) : (
+                                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                                    <div className="flex items-center justify-center h-24 w-24 rounded-full bg-gray-800/40 border-2 border-dashed border-gray-600">
+                                        <Crown className="h-8 w-8 text-gray-600" />
                                     </div>
-                                );
-                            }
-                        })}
+                                    <p className="text-xs font-semibold">Oda Sahibi</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Other Participants Area */}
+                        <div className="grid grid-cols-4 gap-4 text-center">
+                            {Array.from({ length: 7 }).map((_, index) => {
+                                const participant = otherParticipants[index];
+                                if (participant) {
+                                    return (
+                                        <VoiceUserIcon
+                                            key={participant.uid}
+                                            participant={participant}
+                                            isHost={isHost}
+                                            currentUserId={user!.uid}
+                                            roomId={roomId}
+                                            isParticipantTheHost={false}
+                                            size="sm"
+                                        />
+                                    );
+                                } else {
+                                    return (
+                                        <div key={`placeholder-${index}`} className="flex flex-col items-center justify-center aspect-square bg-gray-800/40 rounded-full">
+                                            <Plus className="h-6 w-6 text-gray-600" />
+                                        </div>
+                                    );
+                                }
+                            })}
+                        </div>
                     </div>
+
 
                     {/* Chat Messages */}
                     <TextChat messages={messages} loading={messagesLoading} />
