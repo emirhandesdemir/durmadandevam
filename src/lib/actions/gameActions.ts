@@ -83,6 +83,14 @@ export async function deleteQuestion(id: string) {
 export async function startGameInRoom(roomId: string) {
     const roomRef = doc(db, 'rooms', roomId);
     
+    // Aktif bir oyun olup olmadığını son bir kez kontrol et
+    const activeGamesQuery = query(collection(roomRef, 'games'), where('status', '==', 'active'), limit(1));
+    const activeGamesSnapshot = await getDocs(activeGamesQuery);
+    if (!activeGamesSnapshot.empty) {
+        console.warn("Zaten aktif bir oyun var, yeni oyun başlatılamadı.");
+        return;
+    }
+
     // 1. Rastgele bir soru seç
     const questionsRef = collection(db, 'game_questions');
     const questionsSnapshot = await getDocs(questionsRef);
@@ -154,13 +162,13 @@ export async function submitAnswer(roomId: string, gameId: string, userId: strin
                 const dailyEarnings = userData.dailyDiamonds?.[today] || 0;
 
                 if (dailyEarnings >= dailyLimit) {
-                    // Limite ulaşıldı, sadece tebrik mesajı gönder
+                    // Limite ulaşıldı, sadece tebrik mesajı gönder ve oyunu bitir
                     const systemMessage = {
                         type: 'game', text: `🎉 ${userData.username} doğru cevap verdi ancak günlük ödül limitine ulaştı!`,
                         createdAt: serverTimestamp(), uid: 'system', username: 'System',
                     };
                     transaction.set(doc(messagesRef), systemMessage);
-                     transaction.update(gameRef, { status: 'finished' });
+                    transaction.update(gameRef, { status: 'finished' });
                     return;
                 }
                 
@@ -184,5 +192,46 @@ export async function submitAnswer(roomId: string, gameId: string, userId: strin
         // Hataları kullanıcıya bildirmek için `throw e;` kullanılabilir.
         // Bu, istemci tarafında yakalanıp toast ile gösterilebilir.
         throw e;
+    }
+}
+
+
+/**
+ * Süre dolduğunda veya kimse doğru cevap veremediğinde oyunu bitirir.
+ * @param roomId Oda ID'si
+ * @param gameId Oyun ID'si
+ */
+export async function endGameWithoutWinner(roomId: string, gameId: string) {
+    const gameRef = doc(db, 'rooms', roomId, 'games', gameId);
+    const messagesRef = collection(db, 'rooms', roomId, 'messages');
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            const gameDoc = await transaction.get(gameRef);
+
+            // Eğer oyun zaten bitmişse (örn: biri cevap vermişse) işlem yapma
+            if (!gameDoc.exists() || gameDoc.data().status !== 'active') {
+                return;
+            }
+
+            const gameData = gameDoc.data();
+            const correctOptionText = gameData.options[gameData.correctOptionIndex];
+
+            // Oyunu bitir
+            transaction.update(gameRef, { status: 'finished' });
+
+            // Sistem mesajı gönder
+            const systemMessage = {
+                type: 'game',
+                text: `Süre doldu! Kimse doğru cevabı bilemedi. Doğru cevap: "${correctOptionText}"`,
+                createdAt: serverTimestamp(),
+                uid: 'system',
+                username: 'System'
+            };
+            transaction.set(doc(messagesRef), systemMessage);
+        });
+    } catch (error) {
+        console.error("Oyun bitirilirken hata:", error);
+        // Bu hata genellikle kullanıcıya gösterilmez, sadece loglanır.
     }
 }

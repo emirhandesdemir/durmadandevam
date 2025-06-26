@@ -8,7 +8,6 @@ import { db } from '@/lib/firebase';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { submitAnswer } from '@/lib/actions/gameActions';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,7 +22,6 @@ import { useToast } from '@/hooks/use-toast';
  * Bir oda içindeki gerçek zamanlı metin sohbetini yönetir.
  * - Firestore'dan mesajları dinler ve anlık olarak günceller.
  * - Kullanıcıların mesaj göndermesini sağlar.
- * - Quiz oyunu için `/answer` komutlarını yakalar ve işler.
  */
 
 // Mesaj verisinin arayüzü
@@ -40,10 +38,9 @@ interface Message {
 interface TextChatProps {
   roomId: string;
   canSendMessage: boolean;
-  gameId: string | null; // Aktif oyunun ID'si
 }
 
-export default function TextChat({ roomId, canSendMessage, gameId }: TextChatProps) {
+export default function TextChat({ roomId, canSendMessage }: TextChatProps) {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
   const [message, setMessage] = useState('');
@@ -95,31 +92,15 @@ export default function TextChat({ roomId, canSendMessage, gameId }: TextChatPro
     setMessage(''); // Input'u hemen temizle
 
     try {
-        // Oyun cevabı komutunu kontrol et
-        if (textToSend.trim().startsWith('/answer ')) {
-            const answerParts = textToSend.trim().split(' ');
-            const answerNumber = parseInt(answerParts[1], 10);
-
-            if (gameId && !isNaN(answerNumber) && answerNumber > 0) {
-                await submitAnswer(roomId, gameId, currentUser.uid, answerNumber - 1); // 1-based to 0-based
-            } else {
-                toast({
-                    title: "Geçersiz Komut",
-                    description: "Cevap vermek için `/answer <numara>` formatını kullanın.",
-                    variant: "destructive"
-                });
-            }
-        } else {
-            // Normal mesaj gönder
-            await addDoc(collection(db, "rooms", roomId, "messages"), {
-                uid: currentUser.uid,
-                username: currentUser.displayName || 'Anonim',
-                photoURL: currentUser.photoURL,
-                text: textToSend,
-                createdAt: serverTimestamp(),
-                type: 'user',
-            });
-        }
+        // Normal mesaj gönder
+        await addDoc(collection(db, "rooms", roomId, "messages"), {
+            uid: currentUser.uid,
+            username: currentUser.displayName || 'Anonim',
+            photoURL: currentUser.photoURL,
+            text: textToSend,
+            createdAt: serverTimestamp(),
+            type: 'user',
+        });
     } catch (error: any) {
         console.error("Mesaj gönderilirken hata: ", error);
         toast({
@@ -136,7 +117,7 @@ export default function TextChat({ roomId, canSendMessage, gameId }: TextChatPro
   if (!currentUser) return null;
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col pt-4">
       <ScrollArea className="flex-1 pr-4" ref={scrollAreaRef}>
         <div className="space-y-6 p-4">
           {loading && (
@@ -194,7 +175,7 @@ export default function TextChat({ roomId, canSendMessage, gameId }: TextChatPro
             <Input 
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder={gameId ? "/answer <numara> ile cevapla..." : "Bir mesaj yaz..."}
+              placeholder="Bir mesaj yaz..."
               autoComplete="off"
               className="rounded-full flex-1 py-5 focus-visible:ring-offset-0 focus-visible:ring-2"
               disabled={isSending}
