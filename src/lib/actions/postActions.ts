@@ -16,11 +16,11 @@ import {
     increment,
     runTransaction
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { ref, uploadString, getDownloadURL, deleteObject, uploadBytes } from "firebase/storage";
 
 interface AddPostArgs {
     text: string;
-    imageFile: File | null;
+    image: File | string | null; // Artık File veya base64 string olabilir
     user: {
         uid: string;
         displayName: string | null;
@@ -31,19 +31,27 @@ interface AddPostArgs {
 
 /**
  * Yeni bir gönderi oluşturur, gerekirse resim yükler ve Firestore'a kaydeder.
- * @param {AddPostArgs} args - Gönderi metni, resim dosyası ve kullanıcı bilgileri.
+ * @param {AddPostArgs} args - Gönderi metni, resim dosyası (veya base64 string) ve kullanıcı bilgileri.
  */
-export async function addPost({ text, imageFile, user, role }: AddPostArgs) {
+export async function addPost({ text, image, user, role }: AddPostArgs) {
     if (!user || !user.uid) {
         throw new Error("Yetkilendirme hatası: Kullanıcı bilgileri eksik.");
     }
     
     let imageUrl = "";
-    if (imageFile) {
-        // Resmi Firebase Storage'a yükle
-        const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}_${imageFile.name}`);
-        const snapshot = await uploadBytes(imageRef, imageFile);
-        imageUrl = await getDownloadURL(snapshot.ref); // Yüklenen resmin URL'ini al
+    if (image) {
+        const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}_post`);
+        
+        if (typeof image === 'string') {
+            // Eğer resim base64 string ise (AI filtresinden geliyorsa)
+            // 'data_url' formatında yükle
+            const snapshot = await uploadString(imageRef, image, 'data_url');
+            imageUrl = await getDownloadURL(snapshot.ref);
+        } else {
+            // Eğer resim File nesnesi ise (orijinal yükleme)
+            const snapshot = await uploadBytes(imageRef, image);
+            imageUrl = await getDownloadURL(snapshot.ref);
+        }
     }
 
     // Yeni gönderi dökümanını Firestore'a ekle
