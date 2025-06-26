@@ -8,17 +8,14 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { useVoiceChat } from '@/hooks/useVoiceChat';
-import { joinVoiceChat, leaveVoiceChat, toggleSelfMute } from '@/lib/actions/voiceActions';
+import { useVoiceChat } from '@/contexts/VoiceChatContext';
 import type { Room } from '@/lib/types';
-import { ChevronLeft, Loader2, MoreHorizontal, Mic, MicOff, Plus, Users, Crown, ShieldCheck } from 'lucide-react';
+import { ChevronLeft, Loader2, MoreHorizontal, Mic, MicOff, Plus, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TextChat, { type Message } from '@/components/chat/text-chat';
 import ChatMessageInput from '@/components/chat/ChatMessageInput';
 import VoiceUserIcon from '@/components/voice/VoiceUserIcon';
-import { cn } from '@/lib/utils';
 import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function RoomPage() {
     const params = useParams();
@@ -27,12 +24,18 @@ export default function RoomPage() {
     const roomId = params.id as string;
     
     const { user, loading: authLoading } = useAuth();
-    const { participants, self } = useVoiceChat(roomId);
+    const { 
+        participants, 
+        self, 
+        isConnecting, 
+        isConnected, 
+        joinRoom, 
+        toggleSelfMute 
+    } = useVoiceChat();
 
     const [room, setRoom] = useState<Room | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [messagesLoading, setMessagesLoading] = useState(true);
-    const [isJoiningVoice, setIsJoiningVoice] = useState(false);
     const [isParticipantSheetOpen, setIsParticipantSheetOpen] = useState(false);
     const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -62,21 +65,9 @@ export default function RoomPage() {
              return;
         }
 
-        setIsJoiningVoice(true);
-        try {
-            await joinVoiceChat(roomId, user);
-        } catch (error: any) {
-            toast({ title: "Sesli Sohbet Hatası", description: error.message, variant: "destructive" });
-        } finally {
-            setIsJoiningVoice(false);
-        }
+        await joinRoom(room);
     };
     
-    const handleLeaveVoice = async () => {
-        if(!user) return;
-        await leaveVoiceChat(roomId, user.uid);
-    }
-
     // Metin sohbeti mesajlarını dinle
     useEffect(() => {
         if (!roomId) return;
@@ -106,14 +97,10 @@ export default function RoomPage() {
             toast({ variant: "destructive", title: "Dinleyici Modu", description: "Konuşmak için oda yöneticisinden izin istemelisiniz." });
             return;
         }
-        const result = await toggleSelfMute(roomId, user.uid, !self.isMuted);
-        if (!result.success) {
-            toast({ variant: "destructive", description: result.error});
-        }
+        await toggleSelfMute();
     };
 
     const isLoading = authLoading || !room;
-    const isVoiceConnected = !!self;
 
     if (isLoading) {
         return (
@@ -197,13 +184,13 @@ export default function RoomPage() {
 
                 {/* Footer / Input */}
                 <footer className="flex items-center gap-3 p-3 border-t border-gray-700/50 bg-gray-900 shrink-0">
-                    {isVoiceConnected ? (
+                    {isConnected ? (
                         <Button onClick={handleToggleMute} variant="ghost" size="icon" className="rounded-full bg-gray-700/50 hover:bg-gray-600/50">
                             {self?.isMuted ? <MicOff className="h-5 w-5 text-red-500"/> : <Mic className="h-5 w-5 text-white"/>}
                         </Button>
                     ) : (
-                         <Button onClick={handleJoinVoice} disabled={isJoiningVoice} className="rounded-full bg-primary text-primary-foreground h-10 px-4">
-                            {isJoiningVoice ? <Loader2 className="h-5 w-5 animate-spin"/> : <Mic className="h-5 w-5"/>}
+                         <Button onClick={handleJoinVoice} disabled={isConnecting} className="rounded-full bg-primary text-primary-foreground h-10 px-4">
+                            {isConnecting ? <Loader2 className="h-5 w-5 animate-spin"/> : <Mic className="h-5 w-5"/>}
                             <span className="ml-2">Katıl</span>
                          </Button>
                     )}
