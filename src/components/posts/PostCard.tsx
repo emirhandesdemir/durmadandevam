@@ -124,6 +124,28 @@ export default function PostCard({ post }: PostCardProps) {
         }
     };
 
+    // Gönderi metnini hashtag ve mention'lar ile işleyen fonksiyon
+    const renderTextWithLinks = (text: string) => {
+        const parts = text.split(/(#\w+|@\w+)/g);
+        return parts.map((part, i) => {
+            if (part.startsWith('@')) {
+                return (
+                    <span key={i} className="font-semibold text-primary hover:underline cursor-pointer">
+                        {part}
+                    </span>
+                );
+            }
+            if (part.startsWith('#')) {
+                return (
+                    <span key={i} className="font-semibold text-accent hover:underline cursor-pointer">
+                        {part}
+                    </span>
+                );
+            }
+            return part;
+        });
+    };
+
     return (
         <>
             <Card className="w-full animate-in fade-in-50 duration-500 overflow-hidden rounded-2xl border bg-card/50 shadow-lg shadow-black/5">
@@ -200,7 +222,7 @@ export default function PostCard({ post }: PostCardProps) {
                                 </div>
                             </div>
                         ) : (
-                            <p className="text-sm leading-relaxed whitespace-pre-wrap">{post.text}</p>
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap">{renderTextWithLinks(post.text)}</p>
                         )}
 
                         {post.imageUrl && !isEditing && (
@@ -222,21 +244,21 @@ export default function PostCard({ post }: PostCardProps) {
                     <Button
                         variant="ghost"
                         className={cn(
-                            "group rounded-full px-3 text-muted-foreground hover:bg-red-500/10 hover:text-red-500",
-                            isLiked && "text-red-500"
+                            "group rounded-full px-3 text-muted-foreground hover:bg-destructive/10 hover:text-destructive",
+                            isLiked && "text-destructive"
                         )}
                         onClick={handleLike}
                         disabled={isLiking || !currentUser}
                     >
                         <Heart className={cn(
                             "mr-2 h-4 w-4 transition-transform group-hover:scale-110",
-                            isLiked ? "fill-current" : "group-hover:fill-red-500/50"
+                            isLiked ? "fill-current" : "group-hover:fill-destructive/50"
                         )} />
                         <span className="text-xs">{post.likeCount || 0}</span>
                     </Button>
                     <Button
                         variant="ghost"
-                        className="group rounded-full px-3 text-muted-foreground hover:bg-blue-500/10 hover:text-blue-500"
+                        className="group rounded-full px-3 text-muted-foreground hover:bg-primary/10 hover:text-primary"
                         onClick={() => setShowComments(true)}
                     >
                         <MessageCircle className="mr-2 h-4 w-4 transition-transform group-hover:scale-110" />
