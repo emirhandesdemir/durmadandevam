@@ -34,6 +34,7 @@ interface VoiceUserIconProps {
   isHost: boolean;
   currentUserId: string;
   roomId: string;
+  size?: 'sm' | 'lg';
 }
 
 /**
@@ -45,6 +46,7 @@ export default function VoiceUserIcon({
   isHost,
   currentUserId,
   roomId,
+  size = 'sm'
 }: VoiceUserIconProps) {
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -74,12 +76,13 @@ export default function VoiceUserIcon({
   };
 
   const menuContent = (
-    <DropdownMenuContent align="center">
+    <DropdownMenuContent align="center" className="bg-gray-800 border-gray-700 text-white">
       <DropdownMenuLabel>{participant.username}</DropdownMenuLabel>
-      <DropdownMenuSeparator />
+      <DropdownMenuSeparator className="bg-gray-700"/>
       {participant.isSpeaker ? (
         <DropdownMenuItem
           onClick={() => handleAction(updateSpeakerStatus, false)}
+          className="focus:bg-gray-700"
         >
           <VolumeX className="mr-2 h-4 w-4" />
           <span>Dinleyici Yap</span>
@@ -87,14 +90,15 @@ export default function VoiceUserIcon({
       ) : (
         <DropdownMenuItem
           onClick={() => handleAction(updateSpeakerStatus, true)}
+          className="focus:bg-gray-700"
         >
           <Volume2 className="mr-2 h-4 w-4" />
           <span>Konuşmacı Yap</span>
         </DropdownMenuItem>
       )}
-      <DropdownMenuSeparator />
+      <DropdownMenuSeparator className="bg-gray-700"/>
       <DropdownMenuItem
-        className="text-destructive focus:text-destructive"
+        className="text-red-400 focus:text-red-400 focus:bg-red-900/50"
         onClick={() => handleAction(kickFromVoice)}
       >
         <LogOut className="mr-2 h-4 w-4" />
@@ -102,29 +106,36 @@ export default function VoiceUserIcon({
       </DropdownMenuItem>
     </DropdownMenuContent>
   );
+  
+  const avatarSize = size === 'lg' ? "h-24 w-24" : "h-16 w-16";
+  const nameSize = size === 'lg' ? "text-sm" : "text-xs";
+  const iconSize = size === 'lg' ? "h-5 w-5" : "h-4 w-4";
+  const iconBadgePos = size === 'lg' ? "bottom-2 right-2" : "bottom-1 right-1";
 
   const avatar = (
-    <div className="relative">
+    <div className="relative flex flex-col items-center gap-2">
       <Avatar
         className={cn(
-          "h-12 w-12 border-2 transition-all duration-300",
+          "border-2 transition-all duration-300",
+          avatarSize,
           participant.isSpeaker && !participant.isMuted
             ? "border-green-500 shadow-lg shadow-green-500/50 animate-pulse"
             : "border-transparent"
         )}
       >
         <AvatarImage src={participant.photoURL || undefined} />
-        <AvatarFallback>
+        <AvatarFallback className="bg-gray-700 text-gray-300">
           {participant.username?.charAt(0).toUpperCase()}
         </AvatarFallback>
       </Avatar>
-      <div className="absolute -bottom-1 -right-1 bg-card p-1 rounded-full shadow-md">
+       <div className={cn("absolute bg-gray-800 p-1.5 rounded-full shadow-md", iconBadgePos)}>
         {participant.isMuted ? (
-          <MicOff className="h-3 w-3 text-destructive" />
+          <MicOff className={cn(iconSize, "text-red-500")} />
         ) : (
-          <Mic className="h-3 w-3 text-foreground" />
+          <Mic className={cn(iconSize, "text-white")} />
         )}
       </div>
+      <p className={cn("font-semibold text-white truncate max-w-full", nameSize)}>{participant.username}</p>
     </div>
   );
 
@@ -135,10 +146,12 @@ export default function VoiceUserIcon({
         <DropdownMenuTrigger asChild>
           <button
             disabled={isProcessing}
-            className="cursor-pointer rounded-full"
+            className="cursor-pointer rounded-full text-center"
           >
             {isProcessing ? (
-              <Loader2 className="h-12 w-12 animate-spin" />
+              <div className={cn("flex items-center justify-center rounded-full bg-gray-800/50", avatarSize)}>
+                  <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
             ) : (
               avatar
             )}
