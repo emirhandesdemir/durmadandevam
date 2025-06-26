@@ -60,7 +60,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
                 username: user.displayName || 'Anonim',
                 photoURL: user.photoURL,
                 isSpeaker: true, 
-                isMuted: true, // Herkes sessizde başlar, kendisi açar
+                isMuted: false, // Kullanıcılar varsayılan olarak konuşabilir.
                 joinedAt: serverTimestamp() as Timestamp,
             };
             

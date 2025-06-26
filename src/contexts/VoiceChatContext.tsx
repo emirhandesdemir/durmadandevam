@@ -50,12 +50,21 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     
     // --- Katılımcı Listesi Dinleyicisi ---
     useEffect(() => {
-        if (!activeRoom?.id || !user) {
+        const pathParts = pathname.split('/');
+        // Check if we are on a room page: /rooms/[id]
+        const roomIdFromPath = pathParts[1] === 'rooms' && pathParts[2] ? pathParts[2] : null;
+
+        // The room to listen to is the one we are actively connected to,
+        // OR the one we are currently viewing on its page.
+        const roomIdToListen = activeRoom?.id || roomIdFromPath;
+
+        if (!roomIdToListen) {
+            // If there's no room to listen to, clear participants and stop.
             if (participants.length > 0) setParticipants([]);
             return;
         }
 
-        const voiceParticipantsRef = collection(db, "rooms", activeRoom.id, "voiceParticipants");
+        const voiceParticipantsRef = collection(db, "rooms", roomIdToListen, "voiceParticipants");
         const unsubscribe = onSnapshot(voiceParticipantsRef, (snapshot) => {
             const fetchedParticipants = snapshot.docs.map(doc => doc.data() as VoiceParticipant);
             setParticipants(fetchedParticipants);
@@ -65,7 +74,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         });
 
         return () => unsubscribe();
-    }, [activeRoom?.id, user]);
+    }, [activeRoom?.id, pathname, toast]);
+
 
     const leaveRoom = useCallback(async (force = false) => {
         if (!user || !activeRoom) return;
@@ -229,7 +239,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             username: user.displayName || 'Anonim',
             photoURL: user.photoURL,
             isSpeaker: true,
-            isMuted: true, // Start muted
+            isMuted: false, // Start unmuted
             joinedAt: new Date() as unknown as Timestamp, // Temporary timestamp
         };
         setParticipants(prev => [...prev, optimisticParticipant]);
