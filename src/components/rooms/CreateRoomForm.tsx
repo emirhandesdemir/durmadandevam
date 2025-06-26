@@ -106,8 +106,12 @@ export default function CreateRoomForm() {
                   role: userData.role || 'user'
                 },
                 createdAt: serverTimestamp(),
-                participants: [], // Başlangıçta boş katılımcı listesi
-                maxParticipants: 7, // Maksimum katılımcı sayısı
+                participants: [{
+                    uid: user.uid,
+                    username: user.displayName || "Anonim",
+                    photoURL: user.photoURL || null
+                }], // Başlangıçta kurucuyu katılımcı olarak ekle
+                maxParticipants: 8, // Maksimum katılımcı sayısı (1 kurucu + 7 kişi)
                 voiceParticipantsCount: 0, // Sesli sohbet katılımcı sayısı
                 nextGameTimestamp, // İlk oyun zamanı
             };
