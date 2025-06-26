@@ -25,7 +25,7 @@ interface VoiceChatContextType {
     isConnected: boolean;
     remoteStreams: Record<string, MediaStream>; // UID -> MediaStream
     joinRoom: (roomToJoin: Room) => Promise<void>;
-    leaveRoom: () => Promise<void>;
+    leaveRoom: (force?: boolean) => Promise<void>;
     toggleSelfMute: () => Promise<void>;
 }
 
@@ -45,10 +45,13 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const [remoteStreams, setRemoteStreams] = useState<Record<string, MediaStream>>({});
     const peerConnections = useRef<Record<string, RTCPeerConnection>>({});
 
+    const self = participants.find(p => p.uid === user?.uid) || null;
+    const isConnected = !!self;
+    
     // --- Katılımcı Listesi Dinleyicisi ---
     useEffect(() => {
-        if (!activeRoom || !user) {
-            setParticipants([]);
+        if (!activeRoom?.id || !user) {
+            if (participants.length > 0) setParticipants([]);
             return;
         }
 
@@ -56,22 +59,56 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         const unsubscribe = onSnapshot(voiceParticipantsRef, (snapshot) => {
             const fetchedParticipants = snapshot.docs.map(doc => doc.data() as VoiceParticipant);
             setParticipants(fetchedParticipants);
-            
-            if (participants.length > 0 && !snapshot.docs.some(doc => doc.id === user.uid)) {
-                leaveRoom(true);
-            }
         }, (error) => {
              console.error("Voice participants listener error:", error);
              toast({ variant: "destructive", title: "Bağlantı Hatası", description: "Sesli sohbet durumu alınamadı." });
         });
 
         return () => unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeRoom, user]);
+    }, [activeRoom?.id, user, toast, participants.length]);
+
+    const leaveRoom = useCallback(async (force = false) => {
+        if (!user || !activeRoom) return;
+
+        // Only call server if not a forced local cleanup
+        if (!force) {
+            try {
+                await leaveVoiceChat(activeRoom.id, user.uid);
+            } catch (e) {
+                console.error("Failed to call leaveVoiceChat action:", e);
+            }
+        }
+        
+        // Close all peer connections
+        Object.values(peerConnections.current).forEach(pc => pc.close());
+        peerConnections.current = {};
+        
+        // Stop local media stream
+        localStream?.getTracks().forEach(track => track.stop());
+        setLocalStream(null);
+
+        // Clear state immediately for the leaving user's UI
+        setRemoteStreams({});
+        setActiveRoom(null);
+        setParticipants([]);
+    }, [user, activeRoom, localStream]);
     
-    const self = participants.find(p => p.uid === user?.uid) || null;
-    const isConnected = !!self;
-    
+    // Effect to handle user leaving the page (closing tab, navigating away)
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            // This is a "fire and forget" call. The browser does not guarantee
+            // completion of async operations on unload.
+            if (isConnected && activeRoom && user) {
+                leaveVoiceChat(activeRoom.id, user.uid);
+            }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [isConnected, activeRoom, user]);
+
+
     // --- Sinyalleşme Dinleyicisi (WebRTC için) ---
     useEffect(() => {
         if (!user || !activeRoom || !localStream) return;
@@ -90,6 +127,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         });
 
         return () => unsubscribe();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user, activeRoom, localStream]);
 
 
@@ -208,11 +246,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             });
 
             if (!result.success) {
-                // Rollback optimistic UI on failure
-                setParticipants(prev => prev.filter(p => p.uid !== user.uid));
-                setActiveRoom(null);
-                stream.getTracks().forEach(track => track.stop());
-                setLocalStream(null);
                 throw new Error(result.error || 'Sesli sohbete katılırken bir hata oluştu.');
             }
             // On success, the real-time listener will update the participant list with the correct data
@@ -220,36 +253,13 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             console.error("Could not join voice chat:", error);
             toast({ variant: "destructive", title: "Katılım Başarısız", description: error.message });
             // Rollback optimistic UI on error
-            setParticipants(prev => prev.filter(p => p.uid !== user.uid));
-            setActiveRoom(null);
-            setLocalStream(null);
+            leaveRoom(true);
         } finally {
             setIsConnecting(false);
         }
-    }, [user, isConnected, isConnecting, toast]);
+    }, [user, isConnected, isConnecting, toast, leaveRoom]);
 
 
-    const leaveRoom = useCallback(async (force = false) => {
-        if (!user || !activeRoom) return;
-
-        if (!force) {
-            await leaveVoiceChat(activeRoom.id, user.uid);
-        }
-        
-        // Close all peer connections
-        Object.values(peerConnections.current).forEach(pc => pc.close());
-        peerConnections.current = {};
-        
-        // Stop local media stream
-        localStream?.getTracks().forEach(track => track.stop());
-        setLocalStream(null);
-
-        // Clear state
-        setRemoteStreams({});
-        setActiveRoom(null);
-        setParticipants([]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user, activeRoom, localStream]);
     
     const toggleSelfMute = useCallback(async () => {
         if (!self || !activeRoom || !localStream) return;
