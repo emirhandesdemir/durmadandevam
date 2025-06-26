@@ -62,11 +62,7 @@ export default function RoomPage() {
 
         setIsJoining(true);
         try {
-            await joinVoiceChat(roomId, {
-                uid: user.uid,
-                displayName: user.displayName,
-                photoURL: user.photoURL,
-            });
+            await joinVoiceChat(roomId, user);
         } catch (error: any) {
             toast({ title: "Sesli Sohbet Hatası", description: error.message, variant: "destructive" });
         } finally {
@@ -113,7 +109,7 @@ export default function RoomPage() {
 
     if (isLoading) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-gray-900">
+            <div className="flex min-h-dvh items-center justify-center bg-gray-900">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
             </div>
         );
@@ -157,6 +153,7 @@ export default function RoomPage() {
                                 currentUserId={user!.uid}
                                 roomId={roomId}
                                 size="lg"
+                                isParticipantTheHost={true}
                             />
                         ) : <div className="aspect-square"></div> }
                     </div>
@@ -171,6 +168,7 @@ export default function RoomPage() {
                                         isHost={isHost}
                                         currentUserId={user!.uid}
                                         roomId={roomId}
+                                        isParticipantTheHost={false}
                                     />
                                 ) : (
                                     <div className="flex flex-col items-center justify-center aspect-square bg-gray-800/40 rounded-full">

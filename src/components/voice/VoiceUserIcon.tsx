@@ -19,6 +19,7 @@ import {
 import type { VoiceParticipant } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
+  Crown,
   Mic,
   MicOff,
   User,
@@ -28,6 +29,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { useState } from "react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 
 interface VoiceUserIconProps {
   participant: VoiceParticipant;
@@ -35,6 +38,7 @@ interface VoiceUserIconProps {
   currentUserId: string;
   roomId: string;
   size?: 'sm' | 'lg';
+  isParticipantTheHost: boolean;
 }
 
 /**
@@ -46,7 +50,8 @@ export default function VoiceUserIcon({
   isHost,
   currentUserId,
   roomId,
-  size = 'sm'
+  size = 'sm',
+  isParticipantTheHost,
 }: VoiceUserIconProps) {
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -135,7 +140,21 @@ export default function VoiceUserIcon({
           <Mic className={cn(iconSize, "text-white")} />
         )}
       </div>
-      <p className={cn("font-semibold text-white truncate max-w-full", nameSize)}>{participant.username}</p>
+      <div className="flex items-center justify-center gap-1.5">
+          <p className={cn("font-semibold text-white truncate", nameSize, size === 'lg' ? 'max-w-[120px]' : 'max-w-[80px]')}>{participant.username}</p>
+          {isParticipantTheHost && (
+              <TooltipProvider>
+                  <Tooltip>
+                      <TooltipTrigger>
+                          <Crown className={cn("text-yellow-400", size === 'lg' ? 'h-5 w-5' : 'h-4 w-4' )} />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                          <p>Oda Sahibi</p>
+                      </TooltipContent>
+                  </Tooltip>
+              </TooltipProvider>
+          )}
+      </div>
     </div>
   );
 
