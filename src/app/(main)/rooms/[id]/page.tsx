@@ -1,3 +1,4 @@
+
 // src/app/(main)/rooms/[id]/page.tsx
 "use client";
 
@@ -58,13 +59,8 @@ export default function RoomPage() {
 
     const handleJoinVoice = async () => {
         if (!user || !room) return;
-        
-        const isAlreadyInRoom = room.participants?.some(p => p.uid === user.uid);
-        if(!isAlreadyInRoom) {
-             toast({ title: "Hata", description: "Önce odaya katılmalısınız.", variant: "destructive" });
-             return;
-        }
-
+        // Hatalı kontrol kaldırıldı. İstek doğrudan joinRoom'a yönlendiriliyor.
+        // Sunucu mantığı, kullanıcının odaya ait olup olmadığını ve host olup olmadığını zaten kontrol ediyor.
         await joinRoom(room);
     };
     
