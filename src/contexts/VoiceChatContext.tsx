@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Room, VoiceParticipant } from '@/lib/types';
 import { joinVoiceChat, leaveVoiceChat, toggleSelfMute as toggleMuteAction } from '@/lib/actions/voiceActions';
@@ -47,6 +47,9 @@ export function VoiceChatProvider({ children }: { children: React.ReactNode }) {
             if (participants.length > 0 && !snapshot.docs.some(doc => doc.id === user.uid)) {
                 leaveRoom(true); // Sunucuya tekrar istek göndermeden zorla çıkış yap
             }
+        }, (error) => {
+             console.error("Voice participants listener error:", error);
+             toast({ variant: "destructive", title: "Bağlantı Hatası", description: "Sesli sohbet durumu alınamadı." });
         });
 
         return () => unsubscribe();
@@ -69,7 +72,7 @@ export function VoiceChatProvider({ children }: { children: React.ReactNode }) {
     const isConnected = !!self;
 
     const joinRoom = useCallback(async (roomToJoin: Room) => {
-        if (!user || isConnected) return;
+        if (!user || isConnected || isConnecting) return;
         setIsConnecting(true);
         try {
             const result = await joinVoiceChat(roomToJoin.id, {
@@ -80,6 +83,17 @@ export function VoiceChatProvider({ children }: { children: React.ReactNode }) {
 
             if (result.success) {
                 setActiveRoom(roomToJoin);
+                // Optimistic UI Update: Add self to participants list immediately
+                const selfParticipant: VoiceParticipant = {
+                    uid: user.uid,
+                    username: user.displayName || 'Anonim',
+                    photoURL: user.photoURL,
+                    isSpeaker: roomToJoin.createdBy.uid === user.uid,
+                    isMuted: roomToJoin.createdBy.uid !== user.uid,
+                    joinedAt: new Date() as unknown as Timestamp, // Temporary timestamp
+                };
+                setParticipants(prev => [...prev, selfParticipant]);
+
             } else {
                 throw new Error(result.error || 'Sesli sohbete katılırken bir hata oluştu.');
             }
@@ -90,7 +104,7 @@ export function VoiceChatProvider({ children }: { children: React.ReactNode }) {
         } finally {
             setIsConnecting(false);
         }
-    }, [user, isConnected, toast]);
+    }, [user, isConnected, isConnecting, toast]);
 
     const leaveRoom = useCallback(async (force = false) => {
         if (!user || !activeRoom) return;

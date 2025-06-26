@@ -104,7 +104,7 @@ export default function RoomPage() {
 
     const isLoading = authLoading || !room;
     
-    // Yükleme durumunu kontrol et: bağlanıyor VEYA bağlandı ama katılımcı verisi henüz gelmedi
+    // Yükleme durumunu kontrol et: bağlanıyor veya ilk katılımcı verisi henüz gelmedi
     const showVoiceStageLoader = isConnecting || (isConnected && participants.length === 0);
 
     if (isLoading) {
