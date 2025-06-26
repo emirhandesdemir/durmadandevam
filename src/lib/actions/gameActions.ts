@@ -88,7 +88,7 @@ export async function startGameInRoom(roomId: string) {
     const activeGamesSnapshot = await getDocs(activeGamesQuery);
     if (!activeGamesSnapshot.empty) {
         console.warn("Zaten aktif bir oyun var, yeni oyun başlatılamadı.");
-        return;
+        return { success: false, error: "Zaten aktif bir oyun var."};
     }
 
     // 1. Rastgele bir soru seç
@@ -96,7 +96,7 @@ export async function startGameInRoom(roomId: string) {
     const questionsSnapshot = await getDocs(questionsRef);
     if (questionsSnapshot.empty) {
         console.warn("Oyun başlatılamadı: Hiç soru bulunmuyor.");
-        return;
+        return { success: false, error: "Hiç soru bulunmuyor."};
     }
     const allQuestions = questionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GameQuestion));
     const randomQuestion = allQuestions[Math.floor(Math.random() * allQuestions.length)];
@@ -113,6 +113,20 @@ export async function startGameInRoom(roomId: string) {
         answeredBy: [], // Cevap verenlerin UID'lerini tutar
     };
     await addDoc(gamesRef, newGame);
+    return { success: true };
+}
+
+
+/**
+ * Bir sonraki oyunun başlama zamanını ayarlar.
+ * @param transaction Aktif Firestore transaction'ı.
+ * @param roomRef Güncellenecek oda referansı.
+ */
+async function setNextGameTime(transaction: any, roomRef: any) {
+    const settings = await getGameSettings();
+    const intervalMillis = settings.gameIntervalMinutes * 60 * 1000;
+    const nextGameTimestamp = Timestamp.fromMillis(Date.now() + intervalMillis);
+    transaction.update(roomRef, { nextGameTimestamp });
 }
 
 
@@ -124,9 +138,10 @@ export async function startGameInRoom(roomId: string) {
  * @param answerIndex Kullanıcının cevabının indeksi (0-3)
  */
 export async function submitAnswer(roomId: string, gameId: string, userId: string, answerIndex: number) {
-    const gameRef = doc(db, 'rooms', roomId, 'games', gameId);
+    const roomRef = doc(db, 'rooms', roomId);
+    const gameRef = doc(roomRef, 'games', gameId);
     const userRef = doc(db, 'users', userId);
-    const messagesRef = collection(db, 'rooms', roomId, 'messages');
+    const messagesRef = collection(roomRef, 'messages');
 
     try {
         await runTransaction(db, async (transaction) => {
@@ -152,6 +167,11 @@ export async function submitAnswer(roomId: string, gameId: string, userId: strin
             
             // Cevap doğru mu?
             if (gameData.correctOptionIndex === answerIndex) {
+                // Oyunu bitir ve kazananı işaretle
+                transaction.update(gameRef, { status: 'finished', winner: userId });
+                // Bir sonraki oyun için zamanlayıcıyı ayarla
+                await setNextGameTime(transaction, roomRef);
+
                 // Ayarları ve ödülü al
                 const settings = await getGameSettings();
                 const reward = settings.rewardAmount;
@@ -161,36 +181,30 @@ export async function submitAnswer(roomId: string, gameId: string, userId: strin
                 const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
                 const dailyEarnings = userData.dailyDiamonds?.[today] || 0;
 
-                if (dailyEarnings >= dailyLimit) {
-                    // Limite ulaşıldı, sadece tebrik mesajı gönder ve oyunu bitir
-                    const systemMessage = {
-                        type: 'game', text: `🎉 ${userData.username} doğru cevap verdi ancak günlük ödül limitine ulaştı!`,
-                        createdAt: serverTimestamp(), uid: 'system', username: 'System',
-                    };
-                    transaction.set(doc(messagesRef), systemMessage);
-                    transaction.update(gameRef, { status: 'finished' });
-                    return;
+                let messageText = `🎉 ${userData.username} doğru cevap verdi!`;
+
+                if (dailyEarnings < dailyLimit) {
+                     // Ödülü ver
+                    transaction.update(userRef, {
+                        diamonds: increment(reward),
+                        [`dailyDiamonds.${today}`]: increment(reward)
+                    });
+                    messageText = `🎉 ${userData.username} doğru cevap verdi ve ${reward} elmas kazandı!`;
+                } else {
+                    messageText = `🎉 ${userData.username} doğru cevap verdi ancak günlük ödül limitine ulaştı!`;
                 }
-                
-                // Ödülü ver ve oyunu bitir
-                transaction.update(userRef, {
-                    diamonds: increment(reward),
-                    [`dailyDiamonds.${today}`]: increment(reward)
-                });
 
-                transaction.update(gameRef, { status: 'finished', winner: userId });
-
+                // Sistem mesajını gönder
                 const systemMessage = {
-                    type: 'game', text: `🎉 ${userData.username} doğru cevap verdi ve ${reward} elmas kazandı!`,
+                    type: 'game', text: messageText,
                     createdAt: serverTimestamp(), uid: 'system', username: 'System',
                 };
                 transaction.set(doc(messagesRef), systemMessage);
+
             }
         });
     } catch (e: any) {
         console.error("Cevap işlenirken hata:", e);
-        // Hataları kullanıcıya bildirmek için `throw e;` kullanılabilir.
-        // Bu, istemci tarafında yakalanıp toast ile gösterilebilir.
         throw e;
     }
 }
@@ -202,14 +216,14 @@ export async function submitAnswer(roomId: string, gameId: string, userId: strin
  * @param gameId Oyun ID'si
  */
 export async function endGameWithoutWinner(roomId: string, gameId: string) {
-    const gameRef = doc(db, 'rooms', roomId, 'games', gameId);
-    const messagesRef = collection(db, 'rooms', roomId, 'messages');
+    const roomRef = doc(db, 'rooms', roomId);
+    const gameRef = doc(roomRef, 'games', gameId);
+    const messagesRef = collection(roomRef, 'messages');
 
     try {
         await runTransaction(db, async (transaction) => {
             const gameDoc = await transaction.get(gameRef);
 
-            // Eğer oyun zaten bitmişse (örn: biri cevap vermişse) işlem yapma
             if (!gameDoc.exists() || gameDoc.data().status !== 'active') {
                 return;
             }
@@ -219,6 +233,10 @@ export async function endGameWithoutWinner(roomId: string, gameId: string) {
 
             // Oyunu bitir
             transaction.update(gameRef, { status: 'finished' });
+            
+            // Bir sonraki oyun için zamanlayıcıyı ayarla
+            await setNextGameTime(transaction, roomRef);
+
 
             // Sistem mesajı gönder
             const systemMessage = {
@@ -232,6 +250,5 @@ export async function endGameWithoutWinner(roomId: string, gameId: string) {
         });
     } catch (error) {
         console.error("Oyun bitirilirken hata:", error);
-        // Bu hata genellikle kullanıcıya gösterilmez, sadece loglanır.
     }
 }

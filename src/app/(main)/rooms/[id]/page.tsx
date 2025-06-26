@@ -3,16 +3,20 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, onSnapshot, DocumentData, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { doc, onSnapshot, DocumentData, collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { startGameInRoom, submitAnswer, endGameWithoutWinner } from '@/lib/actions/gameActions';
-import type { GameSettings, ActiveGame } from '@/lib/types';
+import type { GameSettings, ActiveGame, Room } from '@/lib/types';
+import { formatDistanceToNow } from "date-fns";
+import { tr } from "date-fns/locale";
 
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Loader2, Users, Gamepad2 } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from '@/components/ui/badge';
+import { ChevronLeft, Loader2, Users, Gamepad2, Timer, Crown, ShieldCheck } from 'lucide-react';
 import TextChat from '@/components/chat/text-chat';
 import RoomGameCard from '@/components/game/RoomGameCard';
 import GameCountdownCard from '@/components/game/GameCountdownCard';
@@ -32,18 +36,29 @@ export default function RoomPage() {
   const { toast } = useToast();
   const roomId = params.id as string;
   
-  const [room, setRoom] = useState<DocumentData | null>(null);
+  const [room, setRoom] = useState<Room | null>(null);
   const [activeGame, setActiveGame] = useState<ActiveGame | null>(null);
   const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const { user, loading: authLoading } = useAuth();
 
   // Oyun döngüsü için yeni state'ler
-  const [gamePhase, setGamePhase] = useState<'idle' | 'countdown' | 'active' | 'cooldown'>('idle');
-  const [countdown, setCountdown] = useState(20); // 20 saniye geri sayım
-  const gameLoopTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [gamePhase, setGamePhase] = useState<'idle' | 'countdown' | 'active'>('idle');
+  const [countdown, setCountdown] = useState(20);
+  const [nextGameCountdown, setNextGameCountdown] = useState<string>('');
+  
+  const gameStartAttempted = useRef(false);
 
-  // Ayarları ve oda verilerini çek
+  // Helper to format time
+  const formatTime = (ms: number) => {
+    if (ms <= 0) return "00:00";
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  };
+
+  // Ayarları çek
   useEffect(() => {
     if (!roomId) return;
     const settingsUnsub = onSnapshot(doc(db, 'config', 'gameSettings'), (docSnap) => {
@@ -51,9 +66,16 @@ export default function RoomPage() {
             setGameSettings(docSnap.data() as GameSettings);
         }
     });
+    return () => { settingsUnsub(); };
+  }, [roomId]);
+
+  // Oda verisini ve oyun geri sayımını yönet
+  useEffect(() => {
+    if (!roomId) return;
+    setLoading(true);
     const roomUnsub = onSnapshot(doc(db, 'rooms', roomId), (docSnap) => {
       if (docSnap.exists()) {
-        setRoom({ id: docSnap.id, ...docSnap.data() });
+        setRoom({ id: docSnap.id, ...docSnap.data() } as Room);
       } else {
         toast({ title: "Hata", description: "Oda bulunamadı veya silinmiş.", variant: "destructive" });
         router.push('/rooms');
@@ -65,7 +87,8 @@ export default function RoomPage() {
       toast({ title: "Hata", description: "Odaya erişilirken bir sorun oluştu.", variant: "destructive" });
       setLoading(false);
     });
-    return () => { settingsUnsub(); roomUnsub(); };
+
+    return () => roomUnsub();
   }, [roomId, router, toast]);
 
   // Aktif oyunu dinle
@@ -79,61 +102,51 @@ export default function RoomPage() {
             gameData.id = snapshot.docs[0].id;
             setActiveGame(gameData);
             setGamePhase('active');
+            gameStartAttempted.current = false; // Oyun başladığında denemeyi sıfırla
         } else {
-            // Aktif oyun yoksa ve mevcut durum 'active' ise, cooldown'a geç
-            if (gamePhase === 'active') {
-                setGamePhase('cooldown');
-            }
             setActiveGame(null);
+            if (gamePhase === 'active') { // Eğer oyun yeni bittiyse idle'a dön
+                 setGamePhase('idle');
+            }
         }
     });
     return () => gameUnsub();
   }, [roomId, gamePhase]);
 
-  // Oyun döngüsünü yöneten ana useEffect
-  useEffect(() => {
-    // Zamanlayıcıyı her faz değişiminde temizle
-    if (gameLoopTimerRef.current) clearTimeout(gameLoopTimerRef.current);
+   // Geri sayım ve oyun başlatma mantığı
+    useEffect(() => {
+        if (!room?.nextGameTimestamp) return;
 
-    if (!gameSettings || !room || (room.participants?.length || 0) < 1) {
-        setGamePhase('idle'); // Yeterli katılımcı yoksa veya ayar yoksa bekle
-        return;
-    };
-    
-    if (gamePhase === 'idle') {
-        // Bir sonraki oyun için bekleme süresi
-        gameLoopTimerRef.current = setTimeout(() => {
-            setGamePhase('countdown');
-            setCountdown(20); // Geri sayımı başlat
-        }, gameSettings.gameIntervalMinutes * 60 * 1000);
+        const timerId = setInterval(async () => {
+            const remaining = room.nextGameTimestamp.toMillis() - Date.now();
+            
+            if(activeGame) {
+                setGamePhase('active');
+                setNextGameCountdown('');
+            } else if (remaining > 20000) {
+                setGamePhase('idle');
+                setNextGameCountdown(formatTime(remaining));
+            } else if (remaining > 0 && remaining <= 20000) {
+                setGamePhase('countdown');
+                setCountdown(Math.ceil(remaining / 1000));
+            } else { // Süre doldu
+                setGamePhase('idle');
+                setNextGameCountdown('');
+                if (!gameStartAttempted.current) {
+                    gameStartAttempted.current = true;
+                    await startGameInRoom(roomId);
+                }
+            }
+        }, 1000);
 
-    } else if (gamePhase === 'countdown') {
-        // Geri sayım
-        if (countdown > 0) {
-            gameLoopTimerRef.current = setTimeout(() => setCountdown(c => c - 1), 1000);
-        } else {
-            // Geri sayım bitti, oyunu başlat
-            startGameInRoom(roomId);
-            // Oyun başladığında snapshot listener 'active' faza geçirecek
-        }
-    } else if (gamePhase === 'cooldown') {
-        // Oyun sonrası bekleme süresi
-        gameLoopTimerRef.current = setTimeout(() => {
-            setGamePhase('idle'); // Döngüyü yeniden başlat
-        }, gameSettings.cooldownSeconds * 1000);
-    }
-    
-    return () => {
-        if (gameLoopTimerRef.current) clearTimeout(gameLoopTimerRef.current);
-    };
-  }, [gamePhase, gameSettings, room, roomId, countdown]);
+        return () => clearInterval(timerId);
+    }, [room, activeGame, roomId]);
 
   // Kullanıcının cevabını işleyen fonksiyon
   const handleAnswerSubmit = async (answerIndex: number) => {
     if (!user || !activeGame) return;
     try {
         await submitAnswer(roomId, activeGame.id, user.uid, answerIndex);
-        // Başarılı cevap sonrası oyun durumu snapshot'tan güncellenecek
     } catch (error: any) {
         toast({ title: "Hata", description: error.message, variant: "destructive" });
     }
@@ -167,29 +180,42 @@ export default function RoomPage() {
       </div>
     )
   }
-
+  
+  const creatorTimeAgo = room.createdAt ? formatDistanceToNow(room.createdAt.toDate(), { addSuffix: true, locale: tr }) : "";
   const isParticipant = room.participants?.some((p: any) => p.uid === user.uid);
 
   return (
     <div className="flex flex-col h-screen bg-background">
       {/* Üst Bilgi (Header) */}
-      <header className="flex items-center justify-between p-4 border-b bg-card/80 backdrop-blur-sm sticky top-0 z-20">
-        <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="icon" className="mr-2 rounded-full">
-              <Link href="/rooms">
-                  <ChevronLeft className="h-5 w-5" />
-              </Link>
-          </Button>
-          <div>
-              <h1 className="text-lg font-bold">{room.name}</h1>
-              <p className="text-sm text-muted-foreground">{room.description}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-            {gamePhase === 'active' && <Gamepad2 className="h-5 w-5 text-primary animate-pulse" />}
-            <div className="flex items-center gap-2 text-muted-foreground">
-            <Users className="h-5 w-5" />
-            <span className="font-semibold">{room.participants?.length || 0} / {room.maxParticipants || 7}</span>
+      <header className="flex flex-col p-4 border-b bg-card/80 backdrop-blur-sm sticky top-0 z-20">
+        <div className='flex items-center justify-between'>
+            <div className="flex items-center gap-3">
+            <Button asChild variant="ghost" size="icon" className="mr-2 rounded-full">
+                <Link href="/rooms">
+                    <ChevronLeft className="h-5 w-5" />
+                </Link>
+            </Button>
+            <div>
+                <h1 className="text-lg font-bold">{room.name}</h1>
+                <div className="flex items-center gap-2">
+                    <Avatar className="h-5 w-5">
+                        <AvatarImage src={room.createdBy.photoURL || undefined} />
+                        <AvatarFallback>{room.createdBy.username?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                     <p className="text-xs text-muted-foreground">
+                        <span className="font-semibold text-foreground">{room.createdBy.username}</span> tarafından {creatorTimeAgo}
+                    </p>
+                    <Badge variant="outline" className="px-1.5 py-0 text-xs border-amber-500 text-amber-500"><Crown className="h-3 w-3 mr-1"/>Kurucu</Badge>
+                     {room.createdBy.role === 'admin' && <Badge variant="secondary" className="px-1.5 py-0 text-xs"><ShieldCheck className="h-3 w-3 mr-1"/>Yönetici</Badge>}
+                </div>
+            </div>
+            </div>
+            <div className="flex items-center gap-4">
+                {gamePhase === 'active' && <Gamepad2 className="h-5 w-5 text-primary animate-pulse" />}
+                <div className="flex items-center gap-2 text-muted-foreground">
+                <Users className="h-5 w-5" />
+                <span className="font-semibold">{room.participants?.length || 0} / {room.maxParticipants || 7}</span>
+                </div>
             </div>
         </div>
       </header>
@@ -197,7 +223,13 @@ export default function RoomPage() {
       {/* Oyun ve Sohbet Alanı */}
       <main className="flex-1 overflow-y-auto relative">
          {/* Oyun Alanı */}
-         <div className="sticky top-0 z-10 p-4 border-b bg-muted/20">
+         <div className="sticky top-0 z-10 p-4 border-b bg-muted/20 backdrop-blur-sm">
+            {gamePhase === 'idle' && nextGameCountdown && (
+                 <div className="flex items-center justify-center gap-2 text-sm font-semibold text-primary animate-pulse">
+                    <Timer className="h-5 w-5" />
+                    <span>Yeni Oyun: {nextGameCountdown}</span>
+                </div>
+            )}
             {gamePhase === 'countdown' && (
                 <GameCountdownCard timeLeft={countdown} />
             )}

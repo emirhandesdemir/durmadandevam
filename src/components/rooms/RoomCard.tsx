@@ -4,7 +4,7 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { LogIn, Users, Check, Loader2, AlertTriangle } from "lucide-react";
+import { LogIn, Users, Check, Loader2, AlertTriangle, Crown, ShieldCheck } from "lucide-react";
 import { Timestamp, arrayUnion, doc, writeBatch, collection, serverTimestamp } from "firebase/firestore";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -14,6 +14,7 @@ import { db } from "@/lib/firebase";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { Badge } from "../ui/badge";
 
 /**
  * Oda Listeleme Kartı (RoomCard)
@@ -34,10 +35,12 @@ export interface Room {
         uid: string;
         username: string;
         photoURL?: string | null;
+        role?: 'admin' | 'user';
     };
     createdAt: Timestamp;
     participants: { uid: string, username: string }[];
     maxParticipants: number;
+    nextGameTimestamp?: Timestamp;
 }
 
 interface RoomCardProps {
@@ -116,16 +119,22 @@ export default function RoomCard({ room }: RoomCardProps) {
     return (
         <Card className="flex flex-col transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1 rounded-3xl border-0 bg-card/80 backdrop-blur-sm shadow-lg shadow-black/5 overflow-hidden">
             <CardHeader className="p-5">
-                <div className="flex items-center gap-3">
-                     <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
-                        <AvatarImage src={room.createdBy.photoURL || undefined} />
-                        <AvatarFallback className="bg-secondary text-secondary-foreground">{creatorInitial}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                        <CardTitle className="text-base font-bold leading-tight">{room.createdBy.username}</CardTitle>
-                        <CardDescription className="text-xs text-muted-foreground">
-                            {timeAgo} oluşturdu
-                        </CardDescription>
+                <div className="flex items-center justify-between">
+                     <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
+                            <AvatarImage src={room.createdBy.photoURL || undefined} />
+                            <AvatarFallback className="bg-secondary text-secondary-foreground">{creatorInitial}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <CardTitle className="text-base font-bold leading-tight">{room.createdBy.username}</CardTitle>
+                            <CardDescription className="text-xs text-muted-foreground">
+                                {timeAgo} oluşturdu
+                            </CardDescription>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <Badge variant="outline" className="px-1.5 py-0 text-xs border-amber-500 text-amber-500"><Crown className="h-3 w-3 mr-1"/>Kurucu</Badge>
+                        {room.createdBy.role === 'admin' && <Badge variant="secondary" className="px-1.5 py-0 text-xs"><ShieldCheck className="h-3 w-3 mr-1"/>Yönetici</Badge>}
                     </div>
                 </div>
             </CardHeader>

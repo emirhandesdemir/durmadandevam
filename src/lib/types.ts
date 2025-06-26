@@ -42,3 +42,23 @@ export interface ActiveGame {
     answeredBy: string[]; // Cevap veren kullanıcıların UID'leri
     winner?: string; // Kazananın UID'si
 }
+
+/**
+ * Bir sohbet odasının yapısını tanımlar.
+ * Firestore'daki `rooms` koleksiyonundaki dokümanlara karşılık gelir.
+ */
+export interface Room {
+    id: string;
+    name: string;
+    description: string;
+    createdBy: {
+        uid: string;
+        username: string;
+        photoURL?: string | null;
+        role?: 'admin' | 'user';
+    };
+    createdAt: Timestamp;
+    participants: { uid: string, username: string }[];
+    maxParticipants: number;
+    nextGameTimestamp?: Timestamp;
+}

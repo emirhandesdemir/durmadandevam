@@ -5,10 +5,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useState } from "react";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, where, getDocs, limit, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { getGameSettings } from "@/lib/actions/gameActions";
+
 
 import { Button } from "@/components/ui/button";
 import {
@@ -49,7 +51,7 @@ const formSchema = z.object({
 export default function CreateRoomForm() {
     const { toast } = useToast();
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, userData } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
 
     const form = useForm<z.infer<typeof formSchema>>({
@@ -62,7 +64,7 @@ export default function CreateRoomForm() {
 
     // Form gönderme fonksiyonu
     async function onSubmit(values: z.infer<typeof formSchema>) {
-        if (!user) {
+        if (!user || !userData) {
             toast({
                 title: "Hata",
                 description: "Oda oluşturmak için giriş yapmalısınız.",
@@ -72,7 +74,27 @@ export default function CreateRoomForm() {
         }
 
         setIsLoading(true);
+
         try {
+            // Kullanıcının zaten bir odası var mı diye kontrol et
+            const userRoomsQuery = query(collection(db, "rooms"), where("createdBy.uid", "==", user.uid), limit(1));
+            const userRoomsSnapshot = await getDocs(userRoomsQuery);
+
+            if (!userRoomsSnapshot.empty) {
+                 toast({
+                    title: "Oda Oluşturulamadı",
+                    description: "Zaten size ait bir oda var. Sadece bir oda oluşturabilirsiniz.",
+                    variant: "destructive",
+                });
+                setIsLoading(false);
+                router.push('/rooms');
+                return;
+            }
+
+            // İlk oyun için zamanlayıcıyı ayarla
+            const settings = await getGameSettings();
+            const nextGameTimestamp = Timestamp.fromMillis(Date.now() + settings.gameIntervalMinutes * 60 * 1000);
+
             // Firestore için yeni oda nesnesi
             const newRoom = {
                 name: values.name,
@@ -81,10 +103,12 @@ export default function CreateRoomForm() {
                   uid: user.uid,
                   username: user.displayName || "Bilinmeyen Kullanıcı",
                   photoURL: user.photoURL,
+                  role: userData.role || 'user'
                 },
                 createdAt: serverTimestamp(),
                 participants: [], // Başlangıçta boş katılımcı listesi
                 maxParticipants: 7, // Maksimum katılımcı sayısı
+                nextGameTimestamp, // İlk oyun zamanı
             };
             
             // Firestore'a yeni odayı ekle
