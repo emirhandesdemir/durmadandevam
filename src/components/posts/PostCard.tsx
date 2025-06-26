@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Textarea } from "../ui/textarea";
 import CommentSheet from "../comments/CommentSheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 
 interface PostCardProps {
@@ -133,7 +134,16 @@ export default function PostCard({ post }: PostCardProps) {
                             <div className="flex items-center gap-1.5">
                                <p className="font-bold">{post.username}</p>
                                {post.userRole === 'admin' && (
-                                   <BadgeCheck className="h-5 w-5 text-primary" />
+                                   <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger>
+                                            <BadgeCheck className="h-5 w-5 text-primary fill-primary/20" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Yönetici</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                   </TooltipProvider>
                                )}
                             </div>
                             <p className="text-sm text-muted-foreground">{timeAgo}</p>

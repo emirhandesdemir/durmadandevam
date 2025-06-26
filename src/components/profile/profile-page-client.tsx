@@ -17,6 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { LogOut, Edit, Shield, BadgeCheck } from "lucide-react";
 import Link from "next/link";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 
 export default function ProfilePageClient() {
@@ -53,7 +54,16 @@ export default function ProfilePageClient() {
                 <div className="flex items-center gap-2 mt-4">
                     <CardTitle className="text-3xl font-bold">{user.displayName}</CardTitle>
                     {isAdmin && (
-                         <BadgeCheck className="h-7 w-7 text-primary" />
+                         <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger>
+                                     <BadgeCheck className="h-7 w-7 text-primary fill-primary/30" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Yönetici Hesabı</p>
+                                </TooltipContent>
+                            </Tooltip>
+                         </TooltipProvider>
                     )}
                 </div>
                 <CardDescription>{user.email}</CardDescription>

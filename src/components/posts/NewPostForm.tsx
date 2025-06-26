@@ -99,9 +99,9 @@ export default function NewPostForm() {
   return (
     <Card className="w-full overflow-hidden rounded-3xl border-0 bg-card/80 shadow-xl shadow-black/5 backdrop-blur-sm">
       {/* Gönderi giriş alanı: Avatar ve metin kutusu */}
-      <div className="flex flex-col gap-4 p-6">
+      <div className="flex flex-col gap-4 p-5">
         <div className="flex items-start gap-4">
-            <Avatar className="h-12 w-12 flex-shrink-0 border-2 border-white">
+            <Avatar className="h-11 w-11 flex-shrink-0 border-2 border-white">
                 <AvatarImage src={user?.photoURL || undefined} />
                 <AvatarFallback>{user?.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
             </Avatar>
@@ -109,8 +109,8 @@ export default function NewPostForm() {
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Aklında ne var?"
-                className="h-24 flex-1 resize-none border-0 bg-transparent p-0 text-base placeholder:text-muted-foreground/80 focus-visible:ring-0"
-                rows={3}
+                className="min-h-[60px] flex-1 resize-none border-0 bg-transparent p-0 text-base placeholder:text-muted-foreground/80 focus-visible:ring-0"
+                rows={2}
                 disabled={isLoading}
             />
         </div>
@@ -134,7 +134,7 @@ export default function NewPostForm() {
       </div>
       
       {/* Aksiyon Butonları: Resim ekleme ve gönderme */}
-      <div className="flex items-center justify-between border-t border-border/50 bg-muted/20 px-6 py-3">
+      <div className="flex items-center justify-between border-t border-border/50 bg-muted/20 px-4 py-2">
         {/* Gizli dosya girişi */}
         <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" className="hidden" />
         
@@ -146,22 +146,23 @@ export default function NewPostForm() {
           onClick={handleImageClick}
           disabled={isLoading}
         >
-          <ImageIcon className="h-6 w-6" />
+          <ImageIcon className="h-5 w-5" />
           <span className="sr-only">Resim Ekle</span>
         </Button>
         
         {/* Gönder Butonu */}
         <Button 
-          className="rounded-full px-6 py-3 font-bold shadow-lg shadow-primary/30 transition-transform hover:scale-105"
+          className="rounded-full"
+          size="icon"
           onClick={handleShare}
           disabled={isLoading || (!text.trim() && !imageFile)}
         >
           {isLoading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="h-5 w-5 animate-spin" />
           ) : (
-            <Send className="mr-2 h-4 w-4" />
+            <Send className="h-5 w-5" />
           )}
-          {isLoading ? "Paylaşılıyor..." : "Paylaş"}
+          <span className="sr-only">Paylaş</span>
         </Button>
       </div>
     </Card>
