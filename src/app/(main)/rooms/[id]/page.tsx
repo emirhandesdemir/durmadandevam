@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, onSnapshot, DocumentData, collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { doc, onSnapshot, DocumentData, collection, query, where, getDocs, limit, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
@@ -96,7 +96,7 @@ export default function RoomPage() {
   useEffect(() => {
     if (!roomId) return;
     const gamesRef = collection(db, "rooms", roomId, "games");
-    const q = query(gamesRef, where("status", "==", "active"), orderBy("startTime", "desc"), limit(1));
+    const q = query(gamesRef, where("status", "==", "active"), limit(1));
     const gameUnsub = onSnapshot(q, (snapshot) => {
         if (!snapshot.empty) {
             const gameData = snapshot.docs[0].data() as ActiveGame;
