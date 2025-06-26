@@ -119,15 +119,15 @@ export default function VoiceUserIcon({
   const speakingRing = participant.isSpeaker && !participant.isMuted;
 
   const avatar = (
-    <div className="relative flex flex-col items-center gap-1.5 w-full">
-      <div className="relative w-full">
+    <div className="relative flex flex-col items-center gap-1.5">
+      <div className="relative">
         <Avatar
           className={cn(
-            "border-2 transition-all duration-300 w-full h-auto aspect-square",
+            "border-2 transition-all duration-300",
             speakingRing
               ? "border-green-500 shadow-lg shadow-green-500/50 ring-4 ring-green-500/30 animate-pulse"
               : "border-transparent",
-             size === 'lg' ? "h-24 w-24" : ""
+             size === 'lg' ? "h-24 w-24" : "w-full h-auto aspect-square"
           )}
         >
           <AvatarImage src={participant.photoURL || undefined} />
@@ -169,10 +169,10 @@ export default function VoiceUserIcon({
         <DropdownMenuTrigger asChild>
           <button
             disabled={isProcessing}
-            className="cursor-pointer rounded-full text-center w-full"
+            className="cursor-pointer rounded-full text-center"
           >
             {isProcessing ? (
-              <div className={cn("flex items-center justify-center rounded-full bg-gray-800/50 w-full aspect-square", size === 'lg' ? "h-24" : "")}>
+              <div className={cn("flex items-center justify-center rounded-full bg-gray-800/50 aspect-square", size === 'lg' ? "h-24 w-24" : "w-full")}>
                   <Loader2 className="h-8 w-8 animate-spin" />
               </div>
             ) : (
@@ -186,5 +186,5 @@ export default function VoiceUserIcon({
   }
 
   // Yönetici olmayanlar veya kendi ikonu için sadece avatarı göster
-  return <div className="w-full">{avatar}</div>;
+  return <div>{avatar}</div>;
 }
