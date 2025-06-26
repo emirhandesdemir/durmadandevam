@@ -25,8 +25,9 @@ export default function VoiceChatBar({ roomId, isHost }: VoiceChatBarProps) {
 
   // Sesli sohbetten ayrılma fonksiyonu
   const handleLeave = async () => {
+    if (!user) return;
     try {
-      await leaveVoiceChat(roomId);
+      await leaveVoiceChat(roomId, user.uid);
       toast({ description: "Sesli sohbetten ayrıldınız." });
     } catch (error: any) {
       toast({ variant: "destructive", description: error.message });
@@ -35,7 +36,7 @@ export default function VoiceChatBar({ roomId, isHost }: VoiceChatBarProps) {
 
   // Mikrofonu açıp kapatma fonksiyonu
   const handleToggleMute = async () => {
-    if (!self) return;
+    if (!self || !user) return;
     // Sadece hoparlörler mikrofonunu açabilir
     if (!self.isSpeaker && self.isMuted) {
         toast({ variant: "destructive", title: "Dinleyici Modu", description: "Konuşmak için oda yöneticisinden izin istemelisiniz." });
@@ -43,7 +44,7 @@ export default function VoiceChatBar({ roomId, isHost }: VoiceChatBarProps) {
     }
 
     try {
-      await toggleSelfMute(roomId, !self.isMuted);
+      await toggleSelfMute(roomId, user.uid, !self.isMuted);
     } catch (error: any) {
       toast({ variant: "destructive", description: error.message });
     }

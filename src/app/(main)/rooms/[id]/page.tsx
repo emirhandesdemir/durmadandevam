@@ -190,7 +190,11 @@ export default function RoomPage() {
     if (!user || !room) return;
     setIsJoiningVoice(true);
     try {
-      const result = await joinVoiceChat(roomId);
+      const result = await joinVoiceChat(roomId, {
+          uid: user.uid,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+      });
       if (!result.success) {
         toast({ title: "Katılım Başarısız", description: result.error, variant: "destructive" });
       }
@@ -258,7 +262,7 @@ export default function RoomPage() {
                                 </TooltipTrigger>
                                 <TooltipContent><p>Yönetici</p></TooltipContent>
                             </Tooltip>
-                        </TooltipProvider>
+                        </Tooltip>
                     )}
                 </div>
             </div>

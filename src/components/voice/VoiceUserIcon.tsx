@@ -54,6 +54,7 @@ export default function VoiceUserIcon({
   const handleAction = async (
     action: (
       roomId: string,
+      currentUserId: string,
       targetUserId: string,
       param?: any
     ) => Promise<{ success: boolean; error?: string }>,
@@ -61,7 +62,7 @@ export default function VoiceUserIcon({
   ) => {
     setIsProcessing(true);
     try {
-      const result = await action(roomId, participant.uid, param);
+      const result = await action(roomId, currentUserId, participant.uid, param);
       if (!result.success) {
         toast({ variant: "destructive", description: result.error });
       }
@@ -77,12 +78,16 @@ export default function VoiceUserIcon({
       <DropdownMenuLabel>{participant.username}</DropdownMenuLabel>
       <DropdownMenuSeparator />
       {participant.isSpeaker ? (
-        <DropdownMenuItem onClick={() => handleAction(updateSpeakerStatus, false)}>
+        <DropdownMenuItem
+          onClick={() => handleAction(updateSpeakerStatus, false)}
+        >
           <VolumeX className="mr-2 h-4 w-4" />
           <span>Dinleyici Yap</span>
         </DropdownMenuItem>
       ) : (
-        <DropdownMenuItem onClick={() => handleAction(updateSpeakerStatus, true)}>
+        <DropdownMenuItem
+          onClick={() => handleAction(updateSpeakerStatus, true)}
+        >
           <Volume2 className="mr-2 h-4 w-4" />
           <span>Konuşmacı Yap</span>
         </DropdownMenuItem>
@@ -128,8 +133,15 @@ export default function VoiceUserIcon({
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button disabled={isProcessing} className="cursor-pointer rounded-full">
-            {isProcessing ? <Loader2 className="h-12 w-12 animate-spin" /> : avatar}
+          <button
+            disabled={isProcessing}
+            className="cursor-pointer rounded-full"
+          >
+            {isProcessing ? (
+              <Loader2 className="h-12 w-12 animate-spin" />
+            ) : (
+              avatar
+            )}
           </button>
         </DropdownMenuTrigger>
         {menuContent}
