@@ -15,7 +15,8 @@ import {
     serverTimestamp,
     increment,
     deleteDoc,
-    updateDoc
+    updateDoc,
+    Timestamp
 } from 'firebase/firestore';
 import type { Room, VoiceParticipant } from '../types';
 
@@ -52,6 +53,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
                 return; 
             }
             
+            // Denormalize edilmiş sayacı kullanarak kapasiteyi kontrol et
             const voiceCount = roomData.voiceParticipantsCount || 0;
             if (voiceCount >= roomData.maxParticipants) {
                 throw new Error("Sesli sohbet dolu.");
@@ -69,6 +71,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
                 lastSpokeAt: serverTimestamp(),
             };
 
+            // Atomik olarak kullanıcıyı ekle ve sayacı artır
             transaction.set(userVoiceRef, participantData);
             transaction.update(roomRef, { voiceParticipantsCount: increment(1) });
         });
@@ -199,7 +202,8 @@ export async function kickFromVoice(roomId: string, currentUserId: string, targe
             if (!targetUserDoc.exists()) {
                 return; // User already gone.
             }
-
+            
+            // Kullanıcıyı sil ve sayacı azalt
             transaction.delete(targetUserVoiceRef);
             transaction.update(roomRef, { voiceParticipantsCount: increment(-1) });
         });
