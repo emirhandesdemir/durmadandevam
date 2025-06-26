@@ -61,4 +61,19 @@ export interface Room {
     participants: { uid: string, username: string }[];
     maxParticipants: number;
     nextGameTimestamp?: Timestamp;
+    voiceParticipantsCount?: number; // Sesli sohbetteki kişi sayısı
+}
+
+/**
+ * Sesli sohbetteki bir katılımcının yapısını tanımlar.
+ * Firestore'daki `rooms/{roomId}/voiceParticipants/{userId}` dokümanına karşılık gelir.
+ */
+export interface VoiceParticipant {
+    uid: string;
+    username: string;
+    photoURL?: string | null;
+    isSpeaker: boolean;
+    isMuted: boolean;
+    joinedAt: Timestamp;
+    lastSpokeAt?: Timestamp; // Son konuşma zamanı (inaktivite takibi için)
 }

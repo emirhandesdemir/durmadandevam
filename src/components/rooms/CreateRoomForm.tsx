@@ -108,6 +108,7 @@ export default function CreateRoomForm() {
                 createdAt: serverTimestamp(),
                 participants: [], // Başlangıçta boş katılımcı listesi
                 maxParticipants: 7, // Maksimum katılımcı sayısı
+                voiceParticipantsCount: 0, // Sesli sohbet katılımcı sayısı
                 nextGameTimestamp, // İlk oyun zamanı
             };
             
