@@ -12,7 +12,8 @@ import {
     increment,
     updateDoc,
     Timestamp,
-    deleteDoc
+    deleteDoc,
+    arrayRemove
 } from 'firebase/firestore';
 import type { Room, VoiceParticipant } from '../types';
 
@@ -59,7 +60,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
                 username: user.displayName || 'Anonim',
                 photoURL: user.photoURL,
                 isSpeaker: true, 
-                isMuted: !isHost, 
+                isMuted: true, // Herkes sessizde başlar, kendisi açar
                 joinedAt: serverTimestamp() as Timestamp,
             };
             
@@ -77,6 +78,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
 
 /**
  * Kullanıcının sesli sohbetten ayrılması için sunucu eylemi.
+ * Kullanıcıyı hem sesli katılımcı listesinden hem de ana katılımcı listesinden siler.
  * @param roomId Ayrılınacak odanın ID'si.
  * @param userId Ayrılan kullanıcının ID'si.
  */
@@ -88,11 +90,35 @@ export async function leaveVoiceChat(roomId: string, userId: string) {
 
      try {
         await runTransaction(db, async (transaction) => {
+            const roomDoc = await transaction.get(roomRef);
+            if (!roomDoc.exists()) {
+                // Oda zaten silinmiş, yapacak bir şey yok.
+                return;
+            }
+
+            const roomData = roomDoc.data() as Room;
+            // Genel katılımcı listesinden silinecek tam nesneyi bul.
+            const participantToRemove = (roomData.participants || []).find(p => p.uid === userId);
+
             const userVoiceDoc = await transaction.get(userVoiceRef);
-            // Sadece kullanıcı gerçekten listedeyse sil ve sayacı azalt.
+            
+            // Sadece kullanıcı gerçekten sesli sohbet listesindeyse işlemleri yap.
             if (userVoiceDoc.exists()) {
+                // 1. Sesli sohbet alt koleksiyonundan kullanıcıyı sil.
                 transaction.delete(userVoiceRef);
-                transaction.update(roomRef, { voiceParticipantsCount: increment(-1) });
+                
+                // 2. Güncellenecek alanları içeren bir nesne oluştur.
+                const updates: {[key: string]: any} = {
+                    voiceParticipantsCount: increment(-1)
+                };
+
+                // 3. Kullanıcı ana katılımcı listesindeyse, oradan da sil.
+                if (participantToRemove) {
+                    updates.participants = arrayRemove(participantToRemove);
+                }
+                
+                // 4. Oda dokümanını tek seferde güncelle.
+                transaction.update(roomRef, updates);
             }
         });
         return { success: true };
@@ -146,6 +172,9 @@ export async function kickFromVoice(roomId: string, currentUserId: string, targe
             if (!roomDoc.exists() || roomDoc.data()?.createdBy.uid !== currentUserId) {
                 throw new Error("Bu işlemi yapma yetkiniz yok.");
             }
+            
+            const roomData = roomDoc.data() as Room;
+            const participantToRemove = (roomData.participants || []).find(p => p.uid === targetUserId);
 
             const targetUserDoc = await transaction.get(targetUserVoiceRef);
             if (!targetUserDoc.exists()) {
@@ -153,7 +182,16 @@ export async function kickFromVoice(roomId: string, currentUserId: string, targe
             }
             
             transaction.delete(targetUserVoiceRef);
-            transaction.update(roomRef, { voiceParticipantsCount: increment(-1) });
+
+            const updates: {[key: string]: any} = {
+                voiceParticipantsCount: increment(-1)
+            };
+
+            if (participantToRemove) {
+                updates.participants = arrayRemove(participantToRemove);
+            }
+
+            transaction.update(roomRef, updates);
         });
         return { success: true };
     } catch (error: any) {

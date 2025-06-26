@@ -65,7 +65,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         });
 
         return () => unsubscribe();
-    }, [activeRoom?.id, user, toast, participants.length]);
+    }, [activeRoom?.id, user]);
 
     const leaveRoom = useCallback(async (force = false) => {
         if (!user || !activeRoom) return;
