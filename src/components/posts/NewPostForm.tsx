@@ -20,7 +20,7 @@ import { Image as ImageIcon, Send, Loader2, X } from "lucide-react";
  * Paylaşım sırasında yükleme durumu gösterilir ve işlem bitince form sıfırlanır.
  */
 export default function NewPostForm() {
-  const { user } = useAuth(); // Mevcut kullanıcı bilgilerini al
+  const { user, userData } = useAuth(); // Mevcut kullanıcı ve rol bilgilerini al
   const { toast } = useToast(); // Bildirimler için hook
   
   const [text, setText] = useState(""); // Metin alanının state'i
@@ -80,6 +80,7 @@ export default function NewPostForm() {
           displayName: user.displayName,
           photoURL: user.photoURL,
         },
+        role: userData?.role, // Kullanıcının rolünü gönder
       });
       
       // Formu sıfırla ve başarı bildirimi göster

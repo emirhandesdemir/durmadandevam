@@ -26,13 +26,14 @@ interface AddPostArgs {
         displayName: string | null;
         photoURL: string | null;
     };
+    role?: 'admin' | 'user';
 }
 
 /**
  * Yeni bir gönderi oluşturur, gerekirse resim yükler ve Firestore'a kaydeder.
  * @param {AddPostArgs} args - Gönderi metni, resim dosyası ve kullanıcı bilgileri.
  */
-export async function addPost({ text, imageFile, user }: AddPostArgs) {
+export async function addPost({ text, imageFile, user, role }: AddPostArgs) {
     if (!user || !user.uid) {
         throw new Error("Yetkilendirme hatası: Kullanıcı bilgileri eksik.");
     }
@@ -50,6 +51,7 @@ export async function addPost({ text, imageFile, user }: AddPostArgs) {
         uid: user.uid,
         username: user.displayName || "Anonim Kullanıcı",
         userAvatar: user.photoURL,
+        userRole: role || 'user', // Kullanıcı rolünü kaydet
         text: text,
         imageUrl: imageUrl,
         createdAt: serverTimestamp(),

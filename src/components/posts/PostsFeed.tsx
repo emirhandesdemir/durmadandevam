@@ -14,6 +14,7 @@ export interface Post {
     uid: string;
     username: string;
     userAvatar?: string;
+    userRole?: 'admin' | 'user';
     text: string;
     imageUrl?: string;
     createdAt: Timestamp;

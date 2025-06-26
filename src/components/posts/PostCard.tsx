@@ -6,7 +6,7 @@ import type { Post } from "./PostsFeed";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, Send } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, Send, BadgeCheck } from "lucide-react";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -130,7 +130,12 @@ export default function PostCard({ post }: PostCardProps) {
                             <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div>
-                            <p className="font-bold">{post.username}</p>
+                            <div className="flex items-center gap-1.5">
+                               <p className="font-bold">{post.username}</p>
+                               {post.userRole === 'admin' && (
+                                   <BadgeCheck className="h-5 w-5 text-primary" />
+                               )}
+                            </div>
                             <p className="text-sm text-muted-foreground">{timeAgo}</p>
                         </div>
                     </div>

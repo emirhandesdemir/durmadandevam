@@ -14,33 +14,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { useRouter } from "next/navigation";
-import { auth } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, User, Edit } from "lucide-react";
+import { LogOut, Edit, Shield, BadgeCheck } from "lucide-react";
+import Link from "next/link";
+
 
 export default function ProfilePageClient() {
-    const { user, loading } = useAuth();
-    const router = useRouter();
+    const { user, userData, loading, handleLogout } = useAuth();
     const { toast } = useToast();
-
-    const handleLogout = async () => {
-        try {
-            await auth.signOut();
-            toast({
-                title: "Oturum Kapatıldı",
-                description: "Başarıyla çıkış yaptınız.",
-            });
-            router.push('/login');
-        } catch (error) {
-            console.error("Logout error", error);
-            toast({
-                title: "Hata",
-                description: "Çıkış yapılırken bir hata oluştu.",
-                variant: "destructive",
-            });
-        }
-    };
     
     const handleSaveChanges = () => {
         toast({
@@ -52,6 +33,8 @@ export default function ProfilePageClient() {
     if (loading || !user) {
         return null; // or a loading skeleton
     }
+
+    const isAdmin = userData?.role === 'admin';
 
     return (
         <Card className="w-full max-w-lg shadow-xl rounded-3xl border-0">
@@ -67,7 +50,12 @@ export default function ProfilePageClient() {
                         <Edit className="h-5 w-5" />
                      </Button>
                 </div>
-                <CardTitle className="text-3xl font-bold mt-4">{user.displayName}</CardTitle>
+                <div className="flex items-center gap-2 mt-4">
+                    <CardTitle className="text-3xl font-bold">{user.displayName}</CardTitle>
+                    {isAdmin && (
+                         <BadgeCheck className="h-7 w-7 text-primary" />
+                    )}
+                </div>
                 <CardDescription>{user.email}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 px-8">
@@ -79,11 +67,19 @@ export default function ProfilePageClient() {
                     </div>
                 </div>
             </CardContent>
-            <CardFooter className="flex flex-col sm:flex-row justify-between gap-4 p-8">
+            <CardFooter className="flex flex-wrap justify-center gap-4 p-8">
                 <Button onClick={handleLogout} variant="outline" className="w-full sm:w-auto rounded-full">
                     <LogOut className="mr-2" />
                     Çıkış Yap
                 </Button>
+                {isAdmin && (
+                    <Button asChild className="w-full sm:w-auto rounded-full bg-blue-600 hover:bg-blue-700">
+                        <Link href="/admin/dashboard">
+                            <Shield className="mr-2" />
+                            Yönetim Paneli
+                        </Link>
+                    </Button>
+                )}
                 <Button onClick={handleSaveChanges} className="w-full sm:w-auto rounded-full shadow-lg shadow-primary/30 transition-transform hover:scale-105">
                     Değişiklikleri Kaydet
                 </Button>
