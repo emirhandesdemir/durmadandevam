@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, onSnapshot, doc, getDoc, Timestamp, addDoc, query, where, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, Timestamp, addDoc, query, where, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Room, VoiceParticipant } from '@/lib/types';
 import { joinVoiceChat, leaveVoiceChat, toggleSelfMute as toggleMuteAction } from '@/lib/actions/voiceActions';
@@ -47,48 +47,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     const self = participants.find(p => p.uid === user?.uid) || null;
     const isConnected = !!self;
-    
-    // --- Katılımcı Listesi Dinleyicisi ---
-    useEffect(() => {
-        const pathParts = pathname.split('/');
-        // Check if we are on a room page: /rooms/[id]
-        const roomIdFromPath = pathParts[1] === 'rooms' && pathParts[2] ? pathParts[2] : null;
 
-        // The room to listen to is the one we are actively connected to,
-        // OR the one we are currently viewing on its page.
-        const roomIdToListen = activeRoom?.id || roomIdFromPath;
-
-        if (!roomIdToListen) {
-            // If there's no room to listen to, clear participants and stop.
-            if (participants.length > 0) setParticipants([]);
-            return;
-        }
-
-        const voiceParticipantsRef = collection(db, "rooms", roomIdToListen, "voiceParticipants");
-        const unsubscribe = onSnapshot(voiceParticipantsRef, (snapshot) => {
-            const fetchedParticipants = snapshot.docs.map(doc => doc.data() as VoiceParticipant);
-            setParticipants(fetchedParticipants);
-        }, (error) => {
-             console.error("Voice participants listener error:", error);
-             toast({ variant: "destructive", title: "Bağlantı Hatası", description: "Sesli sohbet durumu alınamadı." });
-        });
-
-        return () => unsubscribe();
-    }, [activeRoom?.id, pathname, toast, participants.length]);
-
-
-    const leaveRoom = useCallback(async (force = false) => {
-        if (!user || !activeRoom) return;
-
-        // Only call server if not a forced local cleanup
-        if (!force) {
-            try {
-                await leaveVoiceChat(activeRoom.id, user.uid);
-            } catch (e) {
-                console.error("Failed to call leaveVoiceChat action:", e);
-            }
-        }
-        
+    const cleanupConnections = useCallback(() => {
         // Close all peer connections
         Object.values(peerConnections.current).forEach(pc => pc.close());
         peerConnections.current = {};
@@ -97,36 +57,45 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         localStream?.getTracks().forEach(track => track.stop());
         setLocalStream(null);
 
-        // Clear state immediately for the leaving user's UI
+        // Clear state
         setRemoteStreams({});
         setActiveRoom(null);
         setParticipants([]);
-    }, [user, activeRoom, localStream]);
-    
-    // Effect to handle user leaving the page (closing tab, navigating away)
-    useEffect(() => {
-        const handleBeforeUnload = () => {
-            // This is a "fire and forget" call. The browser does not guarantee
-            // completion of async operations on unload.
-            if (isConnected && activeRoom && user) {
-                leaveVoiceChat(activeRoom.id, user.uid);
+    }, [localStream]);
+
+    const leaveRoom = useCallback(async (force = false) => {
+        if (!user || !activeRoom) return;
+        
+        if (!force) {
+            try {
+                await leaveVoiceChat(activeRoom.id, user.uid);
+            } catch (e) {
+                console.error("Failed to call leaveVoiceChat action:", e);
             }
-        };
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => {
-            window.removeEventListener('beforeunload', handleBeforeUnload);
-        };
-    }, [isConnected, activeRoom, user, leaveRoom]);
+        }
+        cleanupConnections();
+    }, [user, activeRoom, cleanupConnections]);
 
-
-    // --- Sinyalleşme Dinleyicisi (WebRTC için) ---
+    
+    // --- Katılımcı ve Sinyal Dinleyicileri ---
     useEffect(() => {
-        if (!user || !activeRoom || !localStream) return;
+        const roomId = activeRoom?.id;
+        if (!user || !roomId) return;
 
-        const signalsRef = collection(db, `rooms/${activeRoom.id}/signals`);
+        // Katılımcıları dinle
+        const participantsUnsub = onSnapshot(collection(db, "rooms", roomId, "voiceParticipants"), (snapshot) => {
+            const fetchedParticipants = snapshot.docs.map(doc => doc.data() as VoiceParticipant);
+            setParticipants(fetchedParticipants);
+        }, (error) => {
+             console.error("Voice participants listener error:", error);
+             toast({ variant: "destructive", title: "Bağlantı Hatası", description: "Sesli sohbet durumu alınamadı." });
+        });
+        
+        // Sinyalleri dinle
+        const signalsRef = collection(db, `rooms/${roomId}/signals`);
         const q = query(signalsRef, where('to', '==', user.uid));
         
-        const unsubscribe = onSnapshot(q, (snapshot) => {
+        const signalsUnsub = onSnapshot(q, (snapshot) => {
             snapshot.docChanges().forEach(async (change) => {
                 if (change.type === 'added') {
                     const signal = change.doc.data();
@@ -136,26 +105,32 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             });
         });
 
-        return () => unsubscribe();
+        return () => {
+            participantsUnsub();
+            signalsUnsub();
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user, activeRoom, localStream]);
+    }, [user, activeRoom?.id, toast]);
 
 
     // --- Peer Connection Yöneticisi ---
     useEffect(() => {
         if (!isConnected || !localStream || !user) return;
         
+        const currentPeerIds = Object.keys(peerConnections.current);
+        const newParticipantIds = participants.map(p => p.uid).filter(uid => uid !== user.uid);
+
         // Yeni katılanlara bağlan
-        participants.forEach(p => {
-            if (p.uid !== user.uid && !peerConnections.current[p.uid]) {
-                createPeerConnection(p.uid, true);
+        newParticipantIds.forEach(uid => {
+            if (!currentPeerIds.includes(uid)) {
+                createPeerConnection(uid, true);
             }
         });
 
         // Ayrılanların bağlantısını temizle
-        Object.keys(peerConnections.current).forEach(uid => {
-            if (!participants.some(p => p.uid === uid)) {
-                peerConnections.current[uid].close();
+        currentPeerIds.forEach(uid => {
+            if (!newParticipantIds.includes(uid)) {
+                peerConnections.current[uid]?.close();
                 delete peerConnections.current[uid];
                 setRemoteStreams(prev => {
                     const newStreams = {...prev};
@@ -166,6 +141,20 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         });
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [participants, isConnected, localStream, user?.uid]);
+    
+    // Effect to handle user leaving the page (closing tab, navigating away)
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (isConnected) {
+                leaveRoom();
+            }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [isConnected, leaveRoom]);
+
 
     const sendSignal = async (to: string, type: string, data: any) => {
         if (!activeRoom || !user) return;
@@ -193,13 +182,13 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
         pc.onconnectionstatechange = () => {
             if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected' || pc.connectionState === 'closed') {
-                pc.close();
-                delete peerConnections.current[uid];
-                 setRemoteStreams(prev => {
-                    const newStreams = {...prev};
-                    delete newStreams[uid];
-                    return newStreams;
-                });
+               peerConnections.current[uid]?.close();
+               delete peerConnections.current[uid];
+                setRemoteStreams(prev => {
+                   const newStreams = {...prev};
+                   delete newStreams[uid];
+                   return newStreams;
+               });
             }
         }
 
@@ -217,15 +206,21 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         const pc = peerConnections.current[from] || createPeerConnection(from, false);
         if (!pc) return;
         
-        if (type === 'offer') {
-            await pc.setRemoteDescription(new RTCSessionDescription(data));
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            if(pc.localDescription) await sendSignal(from, 'answer', pc.localDescription.toJSON());
-        } else if (type === 'answer') {
-            await pc.setRemoteDescription(new RTCSessionDescription(data));
-        } else if (type === 'ice-candidate') {
-            await pc.addIceCandidate(new RTCIceCandidate(data));
+        try {
+            if (type === 'offer') {
+                await pc.setRemoteDescription(new RTCSessionDescription(data));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                if(pc.localDescription) await sendSignal(from, 'answer', pc.localDescription.toJSON());
+            } else if (type === 'answer') {
+                if (pc.signalingState !== 'stable') {
+                    await pc.setRemoteDescription(new RTCSessionDescription(data));
+                }
+            } else if (type === 'ice-candidate') {
+                await pc.addIceCandidate(new RTCIceCandidate(data));
+            }
+        } catch (error) {
+            console.error("Error handling signal:", type, error);
         }
     };
 
@@ -233,22 +228,13 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         if (!user || isConnected || isConnecting) return;
         setIsConnecting(true);
 
-        // Optimistic UI: Add user to participants list immediately
-        const optimisticParticipant: VoiceParticipant = {
-            uid: user.uid,
-            username: user.displayName || 'Anonim',
-            photoURL: user.photoURL,
-            isSpeaker: true,
-            isMuted: false, // Start unmuted
-            joinedAt: new Date() as unknown as Timestamp, // Temporary timestamp
-        };
-        setParticipants(prev => [...prev, optimisticParticipant]);
-        setActiveRoom(roomToJoin);
-
         try {
             // Get microphone permission and start local stream
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
             setLocalStream(stream);
+
+            // Set active room to trigger listeners
+            setActiveRoom(roomToJoin);
 
             // Send join request to the server
             const result = await joinVoiceChat(roomToJoin.id, {
@@ -262,12 +248,12 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         } catch (error: any) {
             console.error("Could not join voice chat:", error);
             toast({ variant: "destructive", title: "Katılım Başarısız", description: error.message });
-            // Rollback optimistic UI on error
-            leaveRoom(true);
+            // Rollback on error
+            cleanupConnections();
         } finally {
             setIsConnecting(false);
         }
-    }, [user, isConnected, isConnecting, toast, leaveRoom]);
+    }, [user, isConnected, isConnecting, toast, cleanupConnections]);
 
 
     

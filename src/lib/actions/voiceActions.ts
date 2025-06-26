@@ -54,13 +54,12 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
                 throw new Error("Sesli sohbet dolu.");
             }
 
-            const isHost = roomData.createdBy.uid === user.uid;
             const participantData: VoiceParticipant = {
                 uid: user.uid,
                 username: user.displayName || 'Anonim',
                 photoURL: user.photoURL,
                 isSpeaker: true, 
-                isMuted: false, // Kullanıcılar varsayılan olarak konuşabilir.
+                isMuted: false, // Kullanıcılar varsayılan olarak konuşabilir (sessiz değil).
                 joinedAt: serverTimestamp() as Timestamp,
             };
             
@@ -143,7 +142,6 @@ export async function toggleSelfMute(roomId: string, userId: string, isMuted: bo
     try {
         await updateDoc(userVoiceRef, { 
             isMuted: isMuted,
-            lastSpokeAt: serverTimestamp()
         });
         return { success: true };
     } catch (error: any) {
