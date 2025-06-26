@@ -2,14 +2,14 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, onSnapshot, doc, getDoc, Timestamp, addDoc, query, where, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDoc, Timestamp, addDoc, query, where, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Room, VoiceParticipant } from '@/lib/types';
 import { joinVoiceChat, leaveVoiceChat, toggleSelfMute as toggleMuteAction } from '@/lib/actions/voiceActions';
 import { usePathname } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 
-// Google'ın halka açık STUN sunucuları
+// Google's halka açık STUN sunucuları
 const ICE_SERVERS = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -69,6 +69,9 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeRoom, user]);
     
+    const self = participants.find(p => p.uid === user?.uid) || null;
+    const isConnected = !!self;
+    
     // --- Sinyalleşme Dinleyicisi (WebRTC için) ---
     useEffect(() => {
         if (!user || !activeRoom || !localStream) return;
@@ -89,8 +92,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         return () => unsubscribe();
     }, [user, activeRoom, localStream]);
 
-    const self = participants.find(p => p.uid === user?.uid) || null;
-    const isConnected = !!self;
 
     // --- Peer Connection Yöneticisi ---
     useEffect(() => {
@@ -183,31 +184,50 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const joinRoom = useCallback(async (roomToJoin: Room) => {
         if (!user || isConnected || isConnecting) return;
         setIsConnecting(true);
+
+        // Optimistic UI: Add user to participants list immediately
+        const optimisticParticipant: VoiceParticipant = {
+            uid: user.uid,
+            username: user.displayName || 'Anonim',
+            photoURL: user.photoURL,
+            isSpeaker: true,
+            isMuted: true, // Start muted
+            joinedAt: new Date() as unknown as Timestamp, // Temporary timestamp
+        };
+        setParticipants(prev => [...prev, optimisticParticipant]);
+        setActiveRoom(roomToJoin);
+
         try {
-            // Mikrofon izni al ve local stream'i başlat
+            // Get microphone permission and start local stream
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
             setLocalStream(stream);
 
-            // Veritabanına katılma eylemini gönder
+            // Send join request to the server
             const result = await joinVoiceChat(roomToJoin.id, {
                 uid: user.uid, displayName: user.displayName, photoURL: user.photoURL,
             });
 
-            if (result.success) {
-                setActiveRoom(roomToJoin);
-            } else {
+            if (!result.success) {
+                // Rollback optimistic UI on failure
+                setParticipants(prev => prev.filter(p => p.uid !== user.uid));
+                setActiveRoom(null);
                 stream.getTracks().forEach(track => track.stop());
                 setLocalStream(null);
                 throw new Error(result.error || 'Sesli sohbete katılırken bir hata oluştu.');
             }
+            // On success, the real-time listener will update the participant list with the correct data
         } catch (error: any) {
-            console.error("Sesli sohbete katılamadı:", error);
+            console.error("Could not join voice chat:", error);
             toast({ variant: "destructive", title: "Katılım Başarısız", description: error.message });
-            setLocalStream(null); // Başarısız olursa stream'i temizle
+            // Rollback optimistic UI on error
+            setParticipants(prev => prev.filter(p => p.uid !== user.uid));
+            setActiveRoom(null);
+            setLocalStream(null);
         } finally {
             setIsConnecting(false);
         }
     }, [user, isConnected, isConnecting, toast]);
+
 
     const leaveRoom = useCallback(async (force = false) => {
         if (!user || !activeRoom) return;
@@ -216,15 +236,15 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             await leaveVoiceChat(activeRoom.id, user.uid);
         }
         
-        // Tüm peer connection'ları kapat
+        // Close all peer connections
         Object.values(peerConnections.current).forEach(pc => pc.close());
         peerConnections.current = {};
         
-        // Local media stream'i durdur
+        // Stop local media stream
         localStream?.getTracks().forEach(track => track.stop());
         setLocalStream(null);
 
-        // State'i temizle
+        // Clear state
         setRemoteStreams({});
         setActiveRoom(null);
         setParticipants([]);
