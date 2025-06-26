@@ -31,17 +31,22 @@ async function deleteCollection(collectionRef: any, batchSize: number) {
 }
 
 /**
- * Deletes a room document and all of its subcollections (messages, participants).
+ * Deletes a room document and all of its subcollections (messages, participants, signals).
  * @param roomId The ID of the room to delete.
  */
 export async function deleteRoomWithSubcollections(roomId: string) {
     const roomRef = doc(db, 'rooms', roomId);
 
+    // Alt koleksiyonları sil
     const messagesRef = collection(roomRef, 'messages');
     await deleteCollection(messagesRef, 50);
 
-    const participantsRef = collection(roomRef, 'participants');
-    await deleteCollection(participantsRef, 50);
+    const voiceParticipantsRef = collection(roomRef, 'voiceParticipants');
+    await deleteCollection(voiceParticipantsRef, 50);
+    
+    const signalsRef = collection(roomRef, 'signals');
+    await deleteCollection(signalsRef, 50);
 
+    // Ana oda dökümanını sil
     await deleteDoc(roomRef);
 }

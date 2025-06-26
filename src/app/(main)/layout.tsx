@@ -5,6 +5,7 @@
 import BottomNav from "@/components/layout/bottom-nav";
 import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
 import PersistentVoiceBar from "@/components/voice/PersistentVoiceBar";
+import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
 
 export default function MainAppLayout({
   children,
@@ -17,7 +18,8 @@ export default function MainAppLayout({
         {/* Ana içerik alanı, alt navigasyonun kaplayacağı alanı boş bırakmak için alttan padding alır */}
         <main className="flex-1 pb-20">{children}</main>
         
-        {/* Sabit durum çubukları */}
+        {/* Sesli sohbet ve diğer sabit durum çubukları */}
+        <VoiceAudioPlayer />
         <PersistentVoiceBar />
         <BottomNav />
       </div>
