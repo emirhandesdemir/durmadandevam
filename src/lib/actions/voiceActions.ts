@@ -99,25 +99,26 @@ export async function leaveVoiceChat(roomId: string, userId: string) {
             const roomData = roomDoc.data() as Room;
             // Genel katılımcı listesinden silinecek tam nesneyi bul.
             const participantToRemove = (roomData.participants || []).find(p => p.uid === userId);
-
             const userVoiceDoc = await transaction.get(userVoiceRef);
             
-            // Sadece kullanıcı gerçekten sesli sohbet listesindeyse işlemleri yap.
-            if (userVoiceDoc.exists()) {
-                // 1. Sesli sohbet alt koleksiyonundan kullanıcıyı sil.
-                transaction.delete(userVoiceRef);
-                
-                // 2. Güncellenecek alanları içeren bir nesne oluştur.
-                const updates: {[key: string]: any} = {
-                    voiceParticipantsCount: increment(-1)
-                };
+            const updates: {[key: string]: any} = {};
+            let needsUpdate = false;
 
-                // 3. Kullanıcı ana katılımcı listesindeyse, oradan da sil.
-                if (participantToRemove) {
-                    updates.participants = arrayRemove(participantToRemove);
-                }
-                
-                // 4. Oda dokümanını tek seferde güncelle.
+            // Eğer kullanıcı sesli sohbet listesindeyse, onu sil ve sayacı azalt.
+            if (userVoiceDoc.exists()) {
+                transaction.delete(userVoiceRef);
+                updates.voiceParticipantsCount = increment(-1);
+                needsUpdate = true;
+            }
+            
+            // Eğer kullanıcı ana katılımcı listesindeyse, oradan da sil.
+            if (participantToRemove) {
+                updates.participants = arrayRemove(participantToRemove);
+                needsUpdate = true;
+            }
+            
+            // Eğer herhangi bir değişiklik yapılacaksa, oda dökümanını tek seferde güncelle.
+            if (needsUpdate) {
                 transaction.update(roomRef, updates);
             }
         });

@@ -74,7 +74,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         });
 
         return () => unsubscribe();
-    }, [activeRoom?.id, pathname, toast]);
+    }, [activeRoom?.id, pathname, toast, participants.length]);
 
 
     const leaveRoom = useCallback(async (force = false) => {
@@ -116,7 +116,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         return () => {
             window.removeEventListener('beforeunload', handleBeforeUnload);
         };
-    }, [isConnected, activeRoom, user]);
+    }, [isConnected, activeRoom, user, leaveRoom]);
 
 
     // --- Sinyalleşme Dinleyicisi (WebRTC için) ---
