@@ -35,41 +35,38 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
     const userVoiceRef = doc(roomRef, 'voiceParticipants', user.uid);
 
     try {
-        // Step 1: Read the data first, outside of a transaction to prevent race conditions.
-        const roomDoc = await getDoc(roomRef);
-        if (!roomDoc.exists()) {
-            throw new Error("Oda bulunamadı.");
-        }
-        
-        const userVoiceDoc = await getDoc(userVoiceRef);
-        if (userVoiceDoc.exists()) {
-            // User is already in chat, consider it a success.
-            return { success: true };
-        }
+        await runTransaction(db, async (transaction) => {
+            const roomDoc = await transaction.get(roomRef);
+            if (!roomDoc.exists()) {
+                throw new Error("Oda bulunamadı.");
+            }
+            
+            const userVoiceDoc = await transaction.get(userVoiceRef);
+            if (userVoiceDoc.exists()) {
+                // User is already in chat, consider it a success.
+                return;
+            }
 
-        const roomData = roomDoc.data() as Room;
-        const voiceCount = roomData.voiceParticipantsCount || 0;
-        if (voiceCount >= roomData.maxParticipants) {
-            throw new Error("Sesli sohbet dolu.");
-        }
+            const roomData = roomDoc.data() as Room;
+            const voiceCount = roomData.voiceParticipantsCount || 0;
+            if (voiceCount >= roomData.maxParticipants) {
+                throw new Error("Sesli sohbet dolu.");
+            }
 
-        // Step 2: Perform the writes in a single batch.
-        const isHost = roomData.createdBy.uid === user.uid;
-        const participantData: VoiceParticipant = {
-            uid: user.uid,
-            username: user.displayName || 'Anonim',
-            photoURL: user.photoURL,
-            isSpeaker: true, // Everyone is a speaker now
-            isMuted: !isHost, // Host joins unmuted, others join muted
-            joinedAt: serverTimestamp() as Timestamp,
-        };
+            const isHost = roomData.createdBy.uid === user.uid;
+            const participantData: VoiceParticipant = {
+                uid: user.uid,
+                username: user.displayName || 'Anonim',
+                photoURL: user.photoURL,
+                isSpeaker: true, 
+                isMuted: !isHost, 
+                joinedAt: serverTimestamp() as Timestamp,
+            };
+            
+            transaction.set(userVoiceRef, participantData);
+            transaction.update(roomRef, { voiceParticipantsCount: increment(1) });
+        });
         
-        const batch = writeBatch(db);
-        batch.set(userVoiceRef, participantData);
-        batch.update(roomRef, { voiceParticipantsCount: increment(1) });
-        
-        await batch.commit();
-
         return { success: true };
     } catch (error: any) {
         console.error("Sesli sohbete katılırken hata:", error);
@@ -90,16 +87,14 @@ export async function leaveVoiceChat(roomId: string, userId: string) {
     const userVoiceRef = doc(db, 'rooms', roomId, 'voiceParticipants', userId);
 
      try {
-        const userVoiceDoc = await getDoc(userVoiceRef);
-        if (!userVoiceDoc.exists()) {
-            return { success: true }; // Already left, do nothing.
-        }
-
-        const batch = writeBatch(db);
-        batch.delete(userVoiceRef);
-        batch.update(roomRef, { voiceParticipantsCount: increment(-1) });
-        await batch.commit();
-
+        await runTransaction(db, async (transaction) => {
+            const userVoiceDoc = await transaction.get(userVoiceRef);
+            // Sadece kullanıcı gerçekten listedeyse sil ve sayacı azalt.
+            if (userVoiceDoc.exists()) {
+                transaction.delete(userVoiceRef);
+                transaction.update(roomRef, { voiceParticipantsCount: increment(-1) });
+            }
+        });
         return { success: true };
     } catch (error: any) {
         console.error("Sesli sohbetten ayrılırken hata:", error);
