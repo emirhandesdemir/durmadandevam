@@ -1,3 +1,4 @@
+
 // src/app/(main)/rooms/[id]/page.tsx
 "use client";
 
@@ -9,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
-import type { Room } from '@/lib/types';
+import type { Room, VoiceParticipant } from '@/lib/types';
 import { ChevronLeft, Loader2, MoreHorizontal, Mic, MicOff, Plus, Users, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TextChat, { type Message } from '@/components/chat/text-chat';
@@ -25,7 +26,6 @@ export default function RoomPage() {
     
     const { user, loading: authLoading } = useAuth();
     const { 
-        participants, 
         self, 
         isConnecting, 
         isConnected, 
@@ -34,6 +34,7 @@ export default function RoomPage() {
     } = useVoiceChat();
 
     const [room, setRoom] = useState<Room | null>(null);
+    const [voiceParticipants, setVoiceParticipants] = useState<VoiceParticipant[]>([]);
     const [messages, setMessages] = useState<Message[]>([]);
     const [messagesLoading, setMessagesLoading] = useState(true);
     const [isParticipantSheetOpen, setIsParticipantSheetOpen] = useState(false);
@@ -55,6 +56,23 @@ export default function RoomPage() {
         });
         return () => roomUnsub();
     }, [roomId, router, toast]);
+
+    // Sesli sohbet katılımcılarını dinle
+    useEffect(() => {
+        if (!roomId) return;
+        const voiceParticipantsRef = collection(db, "rooms", roomId, "voiceParticipants");
+        const q = query(voiceParticipantsRef, orderBy("joinedAt", "asc"));
+        
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const vps = snapshot.docs.map(doc => doc.data() as VoiceParticipant);
+            setVoiceParticipants(vps);
+        }, (error) => {
+            console.error("Voice participant listener error on RoomPage:", error);
+            toast({ title: "Hata", description: "Sesli sohbet katılımcıları alınamadı.", variant: "destructive" });
+        });
+
+        return () => unsubscribe();
+    }, [roomId, toast]);
 
     // Metin sohbeti mesajlarını dinle
     useEffect(() => {
@@ -94,18 +112,18 @@ export default function RoomPage() {
     };
     
     const { hostParticipant, otherParticipants } = useMemo(() => {
-        if (!participants || !room) {
+        if (!voiceParticipants || !room) {
             return { hostParticipant: null, otherParticipants: [] };
         }
-        const host = participants.find(p => p.uid === room.createdBy.uid);
-        const others = participants.filter(p => p.uid !== room.createdBy.uid);
+        const host = voiceParticipants.find(p => p.uid === room.createdBy.uid);
+        const others = voiceParticipants.filter(p => p.uid !== room.createdBy.uid);
         return { hostParticipant: host, otherParticipants: others };
-    }, [participants, room]);
+    }, [voiceParticipants, room]);
 
     const isLoading = authLoading || !room;
     
     // Yükleme durumunu kontrol et: bağlanıyor veya ilk katılımcı verisi henüz gelmedi
-    const showVoiceStageLoader = isConnecting || (isConnected && participants.length === 0);
+    const showVoiceStageLoader = isConnecting || (isConnected && voiceParticipants.length === 0);
 
     if (isLoading) {
         return (
