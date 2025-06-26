@@ -15,19 +15,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Image as ImageIcon, Send, Loader2, X, Wand2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Filtre seçenekleri
-const filters = [
-    { name: 'Vintage', prompt: 'a grainy, vintage film photo with faded colors' },
-    { name: 'Sinematik', prompt: 'a cinematic shot with dramatic lighting and high contrast' },
-    { name: 'Siyah & Beyaz', prompt: 'a classic, high-contrast black and white photo' },
-    { name: 'Neon', prompt: 'a vibrant, futuristic photo with neon lighting and cyberpunk aesthetics' },
-]
-
 /**
  * NewPostForm Bileşeni
  * 
  * Kullanıcının yeni bir gönderi (metin ve/veya resim) oluşturmasını sağlayan formdur.
- * Resim yüklendiğinde yapay zeka destekli filtre uygulama özelliği içerir.
+ * Resim yüklendiğinde metin komutlarıyla yapay zeka destekli düzenleme özelliği içerir.
  */
 export default function NewPostForm() {
   const router = useRouter();
@@ -38,9 +30,10 @@ export default function NewPostForm() {
   const [text, setText] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [originalImagePreview, setOriginalImagePreview] = useState<string | null>(null);
-  const [filteredImagePreview, setFilteredImagePreview] = useState<string | null>(null); // Filtrelenmiş resim için state
+  const [filteredImagePreview, setFilteredImagePreview] = useState<string | null>(null); // AI ile düzenlenen resim
   const [isLoading, setIsLoading] = useState(false);
-  const [isFiltering, setIsFiltering] = useState<string | null>(null); // Hangi filtrenin işlendiğini tutar
+  const [isFiltering, setIsFiltering] = useState(false); // AI düzenlemesi yapılıyor mu?
+  const [aiPrompt, setAiPrompt] = useState(""); // AI için metin komutu
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -63,6 +56,7 @@ export default function NewPostForm() {
       setImageFile(file);
       setFilteredImagePreview(null); // Yeni resim seçildiğinde filtrelenmişi temizle
       setOriginalImagePreview(URL.createObjectURL(file));
+      setAiPrompt(""); // Metin alanını temizle
     }
   };
 
@@ -74,33 +68,34 @@ export default function NewPostForm() {
       setImageFile(null);
       setOriginalImagePreview(null);
       setFilteredImagePreview(null);
+      setAiPrompt("");
       if(fileInputRef.current) {
           fileInputRef.current.value = "";
       }
   }
 
-  // AI Filtre uygulama fonksiyonu
-  const handleApplyFilter = async (filterPrompt: string, filterName: string) => {
-      if (!imageFile || isFiltering) return;
+  // AI ile düzenleme fonksiyonu
+  const handleApplyAiChanges = async () => {
+      if (!imageFile || !aiPrompt.trim() || isFiltering) return;
 
-      setIsFiltering(filterName);
-      toast({ description: `${filterName} filtresi uygulanıyor, lütfen bekleyin...` });
+      setIsFiltering(true);
+      toast({ description: `Yapay zeka ile değişiklikler uygulanıyor, lütfen bekleyin...` });
 
       try {
           const photoDataUri = await toDataURL(imageFile);
-          const result = await applyImageFilter({ photoDataUri, style: filterPrompt });
+          const result = await applyImageFilter({ photoDataUri, style: aiPrompt });
           
           if (result.success && result.data?.styledPhotoDataUri) {
               setFilteredImagePreview(result.data.styledPhotoDataUri);
-              toast({ title: "Başarılı!", description: `Filtre uygulandı.` });
+              toast({ title: "Başarılı!", description: `Resim güncellendi.` });
           } else {
               throw new Error(result.error);
           }
       } catch (error: any) {
-          console.error("Filtre hatası:", error);
-          toast({ variant: "destructive", description: error.message || "Filtre uygulanırken bir hata oluştu." });
+          console.error("AI düzenleme hatası:", error);
+          toast({ variant: "destructive", description: error.message || "Resim düzenlenirken bir hata oluştu." });
       } finally {
-          setIsFiltering(null);
+          setIsFiltering(false);
       }
   };
 
@@ -162,7 +157,7 @@ export default function NewPostForm() {
                 placeholder="Aklında ne var? (#etiket) veya (@kullanıcı) bahset..."
                 className="min-h-[60px] flex-1 resize-none border-0 bg-transparent p-0 text-base placeholder:text-muted-foreground/80 focus-visible:ring-0"
                 rows={2}
-                disabled={isLoading}
+                disabled={isLoading || isFiltering}
             />
         </div>
         {currentPreview && (
@@ -176,32 +171,39 @@ export default function NewPostForm() {
                         variant="destructive" 
                         className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/50 hover:bg-black/70 border-0"
                         onClick={removeImage}
-                        disabled={isLoading || !!isFiltering}
+                        disabled={isLoading || isFiltering}
                     >
                         <X className="h-4 w-4" />
                     </Button>
                 </div>
-                {/* Filtre Butonları */}
+                 {/* AI Metin Giriş Alanı */}
                 <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                         <Wand2 className="h-4 w-4" />
-                        <span>AI Filtreler</span>
+                        <span>AI ile Düzenle</span>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                        {filters.map(filter => (
-                            <Button 
-                                key={filter.name} 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => handleApplyFilter(filter.prompt, filter.name)}
-                                disabled={!!isFiltering}
-                            >
-                                {isFiltering === filter.name ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                ) : null}
-                                {filter.name}
-                            </Button>
-                        ))}
+                    <div className="flex items-start gap-2">
+                        <Textarea 
+                            placeholder="Resme ne yapmak istersin? Örn: 'arkaplana bir kedi ekle', 'çizgi film gibi yap'..."
+                            value={aiPrompt}
+                            onChange={(e) => setAiPrompt(e.target.value)}
+                            className="text-sm"
+                            rows={2}
+                            disabled={isFiltering || isLoading}
+                        />
+                        <Button 
+                            onClick={handleApplyAiChanges}
+                            disabled={!aiPrompt.trim() || isFiltering || isLoading}
+                            size="icon"
+                            variant="secondary"
+                        >
+                            {isFiltering ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <Wand2 className="h-4 w-4" />
+                            )}
+                            <span className="sr-only">Uygula</span>
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -216,7 +218,7 @@ export default function NewPostForm() {
           size="icon"
           className="rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
           onClick={handleImageClick}
-          disabled={isLoading || !!isFiltering}
+          disabled={isLoading || isFiltering}
         >
           <ImageIcon className="h-5 w-5" />
           <span className="sr-only">Resim Ekle</span>
@@ -226,7 +228,7 @@ export default function NewPostForm() {
           className="rounded-full"
           size="icon"
           onClick={handleShare}
-          disabled={isLoading || (!text.trim() && !imageFile) || !!isFiltering}
+          disabled={isLoading || (!text.trim() && !imageFile) || isFiltering}
         >
           {isLoading ? (
             <Loader2 className="h-5 w-5 animate-spin" />

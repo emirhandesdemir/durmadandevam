@@ -1,8 +1,8 @@
 'use server';
 /**
- * @fileOverview Yapay zeka ile resimlere sanatsal stiller uygulayan bir Genkit akışı.
+ * @fileOverview Kullanıcının metin komutlarına göre yapay zeka ile resimleri düzenleyen bir Genkit akışı.
  *
- * - styleImage - Verilen bir resme belirli bir stili uygulayan ana fonksiyon.
+ * - styleImage - Verilen bir resme metin tabanlı bir komut uygulayan ana fonksiyon.
  * - StyleImageInput - styleImage fonksiyonunun giriş tipi.
  * - StyleImageOutput - styleImage fonksiyonunun dönüş tipi.
  */
@@ -10,20 +10,20 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-// Giriş şeması: Resim verisi ve stil adı
+// Giriş şeması: Resim verisi ve düzenleme komutu
 const StyleImageInputSchema = z.object({
   photoDataUri: z
     .string()
     .describe(
-      "Stil uygulanacak resim. Data URI formatında olmalıdır: 'data:<mimetype>;base64,<encoded_data>'."
+      "Düzenlenecek resim. Data URI formatında olmalıdır: 'data:<mimetype>;base64,<encoded_data>'."
     ),
-  style: z.string().describe('Uygulanacak stilin açıklaması (örn: "vintage film filter").'),
+  style: z.string().describe('Resme uygulanacak değişikliğin metin olarak açıklaması (örn: "make it a watercolor painting").'),
 });
 export type StyleImageInput = z.infer<typeof StyleImageInputSchema>;
 
-// Çıkış şeması: Stil uygulanmış resim verisi
+// Çıkış şeması: Düzenlenmiş resim verisi
 const StyleImageOutputSchema = z.object({
-    styledPhotoDataUri: z.string().describe("Stil uygulanmış resmin Data URI'si.")
+    styledPhotoDataUri: z.string().describe("Düzenlenmiş resmin Data URI'si.")
 });
 export type StyleImageOutput = z.infer<typeof StyleImageOutputSchema>;
 
@@ -51,7 +51,7 @@ const styleImageFlow = ai.defineFlow(
         model: imageGenerationModel,
         prompt: [
             { media: { url: input.photoDataUri } },
-            { text: `Apply this style to the image: ${input.style}` }
+            { text: `Apply the following instruction to the image: ${input.style}` }
         ],
         config: {
             // Hem resim hem metin çıktısı talep etmek, modelin daha iyi çalışmasını sağlar
@@ -63,7 +63,7 @@ const styleImageFlow = ai.defineFlow(
         throw new Error("AI modelinden resim çıktısı alınamadı.");
     }
     
-    // Stil uygulanmış resmin data URI'sini döndür
+    // Düzenlenmiş resmin data URI'sini döndür
     return {
         styledPhotoDataUri: media.url
     };
