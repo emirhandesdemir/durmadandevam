@@ -198,33 +198,27 @@ export default function RoomPage() {
             </Button>
             <div>
                 <h1 className="text-lg font-bold">{room.name}</h1>
-                <div className="flex items-center gap-2">
-                    <Avatar className="h-5 w-5">
-                        <AvatarImage src={room.createdBy.photoURL || undefined} />
-                        <AvatarFallback>{room.createdBy.username?.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <span className="font-semibold text-foreground">{room.createdBy.username}</span>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span>Oluşturan:</span>
+                    <span className="font-semibold text-foreground">{room.createdBy.username}</span>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger>
+                                <Crown className="h-4 w-4 text-amber-500" />
+                            </TooltipTrigger>
+                            <TooltipContent><p>Oda Kurucusu</p></TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                    {room.createdBy.role === 'admin' && (
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger>
-                                    <Crown className="h-4 w-4 text-amber-500" />
+                                    <ShieldCheck className="h-4 w-4 text-primary" />
                                 </TooltipTrigger>
-                                <TooltipContent><p>Oda Kurucusu</p></TooltipContent>
+                                <TooltipContent><p>Yönetici</p></TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
-                        {room.createdBy.role === 'admin' && (
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger>
-                                        <ShieldCheck className="h-4 w-4 text-primary" />
-                                    </TooltipTrigger>
-                                    <TooltipContent><p>Yönetici</p></TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        )}
-                        <span>tarafından {creatorTimeAgo}</span>
-                     </div>
+                    )}
                 </div>
             </div>
             </div>
