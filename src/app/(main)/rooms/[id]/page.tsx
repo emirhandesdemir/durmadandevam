@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
 import type { Room, VoiceParticipant } from '@/lib/types';
-import { ChevronLeft, Loader2, MoreHorizontal, Mic, MicOff, Plus, Users, Crown } from 'lucide-react';
+import { ChevronLeft, Loader2, MoreHorizontal, Mic, MicOff, Plus, Users, Crown, PhoneOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TextChat, { type Message } from '@/components/chat/text-chat';
 import ChatMessageInput from '@/components/chat/ChatMessageInput';
@@ -30,6 +30,7 @@ export default function RoomPage() {
         isConnecting, 
         isConnected, 
         joinRoom, 
+        leaveRoom,
         toggleSelfMute,
         participants: voiceParticipants,
     } = useVoiceChat();
@@ -202,9 +203,15 @@ export default function RoomPage() {
                 {/* Footer / Input */}
                 <footer className="flex items-center gap-3 p-3 border-t border-gray-700/50 bg-gray-900 shrink-0">
                     {isConnected ? (
-                        <Button onClick={handleToggleMute} variant="ghost" size="icon" className="rounded-full bg-gray-700/50 hover:bg-gray-600/50">
-                            {self?.isMuted ? <MicOff className="h-5 w-5 text-red-500"/> : <Mic className="h-5 w-5 text-white"/>}
-                        </Button>
+                         <>
+                            <Button onClick={handleToggleMute} variant="ghost" size="icon" className="rounded-full bg-gray-700/50 hover:bg-gray-600/50">
+                                {self?.isMuted ? <MicOff className="h-5 w-5 text-red-500"/> : <Mic className="h-5 w-5 text-white"/>}
+                            </Button>
+                             <Button onClick={() => leaveRoom()} variant="destructive" size="icon" className="rounded-full">
+                                <PhoneOff className="h-5 w-5" />
+                                <span className="sr-only">Ayrıl</span>
+                            </Button>
+                        </>
                     ) : (
                          <Button onClick={handleJoinVoice} disabled={isConnecting} className="rounded-full bg-primary text-primary-foreground h-10 px-4">
                             {isConnecting ? <Loader2 className="h-5 w-5 animate-spin"/> : <Mic className="h-5 w-5"/>}

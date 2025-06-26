@@ -1,8 +1,9 @@
+
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, onSnapshot, doc, Timestamp, addDoc, query, where, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, Timestamp, addDoc, query, where, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Room, VoiceParticipant } from '@/lib/types';
 import { joinVoiceChat, leaveVoiceChat, toggleSelfMute as toggleMuteAction } from '@/lib/actions/voiceActions';
@@ -48,7 +49,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const self = participants.find(p => p.uid === user?.uid) || null;
     const isConnected = !!self;
 
-    const cleanupConnections = useCallback(() => {
+    const cleanupConnections = useCallback((shouldClearActiveRoom = true) => {
         // Close all peer connections
         Object.values(peerConnections.current).forEach(pc => pc.close());
         peerConnections.current = {};
@@ -59,7 +60,9 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
         // Clear state
         setRemoteStreams({});
-        setActiveRoom(null);
+        if (shouldClearActiveRoom) {
+            setActiveRoom(null);
+        }
         setParticipants([]);
     }, [localStream]);
 
@@ -73,15 +76,37 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 console.error("Failed to call leaveVoiceChat action:", e);
             }
         }
-        cleanupConnections();
+        // Temizlik yaparken activeRoom'u null yapmamak, 
+        // sayfa yenilenene kadar oda bilgisini korur ama bağlantıları keser.
+        // Ancak tam bir çıkış için her şeyi temizlemek daha doğru.
+        cleanupConnections(true);
     }, [user, activeRoom, cleanupConnections]);
 
     
     // --- Katılımcı ve Sinyal Dinleyicileri ---
     useEffect(() => {
-        const roomId = activeRoom?.id;
-        if (!user || !roomId) return;
+        // Sadece oda sayfasındaysak dinleyicileri çalıştır
+        const match = pathname.match(/\/rooms\/([^/]+)/);
+        const roomId = match ? match[1] : null;
 
+        if (!user || !roomId) {
+            // Eğer bir odadan ayrıldıysak ve hala bağlantı varsa temizle
+            if (isConnected) {
+                leaveRoom(true);
+            }
+            return;
+        }
+
+        // Aktif odayı ayarla (eğer henüz ayarlanmadıysa)
+        if (!activeRoom || activeRoom.id !== roomId) {
+             const roomRef = doc(db, 'rooms', roomId);
+             getDoc(roomRef).then(docSnap => {
+                if (docSnap.exists()) {
+                    setActiveRoom({ id: docSnap.id, ...docSnap.data() } as Room);
+                }
+             });
+        }
+        
         // Katılımcıları dinle
         const participantsUnsub = onSnapshot(collection(db, "rooms", roomId, "voiceParticipants"), (snapshot) => {
             const fetchedParticipants = snapshot.docs.map(doc => doc.data() as VoiceParticipant);
@@ -100,7 +125,12 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 if (change.type === 'added') {
                     const signal = change.doc.data();
                     handleSignal(signal.from, signal.type, signal.data);
-                    await deleteDoc(change.doc.ref);
+                    // Sinyali işledikten sonra sil
+                    try {
+                        await deleteDoc(change.doc.ref);
+                    } catch (e) {
+                        console.error("Sinyal silinirken hata:", e);
+                    }
                 }
             });
         });
@@ -110,7 +140,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             signalsUnsub();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user, activeRoom?.id, toast]);
+    }, [user, pathname, toast]);
 
 
     // --- Peer Connection Yöneticisi ---
@@ -123,7 +153,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         // Yeni katılanlara bağlan
         newParticipantIds.forEach(uid => {
             if (!currentPeerIds.includes(uid)) {
-                createPeerConnection(uid, true);
+                createPeerConnection(uid, true); // true = initiator
             }
         });
 
@@ -144,14 +174,18 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     
     // Effect to handle user leaving the page (closing tab, navigating away)
     useEffect(() => {
-        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            if (isConnected) {
-                leaveRoom();
+        const handleBeforeUnload = () => {
+             if (isConnected) {
+                leaveRoom(false); // Call the server action but don't force cleanup locally
             }
         };
         window.addEventListener('beforeunload', handleBeforeUnload);
         return () => {
             window.removeEventListener('beforeunload', handleBeforeUnload);
+             // Component unmount olduğunda (örneğin başka sayfaya gidildiğinde) da odadan ayrıl
+            if(isConnected){
+                leaveRoom(false);
+            }
         };
     }, [isConnected, leaveRoom]);
 
@@ -213,11 +247,12 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 await pc.setLocalDescription(answer);
                 if(pc.localDescription) await sendSignal(from, 'answer', pc.localDescription.toJSON());
             } else if (type === 'answer') {
-                if (pc.signalingState !== 'stable') {
-                    await pc.setRemoteDescription(new RTCSessionDescription(data));
-                }
+                // `if (pc.signalingState !== 'stable')` KONTROLÜ KALDIRILDI
+                await pc.setRemoteDescription(new RTCSessionDescription(data));
             } else if (type === 'ice-candidate') {
-                await pc.addIceCandidate(new RTCIceCandidate(data));
+                 if (data) {
+                    await pc.addIceCandidate(new RTCIceCandidate(data));
+                 }
             }
         } catch (error) {
             console.error("Error handling signal:", type, error);
@@ -244,12 +279,11 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             if (!result.success) {
                 throw new Error(result.error || 'Sesli sohbete katılırken bir hata oluştu.');
             }
-            // On success, the real-time listener will update the participant list with the correct data
+            // On success, the real-time listener will update the participant list
         } catch (error: any) {
             console.error("Could not join voice chat:", error);
             toast({ variant: "destructive", title: "Katılım Başarısız", description: error.message });
-            // Rollback on error
-            cleanupConnections();
+            cleanupConnections(true);
         } finally {
             setIsConnecting(false);
         }
