@@ -1,7 +1,7 @@
 // src/app/(main)/rooms/[id]/page.tsx
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, onSnapshot, collection, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -13,7 +13,6 @@ import { joinVoiceChat, leaveVoiceChat, toggleSelfMute } from '@/lib/actions/voi
 import type { Room } from '@/lib/types';
 import { ChevronLeft, Loader2, MoreHorizontal, Mic, MicOff, Plus, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import TextChat, { type Message } from '@/components/chat/text-chat';
 import ChatMessageInput from '@/components/chat/ChatMessageInput';
 import VoiceUserIcon from '@/components/voice/VoiceUserIcon';
@@ -31,8 +30,8 @@ export default function RoomPage() {
     const [room, setRoom] = useState<Room | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [messagesLoading, setMessagesLoading] = useState(true);
-    const [isChatOpen, setIsChatOpen] = useState(false);
     const [isJoining, setIsJoining] = useState(true);
+    const chatContainerRef = useRef<HTMLDivElement>(null);
 
     const isHost = user?.uid === room?.createdBy.uid;
 
@@ -43,7 +42,6 @@ export default function RoomPage() {
             if (docSnap.exists()) {
                 const roomData = { id: docSnap.id, ...docSnap.data() } as Room;
                 setRoom(roomData);
-                // Eğer kullanıcı odaya girmişse ve sesli sohbette değilse, otomatik olarak kat
                 if (user && !isConnected && !voiceLoading) {
                     handleAutoJoinVoice(roomData);
                 }
@@ -56,12 +54,11 @@ export default function RoomPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [roomId, user?.uid, isConnected, voiceLoading, router, toast]);
     
-    // Sesli sohbete otomatik katıl
     const handleAutoJoinVoice = async (currentRoom: Room) => {
         if (!user || !currentRoom) return;
         
         const isParticipant = currentRoom.participants?.some(p => p.uid === user.uid);
-        if(!isParticipant) return; // Odanın üyesi değilse katılma
+        if(!isParticipant) return;
 
         setIsJoining(true);
         try {
@@ -76,7 +73,6 @@ export default function RoomPage() {
             setIsJoining(false);
         }
     };
-
 
     // Metin sohbeti mesajlarını dinle
     useEffect(() => {
@@ -93,16 +89,24 @@ export default function RoomPage() {
         });
         return () => unsubscribe();
     }, [roomId]);
+    
+    // Yeni mesaj geldiğinde sohbeti en alta kaydır
+    useEffect(() => {
+        if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+    }, [messages]);
 
-
-    // Mikrofonu aç/kapat
     const handleToggleMute = async () => {
         if (!self || !user) return;
         if (!self.isSpeaker && self.isMuted) {
             toast({ variant: "destructive", title: "Dinleyici Modu", description: "Konuşmak için oda yöneticisinden izin istemelisiniz." });
             return;
         }
-        await toggleSelfMute(roomId, user.uid, !self.isMuted);
+        const result = await toggleSelfMute(roomId, user.uid, !self.isMuted);
+        if (!result.success) {
+            toast({ variant: "destructive", description: result.error});
+        }
     };
 
     const isLoading = authLoading || !room || (!isConnected && isJoining);
@@ -117,14 +121,12 @@ export default function RoomPage() {
     
     const hostParticipant = participants.find(p => p.uid === room.createdBy.uid);
     const otherParticipants = participants.filter(p => p.uid !== room.createdBy.uid);
-    
-    // Katıl butonunu göstermek için koşul
     const isRoomParticipant = room.participants?.some(p => p.uid === user?.uid);
 
     return (
-        <div className="flex flex-col h-screen bg-gray-900 text-gray-200">
+        <div className="flex flex-col h-dvh bg-gray-900 text-gray-200">
             {/* Header */}
-            <header className="flex items-center justify-between p-3 border-b border-gray-700/50">
+            <header className="flex items-center justify-between p-3 border-b border-gray-700/50 shrink-0">
                 <div className="flex items-center gap-2">
                     <Button asChild variant="ghost" size="icon" className="rounded-full">
                         <Link href="/rooms"><ChevronLeft /></Link>
@@ -142,11 +144,9 @@ export default function RoomPage() {
                 </div>
             </header>
 
-            {/* Main Content */}
-            <main className="flex-1 overflow-y-auto p-4 space-y-4">
-                {/* Voice Stage */}
+            {/* Voice Stage */}
+            <div className="p-4 space-y-4 shrink-0">
                 <div className="grid grid-cols-4 gap-4 text-center">
-                    {/* Boşluklar */}
                     <div className="col-span-1"></div>
                     <div className="col-span-2">
                         {hostParticipant ? (
@@ -161,8 +161,6 @@ export default function RoomPage() {
                         ) : <div className="aspect-square"></div> }
                     </div>
                      <div className="col-span-1"></div>
-
-                    {/* Diğer Katılımcılar ve Boş Slotlar */}
                     {Array.from({ length: 8 }).map((_, index) => {
                         const participant = otherParticipants[index];
                         return (
@@ -183,40 +181,20 @@ export default function RoomPage() {
                         )
                     })}
                 </div>
-            </main>
+            </div>
 
-            {/* Footer */}
-            <footer className="flex items-center justify-between p-3 border-t border-gray-700/50">
-                 <div className="flex items-center gap-2">
-                    <Button onClick={handleToggleMute} variant="ghost" size="icon" className="rounded-full bg-gray-700/50 hover:bg-gray-600/50">
-                        {self?.isMuted ? <MicOff className="h-6 w-6 text-red-500"/> : <Mic className="h-6 w-6 text-white"/>}
-                    </Button>
-                 </div>
-                 <Button onClick={() => setIsChatOpen(true)} className="rounded-full bg-gray-700/50 hover:bg-gray-600/50 text-white font-semibold px-6">
-                    Sohbet
+            {/* Chat Messages */}
+            <div ref={chatContainerRef} className="flex-1 overflow-y-auto">
+                <TextChat messages={messages} loading={messagesLoading} />
+            </div>
+
+            {/* Footer / Input */}
+            <footer className="flex items-center gap-3 p-3 border-t border-gray-700/50 bg-gray-900 shrink-0">
+                 <Button onClick={handleToggleMute} variant="ghost" size="icon" className="rounded-full bg-gray-700/50 hover:bg-gray-600/50">
+                    {self?.isMuted ? <MicOff className="h-5 w-5 text-red-500"/> : <Mic className="h-5 w-5 text-white"/>}
                  </Button>
-                 <div className="flex items-center gap-2">
-                    {/* Placeholder for other buttons */}
-                 </div>
+                 <ChatMessageInput roomId={roomId} canSendMessage={isRoomParticipant || false} />
             </footer>
-
-            {/* Chat Sheet */}
-            <Sheet open={isChatOpen} onOpenChange={setIsChatOpen}>
-                <SheetContent side="bottom" className="h-[85dvh] flex flex-col bg-gray-900 border-gray-700 text-white">
-                    <SheetHeader className="text-center">
-                        <SheetTitle>Sohbet</SheetTitle>
-                        <SheetDescription className="text-gray-400">
-                            {room.name} odası sohbeti
-                        </SheetDescription>
-                    </SheetHeader>
-                    <div className="flex-1 overflow-y-auto -mx-6">
-                        <TextChat messages={messages} loading={messagesLoading} />
-                    </div>
-                    <SheetFooter className="pt-4 border-t border-gray-700 bg-gray-900 -mx-6 px-6 pb-2">
-                        <ChatMessageInput roomId={roomId} canSendMessage={isRoomParticipant || false} />
-                    </SheetFooter>
-                </SheetContent>
-            </Sheet>
         </div>
     );
 }
