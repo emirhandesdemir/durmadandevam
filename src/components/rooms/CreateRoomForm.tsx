@@ -111,7 +111,7 @@ export default function CreateRoomForm() {
                     username: user.displayName || "Anonim",
                     photoURL: user.photoURL || null
                 }], // Başlangıçta kurucuyu katılımcı olarak ekle
-                maxParticipants: 8, // Maksimum katılımcı sayısı (1 kurucu + 7 kişi)
+                maxParticipants: 9, // Maksimum katılımcı sayısı (1 kurucu + 8 kişi)
                 voiceParticipantsCount: 0, // Sesli sohbet katılımcı sayısı
                 nextGameTimestamp, // İlk oyun zamanı
             };

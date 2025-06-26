@@ -157,7 +157,7 @@ export default function RoomPage() {
 
                         {/* Other Participants Area */}
                         <div className="grid grid-cols-4 gap-4 text-center">
-                            {Array.from({ length: 7 }).map((_, index) => {
+                            {Array.from({ length: 8 }).map((_, index) => {
                                 const participant = otherParticipants[index];
                                 if (participant) {
                                     return (
