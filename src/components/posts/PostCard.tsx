@@ -5,12 +5,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Post } from "./PostsFeed";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, Send, BadgeCheck } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck } from "lucide-react";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { deletePost, updatePost, likePost } from "@/lib/actions/postActions";
@@ -42,7 +42,8 @@ interface PostCardProps {
 
 /**
  * PostCard Bileşeni
- * Tek bir gönderiyi görüntüleyen, düzenleme, silme ve yorum yapma işlevlerini barındıran karttır.
+ * Tek bir gönderiyi daha zarif ve şerit benzeri bir tasarımla görüntüleyen karttır.
+ * Düzenleme, silme ve yorum yapma işlevlerini barındırır.
  */
 export default function PostCard({ post }: PostCardProps) {
     const { user: currentUser } = useAuth();
@@ -66,6 +67,16 @@ export default function PostCard({ post }: PostCardProps) {
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+    // Düzenleme moduna girildiğinde textarea'yı odakla ve boyutlandır
+    useEffect(() => {
+        if (isEditing && textareaRef.current) {
+            textareaRef.current.focus();
+            // Otomatik boyutlandırma
+            textareaRef.current.style.height = 'inherit';
+            const scrollHeight = textareaRef.current.scrollHeight;
+            textareaRef.current.style.height = `${scrollHeight}px`;
+        }
+    }, [isEditing]);
 
     // Beğenme fonksiyonu
     const handleLike = async () => {
@@ -113,130 +124,125 @@ export default function PostCard({ post }: PostCardProps) {
         }
     };
 
-     // Düzenleme moduna girildiğinde metin alanını otomatik olarak boyutlandır
-    if (isEditing && textareaRef.current) {
-        textareaRef.current.style.height = 'inherit';
-        const scrollHeight = textareaRef.current.scrollHeight;
-        textareaRef.current.style.height = `${scrollHeight}px`;
-    }
-
     return (
         <>
-            <Card className="w-full overflow-hidden rounded-3xl border-0 bg-card/80 shadow-xl shadow-black/5 backdrop-blur-sm">
-                {/* Kart Başlığı: Kullanıcı bilgileri ve seçenekler butonu */}
-                <CardHeader className="flex flex-row items-center justify-between p-6">
-                    <div className="flex items-center gap-4">
-                        <Avatar className="h-12 w-12 border-2 border-white">
-                            <AvatarImage src={post.userAvatar} />
-                            <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                            <div className="flex items-center gap-1.5">
-                               <p className="font-bold">{post.username}</p>
-                               {post.userRole === 'admin' && (
-                                   <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger>
-                                            <BadgeCheck className="h-5 w-5 text-primary fill-primary/20" />
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>Yönetici</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                   </TooltipProvider>
-                               )}
-                            </div>
-                            <p className="text-sm text-muted-foreground">{timeAgo}</p>
-                        </div>
-                    </div>
-                    {isOwner && !isEditing && (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="rounded-full">
-                                    <MoreHorizontal />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    <span>Düzenle</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-destructive focus:text-destructive">
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    <span>Sil</span>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    )}
-                </CardHeader>
-
-                {/* Kart İçeriği: Gönderi metni ve resmi veya düzenleme modu */}
-                <CardContent className="space-y-4 px-6 pb-2 pt-0">
-                    {isEditing ? (
-                        <div className="space-y-2">
-                           <Textarea
-                                ref={textareaRef}
-                                value={editedText}
-                                onChange={(e) => setEditedText(e.target.value)}
-                                className="w-full resize-none bg-muted p-2 rounded-lg"
-                                onInput={(e) => {
-                                    const target = e.currentTarget;
-                                    target.style.height = 'inherit';
-                                    target.style.height = `${target.scrollHeight}px`;
-                                }}
-                            />
-                             <div className="flex justify-end gap-2">
-                                <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>İptal</Button>
-                                <Button size="sm" onClick={handleSaveEdit} disabled={isSaving}>
-                                    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Kaydet
-                                </Button>
-                            </div>
-                        </div>
-                    ) : (
-                        <>
-                            <p className="text-base leading-relaxed whitespace-pre-wrap">{post.text}</p>
-                            {post.imageUrl && (
-                                <div className="overflow-hidden rounded-2xl border">
-                                    <Image
-                                        src={post.imageUrl}
-                                        alt="Gönderi resmi"
-                                        width={600}
-                                        height={400}
-                                        className="aspect-video w-full object-cover transition-transform duration-300 hover:scale-105"
-                                    />
+            <Card className="w-full animate-in fade-in-50 duration-500 overflow-hidden rounded-2xl border bg-card/50 shadow-lg shadow-black/5">
+                {/* Gönderi içeriği, esnek bir yapı ile */}
+                <div className="p-4">
+                    {/* Üst Kısım: Avatar, İsim ve Menü */}
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10 border">
+                                <AvatarImage src={post.userAvatar} />
+                                <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <div className="flex items-center gap-1.5">
+                                    <p className="font-bold text-sm">{post.username}</p>
+                                    {post.userRole === 'admin' && (
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger>
+                                                    <BadgeCheck className="h-4 w-4 text-primary fill-primary/20" />
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>Yönetici</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    )}
                                 </div>
-                            )}
-                        </>
-                    )}
-                </CardContent>
+                                <p className="text-xs text-muted-foreground">{timeAgo}</p>
+                            </div>
+                        </div>
+                        {isOwner && !isEditing && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="rounded-full h-8 w-8">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        <span>Düzenle</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-destructive focus:text-destructive">
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        <span>Sil</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
+                    </div>
 
-                {/* Kart Alt Bilgisi: Beğeni ve yorum butonları */}
-                <CardFooter className="flex items-center justify-start gap-4 p-6 pt-4">
-                    <Button 
-                        variant="ghost" 
+                    {/* Metin ve Resim Alanı */}
+                    <div className="space-y-3">
+                        {isEditing ? (
+                            <div className="space-y-2">
+                                <Textarea
+                                    ref={textareaRef}
+                                    value={editedText}
+                                    onChange={(e) => setEditedText(e.target.value)}
+                                    className="w-full resize-none bg-muted p-2 rounded-lg text-sm"
+                                    onInput={(e) => {
+                                        const target = e.currentTarget;
+                                        target.style.height = 'inherit';
+                                        target.style.height = `${target.scrollHeight}px`;
+                                    }}
+                                />
+                                <div className="flex justify-end gap-2">
+                                    <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>İptal</Button>
+                                    <Button size="sm" onClick={handleSaveEdit} disabled={isSaving}>
+                                        {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        Kaydet
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap">{post.text}</p>
+                        )}
+
+                        {post.imageUrl && !isEditing && (
+                            <div className="overflow-hidden rounded-xl border">
+                                <Image
+                                    src={post.imageUrl}
+                                    alt="Gönderi resmi"
+                                    width={800}
+                                    height={400}
+                                    className="aspect-[2/1] w-full object-cover transition-transform duration-300 hover:scale-105"
+                                />
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Alt Kısım: Beğeni ve Yorum Butonları */}
+                <div className="border-t px-4 py-2 flex items-center justify-start gap-1">
+                    <Button
+                        variant="ghost"
                         className={cn(
-                            "group rounded-full px-4 text-muted-foreground hover:bg-red-500/10 hover:text-red-500",
+                            "group rounded-full px-3 text-muted-foreground hover:bg-red-500/10 hover:text-red-500",
                             isLiked && "text-red-500"
                         )}
                         onClick={handleLike}
                         disabled={isLiking || !currentUser}
                     >
                         <Heart className={cn(
-                            "mr-2 transition-transform group-hover:scale-110", 
+                            "mr-2 h-4 w-4 transition-transform group-hover:scale-110",
                             isLiked ? "fill-current" : "group-hover:fill-red-500/50"
                         )} />
-                        {post.likeCount || 0}
+                        <span className="text-xs">{post.likeCount || 0}</span>
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      className="group rounded-full px-4 text-muted-foreground hover:bg-blue-500/10 hover:text-blue-500"
-                      onClick={() => setShowComments(true)}
+                    <Button
+                        variant="ghost"
+                        className="group rounded-full px-3 text-muted-foreground hover:bg-blue-500/10 hover:text-blue-500"
+                        onClick={() => setShowComments(true)}
                     >
-                        <MessageCircle className="mr-2 transition-transform group-hover:scale-110" />
-                        {post.commentCount || 0}
+                        <MessageCircle className="mr-2 h-4 w-4 transition-transform group-hover:scale-110" />
+                        <span className="text-xs">{post.commentCount || 0}</span>
                     </Button>
-                </CardFooter>
+                </div>
             </Card>
 
             {/* Silme Onay Dialogu */}
