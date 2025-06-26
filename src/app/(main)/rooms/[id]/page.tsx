@@ -11,14 +11,12 @@ import { useToast } from '@/hooks/use-toast';
 import { useVoiceChat } from '@/hooks/useVoiceChat';
 import { joinVoiceChat, leaveVoiceChat, toggleSelfMute } from '@/lib/actions/voiceActions';
 import type { Room } from '@/lib/types';
-import { ChevronLeft, Loader2, MoreHorizontal, MessageSquare, Mic, MicOff, Plus, Copy } from 'lucide-react';
+import { ChevronLeft, Loader2, MoreHorizontal, Mic, MicOff, Plus, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import TextChat, { type Message } from '@/components/chat/text-chat';
 import ChatMessageInput from '@/components/chat/ChatMessageInput';
 import VoiceUserIcon from '@/components/voice/VoiceUserIcon';
-import WelcomeMessageCard from '@/components/rooms/WelcomeMessageCard';
-import PartyTipsCard from '@/components/rooms/PartyTipsCard';
 import { cn } from '@/lib/utils';
 
 export default function RoomPage() {
@@ -106,11 +104,6 @@ export default function RoomPage() {
         }
         await toggleSelfMute(roomId, user.uid, !self.isMuted);
     };
-    
-    const handleCopyId = () => {
-        navigator.clipboard.writeText(roomId);
-        toast({description: "Oda ID'si kopyalandı!"});
-    };
 
     const isLoading = authLoading || !room || (!isConnected && isJoining);
 
@@ -136,16 +129,13 @@ export default function RoomPage() {
                     <Button asChild variant="ghost" size="icon" className="rounded-full">
                         <Link href="/rooms"><ChevronLeft /></Link>
                     </Button>
-                    <div>
-                        <h1 className="text-md font-bold text-white truncate max-w-[150px]">{room.name}</h1>
-                        <div className="flex items-center gap-2">
-                           <span className="text-xs text-gray-400">ID: {roomId.substring(0, 6)}...</span>
-                           <Copy className="h-3 w-3 text-gray-500 cursor-pointer" onClick={handleCopyId} />
-                        </div>
-                    </div>
+                    <h1 className="text-md font-bold text-white truncate max-w-[180px]">{room.name}</h1>
                 </div>
                 <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold">{participants.length}</span>
+                    <div className="flex items-center gap-1.5 text-sm font-semibold">
+                         <Users className="h-4 w-4 text-gray-400" />
+                         <span>{participants.length}</span>
+                    </div>
                     <Button variant="ghost" size="icon" className="rounded-full">
                         <MoreHorizontal />
                     </Button>
@@ -193,10 +183,6 @@ export default function RoomPage() {
                         )
                     })}
                 </div>
-
-                {/* Info Cards */}
-                <WelcomeMessageCard />
-                <PartyTipsCard />
             </main>
 
             {/* Footer */}
