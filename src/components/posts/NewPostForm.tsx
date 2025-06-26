@@ -5,6 +5,7 @@ import { useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { addPost } from "@/lib/actions/postActions";
+import { useRouter } from "next/navigation";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import { Image as ImageIcon, Send, Loader2, X } from "lucide-react";
  * Paylaşım sırasında yükleme durumu gösterilir ve işlem bitince form sıfırlanır.
  */
 export default function NewPostForm() {
+  const router = useRouter();
   const { user, userData } = useAuth(); // Mevcut kullanıcı ve rol bilgilerini al
   const { toast } = useToast(); // Bildirimler için hook
   
@@ -87,6 +89,7 @@ export default function NewPostForm() {
       setText("");
       removeImage();
       toast({ description: "Gönderiniz başarıyla paylaşıldı!" });
+      router.push('/home');
 
     } catch (error) {
       console.error("Error creating post:", error);

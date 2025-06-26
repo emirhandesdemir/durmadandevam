@@ -4,16 +4,13 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
-import NewPostForm from "@/components/posts/NewPostForm";
 import PostsFeed from "@/components/posts/PostsFeed";
 
 /**
  * Ana Sayfa (Home Page)
  * 
  * Uygulamanın ana giriş sayfasıdır. Kullanıcı giriş yaptıktan sonra bu sayfayı görür.
- * Sayfa, 2 ana bileşenden oluşur:
- * 1. NewPostForm: Kullanıcının yeni gönderi oluşturabileceği alan.
- * 2. PostsFeed: Diğer kullanıcıların gönderilerinin listelendiği akış.
+ * Sayfa, diğer kullanıcıların gönderilerinin listelendiği akıştan (PostsFeed) oluşur.
  * 
  * Ayrıca, kullanıcıyı karşılayan bir animasyon içerir.
  */
@@ -61,10 +58,7 @@ export default function HomePage() {
         <main className="container mx-auto max-w-3xl px-4 py-6 md:py-8">
           {/* Ana sayfanın dikey düzenini ve bileşenler arası boşluğu yöneten ana sarmalayıcı */}
           <div className="flex flex-col gap-8">
-            {/* 1. Yeni gönderi oluşturma alanı */}
-            <NewPostForm />
-
-            {/* 2. Gönderi akışı */}
+            {/* Gönderi akışı */}
             <PostsFeed />
           </div>
         </main>
