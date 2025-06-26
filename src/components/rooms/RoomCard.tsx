@@ -14,7 +14,8 @@ import { db } from "@/lib/firebase";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Badge } from "../ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 
 /**
  * Oda Listeleme Kartı (RoomCard)
@@ -126,15 +127,31 @@ export default function RoomCard({ room }: RoomCardProps) {
                             <AvatarFallback className="bg-secondary text-secondary-foreground">{creatorInitial}</AvatarFallback>
                         </Avatar>
                         <div>
-                            <CardTitle className="text-base font-bold leading-tight">{room.createdBy.username}</CardTitle>
+                             <div className="flex items-center gap-1.5">
+                                <p className="text-base font-bold leading-tight text-card-foreground">{room.createdBy.username}</p>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger>
+                                            <Crown className="h-4 w-4 text-amber-500" />
+                                        </TooltipTrigger>
+                                        <TooltipContent><p>Oda Kurucusu</p></TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                                {room.createdBy.role === 'admin' && (
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger>
+                                                <ShieldCheck className="h-4 w-4 text-primary" />
+                                            </TooltipTrigger>
+                                            <TooltipContent><p>Yönetici</p></TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                )}
+                            </div>
                             <CardDescription className="text-xs text-muted-foreground">
                                 {timeAgo} oluşturdu
                             </CardDescription>
                         </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <Badge variant="outline" className="px-1.5 py-0 text-xs border-amber-500 text-amber-500"><Crown className="h-3 w-3 mr-1"/>Kurucu</Badge>
-                        {room.createdBy.role === 'admin' && <Badge variant="secondary" className="px-1.5 py-0 text-xs"><ShieldCheck className="h-3 w-3 mr-1"/>Yönetici</Badge>}
                     </div>
                 </div>
             </CardHeader>

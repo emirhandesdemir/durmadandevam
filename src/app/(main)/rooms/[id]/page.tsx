@@ -20,6 +20,7 @@ import { ChevronLeft, Loader2, Users, Gamepad2, Timer, Crown, ShieldCheck } from
 import TextChat from '@/components/chat/text-chat';
 import RoomGameCard from '@/components/game/RoomGameCard';
 import GameCountdownCard from '@/components/game/GameCountdownCard';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 /**
@@ -202,11 +203,28 @@ export default function RoomPage() {
                         <AvatarImage src={room.createdBy.photoURL || undefined} />
                         <AvatarFallback>{room.createdBy.username?.charAt(0)}</AvatarFallback>
                     </Avatar>
-                     <p className="text-xs text-muted-foreground">
-                        <span className="font-semibold text-foreground">{room.createdBy.username}</span> tarafından {creatorTimeAgo}
-                    </p>
-                    <Badge variant="outline" className="px-1.5 py-0 text-xs border-amber-500 text-amber-500"><Crown className="h-3 w-3 mr-1"/>Kurucu</Badge>
-                     {room.createdBy.role === 'admin' && <Badge variant="secondary" className="px-1.5 py-0 text-xs"><ShieldCheck className="h-3 w-3 mr-1"/>Yönetici</Badge>}
+                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <span className="font-semibold text-foreground">{room.createdBy.username}</span>
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger>
+                                    <Crown className="h-4 w-4 text-amber-500" />
+                                </TooltipTrigger>
+                                <TooltipContent><p>Oda Kurucusu</p></TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                        {room.createdBy.role === 'admin' && (
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger>
+                                        <ShieldCheck className="h-4 w-4 text-primary" />
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>Yönetici</p></TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
+                        <span>tarafından {creatorTimeAgo}</span>
+                     </div>
                 </div>
             </div>
             </div>
