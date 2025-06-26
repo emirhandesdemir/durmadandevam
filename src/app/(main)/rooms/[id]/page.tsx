@@ -1,7 +1,7 @@
 // src/app/(main)/rooms/[id]/page.tsx
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, onSnapshot, collection, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -92,8 +92,20 @@ export default function RoomPage() {
         }
         await toggleSelfMute();
     };
+    
+    const { hostParticipant, otherParticipants } = useMemo(() => {
+        if (!participants || !room) {
+            return { hostParticipant: null, otherParticipants: [] };
+        }
+        const host = participants.find(p => p.uid === room.createdBy.uid);
+        const others = participants.filter(p => p.uid !== room.createdBy.uid);
+        return { hostParticipant: host, otherParticipants: others };
+    }, [participants, room]);
 
     const isLoading = authLoading || !room;
+    
+    // Yükleme durumunu kontrol et: bağlanıyor VEYA bağlandı ama katılımcı verisi henüz gelmedi
+    const showVoiceStageLoader = isConnecting || (isConnected && participants.length === 0);
 
     if (isLoading) {
         return (
@@ -104,8 +116,6 @@ export default function RoomPage() {
     }
     
     const isRoomParticipant = room.participants?.some(p => p.uid === user?.uid);
-    const hostParticipant = participants.find(p => p.uid === room.createdBy.uid);
-    const otherParticipants = participants.filter(p => p.uid !== room.createdBy.uid);
 
     return (
         <>
@@ -131,56 +141,62 @@ export default function RoomPage() {
 
                 {/* Main Content (Voice Stage + Chat) */}
                 <main ref={chatContainerRef} className="flex-1 overflow-y-auto p-4">
-                     {/* Voice Stage */}
-                    <div className="mb-6 space-y-8">
-                        {/* Host Area */}
-                        <div className="flex flex-col items-center">
-                            {hostParticipant ? (
-                                <VoiceUserIcon
-                                    key={hostParticipant.uid}
-                                    participant={hostParticipant}
-                                    isHost={isHost}
-                                    currentUserId={user!.uid}
-                                    roomId={roomId}
-                                    isParticipantTheHost={true}
-                                    size="lg" // Make host icon larger
-                                />
-                            ) : (
-                                <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                                    <div className="flex items-center justify-center h-24 w-24 rounded-full bg-gray-800/40 border-2 border-dashed border-gray-600">
-                                        <Crown className="h-8 w-8 text-gray-600" />
-                                    </div>
-                                    <p className="text-xs font-semibold">Oda Sahibi</p>
-                                </div>
-                            )}
+                     {/* Voice Stage or Loader */}
+                     {showVoiceStageLoader ? (
+                        <div className="flex h-64 items-center justify-center">
+                            <Loader2 className="h-10 w-10 animate-spin text-primary" />
                         </div>
-
-                        {/* Other Participants Area */}
-                        <div className="grid grid-cols-4 gap-4 text-center">
-                            {Array.from({ length: 8 }).map((_, index) => {
-                                const participant = otherParticipants[index];
-                                if (participant) {
-                                    return (
-                                        <VoiceUserIcon
-                                            key={participant.uid}
-                                            participant={participant}
-                                            isHost={isHost}
-                                            currentUserId={user!.uid}
-                                            roomId={roomId}
-                                            isParticipantTheHost={false}
-                                            size="sm"
-                                        />
-                                    );
-                                } else {
-                                    return (
-                                        <div key={`placeholder-${index}`} className="flex flex-col items-center justify-center aspect-square bg-gray-800/40 rounded-full">
-                                            <Plus className="h-6 w-6 text-gray-600" />
+                     ) : (
+                        <div className="mb-6 space-y-8">
+                            {/* Host Area - with fixed height to prevent layout shift */}
+                            <div className="flex flex-col items-center justify-center min-h-36">
+                                {hostParticipant ? (
+                                    <VoiceUserIcon
+                                        key={hostParticipant.uid}
+                                        participant={hostParticipant}
+                                        isHost={isHost}
+                                        currentUserId={user!.uid}
+                                        roomId={roomId}
+                                        isParticipantTheHost={true}
+                                        size="lg" // Make host icon larger
+                                    />
+                                ) : (
+                                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                                        <div className="flex items-center justify-center h-24 w-24 rounded-full bg-gray-800/40 border-2 border-dashed border-gray-600">
+                                            <Crown className="h-8 w-8 text-gray-600" />
                                         </div>
-                                    );
-                                }
-                            })}
+                                        <p className="text-xs font-semibold">Oda Sahibi</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Other Participants Area */}
+                            <div className="grid grid-cols-4 gap-4 text-center">
+                                {Array.from({ length: 8 }).map((_, index) => {
+                                    const participant = otherParticipants[index];
+                                    if (participant) {
+                                        return (
+                                            <VoiceUserIcon
+                                                key={participant.uid}
+                                                participant={participant}
+                                                isHost={isHost}
+                                                currentUserId={user!.uid}
+                                                roomId={roomId}
+                                                isParticipantTheHost={false}
+                                                size="sm"
+                                            />
+                                        );
+                                    } else {
+                                        return (
+                                            <div key={`placeholder-${index}`} className="flex flex-col items-center justify-center aspect-square bg-gray-800/40 rounded-full">
+                                                <Plus className="h-6 w-6 text-gray-600" />
+                                            </div>
+                                        );
+                                    }
+                                })}
+                            </div>
                         </div>
-                    </div>
+                     )}
 
 
                     {/* Chat Messages */}
