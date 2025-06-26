@@ -72,12 +72,18 @@ export function VoiceChatProvider({ children }: { children: React.ReactNode }) {
         if (!user || isConnected) return;
         setIsConnecting(true);
         try {
-            await joinVoiceChat(roomToJoin.id, {
+            const result = await joinVoiceChat(roomToJoin.id, {
                 uid: user.uid,
                 displayName: user.displayName,
                 photoURL: user.photoURL,
             });
-            setActiveRoom(roomToJoin);
+
+            if (result.success) {
+                setActiveRoom(roomToJoin);
+            } else {
+                throw new Error(result.error || 'Sesli sohbete katılırken bir hata oluştu.');
+            }
+
         } catch (error: any) {
             console.error("Sesli sohbete katılamadı:", error);
             toast({ variant: "destructive", title: "Katılım Başarısız", description: error.message });

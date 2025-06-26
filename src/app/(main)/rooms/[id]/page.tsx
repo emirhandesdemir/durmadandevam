@@ -1,4 +1,3 @@
-
 // src/app/(main)/rooms/[id]/page.tsx
 "use client";
 
@@ -57,13 +56,6 @@ export default function RoomPage() {
         return () => roomUnsub();
     }, [roomId, router, toast]);
 
-    const handleJoinVoice = async () => {
-        if (!user || !room) return;
-        // Hatalı kontrol kaldırıldı. İstek doğrudan joinRoom'a yönlendiriliyor.
-        // Sunucu mantığı, kullanıcının odaya ait olup olmadığını ve host olup olmadığını zaten kontrol ediyor.
-        await joinRoom(room);
-    };
-    
     // Metin sohbeti mesajlarını dinle
     useEffect(() => {
         if (!roomId) return;
@@ -86,6 +78,11 @@ export default function RoomPage() {
             chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
         }
     }, [messages]);
+    
+    const handleJoinVoice = async () => {
+        if (!user || !room) return;
+        await joinRoom(room);
+    };
 
     const handleToggleMute = async () => {
         if (!self || !user) return;
@@ -106,9 +103,10 @@ export default function RoomPage() {
         );
     }
     
+    const isRoomParticipant = room.participants?.some(p => p.uid === user?.uid);
     const hostParticipant = participants.find(p => p.uid === room.createdBy.uid);
     const otherParticipants = participants.filter(p => p.uid !== room.createdBy.uid);
-    const isRoomParticipant = room.participants?.some(p => p.uid === user?.uid);
+    const displayParticipants = hostParticipant ? [hostParticipant, ...otherParticipants] : otherParticipants;
 
     return (
         <>
@@ -132,51 +130,36 @@ export default function RoomPage() {
                     </div>
                 </header>
 
-                {/* Voice Stage */}
-                <div className="p-4 space-y-4 shrink-0">
-                    <div className="grid grid-cols-4 gap-4 text-center">
-                        <div className="col-span-1"></div>
-                        <div className="col-span-2">
-                            {hostParticipant ? (
-                                <VoiceUserIcon
-                                    key={hostParticipant.uid}
-                                    participant={hostParticipant}
-                                    isHost={isHost}
-                                    currentUserId={user!.uid}
-                                    roomId={roomId}
-                                    size="lg"
-                                    isParticipantTheHost={true}
-                                />
-                            ) : <div className="aspect-square"></div> }
-                        </div>
-                        <div className="col-span-1"></div>
+                {/* Main Content (Voice Stage + Chat) */}
+                <main ref={chatContainerRef} className="flex-1 overflow-y-auto p-4">
+                    {/* Voice Stage */}
+                    <div className="grid grid-cols-4 gap-4 text-center mb-6">
                         {Array.from({ length: 8 }).map((_, index) => {
-                            const participant = otherParticipants[index];
-                            return (
-                                <div key={index}>
-                                    {participant ? (
-                                        <VoiceUserIcon
-                                            participant={participant}
-                                            isHost={isHost}
-                                            currentUserId={user!.uid}
-                                            roomId={roomId}
-                                            isParticipantTheHost={false}
-                                        />
-                                    ) : (
-                                        <div className="flex flex-col items-center justify-center aspect-square bg-gray-800/40 rounded-full">
-                                            <Plus className="h-6 w-6 text-gray-600" />
-                                        </div>
-                                    )}
-                                </div>
-                            )
+                            const participant = displayParticipants[index];
+                            if (participant) {
+                                return (
+                                    <VoiceUserIcon
+                                        key={participant.uid}
+                                        participant={participant}
+                                        isHost={isHost}
+                                        currentUserId={user!.uid}
+                                        roomId={roomId}
+                                        isParticipantTheHost={participant.uid === room.createdBy.uid}
+                                    />
+                                );
+                            } else {
+                                return (
+                                    <div key={`placeholder-${index}`} className="flex flex-col items-center justify-center aspect-square bg-gray-800/40 rounded-full">
+                                        <Plus className="h-6 w-6 text-gray-600" />
+                                    </div>
+                                );
+                            }
                         })}
                     </div>
-                </div>
 
-                {/* Chat Messages */}
-                <div ref={chatContainerRef} className="flex-1 overflow-y-auto">
+                    {/* Chat Messages */}
                     <TextChat messages={messages} loading={messagesLoading} />
-                </div>
+                </main>
 
                 {/* Footer / Input */}
                 <footer className="flex items-center gap-3 p-3 border-t border-gray-700/50 bg-gray-900 shrink-0">
