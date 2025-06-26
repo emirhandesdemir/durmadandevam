@@ -31,7 +31,7 @@ export default function RoomPage() {
         isConnected, 
         joinRoom, 
         toggleSelfMute,
-        participants: voiceParticipantsFromCtx,
+        participants: voiceParticipants,
     } = useVoiceChat();
 
     const [room, setRoom] = useState<Room | null>(null);
@@ -56,9 +56,6 @@ export default function RoomPage() {
         });
         return () => roomUnsub();
     }, [roomId, router, toast]);
-
-    // Sesli sohbet katılımcılarını dinle (Context'ten alınıyor)
-    const voiceParticipants = voiceParticipantsFromCtx;
 
     // Metin sohbeti mesajlarını dinle
     useEffect(() => {
@@ -104,7 +101,7 @@ export default function RoomPage() {
 
     const isLoading = authLoading || !room;
     
-    const showVoiceStageLoader = isConnecting || (isConnected && voiceParticipants.length === 0);
+    const showVoiceStageLoader = isConnecting;
 
     if (isLoading) {
         return (

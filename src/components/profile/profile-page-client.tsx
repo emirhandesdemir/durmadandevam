@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,14 +16,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Edit, Shield, BadgeCheck } from "lucide-react";
+import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop } from "lucide-react";
 import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import { useTheme } from "next-themes";
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 
 
 export default function ProfilePageClient() {
     const { user, userData, loading, handleLogout } = useAuth();
     const { toast } = useToast();
+    const { theme, setTheme } = useTheme();
     
     const handleSaveChanges = () => {
         toast({
@@ -69,12 +73,37 @@ export default function ProfilePageClient() {
                 <CardDescription>{user.email}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 px-8">
-                <Separator />
-                <div className="space-y-4">
+                 <div className="space-y-4">
                     <div>
                         <Label htmlFor="username">Kullanıcı Adı</Label>
                         <Input id="username" defaultValue={user.displayName || ""} className="rounded-full" />
                     </div>
+                </div>
+                <Separator />
+                <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                         <Palette className="h-5 w-5 text-muted-foreground" />
+                         <Label>Görünüm</Label>
+                    </div>
+                     <RadioGroup value={theme} onValueChange={setTheme} className="grid grid-cols-3 gap-2">
+                        <Label htmlFor="light-theme" className="flex flex-col items-center justify-center rounded-lg border-2 bg-card p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
+                        <RadioGroupItem value="light" id="light-theme" className="sr-only" />
+                        <Sun className="mb-2 h-6 w-6" />
+                        <span className="text-xs font-bold">Aydınlık</span>
+                        </Label>
+
+                        <Label htmlFor="dark-theme" className="flex flex-col items-center justify-center rounded-lg border-2 bg-card p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
+                        <RadioGroupItem value="dark" id="dark-theme" className="sr-only" />
+                        <Moon className="mb-2 h-6 w-6" />
+                        <span className="text-xs font-bold">Karanlık</span>
+                        </Label>
+                        
+                        <Label htmlFor="system-theme" className="flex flex-col items-center justify-center rounded-lg border-2 bg-card p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
+                        <RadioGroupItem value="system" id="system-theme" className="sr-only" />
+                        <Laptop className="mb-2 h-6 w-6" />
+                        <span className="text-xs font-bold">Sistem</span>
+                        </Label>
+                    </RadioGroup>
                 </div>
             </CardContent>
             <CardFooter className="flex flex-wrap justify-center gap-4 p-8">
