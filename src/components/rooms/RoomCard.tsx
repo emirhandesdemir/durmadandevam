@@ -39,7 +39,7 @@ export interface Room {
         role?: 'admin' | 'user';
     };
     createdAt: Timestamp;
-    participants: { uid: string, username: string }[];
+    participants: { uid: string, username: string, photoURL?: string | null }[];
     maxParticipants: number;
     nextGameTimestamp?: Timestamp;
 }
@@ -85,7 +85,8 @@ export default function RoomCard({ room }: RoomCardProps) {
             batch.update(roomRef, {
                 participants: arrayUnion({
                     uid: currentUser.uid,
-                    username: currentUser.displayName || "Anonim"
+                    username: currentUser.displayName || "Anonim",
+                    photoURL: currentUser.photoURL || null
                 })
             });
 

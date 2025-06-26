@@ -124,7 +124,7 @@ export default function VoiceUserIcon({
           "border-2 transition-all duration-300",
           avatarSize,
           participant.isSpeaker && !participant.isMuted
-            ? "border-green-500 shadow-lg shadow-green-500/50 animate-pulse"
+            ? "border-green-500 shadow-lg shadow-green-500/50 ring-4 ring-green-500/30 animate-pulse"
             : "border-transparent"
         )}
       >

@@ -58,7 +58,7 @@ export interface Room {
         role?: 'admin' | 'user';
     };
     createdAt: Timestamp;
-    participants: { uid: string, username: string }[];
+    participants: { uid: string, username: string, photoURL?: string | null }[];
     maxParticipants: number;
     nextGameTimestamp?: Timestamp;
     voiceParticipantsCount?: number; // Sesli sohbetteki kişi sayısı
