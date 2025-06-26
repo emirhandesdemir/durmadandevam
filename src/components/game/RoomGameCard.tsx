@@ -28,7 +28,7 @@ export default function RoomGameCard({ game, settings, onAnswerSubmit, onTimerEn
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const hasAnswered = (game.answeredBy || []).includes(currentUserId);
-    constisDisabled = hasAnswered || isSubmitting;
+    const isDisabled = hasAnswered || isSubmitting;
 
     // Geri sayım sayacını yöneten useEffect
     useEffect(() => {
