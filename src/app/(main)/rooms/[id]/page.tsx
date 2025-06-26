@@ -188,7 +188,7 @@ export default function RoomPage() {
       <main className="flex-1 overflow-y-auto relative">
          {/* Oyun Kartı Alanı */}
          {activeGame && gameSettings && (
-            <div className="sticky top-0 z-10 p-4 bg-background/80 backdrop-blur-sm">
+            <div className="sticky top-0 z-10 p-4 border-b bg-card">
                 <RoomGameCard 
                     game={activeGame} 
                     roomId={roomId} 

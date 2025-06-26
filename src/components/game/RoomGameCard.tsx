@@ -2,11 +2,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ActiveGame, GameSettings } from "@/lib/types";
+import { Puzzle } from "lucide-react";
 
 interface RoomGameCardProps {
     game: ActiveGame;
@@ -47,28 +47,35 @@ export default function RoomGameCard({ game, settings }: RoomGameCardProps) {
     }, [timeLeft, settings.questionTimerSeconds]);
 
     return (
-        <Card className="w-full bg-gradient-to-br from-purple-600 to-indigo-700 text-primary-foreground border-0 shadow-2xl animate-in fade-in zoom-in-95 duration-500">
-            <CardHeader className="pb-3">
-                <div className="flex justify-between items-center">
-                    <CardTitle className="text-lg">Hızlı Quiz!</CardTitle>
-                    <div className="text-2xl font-bold">{timeLeft}s</div>
+        <Card className="w-full bg-card border-primary/20 shadow-lg animate-in fade-in duration-500 rounded-2xl">
+            <CardContent className="p-4 space-y-4">
+                {/* Header section with icon and question */}
+                <div className="flex items-start sm:items-center gap-4">
+                    <div className="p-3 bg-primary/10 rounded-full shrink-0">
+                        <Puzzle className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                        <p className="font-bold text-foreground leading-tight">{game.question}</p>
+                        <p className="text-xs text-muted-foreground mt-1">Doğru cevabı bulmak için {timeLeft} saniyen var!</p>
+                    </div>
                 </div>
-                <Progress value={progress} className="w-full h-2 bg-white/20 [&>div]:bg-yellow-400" />
-            </CardHeader>
-            <CardContent>
-                <p className="text-center font-semibold text-xl mb-4">
-                    {game.question}
-                </p>
-                <div className="grid grid-cols-2 gap-3">
+                
+                {/* Progress bar */}
+                <Progress value={progress} className="h-1.5" />
+
+                {/* Options */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {game.options.map((option, index) => (
-                        <div key={index} className="flex items-center gap-2 p-3 bg-white/10 rounded-lg text-sm">
-                           <span className="font-bold bg-white/20 text-white rounded-full h-6 w-6 flex items-center justify-center">{index + 1}</span>
-                           <span>{option}</span>
+                        <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg text-sm">
+                           <span className="font-semibold text-primary">{index + 1}.</span>
+                           <span className="text-foreground">{option}</span>
                         </div>
                     ))}
                 </div>
-                <p className="text-center text-xs mt-3 text-primary-foreground/70">
-                    Cevaplamak için sohbeti kullan: /answer &lt;numara&gt;
+                
+                {/* Help text */}
+                <p className="text-center text-xs text-muted-foreground pt-2">
+                    Cevapla: <code className="bg-muted px-2 py-1 rounded-md text-primary font-mono font-semibold">/answer &lt;numara&gt;</code>
                 </p>
             </CardContent>
         </Card>
