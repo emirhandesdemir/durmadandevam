@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, onSnapshot, doc, Timestamp, addDoc, query, where, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDoc, Timestamp, addDoc, query, where, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Room, VoiceParticipant } from '@/lib/types';
 import { joinVoiceChat, leaveVoiceChat, toggleSelfMute as toggleMuteAction } from '@/lib/actions/voiceActions';
@@ -76,9 +76,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 console.error("Failed to call leaveVoiceChat action:", e);
             }
         }
-        // Temizlik yaparken activeRoom'u null yapmamak, 
-        // sayfa yenilenene kadar oda bilgisini korur ama bağlantıları keser.
-        // Ancak tam bir çıkış için her şeyi temizlemek daha doğru.
         cleanupConnections(true);
     }, [user, activeRoom, cleanupConnections]);
 
@@ -247,7 +244,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 await pc.setLocalDescription(answer);
                 if(pc.localDescription) await sendSignal(from, 'answer', pc.localDescription.toJSON());
             } else if (type === 'answer') {
-                // `if (pc.signalingState !== 'stable')` KONTROLÜ KALDIRILDI
                 await pc.setRemoteDescription(new RTCSessionDescription(data));
             } else if (type === 'ice-candidate') {
                  if (data) {
@@ -268,9 +264,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
             setLocalStream(stream);
 
-            // Set active room to trigger listeners
-            setActiveRoom(roomToJoin);
-
             // Send join request to the server
             const result = await joinVoiceChat(roomToJoin.id, {
                 uid: user.uid, displayName: user.displayName, photoURL: user.photoURL,
@@ -280,6 +273,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 throw new Error(result.error || 'Sesli sohbete katılırken bir hata oluştu.');
             }
             // On success, the real-time listener will update the participant list
+            // We set the active room here to trigger the participant listener
+             setActiveRoom(roomToJoin);
         } catch (error: any) {
             console.error("Could not join voice chat:", error);
             toast({ variant: "destructive", title: "Katılım Başarısız", description: error.message });
