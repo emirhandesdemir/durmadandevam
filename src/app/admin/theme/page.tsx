@@ -1,12 +1,15 @@
 // src/app/admin/theme/page.tsx
-// Bu bileşen, Admin Paneli'ndeki "Tema Ayarları" sayfasıdır.
-// Bu sayfa, uygulamanın genel renk paletini ve modlarını yönetmek için kullanılacaktır.
-// Şu an için bir yer tutucu olarak tasarlanmıştır.
+"use client";
 
+import { useTheme } from "next-themes";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Palette } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Palette, Sun, Moon, Laptop } from "lucide-react";
 
 export default function ThemeSettingsPage() {
+  const { theme, setTheme } = useTheme();
+
   return (
     <div>
       <div className="flex items-center gap-4">
@@ -14,20 +17,38 @@ export default function ThemeSettingsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Tema Ayarları</h1>
           <p className="text-muted-foreground mt-1">
-            Uygulamanın görünümünü (renkler, karanlık/aydınlık mod) yönetin.
+            Uygulamanın genel görünümünü (renkler, karanlık/aydınlık mod) yönetin.
           </p>
         </div>
       </div>
 
       <Card className="mt-8">
         <CardHeader>
-          <CardTitle>Geliştirme Aşamasında</CardTitle>
+          <CardTitle>Uygulama Teması</CardTitle>
           <CardDescription>
-            Bu bölüm şu anda yapım aşamasındadır. Yakında tema ayarlarını buradan yönetebileceksiniz.
+            Uygulama genelinde kullanılacak renk modunu seçin.
           </CardDescription>
         </CardHeader>
         <CardContent>
-            <p className="text-muted-foreground">Özellikler yolda!</p>
+          <RadioGroup value={theme} onValueChange={setTheme} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Label htmlFor="light-theme" className="flex flex-col items-center justify-center rounded-lg border-2 bg-card p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
+              <RadioGroupItem value="light" id="light-theme" className="sr-only" />
+              <Sun className="mb-3 h-8 w-8" />
+              <span className="font-bold">Aydınlık</span>
+            </Label>
+
+            <Label htmlFor="dark-theme" className="flex flex-col items-center justify-center rounded-lg border-2 bg-card p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
+              <RadioGroupItem value="dark" id="dark-theme" className="sr-only" />
+              <Moon className="mb-3 h-8 w-8" />
+              <span className="font-bold">Karanlık</span>
+            </Label>
+            
+            <Label htmlFor="system-theme" className="flex flex-col items-center justify-center rounded-lg border-2 bg-card p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
+              <RadioGroupItem value="system" id="system-theme" className="sr-only" />
+              <Laptop className="mb-3 h-8 w-8" />
+              <span className="font-bold">Sistem</span>
+            </Label>
+          </RadioGroup>
         </CardContent>
       </Card>
     </div>
