@@ -40,26 +40,30 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
             const roomDoc = await transaction.get(roomRef);
             if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
             
-            const roomData = roomDoc.data() as Room;
+            const roomData = roomDoc.data();
+            if (!roomData) throw new Error("Oda verisi bulunamadı.");
+
             const voiceCount = roomData.voiceParticipantsCount || 0;
             if (voiceCount >= 8) throw new Error("Sesli sohbet dolu.");
-
-            // Katılımcının zaten olup olmadığını kontrol et
+            
             const userDoc = await transaction.get(userVoiceRef);
             if (userDoc.exists()) {
                 console.log("Kullanıcı zaten sesli sohbette.");
-                return; // Zaten içeride, işlem yapma
+                return; 
             }
             
-            const isHost = roomData.createdBy.uid === user.uid;
+            const createdBy = roomData.createdBy;
+            if (!createdBy || !createdBy.uid) throw new Error("Oda kurucusu bilgisi eksik.");
+            
+            const isHost = createdBy.uid === user.uid;
             
             // Yeni katılımcı belgesini oluştur
             transaction.set(userVoiceRef, {
                 uid: user.uid,
                 username: user.displayName || 'Anonim',
                 photoURL: user.photoURL,
-                isSpeaker: isHost, // Sadece host başlangıçta hoparlör olsun
-                isMuted: !isHost, // Hoparlör değilse, başlangıçta sessizde
+                isSpeaker: isHost, 
+                isMuted: !isHost,
                 joinedAt: serverTimestamp(),
                 lastSpokeAt: serverTimestamp(),
             });

@@ -3,12 +3,16 @@
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Mic, MicOff, X, Headphones } from 'lucide-react';
+import { Mic, MicOff, X, Users, Headphones } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { useAuth } from '@/contexts/AuthContext';
+
 
 export default function PersistentVoiceBar() {
-    const { isConnected, activeRoom, self, toggleSelfMute, leaveRoom } = useVoiceChat();
+    const { user } = useAuth();
+    const { isConnected, activeRoom, self, participants, leaveRoom } = useVoiceChat();
     const pathname = usePathname();
 
     // Odanın kendi sayfasındaysak veya bağlı değilsek bu çubuğu gösterme
@@ -22,32 +26,36 @@ export default function PersistentVoiceBar() {
         leaveRoom();
     };
 
-    const handleToggleMute = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleSelfMute();
-    }
+    const isSpeaking = self?.isSpeaker && !self?.isMuted;
 
     return (
-        <div className="fixed bottom-20 left-0 right-0 z-50 p-2 animate-in slide-in-from-bottom-5 duration-300">
+        <div className="fixed bottom-24 right-4 z-50 flex items-start gap-2 animate-in slide-in-from-right-5 duration-300">
+             {/* Kapatma Butonu */}
+            <Button 
+                onClick={handleLeave} 
+                variant="destructive" 
+                size="icon" 
+                className="rounded-full shadow-lg h-9 w-9"
+            >
+                <X className="h-5 w-5"/>
+                <span className="sr-only">Sesli Sohbetten Ayrıl</span>
+            </Button>
+            
+            {/* Tıklanabilir Kapsül */}
             <Link href={`/rooms/${activeRoom?.id}`} className="block">
-                <div className="container max-w-4xl mx-auto">
-                    <div className="flex items-center justify-between gap-4 rounded-full bg-gray-900/90 text-white p-2 pl-4 border border-gray-700/50 backdrop-blur-md shadow-lg">
-                        <div className="flex items-center gap-3">
-                            <Headphones className={cn("h-5 w-5", self?.isMuted ? "text-red-500" : "text-green-500 animate-pulse")} />
-                            <div>
-                                <p className="font-bold text-sm truncate">{activeRoom?.name}</p>
-                                <p className="text-xs text-gray-400">Sesli sohbettesin. Geri dönmek için tıkla.</p>
+                 <div className="flex flex-col items-center gap-3 p-3 rounded-full bg-primary/90 text-primary-foreground backdrop-blur-md shadow-lg border border-primary/20 hover:scale-105 transition-transform duration-200">
+                    <Avatar className="h-14 w-14 border-2 border-background">
+                         <AvatarImage src={self?.photoURL || user?.photoURL || undefined} />
+                         <AvatarFallback>{self?.username?.charAt(0) || user?.displayName?.charAt(0)}</AvatarFallback>
+                        {isSpeaking && (
+                             <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">
+                                <Mic className="h-6 w-6 text-white animate-pulse" />
                             </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                             <Button onClick={handleToggleMute} variant="ghost" size="icon" className="rounded-full bg-gray-700/50 hover:bg-gray-600/50 text-white hover:text-white">
-                                {self?.isMuted ? <MicOff className="h-5 w-5 text-red-500"/> : <Mic className="h-5 w-5 text-white"/>}
-                            </Button>
-                             <Button onClick={handleLeave} variant="ghost" size="icon" className="rounded-full bg-red-600/50 hover:bg-red-500 text-white hover:text-white">
-                                <X className="h-5 w-5"/>
-                            </Button>
-                        </div>
+                        )}
+                    </Avatar>
+                     <div className="flex items-center gap-1.5 text-sm font-bold">
+                        <Users className="h-4 w-4" />
+                        <span>{participants.length}</span>
                     </div>
                 </div>
             </Link>
