@@ -53,7 +53,7 @@ export default function PostCard({ post }: PostCardProps) {
     const [isLiking, setIsLiking] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
-    const [editedText, setEditedText] = useState(post.text);
+    const [editedText, setEditedText] = useState(post.text || '');
     const [isSaving, setIsSaving] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showComments, setShowComments] = useState(false);
@@ -126,6 +126,7 @@ export default function PostCard({ post }: PostCardProps) {
 
     // Gönderi metnini hashtag ve mention'lar ile işleyen fonksiyon
     const renderTextWithLinks = (text: string) => {
+        if (!text) return null;
         const parts = text.split(/(#\w+|@\w+)/g);
         return parts.map((part, i) => {
             if (part.startsWith('@')) {
@@ -222,7 +223,7 @@ export default function PostCard({ post }: PostCardProps) {
                                 </div>
                             </div>
                         ) : (
-                            <p className="text-sm leading-relaxed whitespace-pre-wrap">{renderTextWithLinks(post.text)}</p>
+                            post.text && <p className="text-sm leading-relaxed whitespace-pre-wrap">{renderTextWithLinks(post.text)}</p>
                         )}
 
                         {post.imageUrl && !isEditing && (
