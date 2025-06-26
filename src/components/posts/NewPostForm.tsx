@@ -112,11 +112,13 @@ export default function NewPostForm() {
     setIsLoading(true);
 
     try {
-      let finalImage: File | string | null = imageFile;
+      let finalImage: string | null = null;
       if (filteredImagePreview) {
         finalImage = filteredImagePreview;
+      } else if (imageFile) {
+        finalImage = await toDataURL(imageFile);
       }
-
+      
       await addPost({
         text,
         image: finalImage,

@@ -16,11 +16,11 @@ import {
     increment,
     runTransaction
 } from "firebase/firestore";
-import { ref, uploadString, getDownloadURL, deleteObject, uploadBytes } from "firebase/storage";
+import { ref, uploadString, getDownloadURL, deleteObject } from "firebase/storage";
 
 interface AddPostArgs {
     text: string;
-    image: File | string | null; // Artık File veya base64 string olabilir
+    image: string | null; // Artık sadece base64 string veya null olabilir
     user: {
         uid: string;
         displayName: string | null;
@@ -31,7 +31,7 @@ interface AddPostArgs {
 
 /**
  * Yeni bir gönderi oluşturur, gerekirse resim yükler ve Firestore'a kaydeder.
- * @param {AddPostArgs} args - Gönderi metni, resim dosyası (veya base64 string) ve kullanıcı bilgileri.
+ * @param {AddPostArgs} args - Gönderi metni, resim dosyası (base64 string) ve kullanıcı bilgileri.
  */
 export async function addPost({ text, image, user, role }: AddPostArgs) {
     if (!user || !user.uid) {
@@ -42,16 +42,10 @@ export async function addPost({ text, image, user, role }: AddPostArgs) {
     if (image) {
         const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}_post`);
         
-        if (typeof image === 'string') {
-            // Eğer resim base64 string ise (AI filtresinden geliyorsa)
-            // 'data_url' formatında yükle
-            const snapshot = await uploadString(imageRef, image, 'data_url');
-            imageUrl = await getDownloadURL(snapshot.ref);
-        } else {
-            // Eğer resim File nesnesi ise (orijinal yükleme)
-            const snapshot = await uploadBytes(imageRef, image);
-            imageUrl = await getDownloadURL(snapshot.ref);
-        }
+        // Gelen resim her zaman bir data URI (base64) string'dir.
+        // 'data_url' formatında yükle
+        const snapshot = await uploadString(imageRef, image, 'data_url');
+        imageUrl = await getDownloadURL(snapshot.ref);
     }
 
     // Yeni gönderi dökümanını Firestore'a ekle
