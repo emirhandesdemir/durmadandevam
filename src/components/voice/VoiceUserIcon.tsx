@@ -14,7 +14,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   kickFromVoice,
-  updateSpeakerStatus,
 } from "@/lib/actions/voiceActions";
 import type { VoiceParticipant } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -22,9 +21,6 @@ import {
   Crown,
   Mic,
   MicOff,
-  User,
-  Volume2,
-  VolumeX,
   LogOut,
   Loader2,
 } from "lucide-react";
@@ -62,14 +58,12 @@ export default function VoiceUserIcon({
     action: (
       roomId: string,
       currentUserId: string,
-      targetUserId: string,
-      param?: any
-    ) => Promise<{ success: boolean; error?: string }>,
-    param?: any
+      targetUserId: string
+    ) => Promise<{ success: boolean; error?: string }>
   ) => {
     setIsProcessing(true);
     try {
-      const result = await action(roomId, currentUserId, participant.uid, param);
+      const result = await action(roomId, currentUserId, participant.uid);
       if (!result.success) {
         toast({ variant: "destructive", description: result.error });
       }
@@ -83,24 +77,6 @@ export default function VoiceUserIcon({
   const menuContent = (
     <DropdownMenuContent align="center" className="bg-gray-800 border-gray-700 text-white">
       <DropdownMenuLabel>{participant.username}</DropdownMenuLabel>
-      <DropdownMenuSeparator className="bg-gray-700"/>
-      {participant.isSpeaker ? (
-        <DropdownMenuItem
-          onClick={() => handleAction(updateSpeakerStatus, false)}
-          className="focus:bg-gray-700"
-        >
-          <VolumeX className="mr-2 h-4 w-4" />
-          <span>Dinleyici Yap</span>
-        </DropdownMenuItem>
-      ) : (
-        <DropdownMenuItem
-          onClick={() => handleAction(updateSpeakerStatus, true)}
-          className="focus:bg-gray-700"
-        >
-          <Volume2 className="mr-2 h-4 w-4" />
-          <span>Konuşmacı Yap</span>
-        </DropdownMenuItem>
-      )}
       <DropdownMenuSeparator className="bg-gray-700"/>
       <DropdownMenuItem
         className="text-red-400 focus:text-red-400 focus:bg-red-900/50"

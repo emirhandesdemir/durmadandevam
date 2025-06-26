@@ -30,11 +30,11 @@ export default function RoomPage() {
         isConnecting, 
         isConnected, 
         joinRoom, 
-        toggleSelfMute 
+        toggleSelfMute,
+        participants: voiceParticipantsFromCtx,
     } = useVoiceChat();
 
     const [room, setRoom] = useState<Room | null>(null);
-    const [voiceParticipants, setVoiceParticipants] = useState<VoiceParticipant[]>([]);
     const [messages, setMessages] = useState<Message[]>([]);
     const [messagesLoading, setMessagesLoading] = useState(true);
     const [isParticipantSheetOpen, setIsParticipantSheetOpen] = useState(false);
@@ -57,22 +57,8 @@ export default function RoomPage() {
         return () => roomUnsub();
     }, [roomId, router, toast]);
 
-    // Sesli sohbet katılımcılarını dinle
-    useEffect(() => {
-        if (!roomId) return;
-        const voiceParticipantsRef = collection(db, "rooms", roomId, "voiceParticipants");
-        const q = query(voiceParticipantsRef, orderBy("joinedAt", "asc"));
-        
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const vps = snapshot.docs.map(doc => doc.data() as VoiceParticipant);
-            setVoiceParticipants(vps);
-        }, (error) => {
-            console.error("Voice participant listener error on RoomPage:", error);
-            toast({ title: "Hata", description: "Sesli sohbet katılımcıları alınamadı.", variant: "destructive" });
-        });
-
-        return () => unsubscribe();
-    }, [roomId, toast]);
+    // Sesli sohbet katılımcılarını dinle (Context'ten alınıyor)
+    const voiceParticipants = voiceParticipantsFromCtx;
 
     // Metin sohbeti mesajlarını dinle
     useEffect(() => {
@@ -104,10 +90,6 @@ export default function RoomPage() {
 
     const handleToggleMute = async () => {
         if (!self || !user) return;
-        if (!self.isSpeaker && self.isMuted) {
-            toast({ variant: "destructive", title: "Dinleyici Modu", description: "Konuşmak için oda yöneticisinden izin istemelisiniz." });
-            return;
-        }
         await toggleSelfMute();
     };
     
@@ -122,7 +104,6 @@ export default function RoomPage() {
 
     const isLoading = authLoading || !room;
     
-    // Yükleme durumunu kontrol et: bağlanıyor veya ilk katılımcı verisi henüz gelmedi
     const showVoiceStageLoader = isConnecting || (isConnected && voiceParticipants.length === 0);
 
     if (isLoading) {

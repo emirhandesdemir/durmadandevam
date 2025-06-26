@@ -11,7 +11,8 @@ import {
     serverTimestamp,
     increment,
     updateDoc,
-    Timestamp
+    Timestamp,
+    deleteDoc
 } from 'firebase/firestore';
 import type { Room, VoiceParticipant } from '../types';
 
@@ -34,7 +35,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
     const userVoiceRef = doc(roomRef, 'voiceParticipants', user.uid);
 
     try {
-        // Step 1: Read the data first, outside of a transaction to prevent deadlocks.
+        // Step 1: Read the data first, outside of a transaction to prevent race conditions.
         const roomDoc = await getDoc(roomRef);
         if (!roomDoc.exists()) {
             throw new Error("Oda bulunamadı.");
@@ -58,9 +59,9 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
             uid: user.uid,
             username: user.displayName || 'Anonim',
             photoURL: user.photoURL,
-            isSpeaker: isHost,
-            isMuted: !isHost,
-            joinedAt: serverTimestamp() as Timestamp, // Cast for type consistency
+            isSpeaker: true, // Everyone is a speaker now
+            isMuted: !isHost, // Host joins unmuted, others join muted
+            joinedAt: serverTimestamp() as Timestamp,
         };
         
         const batch = writeBatch(db);
@@ -89,7 +90,6 @@ export async function leaveVoiceChat(roomId: string, userId: string) {
     const userVoiceRef = doc(db, 'rooms', roomId, 'voiceParticipants', userId);
 
      try {
-        // First, check if the user is actually in the voice chat.
         const userVoiceDoc = await getDoc(userVoiceRef);
         if (!userVoiceDoc.exists()) {
             return { success: true }; // Already left, do nothing.
@@ -121,7 +121,6 @@ export async function toggleSelfMute(roomId: string, userId: string, isMuted: bo
     try {
         await updateDoc(userVoiceRef, { 
             isMuted: isMuted,
-            // Kullanıcı sesini açtığında aktivite zamanını güncelle
             lastSpokeAt: serverTimestamp()
         });
         return { success: true };
@@ -132,46 +131,6 @@ export async function toggleSelfMute(roomId: string, userId: string, isMuted: bo
 
 
 // --- Yönetici (Host) Eylemleri ---
-
-/**
- * Oda yöneticisinin başka bir katılımcının hoparlör durumunu değiştirmesi.
- * @param roomId Oda ID'si.
- * @param currentUserId İşlemi yapan yönetici ID'si.
- * @param targetUserId Hedef kullanıcının ID'si.
- * @param isSpeaker Hedefin yeni hoparlör durumu.
- */
-export async function updateSpeakerStatus(roomId: string, currentUserId: string, targetUserId: string, isSpeaker: boolean) {
-    if (!currentUserId) throw new Error("Yetkilendirme hatası.");
-
-    const roomRef = doc(db, 'rooms', roomId);
-    const targetUserVoiceRef = doc(roomRef, 'voiceParticipants', targetUserId);
-    
-    try {
-        // Transaction is required here to securely check for host permissions before making a change.
-        await runTransaction(db, async (transaction) => {
-            const roomDoc = await transaction.get(roomRef);
-            if (!roomDoc.exists() || roomDoc.data()?.createdBy.uid !== currentUserId) {
-                throw new Error("Bu işlemi yapma yetkiniz yok.");
-            }
-
-            const targetUserDoc = await transaction.get(targetUserVoiceRef);
-            if (!targetUserDoc.exists()) {
-                throw new Error("Hedef kullanıcı sesli sohbette değil.");
-            }
-
-            // Hedef kullanıcının durumunu güncelle
-            transaction.update(targetUserVoiceRef, { 
-                isSpeaker: isSpeaker,
-                // Hoparlör yapılırsa sesi otomatik aç, dinleyici yapılırsa kapat
-                isMuted: !isSpeaker 
-            });
-        });
-        return { success: true };
-    } catch (error: any) {
-        return { success: false, error: error.message };
-    }
-}
-
 
 /**
  * Oda yöneticisinin bir katılımcıyı sesli sohbetten atması.
@@ -187,7 +146,6 @@ export async function kickFromVoice(roomId: string, currentUserId: string, targe
     const targetUserVoiceRef = doc(roomRef, 'voiceParticipants', targetUserId);
 
     try {
-        // Transaction is required here to securely check for host permissions.
         await runTransaction(db, async (transaction) => {
              const roomDoc = await transaction.get(roomRef);
             if (!roomDoc.exists() || roomDoc.data()?.createdBy.uid !== currentUserId) {
@@ -199,7 +157,6 @@ export async function kickFromVoice(roomId: string, currentUserId: string, targe
                 return; // User already gone.
             }
             
-            // Kullanıcıyı sil ve sayacı azalt
             transaction.delete(targetUserVoiceRef);
             transaction.update(roomRef, { voiceParticipantsCount: increment(-1) });
         });
