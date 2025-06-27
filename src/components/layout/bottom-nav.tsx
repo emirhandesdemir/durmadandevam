@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, MessageSquare, PlusCircle, User } from "lucide-react";
+import { Home, MessageSquare, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
     { href: "/home", label: "Anasayfa", icon: Home },
     { href: "/rooms", label: "Odalar", icon: MessageSquare },
-    { href: "/create-post", label: "Gönderi Ekle", icon: PlusCircle },
     { href: "/profile", label: "Profil", icon: User },
 ]
 
@@ -23,7 +22,7 @@ export default function BottomNav() {
     return (
         <footer className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card/80 backdrop-blur-sm">
             {/* Yükseklik h-20'den (80px) h-16'ya (64px) düşürüldü */}
-            <nav className="grid h-16 grid-cols-4">
+            <nav className="grid h-16 grid-cols-3">
                 {navItems.map((item) => {
                     const isActive = pathname === item.href;
                     

@@ -1,3 +1,4 @@
+
 // src/components/home/NewPost.tsx
 "use client";
 
