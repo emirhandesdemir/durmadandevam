@@ -24,6 +24,7 @@ interface VoiceChatContextType {
     isConnected: boolean;
     remoteAudioStreams: Record<string, MediaStream>;
     remoteScreenStreams: Record<string, MediaStream>;
+    localScreenStream: MediaStream | null;
     isSharingScreen: boolean;
     startScreenShare: () => Promise<void>;
     stopScreenShare: () => Promise<void>;
@@ -100,6 +101,15 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const startScreenShare = useCallback(async () => {
         if (!user || !activeRoom || isSharingScreen) return;
         console.log("Starting screen share");
+
+        if (typeof navigator?.mediaDevices?.getDisplayMedia !== 'function') {
+            toast({
+                variant: 'destructive',
+                title: 'Özellik Desteklenmiyor',
+                description: 'Tarayıcınız ekran paylaşımını desteklemiyor veya güvenli bir bağlantı (HTTPS) üzerinde değilsiniz.'
+            });
+            return;
+        }
         
         try {
             const screenStream = await navigator.mediaDevices.getDisplayMedia({
@@ -270,7 +280,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     }, [self, activeRoom, localStream]);
 
     const value = {
-        activeRoom, participants, self, isConnecting, isConnected, remoteAudioStreams, remoteScreenStreams, isSharingScreen,
+        activeRoom, participants, self, isConnecting, isConnected, remoteAudioStreams, remoteScreenStreams, isSharingScreen, localScreenStream,
         joinRoom, leaveRoom, toggleSelfMute, startScreenShare, stopScreenShare,
     };
 
