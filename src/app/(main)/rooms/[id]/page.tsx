@@ -16,7 +16,6 @@ import VoiceUserIcon from '@/components/voice/VoiceUserIcon';
 import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
 import RoomHeader from '@/components/rooms/RoomHeader';
 import ScreenShareView from '@/components/voice/ScreenShareView';
-import { kickInactiveUsers } from '@/lib/actions/voiceActions';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -62,13 +61,11 @@ export default function RoomPage() {
 
     // --- Effects ---
 
-    // Set active room ID for voice chat context. This effect ensures that the context knows
-    // which room we're in, but it no longer clears the ID on unmount. The connection state
-    // is now managed entirely within the context via explicit join/leave actions.
     useEffect(() => {
         if (roomId) {
             setActiveRoomId(roomId);
         }
+        return () => setActiveRoomId(null);
     }, [roomId, setActiveRoomId]);
 
     // Fetch game settings on mount
@@ -76,11 +73,17 @@ export default function RoomPage() {
         getGameSettings().then(setGameSettings);
     }, []);
 
-    // Oda verisi, AFK kick ve mesajları dinle
+    // Oda verisi ve mesajları dinle
     useEffect(() => {
         if (!roomId) return;
+        
         const roomUnsub = onSnapshot(doc(db, 'rooms', roomId), (docSnap) => {
-            if (docSnap.exists()) setRoom({ id: docSnap.id, ...docSnap.data() } as Room);
+            if (docSnap.exists()) {
+                 setRoom({ id: docSnap.id, ...docSnap.data() } as Room);
+            } else {
+                 toast({ variant: 'destructive', title: 'Oda Bulunamadı', description: 'Bu oda artık mevcut değil veya süresi dolmuş.' });
+                 router.push('/rooms');
+            }
         });
         
         const messagesQuery = query(collection(db, "rooms", roomId, "messages"), orderBy("createdAt", "asc"), limit(100));
@@ -88,18 +91,12 @@ export default function RoomPage() {
             setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message)));
             setMessagesLoading(false);
         });
-        
-        let afkInterval: NodeJS.Timeout;
-        if (isHost) {
-            afkInterval = setInterval(() => kickInactiveUsers(roomId), 60 * 1000);
-        }
 
         return () => {
             roomUnsub();
             messagesUnsub();
-            if (afkInterval) clearInterval(afkInterval);
         };
-    }, [roomId, isHost]);
+    }, [roomId, router, toast]);
 
     // Listen for games and countdowns
     useEffect(() => {
@@ -119,13 +116,11 @@ export default function RoomPage() {
                 setGameLoading(false);
             } else {
                 setActiveGame(null);
-                // When game ends, room listener will pick up the new `nextGameTimestamp`
             }
         });
         
-        // This listener is for the countdown when there's no active game.
         const roomTimestampUnsub = onSnapshot(doc(db, 'rooms', roomId), (docSnap) => {
-             if (docSnap.exists() && !activeGame) { // only set countdown if no game is active
+             if (docSnap.exists() && !activeGame) {
                 const roomData = docSnap.data() as Room;
                 const nextGameTime = roomData.nextGameTimestamp?.toDate().getTime();
                 if (nextGameTime) {

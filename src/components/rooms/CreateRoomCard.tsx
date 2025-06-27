@@ -7,16 +7,13 @@ import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/ca
 import { PlusCircle, ChevronRight, Settings } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, limit } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, limit, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '../ui/skeleton';
-import type { Room } from '@/lib/types'; // Import the type
-import RoomManagementDialog from './RoomManagementDialog'; // Import the new dialog
+import type { Room } from '@/lib/types';
+import RoomManagementDialog from './RoomManagementDialog';
+import { deleteRoomAsOwner } from '@/lib/actions/roomActions';
 
-/**
- * Odalar sayfasının en üstünde yer alan, kullanıcıyı karşılayan ve
- * yeni oda oluşturmaya veya mevcut odasını yönetmeye yönlendiren kart.
- */
 export default function CreateRoomCard() {
     const { user } = useAuth();
     const username = user?.displayName?.split(' ')[0] || 'Dostum';
@@ -31,25 +28,35 @@ export default function CreateRoomCard() {
         }
         setUserRoom('loading');
         const q = query(collection(db, "rooms"), where("createdBy.uid", "==", user.uid), limit(1));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
+        
+        const unsubscribe = onSnapshot(q, async (snapshot) => {
             if (!snapshot.empty) {
-                // Store the full room object
-                setUserRoom({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Room);
+                const roomDoc = snapshot.docs[0];
+                const roomData = { id: roomDoc.id, ...roomDoc.data() } as Room;
+                
+                // Oda sahibi bu kartı gördüğünde, odası süresi dolmuşsa otomatik olarak sil.
+                const isExpired = roomData.expiresAt && (roomData.expiresAt as Timestamp).toDate() < new Date();
+                
+                if (isExpired) {
+                    // Bu işlem, onSnapshot'ın tekrar tetiklenmesini sağlayacak ve userRoom'u null yapacaktır.
+                    await deleteRoomAsOwner(roomData.id, user.uid);
+                } else {
+                    setUserRoom(roomData);
+                }
             } else {
                 setUserRoom(null);
             }
         }, (error) => {
             console.error("Error fetching user room:", error);
-            setUserRoom(null); // Set to null on error
+            setUserRoom(null);
         });
+
         return () => unsubscribe();
     }, [user]);
 
     const renderButton = () => {
         if (userRoom === 'loading') {
-            return (
-                <Skeleton className="h-16 w-full md:w-52 rounded-full" />
-            );
+            return <Skeleton className="h-16 w-full md:w-52 rounded-full" />;
         }
         if (userRoom) {
             return (

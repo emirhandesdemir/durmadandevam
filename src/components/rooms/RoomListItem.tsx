@@ -13,6 +13,7 @@ import type { Room } from "@/lib/types";
 import { joinRoom } from "@/lib/actions/roomActions";
 import { Timestamp } from "firebase/firestore";
 import { Badge } from "../ui/badge";
+import Link from 'next/link';
 
 interface RoomListItemProps {
     room: Room;
@@ -78,23 +79,30 @@ export default function RoomListItem({ room }: RoomListItemProps) {
     };
     
     const handleEnterClick = () => {
-        router.push(`/rooms/${room.id}`);
+        if (!isExpired) {
+          router.push(`/rooms/${room.id}`);
+        }
     }
 
     return (
-        <div className="flex items-center gap-4 p-3 rounded-2xl bg-card hover:bg-muted/50 transition-colors">
+        <div className={cn(
+            "flex items-center gap-4 p-3 rounded-2xl bg-card hover:bg-muted/50 transition-colors",
+            isExpired && "opacity-50"
+        )}>
             <div className="relative">
-                <Avatar className="h-12 w-12 border">
-                    <AvatarImage src={room.createdBy.photoURL || undefined} />
-                    <AvatarFallback>{room.createdBy.username?.charAt(0)}</AvatarFallback>
-                </Avatar>
+                <Link href={`/profile/${room.createdBy.uid}`}>
+                    <Avatar className="h-12 w-12 border">
+                        <AvatarImage src={room.createdBy.photoURL || undefined} />
+                        <AvatarFallback>{room.createdBy.username?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                </Link>
                  <div className="absolute -bottom-1 -right-1 p-1 bg-background rounded-full">
                     <Crown className="h-4 w-4 text-yellow-500"/>
                 </div>
             </div>
             <div className="flex-1 overflow-hidden">
                 <p className="font-bold truncate">{room.name}</p>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm text-muted-foreground truncate">{room.description}</p>
                     {timeLeft !== null && !isExpired && (
                         <Badge variant="outline" className="flex items-center gap-1 shrink-0">
@@ -118,7 +126,7 @@ export default function RoomListItem({ room }: RoomListItemProps) {
                   disabled={isJoining || isFull || isExpired}
                   size="sm"
                 >
-                    {isJoining ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
+                    {isJoining ? <Loader2 className="h-4 w-4 animate-spin" /> : isExpired ? null : <LogIn className="mr-2 h-4 w-4" />}
                     {isExpired ? 'Süresi Doldu' : (isFull ? 'Dolu' : 'Katıl')}
                 </Button>
             )}

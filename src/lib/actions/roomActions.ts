@@ -1,3 +1,4 @@
+// src/lib/actions/roomActions.ts
 'use server';
 
 import { db } from '@/lib/firebase';
@@ -90,8 +91,13 @@ export async function joinRoom(roomId: string, userInfo: UserInfo) {
     const roomSnap = await getDoc(roomRef);
     if (!roomSnap.exists()) throw new Error("Oda bulunamadı.");
     const roomData = roomSnap.data();
+    
+    const isExpired = roomData.expiresAt && (roomData.expiresAt as Timestamp).toDate() < new Date();
+    if(isExpired) throw new Error("Bu odanın süresi dolmuş.");
+
     const isFull = (roomData.participants?.length || 0) >= roomData.maxParticipants;
     if (isFull) throw new Error("Bu oda dolu.");
+
     const isParticipant = roomData.participants?.some((p: any) => p.uid === userInfo.uid);
     if (isParticipant) return { success: true, message: "Zaten katılımcı." };
 
