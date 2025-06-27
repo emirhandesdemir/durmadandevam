@@ -16,11 +16,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles } from "lucide-react";
+import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, Headphones } from "lucide-react";
 import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
+import { Switch } from "../ui/switch";
 import { useState, useRef, useEffect } from "react";
 import { auth, db, storage } from "@/lib/firebase";
 import { updateProfile } from "firebase/auth";
@@ -52,6 +53,13 @@ export default function ProfilePageClient() {
     const [selectedBubble, setSelectedBubble] = useState(userData?.selectedBubble || "");
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    
+    // Ses ayarları için state'ler
+    const [isMonitoring, setIsMonitoring] = useState(false);
+    const [isTogglingMic, setIsTogglingMic] = useState(false);
+    const micTestStreamRef = useRef<MediaStream | null>(null);
+    const audioContextRef = useRef<AudioContext | null>(null);
+
 
     // userData güncellendiğinde, state'i de güncelle
     useEffect(() => {
@@ -60,6 +68,18 @@ export default function ProfilePageClient() {
             setSelectedBubble(userData.selectedBubble || "");
         }
     }, [userData]);
+    
+    // Mikrofon dinleme özelliğinin temizlenmesi için useEffect
+    useEffect(() => {
+        return () => {
+            if (micTestStreamRef.current) {
+                micTestStreamRef.current.getTracks().forEach(track => track.stop());
+            }
+            if (audioContextRef.current) {
+                audioContextRef.current.close();
+            }
+        };
+    }, []);
 
 
     const hasChanges = username !== (user?.displayName || "") || newAvatar !== null || selectedBubble !== (userData?.selectedBubble || "");
@@ -142,6 +162,37 @@ export default function ProfilePageClient() {
             setIsSaving(false);
         }
     }
+    
+    const handleMicMonitoringToggle = async (checked: boolean) => {
+        setIsTogglingMic(true);
+        if (checked) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                micTestStreamRef.current = stream;
+                const context = new (window.AudioContext || (window as any).webkitAudioContext)();
+                const source = context.createMediaStreamSource(stream);
+                source.connect(context.destination);
+                audioContextRef.current = context;
+                setIsMonitoring(true);
+                toast({ description: "Mikrofon dinlemesi aktif." });
+            } catch (error) {
+                console.error("Mic access error:", error);
+                toast({ variant: "destructive", title: "Hata", description: "Mikrofon erişimi reddedildi veya bulunamadı." });
+                setIsMonitoring(false);
+            }
+        } else {
+            if (micTestStreamRef.current) {
+                micTestStreamRef.current.getTracks().forEach(track => track.stop());
+                micTestStreamRef.current = null;
+            }
+            if (audioContextRef.current) {
+                await audioContextRef.current.close();
+                audioContextRef.current = null;
+            }
+            setIsMonitoring(false);
+        }
+        setIsTogglingMic(false);
+    };
 
     if (loading || !user) {
         return null; // or a loading skeleton
@@ -263,6 +314,34 @@ export default function ProfilePageClient() {
                                </div>
                             </AccordionContent>
                         </AccordionItem>
+                        <AccordionItem value="voice">
+                            <AccordionTrigger>
+                                <div className="flex items-center gap-3">
+                                    <Headphones className="h-5 w-5 text-muted-foreground" />
+                                    <span className="font-semibold">Ses Ayarları</span>
+                                </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                                <div className="pt-2">
+                                    <div className="flex items-center justify-between rounded-lg border p-3">
+                                        <div className="space-y-0.5">
+                                            <Label htmlFor="mic-monitoring" className="text-base">
+                                                Mikrofonu Dinle
+                                            </Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                Konuşurken kendi sesini duyarak mikrofonunu test et.
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            id="mic-monitoring"
+                                            checked={isMonitoring}
+                                            onCheckedChange={handleMicMonitoringToggle}
+                                            disabled={isTogglingMic}
+                                        />
+                                    </div>
+                                </div>
+                            </AccordionContent>
+                        </AccordionItem>
                     </Accordion>
 
 
@@ -297,3 +376,5 @@ export default function ProfilePageClient() {
         </>
     );
 }
+
+    
