@@ -19,6 +19,13 @@ export interface UserProfile {
     hasUnreadNotifications?: boolean;
 }
 
+export interface ProfileViewer {
+    uid: string;
+    viewedAt: Timestamp;
+    username?: string;
+    photoURL?: string | null;
+}
+
 export interface FollowRequest {
     uid: string;
     username: string;

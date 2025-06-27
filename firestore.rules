@@ -3,85 +3,87 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-    
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Rules for the 'users' collection
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isChangingOnly(allowedKeys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedKeys);
+    }
+
     match /users/{userId} {
       allow read: if true;
       allow create: if isOwner(userId);
-      
-      // Update rules for user documents
+
       allow update: if isSignedIn() && (
-        // 1. The owner can always update their own document.
-        isOwner(userId) ||
-        // 2. A non-owner can modify ONLY the 'followers' list (used for unfollowing).
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['followers']) ||
-        // 3. A non-owner can modify ONLY the 'following' list (used when a follow request is accepted).
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['following']) ||
-        // 4. A non-owner can modify ONLY the 'followRequests' list (used for sending requests to private profiles).
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['followRequests'])
+        (
+          isOwner(userId) &&
+          request.resource.data.role == resource.data.role
+        ) ||
+        (
+          !isOwner(userId) && (
+            (isChangingOnly(['followers']) && request.resource.data.followers == resource.data.followers.union([request.auth.uid])) ||
+            (isChangingOnly(['followers']) && request.resource.data.followers == resource.data.followers.difference(toSet([request.auth.uid]))) ||
+            (isChangingOnly(['followRequests']))
+          )
+        )
       );
+
+      allow delete: if false;
+
+      match /profileViewers/{viewerId} {
+        allow write: if isSignedIn() && request.auth.uid == viewerId;
+        allow read: if isSignedIn() && isOwner(userId);
+      }
     }
 
-    // Rules for the 'posts' collection and its subcollections
     match /posts/{postId} {
       allow read: if true;
-      allow create: if isOwner(request.resource.data.uid);
-      
-      // Allow owner to update text, or any signed-in user to update interaction counts.
-      allow update: if (isOwner(resource.data.uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text'])) ||
-                      (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasAny(['likeCount', 'likes', 'commentCount']));
-      allow delete: if isOwner(resource.data.uid);
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update: if isSignedIn() && (
+        (request.auth.uid == resource.data.uid && isChangingOnly(['text'])) ||
+        (isChangingOnly(['likes', 'likeCount']))
+      );
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.uid;
 
       match /comments/{commentId} {
         allow read: if true;
-        allow create: if isOwner(request.resource.data.uid);
-        allow delete: if isOwner(resource.data.uid);
-      }
-    }
-
-    // Rules for the 'notifications' collection
-    match /notifications/{notificationId} {
-      allow read, update, delete: if isOwner(resource.data.recipientId);
-      allow create: if isSignedIn();
-    }
-
-    // Rules for system configuration
-    match /config/{docId} {
-      allow read: if true;
-      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-
-    // Rules for 'rooms' and their subcollections
-    match /rooms/{roomId} {
-      allow read: if true;
-      allow create: if isOwner(request.resource.data.createdBy.uid);
-      allow update: if isOwner(resource.data.createdBy.uid) || isSignedIn(); // Allow owner to manage, or users to join
-      allow delete: if isOwner(resource.data.createdBy.uid);
-
-      match /messages/{messageId} {
-        allow read: if true;
         allow create: if isSignedIn();
+        allow delete: if isSignedIn() && (
+          resource.data.uid == request.auth.uid ||
+          get(/databases/$(database)/documents/posts/$(postId)).data.uid == request.auth.uid
+        );
       }
-      match /voiceParticipants/{participantId} {
+    }
+
+    match /notifications/{notificationId} {
+      allow read, delete: if isSignedIn() && resource.data.recipientId == request.auth.uid;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource.data.recipientId == request.auth.uid && isChangingOnly(['read']);
+    }
+    
+    match /rooms/{roomId} {
         allow read: if true;
-        allow create, update, delete: if isSignedIn();
-      }
-      match /signals/{signalId} {
-        allow write: if isSignedIn();
-      }
-      match /games/{gameId} {
-        allow read: if true;
-        allow create: if isOwner(get(/databases/$(database)/documents/rooms/$(roomId)).data.createdBy.uid);
+        allow create: if isSignedIn() && request.resource.data.createdBy.uid == request.auth.uid;
         allow update: if isSignedIn();
-      }
+        allow delete: if isSignedIn() && resource.data.createdBy.uid == request.auth.uid;
+
+        match /{path=**}/documents/{docId} {
+            allow read, write: if isSignedIn();
+        }
+    }
+
+    match /config/{docId} {
+        allow read: if true;
+        allow write: if false; // Admin console only
+    }
+     match /game_questions/{questionId} {
+        allow read: if true;
+        allow write: if false; // Admin only
     }
   }
 }

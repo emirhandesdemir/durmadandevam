@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, MessageCircle, Lock, UserPlus } from "lucide-react";
+import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, MessageCircle, Lock, UserPlus, Eye } from "lucide-react";
 import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { useTheme } from "next-themes";
@@ -30,6 +30,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { cn } from "@/lib/utils";
 import { doc, updateDoc } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
+import ProfileViewerList from "./ProfileViewerList";
 
 
 const bubbleOptions = [
@@ -228,6 +229,14 @@ export default function ProfilePageClient() {
                                 </div>
                             </AccordionContent>
                         </AccordionItem>
+                        <AccordionItem value="viewers">
+                            <AccordionTrigger>
+                                <div className="flex items-center gap-3"><Eye className="h-5 w-5 text-muted-foreground" /><span className="font-semibold">Profilime Bakanlar</span></div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                                <ProfileViewerList />
+                            </AccordionContent>
+                        </AccordionItem>
                         <AccordionItem value="appearance">
                             <AccordionTrigger>
                                 <div className="flex items-center gap-3"><Palette className="h-5 w-5 text-muted-foreground" /><span className="font-semibold">Görünüm Ayarları</span></div>
@@ -277,7 +286,6 @@ export default function ProfilePageClient() {
                                         ))}
                                     </div>
                                 </div>
-                                 {/* NEW: Live Preview Section */}
                                 <div className="mt-6 space-y-3">
                                     <h4 className="text-sm font-semibold text-muted-foreground">Canlı Önizleme</h4>
                                     <div className="rounded-xl border bg-gradient-to-tr from-card to-muted/20 p-4 shadow-inner min-h-[100px] flex items-center justify-center">
