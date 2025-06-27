@@ -17,8 +17,8 @@ import type { FeatureFlags } from '@/lib/types';
 // Context'in tip tanımı
 interface AuthContextType {
   user: User | null;
-  userData: DocumentData | null; // Firestore'dan gelen ek kullanıcı verileri (örn: rol)
-  featureFlags: FeatureFlags | null; // Uygulama genelindeki özellik bayrakları
+  userData: DocumentData | null;
+  featureFlags: FeatureFlags | null;
   loading: boolean;
   handleLogout: () => Promise<void>; // Çıkış fonksiyonu eklendi
 }
@@ -38,57 +38,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<DocumentData | null>(null);
   const [featureFlags, setFeatureFlags] = useState<FeatureFlags | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [firestoreLoading, setFirestoreLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
 
+  // Step 1: Listen for auth state changes from Firebase.
+  // This determines if there's a user or not.
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (!currentUser) {
-        setUserData(null);
-        setLoading(false);
-      }
+      setAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
+  // Step 2: Listen for Firestore data. This effect depends on the user state.
   useEffect(() => {
-    let unsubscribeFirestore: () => void = () => {};
-    let unsubscribeFeatures: () => void = () => {};
-    
-    // Özellik bayraklarını her zaman dinle
+    setFirestoreLoading(true);
+
     const featuresRef = doc(db, 'config', 'featureFlags');
-    unsubscribeFeatures = onSnapshot(featuresRef, (docSnap) => {
-        setFeatureFlags(docSnap.exists() ? docSnap.data() as FeatureFlags : { quizGameEnabled: true, postFeedEnabled: true });
-        // Kullanıcı bilgisi ve özellikler yüklendiğinde yüklemeyi bitir
-        if (!user) setLoading(false);
+    const unsubscribeFeatures = onSnapshot(featuresRef, (docSnap) => {
+      setFeatureFlags(docSnap.exists() ? docSnap.data() as FeatureFlags : { quizGameEnabled: true, postFeedEnabled: true });
     });
 
+    let unsubscribeUser: () => void = () => {};
+
     if (user) {
-      setLoading(true);
       const userDocRef = doc(db, 'users', user.uid);
-      unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-          setUserData(docSnap.data());
-        } else {
-          setUserData(null);
-        }
-        // Kullanıcı bilgisi ve özellikler yüklendiğinde yüklemeyi bitir
-        if (featureFlags !== null) setLoading(false);
+      unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
+        setUserData(docSnap.exists() ? docSnap.data() : null);
+        setFirestoreLoading(false);
       }, (error) => {
         console.error("Firestore user listener error:", error);
         setUserData(null);
-        setLoading(false);
+        setFirestoreLoading(false);
       });
+    } else {
+      // No user, so no user data to load.
+      setUserData(null);
+      setFirestoreLoading(false);
     }
 
     return () => {
-        unsubscribeFirestore();
-        unsubscribeFeatures();
+      unsubscribeUser();
+      unsubscribeFeatures();
     };
-  }, [user, featureFlags]);
+  }, [user]);
 
+  // The overall loading state is true until both the auth state is known
+  // and the subsequent firestore data has been loaded.
+  const loading = authLoading || firestoreLoading;
 
   // Çıkış yapma fonksiyonu
   const handleLogout = useCallback(async () => {
