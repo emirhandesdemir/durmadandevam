@@ -50,12 +50,19 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     const peerConnections = useRef<Record<string, RTCPeerConnection>>({});
     const screenSenderRef = useRef<Record<string, RTCRtpSender>>({});
-    const audioAnalysers = useRef<Record<string, { analyser: AnalyserNode, dataArray: Uint8Array, context: AudioContext }>>({});
+    const audioAnalysers = useRef<Record<string, { analyser: AnalyserNode, dataArray: Float32Array, context: AudioContext }>>({});
     const animationFrameId = useRef<number>();
 
     const self = participants.find(p => p.uid === user?.uid) || null;
     const isConnected = !!self;
     const isSharingScreen = !!localScreenStream;
+
+    // 1. Core helper functions with minimal dependencies
+    const sendSignal = useCallback(async (to: string, type: string, data: any) => {
+        if (!activeRoomId || !user) return;
+        const signalsRef = collection(db, `rooms/${activeRoomId}/signals`);
+        await addDoc(signalsRef, { to, from: user.uid, type, data, createdAt: serverTimestamp() });
+    }, [activeRoomId, user]);
     
     const _cleanupAndResetState = useCallback(() => {
         console.log("Cleaning up all connections and state.");
@@ -79,71 +86,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         setIsConnecting(false);
     }, [localStream, localScreenStream]);
 
-    const sendSignal = useCallback(async (to: string, type: string, data: any) => {
-        if (!activeRoomId || !user) return;
-        const signalsRef = collection(db, `rooms/${activeRoomId}/signals`);
-        await addDoc(signalsRef, { to, from: user.uid, type, data, createdAt: serverTimestamp() });
-    }, [activeRoomId, user]);
-    
-    const runAudioAnalysis = useCallback(() => {
-        const newSpeakingStates: Record<string, boolean> = {};
-        let activeSpeakerFound = false;
-        Object.entries(audioAnalysers.current).forEach(([uid, { analyser, dataArray }]) => {
-            analyser.getFloatFrequencyData(dataArray);
-            let sum = 0;
-            for (const amplitude of dataArray) { sum += amplitude * amplitude; }
-            const volume = Math.sqrt(sum / dataArray.length);
-            if (volume > 0.01) {
-                newSpeakingStates[uid] = true;
-                activeSpeakerFound = true;
-            } else {
-                newSpeakingStates[uid] = false;
-            }
-        });
-        setSpeakingStates(newSpeakingStates);
-
-        if (activeSpeakerFound && user && activeRoomId) {
-            updateLastActive(activeRoomId, user.uid);
-        }
-
-        animationFrameId.current = requestAnimationFrame(runAudioAnalysis);
-    }, [user, activeRoomId]);
-
-    useEffect(() => {
-        const setupAnalyser = (stream: MediaStream, uid: string) => {
-            if (!audioAnalysers.current[uid]) {
-                const context = new (window.AudioContext || (window as any).webkitAudioContext)();
-                const source = context.createMediaStreamSource(stream);
-                const analyser = context.createAnalyser();
-                analyser.fftSize = 512;
-                analyser.smoothingTimeConstant = 0.5;
-                source.connect(analyser);
-                audioAnalysers.current[uid] = { analyser, dataArray: new Float32Array(analyser.frequencyBinCount), context };
-            }
-        };
-
-        if (localStream && user) setupAnalyser(localStream, user.uid);
-        Object.entries(remoteAudioStreams).forEach(([uid, stream]) => setupAnalyser(stream, uid));
-        
-        const currentUids = new Set([user?.uid, ...Object.keys(remoteAudioStreams)]);
-        Object.keys(audioAnalysers.current).forEach(uid => {
-            if (!currentUids.has(uid)) {
-                audioAnalysers.current[uid]?.context.close();
-                delete audioAnalysers.current[uid];
-            }
-        });
-
-    }, [localStream, remoteAudioStreams, user]);
-
-    useEffect(() => {
-        if (isConnected) {
-            animationFrameId.current = requestAnimationFrame(runAudioAnalysis);
-        } else {
-            if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
-        }
-        return () => { if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current); };
-    }, [isConnected, runAudioAnalysis]);
-    
+    // 2. Functions dependent on helpers above
     const leaveRoom = useCallback(async () => {
         if (!user || !activeRoomId) return;
         await leaveVoiceChat(activeRoomId, user.uid);
@@ -165,40 +108,31 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         await toggleScreenShareAction(activeRoomId, user.uid, false);
     }, [user, activeRoomId, localScreenStream]);
 
-    const startScreenShare = useCallback(async () => {
-        if (!user || !activeRoomId || isSharingScreen) {
-            return;
+    const runAudioAnalysis = useCallback(() => {
+        const newSpeakingStates: Record<string, boolean> = {};
+        let activeSpeakerFound = false;
+        Object.entries(audioAnalysers.current).forEach(([uid, { analyser, dataArray }]) => {
+            analyser.getByteFrequencyData(dataArray as unknown as Uint8Array); // Corrected type for getByteFrequencyData
+            let sum = 0;
+            for (const amplitude of dataArray) { sum += amplitude * amplitude; }
+            const volume = Math.sqrt(sum / dataArray.length);
+            if (volume > 20) { // Adjusted threshold for byte data
+                newSpeakingStates[uid] = true;
+                activeSpeakerFound = true;
+            } else {
+                newSpeakingStates[uid] = false;
+            }
+        });
+        setSpeakingStates(newSpeakingStates);
+
+        if (activeSpeakerFound && user && activeRoomId) {
+            updateLastActive(activeRoomId, user.uid);
         }
 
-        try {
-            if (!navigator?.mediaDevices?.getDisplayMedia) {
-                const isSecureContext = window.isSecureContext;
-                const errorMsg = isSecureContext
-                    ? 'Your browser does not support screen sharing. Please use a modern browser like Chrome, Firefox, or Edge.'
-                    : 'Screen sharing requires a secure context (HTTPS).';
-                throw new Error(errorMsg);
-            }
-            const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: "always" } as MediaTrackConstraints, audio: false });
-            const screenTrack = screenStream.getVideoTracks()[0];
-            if (!screenTrack) throw new Error("No screen track found");
+        animationFrameId.current = requestAnimationFrame(runAudioAnalysis);
+    }, [user, activeRoomId]);
 
-            screenTrack.onended = () => stopScreenShare();
-            setLocalScreenStream(screenStream);
-            
-            for (const peerId in peerConnections.current) {
-                screenSenderRef.current[peerId] = peerConnections.current[peerId].addTrack(screenTrack, screenStream);
-            }
-            await toggleScreenShareAction(activeRoomId, user.uid, true);
-        } catch (error: any) {
-             console.error("Screen share error:", error);
-            toast({ 
-                variant: 'destructive', 
-                title: 'Feature Not Supported', 
-                description: error.message || 'Screen sharing could not be started.'
-            });
-        }
-    }, [user, activeRoomId, isSharingScreen, stopScreenShare, toast]);
-
+    // 3. Inter-dependent WebRTC functions (order matters here)
     const createPeerConnection = useCallback((otherUid: string) => {
         if (!user || !localStream || peerConnections.current[otherUid]) return;
 
@@ -228,6 +162,109 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             }
         } catch (error) { console.error("Signal handling error:", type, error); }
     }, [createPeerConnection, sendSignal]);
+
+    // 4. Main user-facing actions
+    const joinRoom = useCallback(async () => {
+        if (!user || !activeRoomId || isConnected || isConnecting) return;
+        
+        setIsConnecting(true);
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000 }, video: false });
+            setLocalStream(stream);
+            
+            const result = await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL });
+            if (!result.success) {
+                throw new Error(result.error || 'Sesli sohbete katılamadınız.');
+            }
+        } catch (error: any) {
+            toast({ variant: "destructive", title: "Katılım Başarısız", description: error.message });
+            _cleanupAndResetState();
+        } finally {
+            setIsConnecting(false);
+        }
+    }, [user, activeRoomId, isConnected, isConnecting, toast, _cleanupAndResetState]);
+    
+    const startScreenShare = useCallback(async () => {
+        if (!user || !activeRoomId || isSharingScreen) {
+            return;
+        }
+
+        try {
+            const isSecureContext = window.isSecureContext;
+            if (!navigator?.mediaDevices?.getDisplayMedia) {
+                const errorMsg = isSecureContext
+                    ? 'Tarayıcınız bu özelliği desteklemiyor gibi görünüyor. Lütfen güncel bir Chrome, Firefox veya Edge tarayıcısı kullanın.'
+                    : 'Ekran paylaşımı için güvenli bir bağlantı (HTTPS) gereklidir.';
+                throw new Error(errorMsg);
+            }
+            const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: "always" } as MediaTrackConstraints, audio: false });
+            const screenTrack = screenStream.getVideoTracks()[0];
+            if (!screenTrack) throw new Error("No screen track found");
+
+            screenTrack.onended = () => stopScreenShare();
+            setLocalScreenStream(screenStream);
+            
+            for (const peerId in peerConnections.current) {
+                screenSenderRef.current[peerId] = peerConnections.current[peerId].addTrack(screenTrack, screenStream);
+            }
+            await toggleScreenShareAction(activeRoomId, user.uid, true);
+        } catch (error: any) {
+             console.error("Screen share error:", error);
+            toast({ 
+                variant: 'destructive', 
+                title: 'Özellik Desteklenmiyor', 
+                description: error.message || 'Ekran paylaşımı başlatılamadı.'
+            });
+        }
+    }, [user, activeRoomId, isSharingScreen, stopScreenShare, toast]);
+
+    const toggleSelfMute = useCallback(async () => {
+        if (!self || !activeRoomId || !localStream) return;
+        const audioTrack = localStream.getAudioTracks()[0];
+        if (audioTrack) {
+            audioTrack.enabled = self.isMuted;
+            await toggleMuteAction(activeRoomId, self.uid, !self.isMuted);
+            if (!self.isMuted && user) await updateLastActive(activeRoomId, user.uid);
+        }
+    }, [self, activeRoomId, localStream, user]);
+
+
+    // --- Side Effects (useEffect hooks) ---
+    
+    useEffect(() => {
+        const setupAnalyser = (stream: MediaStream, uid: string) => {
+            if (!audioAnalysers.current[uid]) {
+                const context = new (window.AudioContext || (window as any).webkitAudioContext)();
+                const source = context.createMediaStreamSource(stream);
+                const analyser = context.createAnalyser();
+                analyser.fftSize = 256; // Smaller size for performance
+                analyser.smoothingTimeConstant = 0.5;
+                source.connect(analyser);
+                audioAnalysers.current[uid] = { analyser, dataArray: new Float32Array(analyser.frequencyBinCount), context };
+            }
+        };
+
+        if (localStream && user) setupAnalyser(localStream, user.uid);
+        Object.entries(remoteAudioStreams).forEach(([uid, stream]) => setupAnalyser(stream, uid));
+        
+        const currentUids = new Set([user?.uid, ...Object.keys(remoteAudioStreams)]);
+        Object.keys(audioAnalysers.current).forEach(uid => {
+            if (!currentUids.has(uid)) {
+                audioAnalysers.current[uid]?.context.close();
+                delete audioAnalysers.current[uid];
+            }
+        });
+
+    }, [localStream, remoteAudioStreams, user]);
+
+    useEffect(() => {
+        if (isConnected) {
+            animationFrameId.current = requestAnimationFrame(runAudioAnalysis);
+        } else {
+            if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
+        }
+        return () => { if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current); };
+    }, [isConnected, runAudioAnalysis]);
     
     useEffect(() => {
         if (!user || !activeRoomId) {
@@ -247,7 +284,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         const participantsUnsub = onSnapshot(collection(db, "rooms", activeRoomId, "voiceParticipants"), snapshot => {
             const fetched = snapshot.docs.map(d => d.data() as VoiceParticipant);
             setParticipants(fetched);
-            if (isConnected && fetched.every(p => p.uid !== user.uid)) {
+            if (isConnected && fetched.every(p => p.uid !== user?.uid)) {
                 toast({ title: "Bağlantı Kesildi", description: "Sesten ayrıldınız veya atıldınız." });
                 _cleanupAndResetState();
             }
@@ -288,36 +325,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         const interval = setInterval(() => updateLastActive(activeRoomId, user.uid), 60 * 1000);
         return () => clearInterval(interval);
     }, [isConnected, user, activeRoomId]);
-
-    const joinRoom = useCallback(async () => {
-        if (!user || !activeRoomId || isConnected || isConnecting) return;
-        
-        setIsConnecting(true);
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000, channelCount: 2 }, video: false });
-            setLocalStream(stream);
-            
-            const result = await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL });
-            if (!result.success) {
-                throw new Error(result.error || 'Sesli sohbete katılamadınız.');
-            }
-        } catch (error: any) {
-            toast({ variant: "destructive", title: "Katılım Başarısız", description: error.message });
-            _cleanupAndResetState();
-        } finally {
-            setIsConnecting(false);
-        }
-    }, [user, activeRoomId, isConnected, isConnecting, toast, _cleanupAndResetState]);
-    
-    const toggleSelfMute = useCallback(async () => {
-        if (!self || !activeRoomId || !localStream) return;
-        const audioTrack = localStream.getAudioTracks()[0];
-        if (audioTrack) {
-            audioTrack.enabled = self.isMuted;
-            await toggleMuteAction(activeRoomId, self.uid, !self.isMuted);
-            if (!self.isMuted && user) await updateLastActive(activeRoomId, user.uid);
-        }
-    }, [self, activeRoomId, localStream, user]);
 
     const memoizedParticipants = useMemo(() => {
         return participants.map(p => ({ ...p, isSpeaker: !!speakingStates[p.uid] }));
