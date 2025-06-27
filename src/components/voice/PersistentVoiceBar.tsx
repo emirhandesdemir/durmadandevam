@@ -1,10 +1,9 @@
 'use client';
 
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Mic, MicOff, X, Users, Headphones } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Mic, X, Users } from 'lucide-react';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,18 +11,20 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function PersistentVoiceBar() {
     const { user } = useAuth();
+    const router = useRouter();
     const { isConnected, activeRoom, self, participants, leaveRoom } = useVoiceChat();
     const pathname = usePathname();
 
     // Odanın kendi sayfasındaysak veya bağlı değilsek bu çubuğu gösterme
-    if (!isConnected || (activeRoom && pathname.startsWith(`/rooms/${activeRoom.id}`))) {
+    if (!isConnected || !activeRoom || pathname.startsWith(`/rooms/${activeRoom.id}`)) {
         return null;
     }
 
-    const handleLeave = (e: React.MouseEvent) => {
+    const handleLeaveAndNavigate = async (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        leaveRoom();
+        await leaveRoom();
+        router.push('/rooms');
     };
 
     const isSpeaking = self?.isSpeaker && !self?.isMuted;
@@ -32,7 +33,7 @@ export default function PersistentVoiceBar() {
         <div className="fixed bottom-20 right-4 z-50 flex items-start gap-2 animate-in slide-in-from-right-5 duration-300">
              {/* Kapatma Butonu */}
             <Button 
-                onClick={handleLeave} 
+                onClick={handleLeaveAndNavigate} 
                 variant="destructive" 
                 size="icon" 
                 className="rounded-full shadow-lg h-9 w-9"

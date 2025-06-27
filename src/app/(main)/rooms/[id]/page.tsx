@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { doc, onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,10 +18,12 @@ import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
 import RoomHeader from '@/components/rooms/RoomHeader';
 import ScreenShareView from '@/components/voice/ScreenShareView';
 import { kickInactiveUsers } from '@/lib/actions/voiceActions';
+import { useRouter } from 'next/navigation';
 
 
 export default function RoomPage() {
     const params = useParams();
+    const router = useRouter();
     const { toast } = useToast();
     const roomId = params.id as string;
     
@@ -68,6 +70,8 @@ export default function RoomPage() {
         const roomUnsub = onSnapshot(doc(db, 'rooms', roomId), (docSnap) => {
             if (docSnap.exists()) {
                 setRoom({ id: docSnap.id, ...docSnap.data() } as Room);
+            } else {
+                // The listener in the context will handle navigation for deleted rooms.
             }
         });
         return () => roomUnsub();
@@ -102,9 +106,14 @@ export default function RoomPage() {
     }, [messages]);
     
     const handleJoinVoice = useCallback(async () => {
-        if (!user || !room) return;
-        await joinRoom(room);
-    }, [user, room, joinRoom]);
+        if (!user) return;
+        await joinRoom();
+    }, [user, joinRoom]);
+
+    const handleLeaveAndNavigate = useCallback(async () => {
+        await leaveRoom();
+        router.push('/rooms');
+    }, [leaveRoom, router]);
 
     const handleToggleMute = useCallback(async () => {
         if (!self || !user) return;
@@ -188,13 +197,13 @@ export default function RoomPage() {
                              <Button onClick={isSharingScreen ? stopScreenShare : startScreenShare} variant="ghost" size="icon" className="rounded-full bg-gray-700/50 hover:bg-gray-600/50">
                                 {isSharingScreen ? <ScreenShareOff className="h-5 w-5 text-red-500"/> : <ScreenShare className="h-5 w-5 text-white"/>}
                              </Button>
-                             <Button onClick={() => leaveRoom()} variant="destructive" size="icon" className="rounded-full">
+                             <Button onClick={handleLeaveAndNavigate} variant="destructive" size="icon" className="rounded-full">
                                 <PhoneOff className="h-5 w-5" />
                                 <span className="sr-only">Ayrıl</span>
                             </Button>
                         </>
                     ) : (
-                         <Button onClick={handleJoinVoice} disabled={isConnecting || !isRoomParticipant} className="rounded-full bg-primary text-primary-foreground h-10 px-4">
+                         <Button onClick={handleJoinVoice} disabled={isConnecting || isConnected} className="rounded-full bg-primary text-primary-foreground h-10 px-4">
                             {isConnecting ? <Loader2 className="h-5 w-5 animate-spin"/> : <Mic className="h-5 w-5"/>}
                             <span className="ml-2">Katıl</span>
                          </Button>

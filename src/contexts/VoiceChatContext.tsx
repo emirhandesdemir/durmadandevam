@@ -7,10 +7,9 @@ import { db } from '@/lib/firebase';
 import type { Room, VoiceParticipant } from '../types';
 import { joinVoiceChat, leaveVoiceChat, updateLastActive, toggleSelfMute as toggleMuteAction, toggleScreenShare as toggleScreenShareAction } from '@/lib/actions/voiceActions';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
-const SPEAKING_THRESHOLD = -50; // dB
 
 interface VoiceChatContextType {
     activeRoom: Room | null;
@@ -25,7 +24,7 @@ interface VoiceChatContextType {
     setActiveRoomId: (id: string | null) => void;
     startScreenShare: () => Promise<void>;
     stopScreenShare: () => Promise<void>;
-    joinRoom: (roomToJoin: Room) => Promise<void>;
+    joinRoom: () => Promise<void>;
     leaveRoom: () => Promise<void>;
     toggleSelfMute: () => Promise<void>;
 }
@@ -36,6 +35,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const { user } = useAuth();
     const { toast } = useToast();
     const router = useRouter();
+    const pathname = usePathname();
 
     const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
     const [activeRoom, setActiveRoom] = useState<Room | null>(null);
@@ -57,7 +57,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const isConnected = !!self;
     const isSharingScreen = !!localScreenStream;
     
-    const cleanupConnections = useCallback(() => {
+    const _cleanupAndResetState = useCallback(() => {
+        console.log("Cleaning up all connections and state.");
         Object.values(peerConnections.current).forEach(pc => pc.close());
         peerConnections.current = {};
         
@@ -73,21 +74,17 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         setRemoteAudioStreams({});
         setRemoteScreenStreams({});
         screenSenderRef.current = {};
-    }, [localStream, localScreenStream]);
-
-    const stopAndCleanup = useCallback(() => {
-        cleanupConnections();
         setParticipants([]);
         setActiveRoom(null);
-    }, [cleanupConnections]);
+        setIsConnecting(false);
+    }, [localStream, localScreenStream]);
 
     const sendSignal = useCallback(async (to: string, type: string, data: any) => {
-        if (!activeRoom || !user) return;
-        const signalsRef = collection(db, `rooms/${activeRoom.id}/signals`);
+        if (!activeRoomId || !user) return;
+        const signalsRef = collection(db, `rooms/${activeRoomId}/signals`);
         await addDoc(signalsRef, { to, from: user.uid, type, data, createdAt: serverTimestamp() });
-    }, [activeRoom, user]);
+    }, [activeRoomId, user]);
     
-    // Audio Analysis Loop
     const runAudioAnalysis = useCallback(() => {
         const newSpeakingStates: Record<string, boolean> = {};
         let activeSpeakerFound = false;
@@ -96,8 +93,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             let sum = 0;
             for (const amplitude of dataArray) { sum += amplitude * amplitude; }
             const volume = Math.sqrt(sum / dataArray.length);
-            const isSpeaking = volume > 0.01; // Adjusted threshold
-            if (isSpeaking) {
+            if (volume > 0.01) {
                 newSpeakingStates[uid] = true;
                 activeSpeakerFound = true;
             } else {
@@ -113,7 +109,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         animationFrameId.current = requestAnimationFrame(runAudioAnalysis);
     }, [user, activeRoomId]);
 
-    // Setup Analysers
     useEffect(() => {
         const setupAnalyser = (stream: MediaStream, uid: string) => {
             if (!audioAnalysers.current[uid]) {
@@ -140,7 +135,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     }, [localStream, remoteAudioStreams, user]);
 
-    // Start/stop analysis loop
     useEffect(() => {
         if (isConnected) {
             animationFrameId.current = requestAnimationFrame(runAudioAnalysis);
@@ -150,8 +144,15 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         return () => { if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current); };
     }, [isConnected, runAudioAnalysis]);
 
+    const leaveRoom = useCallback(async () => {
+        if (!user || !activeRoomId) return;
+        await leaveVoiceChat(activeRoomId, user.uid);
+        _cleanupAndResetState();
+        setActiveRoomId(null);
+    }, [user, activeRoomId, _cleanupAndResetState]);
+
     const stopScreenShare = useCallback(async () => {
-        if (!user || !activeRoom || !localScreenStream) return;
+        if (!user || !activeRoomId || !localScreenStream) return;
         localScreenStream.getTracks().forEach(track => track.stop());
         setLocalScreenStream(null);
         for (const peerId in peerConnections.current) {
@@ -161,11 +162,11 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 delete screenSenderRef.current[peerId];
             }
         }
-        await toggleScreenShareAction(activeRoom.id, user.uid, false);
-    }, [user, activeRoom, localScreenStream]);
+        await toggleScreenShareAction(activeRoomId, user.uid, false);
+    }, [user, activeRoomId, localScreenStream]);
 
     const startScreenShare = useCallback(async () => {
-        if (!user || !activeRoom || isSharingScreen || !navigator?.mediaDevices?.getDisplayMedia) {
+        if (!user || !activeRoomId || isSharingScreen || !navigator?.mediaDevices?.getDisplayMedia) {
              if (!navigator?.mediaDevices?.getDisplayMedia) {
                 toast({ variant: 'destructive', title: 'Özellik Desteklenmiyor', description: 'Tarayıcınız ekran paylaşımını desteklemiyor veya güvenli bir bağlantı (HTTPS) üzerinde değilsiniz.' });
             }
@@ -182,11 +183,11 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             for (const peerId in peerConnections.current) {
                 screenSenderRef.current[peerId] = peerConnections.current[peerId].addTrack(screenTrack, screenStream);
             }
-            await toggleScreenShareAction(activeRoom.id, user.uid, true);
+            await toggleScreenShareAction(activeRoomId, user.uid, true);
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Hata', description: error.name === 'NotAllowedError' ? 'Ekran paylaşımı için izin vermelisiniz.' : 'Ekran paylaşımı başlatılamadı.' });
         }
-    }, [user, activeRoom, isSharingScreen, stopScreenShare, toast]);
+    }, [user, activeRoomId, isSharingScreen, stopScreenShare, toast]);
 
     const createPeerConnection = useCallback((otherUid: string) => {
         if (!user || !localStream || peerConnections.current[otherUid]) return;
@@ -218,28 +219,46 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         } catch (error) { console.error("Signal handling error:", type, error); }
     }, [createPeerConnection, sendSignal]);
     
-    // Main listener setup based on activeRoomId
     useEffect(() => {
         if (!user || !activeRoomId) {
-            stopAndCleanup();
+            if(isConnected) _cleanupAndResetState();
             return;
         };
+        
+        const roomUnsub = onSnapshot(doc(db, "rooms", activeRoomId), docSnap => {
+            if (docSnap.exists()) {
+                 setActiveRoom({id: docSnap.id, ...docSnap.data()} as Room)
+            } else {
+                 toast({ variant: 'destructive', title: 'Oda Bulunamadı', description: 'Bu oda artık mevcut değil veya süresi dolmuş.' });
+                 leaveRoom().then(() => { if(pathname.startsWith('/rooms/')) router.push('/rooms'); });
+            }
+        });
 
-        const roomUnsub = onSnapshot(doc(db, "rooms", activeRoomId), docSnap => setActiveRoom(docSnap.exists() ? {id: docSnap.id, ...docSnap.data()} as Room : null));
         const participantsUnsub = onSnapshot(collection(db, "rooms", activeRoomId, "voiceParticipants"), snapshot => {
             const fetched = snapshot.docs.map(d => d.data() as VoiceParticipant);
             setParticipants(fetched);
-            if (isConnected && !fetched.some(p => p.uid === user.uid)) {
+            if (isConnected && fetched.every(p => p.uid !== user.uid)) {
                 toast({ title: "Bağlantı Kesildi", description: "Sesten ayrıldınız veya atıldınız." });
-                stopAndCleanup();
+                _cleanupAndResetState();
             }
         });
-        const signalsUnsub = onSnapshot(query(collection(db, `rooms/${activeRoomId}/signals`), where('to', '==', user.uid)), s => s.docChanges().forEach(async c => c.type === 'added' && (await handleSignal(c.doc.data().from, c.doc.data().type, c.doc.data().data), await deleteDoc(c.doc.ref))));
         
-        return () => { roomUnsub(); participantsUnsub(); signalsUnsub(); };
-    }, [activeRoomId, user, isConnected, stopAndCleanup, handleSignal, toast]);
-
-    // Peer connection manager
+        const signalsUnsub = onSnapshot(query(collection(db, `rooms/${activeRoomId}/signals`), where('to', '==', user.uid)), s => {
+             s.docChanges().forEach(async c => {
+                if (c.type === 'added') {
+                    await handleSignal(c.doc.data().from, c.doc.data().type, c.doc.data().data);
+                    await deleteDoc(c.doc.ref);
+                }
+             })
+        });
+        
+        return () => { 
+            roomUnsub(); 
+            participantsUnsub(); 
+            signalsUnsub(); 
+        };
+    }, [activeRoomId, user, isConnected, _cleanupAndResetState, handleSignal, toast, router, pathname, leaveRoom]);
+    
     useEffect(() => {
         if (!isConnected || !user || !localStream) return;
         const otherP = participants.filter(p => p.uid !== user.uid);
@@ -254,44 +273,41 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         });
     }, [participants, isConnected, user, localStream, createPeerConnection]);
 
-    // AFK updater
     useEffect(() => {
         if (!isConnected || !user || !activeRoomId) return;
         const interval = setInterval(() => updateLastActive(activeRoomId, user.uid), 60 * 1000);
         return () => clearInterval(interval);
     }, [isConnected, user, activeRoomId]);
 
-    const leaveRoom = useCallback(async () => {
-        if (!user || !activeRoom) return;
-        await leaveVoiceChat(activeRoom.id, user.uid);
-        stopAndCleanup();
-        router.push('/rooms');
-    }, [user, activeRoom, stopAndCleanup, router]);
-
-    const joinRoom = useCallback(async (roomToJoin: Room) => {
-        if (!user || (isConnected && activeRoom?.id === roomToJoin.id) || isConnecting) return;
-        if (activeRoom && activeRoom.id !== roomToJoin.id) await leaveRoom();
+    const joinRoom = useCallback(async () => {
+        if (!user || !activeRoomId || !activeRoom || isConnected || isConnecting) return;
+        
         setIsConnecting(true);
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000, channelCount: 2 }, video: false });
             setLocalStream(stream);
-            const result = await joinVoiceChat(roomToJoin.id, { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL });
-            if (!result.success) throw new Error(result.error || 'Join voice chat failed');
+            
+            const result = await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL });
+            if (!result.success) {
+                throw new Error(result.error || 'Sesli sohbete katılamadınız.');
+            }
         } catch (error: any) {
             toast({ variant: "destructive", title: "Katılım Başarısız", description: error.message });
-            stopAndCleanup();
-        } finally { setIsConnecting(false); }
-    }, [user, isConnected, activeRoom, isConnecting, toast, stopAndCleanup, leaveRoom]);
+            _cleanupAndResetState();
+        } finally {
+            setIsConnecting(false);
+        }
+    }, [user, activeRoomId, activeRoom, isConnected, isConnecting, toast, _cleanupAndResetState]);
     
     const toggleSelfMute = useCallback(async () => {
-        if (!self || !activeRoom || !localStream) return;
+        if (!self || !activeRoomId || !localStream) return;
         const audioTrack = localStream.getAudioTracks()[0];
         if (audioTrack) {
-            audioTrack.enabled = self.isMuted; // Toggle: if muted, enable it
-            await toggleMuteAction(activeRoom.id, self.uid, !self.isMuted);
-            if (!self.isMuted && user) await updateLastActive(activeRoom.id, user.uid);
+            audioTrack.enabled = self.isMuted;
+            await toggleMuteAction(activeRoomId, self.uid, !self.isMuted);
+            if (!self.isMuted && user) await updateLastActive(activeRoomId, user.uid);
         }
-    }, [self, activeRoom, localStream, user]);
+    }, [self, activeRoomId, localStream, user]);
 
     const memoizedParticipants = useMemo(() => {
         return participants.map(p => ({ ...p, isSpeaker: !!speakingStates[p.uid] }));

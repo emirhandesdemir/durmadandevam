@@ -14,7 +14,8 @@ import {
     deleteDoc,
     arrayRemove,
     getDocs,
-    writeBatch
+    writeBatch,
+    arrayUnion
 } from 'firebase/firestore';
 import { getGameSettings } from './gameActions';
 import type { Room, VoiceParticipant } from '../types';
@@ -66,7 +67,18 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
             };
             
             transaction.set(userVoiceRef, participantData);
-            transaction.update(roomRef, { voiceParticipantsCount: increment(1) });
+
+            const isAlreadyParticipant = roomData.participants?.some(p => p.uid === user.uid);
+            const roomUpdates: { [key: string]: any } = { voiceParticipantsCount: increment(1) };
+            if (!isAlreadyParticipant) {
+                roomUpdates.participants = arrayUnion({
+                    uid: user.uid,
+                    username: user.displayName || 'Anonim',
+                    photoURL: user.photoURL,
+                });
+            }
+
+            transaction.update(roomRef, roomUpdates);
             transaction.set(voiceStatsRef, { totalUsers: increment(1) }, { merge: true });
         });
         
