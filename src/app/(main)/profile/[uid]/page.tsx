@@ -43,7 +43,7 @@ export default async function UserProfilePage({ params }: ProfilePageProps) {
   }
 
   // Kullanıcının takipçisi olup olmadığını kontrol et
-  const isFollower = profileUserData.followers.includes(currentUserId || '');
+  const isFollower = (profileUserData.followers || []).includes(currentUserId || '');
   const canViewContent = !profileUserData.privateProfile || isFollower || currentUserId === uid;
 
   return (
