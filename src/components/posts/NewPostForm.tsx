@@ -88,6 +88,7 @@ export default function NewPostForm() {
             toast({ description: "Yapay zeka filtresi uygulandı, resim optimize ediliyor..."});
             const compressedStyledImage = await compressImage(result.data.styledPhotoDataUri);
             setImage(compressedStyledImage);
+            setStylePrompt(""); // Clear the prompt input
             toast({ title: "İşlem Başarılı!", description: "Resminiz hem stilize edildi hem de optimize edildi."});
         } else {
             throw new Error(result.error || "Stil uygulanamadı.");
