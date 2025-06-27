@@ -70,18 +70,15 @@ export default function NewPostForm() {
     }
 
     setIsSubmitting(true);
-    const { id: toastId } = toast({ description: "Gönderiniz paylaşılıyor..." });
-
+    
     try {
         let imageUrl = "";
 
         // Adım 1: Resmi yükle (varsa)
         if (croppedImage) {
-            toast.update(toastId, { description: "Resim yükleniyor..." });
             const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}_post.jpg`);
             const snapshot = await uploadString(imageRef, croppedImage, 'data_url');
             imageUrl = await getDownloadURL(snapshot.ref);
-            toast.update(toastId, { description: "Resim yüklendi, gönderi oluşturuluyor..." });
         }
 
         // Adım 2: Gönderi belgesini Firestore'a oluştur
@@ -98,7 +95,7 @@ export default function NewPostForm() {
             commentCount: 0,
         });
 
-        toast.update(toastId, {
+        toast({
             title: "Başarıyla Paylaşıldı!",
             description: "Gönderiniz ana sayfada görünecektir.",
         });
@@ -130,7 +127,7 @@ export default function NewPostForm() {
             }
         }
         
-        toast.update(toastId, {
+        toast({
             variant: 'destructive',
             title: title,
             description: description,
