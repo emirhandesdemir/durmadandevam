@@ -1,4 +1,3 @@
-
 // src/app/(main)/profile/[uid]/page.tsx
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -8,24 +7,40 @@ import ProfileHeader from '@/components/profile/ProfileHeader';
 import ProfilePosts from '@/components/profile/ProfilePosts';
 import ProfileViewLogger from '@/components/profile/ProfileViewLogger';
 
-interface ProfilePageProps {
-  params: {
-    uid: string;
-  };
-}
 
-// A more robust converter that handles both actual Timestamp instances and plain objects.
-const convertTimestamp = (value: any): string | null => {
-    if (!value) return null;
-    if (value instanceof Timestamp) {
-        return value.toDate().toISOString();
-    }
-    // Check for plain object structure as a fallback
-    if (typeof value === 'object' && typeof value.seconds === 'number' && typeof value.nanoseconds === 'number') {
-        return new Date(value.seconds * 1000 + value.nanoseconds / 1000000).toISOString();
-    }
-    // If it's already a string or some other primitive, return it as is, or null if invalid
-    return typeof value === 'string' ? value : null;
+/**
+ * Recursively converts Firestore Timestamps within an object or array to ISO strings.
+ * This is the robust way to ensure data is serializable before passing from
+ * Server Components to Client Components.
+ * @param data The object, array, or primitive to serialize.
+ * @returns The serialized data.
+ */
+function deepSerialize(data: any): any {
+  if (data === null || data === undefined || typeof data !== 'object') {
+    return data;
+  }
+
+  // Specifically handle Firestore Timestamp objects.
+  if (data instanceof Timestamp) {
+    return data.toDate().toISOString();
+  }
+  
+  // Also handle plain objects that look like Timestamps, as a fallback.
+  if (typeof data.seconds === 'number' && typeof data.nanoseconds === 'number' && Object.keys(data).length === 2) {
+     return new Date(data.seconds * 1000 + data.nanoseconds / 1000000).toISOString();
+  }
+
+  // Handle arrays by serializing each item.
+  if (Array.isArray(data)) {
+    return data.map(deepSerialize);
+  }
+  
+  // Handle objects by serializing each value.
+  const newObj: { [key: string]: any } = {};
+  for (const key in data) {
+    newObj[key] = deepSerialize(data[key]);
+  }
+  return newObj;
 }
 
 
@@ -39,17 +54,10 @@ export default async function UserProfilePage({ params }: ProfilePageProps) {
     notFound();
   }
   
-  const profileUserData = profileUserSnap.data() as UserProfile;
+  const profileUserData = profileUserSnap.data();
 
-  // Robustly serialize all Timestamp objects before passing to client components.
-  const serializableProfileUser = {
-    ...profileUserData,
-    createdAt: convertTimestamp(profileUserData.createdAt),
-    followRequests: (profileUserData.followRequests || []).map(req => ({
-      ...req,
-      requestedAt: convertTimestamp(req.requestedAt),
-    })),
-  };
+  // Recursively serialize the entire object to ensure no Timestamps are passed.
+  const serializableProfileUser = deepSerialize(profileUserData) as UserProfile;
 
   return (
     <>
