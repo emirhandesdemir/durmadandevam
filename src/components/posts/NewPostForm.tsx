@@ -70,70 +70,77 @@ export default function NewPostForm() {
     }
 
     setIsSubmitting(true);
-    let imageUrl = '';
+    const { id: toastId } = toast({ description: "Gönderiniz paylaşılıyor..." });
 
-    // Step 1: Upload image if it exists
-    if (croppedImage) {
-      try {
-        const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}_post.jpg`);
-        const snapshot = await uploadString(imageRef, croppedImage, 'data_url');
-        imageUrl = await getDownloadURL(snapshot.ref);
-      } catch (error) {
-        console.error("Firebase Storage yükleme hatası:", error);
-        let description = 'Resim yüklenirken bir hata oluştu. Lütfen internet bağlantınızı ve Firebase Storage kurallarınızı kontrol edin.';
-        if (error instanceof FirebaseError) {
-          if (error.code === 'storage/unauthorized') {
-            description = 'Bu resmi yükleme yetkiniz yok.';
-          } else if (error.code === 'storage/canceled') {
-            description = 'Resim yükleme iptal edildi.';
-          }
-        }
-        toast({
-          variant: 'destructive',
-          title: 'Resim Yüklenemedi',
-          description: description,
-          duration: 9000,
-        });
-        setIsSubmitting(false); // Stop the process on failure
-        return;
-      }
-    }
-
-    // Step 2: Create post document in Firestore
     try {
-      await addDoc(collection(db, 'posts'), {
-        uid: user.uid,
-        username: userData.username || user.displayName || 'Anonim Kullanıcı',
-        userAvatar: userData.photoURL || user.photoURL,
-        userRole: userData.role || 'user',
-        text: text,
-        imageUrl: imageUrl, // Will be empty string if no image
-        createdAt: serverTimestamp(),
-        likes: [],
-        likeCount: 0,
-        commentCount: 0,
-      });
+        let imageUrl = "";
 
-      toast({
-        title: "Paylaşıldı!",
-        description: "Gönderiniz başarıyla oluşturuldu.",
-      });
-      router.push('/home');
+        // Adım 1: Resmi yükle (varsa)
+        if (croppedImage) {
+            toast.update(toastId, { description: "Resim yükleniyor..." });
+            const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}_post.jpg`);
+            const snapshot = await uploadString(imageRef, croppedImage, 'data_url');
+            imageUrl = await getDownloadURL(snapshot.ref);
+            toast.update(toastId, { description: "Resim yüklendi, gönderi oluşturuluyor..." });
+        }
+
+        // Adım 2: Gönderi belgesini Firestore'a oluştur
+        await addDoc(collection(db, 'posts'), {
+            uid: user.uid,
+            username: userData.username || user.displayName || 'Anonim Kullanıcı',
+            userAvatar: userData.photoURL || user.photoURL,
+            userRole: userData.role || 'user',
+            text: text,
+            imageUrl: imageUrl, // Resim yoksa boş string olacak
+            createdAt: serverTimestamp(),
+            likes: [],
+            likeCount: 0,
+            commentCount: 0,
+        });
+
+        toast.update(toastId, {
+            title: "Başarıyla Paylaşıldı!",
+            description: "Gönderiniz ana sayfada görünecektir.",
+        });
+        router.push('/home');
 
     } catch (error) {
-      console.error("Firestore gönderi oluşturma hatası:", error);
-      let description = 'Gönderiniz veritabanına kaydedilirken bir hata oluştu. Lütfen Firestore kurallarınızı kontrol edin.';
-      if (error instanceof FirebaseError && error.code === 'permission-denied') {
-        description = 'Veritabanına yazma izniniz yok.';
-      }
-      toast({
-        variant: 'destructive',
-        title: 'Gönderi Oluşturulamadı',
-        description: description,
-        duration: 9000,
-      });
+        console.error("Gönderi paylaşılırken hata oluştu:", error);
+        let title = "Bir Hata Oluştu";
+        let description = "Gönderiniz paylaşılamadı. Lütfen tekrar deneyin.";
+
+        // Firebase hatalarını daha anlaşılır hale getir
+        if (error instanceof FirebaseError) {
+            switch (error.code) {
+                case 'storage/unauthorized':
+                    title = 'Yetki Hatası';
+                    description = 'Resmi yüklemek için izniniz yok. Lütfen Firebase Storage güvenlik kurallarınızı kontrol edin.';
+                    break;
+                case 'storage/canceled':
+                    title = 'İşlem İptal Edildi';
+                    description = 'Resim yükleme işlemi ağ sorunu nedeniyle iptal edildi.';
+                    break;
+                case 'permission-denied': // Bu Firestore hatasıdır
+                    title = 'Yetki Hatası';
+                    description = 'Veritabanına yazma izniniz yok. Lütfen Firestore güvenlik kurallarınızı kontrol edin.';
+                    break;
+                default:
+                    title = `Hata Kodu: ${error.code}`;
+                    description = "Beklenmedik bir hata oluştu. Lütfen daha sonra tekrar deneyin.";
+            }
+        }
+        
+        toast.update(toastId, {
+            variant: 'destructive',
+            title: title,
+            description: description,
+            duration: 9000
+        });
+
     } finally {
-      setIsSubmitting(false);
+        // Bu blok, işlem başarılı da olsa başarısız da olsa çalışır.
+        // Bu sayede yükleme göstergesi asla takılı kalmaz.
+        setIsSubmitting(false);
     }
   };
 
