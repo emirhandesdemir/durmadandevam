@@ -2,14 +2,12 @@
 "use client";
 
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { UserProfile } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import FollowButton from "./FollowButton";
 
 interface ProfileHeaderProps {
-  profileUser: UserProfile;
-  currentUser: UserProfile | null;
+  profileUser: any;
+  currentUser: any | null;
 }
 
 /**
@@ -18,7 +16,7 @@ interface ProfileHeaderProps {
  */
 export default function ProfileHeader({ profileUser, currentUser }: ProfileHeaderProps) {
   const isOwnProfile = currentUser?.uid === profileUser.uid;
-  const isFollower = profileUser.followers.includes(currentUser?.uid || '');
+  const isFollower = (profileUser.followers || []).includes(currentUser?.uid || '');
   const canViewStats = !profileUser.privateProfile || isFollower || isOwnProfile;
 
   return (
@@ -44,11 +42,11 @@ export default function ProfileHeader({ profileUser, currentUser }: ProfileHeade
         {canViewStats ? (
           <div className="flex gap-6 text-center">
             <div>
-              <p className="font-bold">{profileUser.followers.length}</p>
+              <p className="font-bold">{(profileUser.followers || []).length}</p>
               <p className="text-sm text-muted-foreground">takipçi</p>
             </div>
             <div>
-              <p className="font-bold">{profileUser.following.length}</p>
+              <p className="font-bold">{(profileUser.following || []).length}</p>
               <p className="text-sm text-muted-foreground">takip</p>
             </div>
           </div>

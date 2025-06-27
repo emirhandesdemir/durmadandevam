@@ -5,12 +5,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { followUser, unfollowUser } from "@/lib/actions/followActions";
-import type { UserProfile } from "@/lib/types";
 import { Loader2 } from "lucide-react";
 
 interface FollowButtonProps {
-  currentUser: UserProfile | null;
-  targetUser: UserProfile;
+  currentUser: any | null;
+  targetUser: any;
 }
 
 /**
@@ -23,7 +22,7 @@ export default function FollowButton({ currentUser, targetUser }: FollowButtonPr
 
   // Takip durumunu belirle
   const isFollowing = currentUser?.following?.includes(targetUser.uid);
-  const hasSentRequest = targetUser.followRequests?.some(req => req.uid === currentUser?.uid);
+  const hasSentRequest = targetUser.followRequests?.some((req: any) => req.uid === currentUser?.uid);
 
   const handleFollow = async () => {
     if (!currentUser) {

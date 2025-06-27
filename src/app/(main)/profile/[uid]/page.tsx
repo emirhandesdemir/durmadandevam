@@ -42,6 +42,11 @@ export default async function UserProfilePage({ params }: ProfilePageProps) {
     }
   }
 
+  // Firestore Timestamps are not serializable and cannot be passed from Server to Client Components.
+  // We convert them to a plain JSON object. `JSON.stringify` automatically handles Timestamps.
+  const plainProfileUser = JSON.parse(JSON.stringify(profileUserData));
+  const plainCurrentUser = currentUserData ? JSON.parse(JSON.stringify(currentUserData)) : null;
+
   // Kullanıcının takipçisi olup olmadığını kontrol et
   const isFollower = (profileUserData.followers || []).includes(currentUserId || '');
   const canViewContent = !profileUserData.privateProfile || isFollower || currentUserId === uid;
@@ -50,8 +55,8 @@ export default async function UserProfilePage({ params }: ProfilePageProps) {
     <div className="container mx-auto max-w-3xl px-4 py-6 md:py-8">
       <div className="flex flex-col gap-8">
         <ProfileHeader 
-          profileUser={profileUserData} 
-          currentUser={currentUserData} 
+          profileUser={plainProfileUser} 
+          currentUser={plainCurrentUser} 
         />
         {canViewContent ? (
           <ProfilePosts userId={uid} />
