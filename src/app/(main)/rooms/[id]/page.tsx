@@ -2,14 +2,14 @@
 "use client";
 
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { doc, onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
 import type { Room } from '@/lib/types';
-import { Loader2, Mic, MicOff, Plus, Crown, PhoneOff, ScreenShare, ScreenShareOff } from 'lucide-react';
+import { Loader2, Mic, MicOff, Plus, Crown, PhoneOff, ScreenShare, ScreenShareOff, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TextChat, { type Message } from '@/components/chat/text-chat';
 import ChatMessageInput from '@/components/chat/ChatMessageInput';
@@ -18,7 +18,8 @@ import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
 import RoomHeader from '@/components/rooms/RoomHeader';
 import ScreenShareView from '@/components/voice/ScreenShareView';
 import { kickInactiveUsers } from '@/lib/actions/voiceActions';
-import { useRouter } from 'next/navigation';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 export default function RoomPage() {
@@ -48,6 +49,7 @@ export default function RoomPage() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [messagesLoading, setMessagesLoading] = useState(true);
     const [isParticipantSheetOpen, setIsParticipantSheetOpen] = useState(false);
+    const [isVoiceStageCollapsed, setVoiceStageCollapsed] = useState(false);
     const chatScrollRef = useRef<HTMLDivElement>(null);
 
     const isHost = user?.uid === room?.createdBy.uid;
@@ -70,8 +72,6 @@ export default function RoomPage() {
         const roomUnsub = onSnapshot(doc(db, 'rooms', roomId), (docSnap) => {
             if (docSnap.exists()) {
                 setRoom({ id: docSnap.id, ...docSnap.data() } as Room);
-            } else {
-                // The listener in the context will handle navigation for deleted rooms.
             }
         });
         return () => roomUnsub();
@@ -157,28 +157,64 @@ export default function RoomPage() {
                             <p className="text-center text-xs text-muted-foreground mt-2">{screenSharer.username} ekranını paylaşıyor...</p>
                         </div>
                     ) : (
-                        <div className="space-y-4">
-                            <div className="flex flex-col items-center justify-center min-h-28">
-                                {hostParticipant ? (
-                                    <VoiceUserIcon key={hostParticipant.uid} participant={hostParticipant} isHost={isHost} currentUserId={user!.uid} roomId={roomId} isParticipantTheHost={true} size="lg"/>
-                                ) : (
-                                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                                        <div className="flex items-center justify-center h-20 w-20 rounded-full bg-gray-800/40 border-2 border-dashed border-gray-600">
-                                            <Crown className="h-8 w-8 text-gray-600" />
-                                        </div>
-                                        <p className="text-xs font-semibold">Oda Sahibi</p>
+                        <div className="space-y-2">
+                             {!isVoiceStageCollapsed ? (
+                                <div className="space-y-4 animate-in fade-in duration-300">
+                                    <div className="flex flex-col items-center justify-center min-h-28">
+                                        {hostParticipant ? (
+                                            <VoiceUserIcon key={hostParticipant.uid} participant={hostParticipant} isHost={isHost} currentUserId={user!.uid} roomId={roomId} isParticipantTheHost={true} size="lg"/>
+                                        ) : (
+                                            <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                                                <div className="flex items-center justify-center h-20 w-20 rounded-full bg-gray-800/40 border-2 border-dashed border-gray-600">
+                                                    <Crown className="h-8 w-8 text-gray-600" />
+                                                </div>
+                                                <p className="text-xs font-semibold">Oda Sahibi</p>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
-                            <div className="grid grid-cols-4 gap-4 text-center">
-                                {otherParticipants.map((participant) => (
-                                    <VoiceUserIcon key={participant.uid} participant={participant} isHost={isHost} currentUserId={user!.uid} roomId={roomId} isParticipantTheHost={false} size="sm"/>
-                                ))}
-                                {Array.from({ length: Math.max(0, 8 - otherParticipants.length) }).map((_, index) => (
-                                    <div key={`placeholder-${index}`} className="flex flex-col items-center justify-center aspect-square bg-gray-800/40 rounded-full">
-                                        <Plus className="h-6 w-6 text-gray-600" />
+                                    <div className="grid grid-cols-4 gap-4 text-center">
+                                        {otherParticipants.map((participant) => (
+                                            <VoiceUserIcon key={participant.uid} participant={participant} isHost={isHost} currentUserId={user!.uid} roomId={roomId} isParticipantTheHost={false} size="sm"/>
+                                        ))}
+                                        {Array.from({ length: Math.max(0, 8 - otherParticipants.length) }).map((_, index) => (
+                                            <div key={`placeholder-${index}`} className="flex flex-col items-center justify-center aspect-square bg-gray-800/40 rounded-full">
+                                                <Plus className="h-6 w-6 text-gray-600" />
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
+                                </div>
+                            ) : (
+                                <div className="flex h-full min-h-28 items-center justify-center gap-2 py-4 animate-in fade-in duration-300">
+                                    {participants.length > 0 ? participants.map(p => (
+                                        <TooltipProvider key={p.uid}>
+                                            <Tooltip>
+                                                <TooltipTrigger>
+                                                    <Avatar className="h-10 w-10 border-2 border-transparent data-[speaking=true]:border-green-500" data-speaking={p.isSpeaker && !p.isMuted}>
+                                                        <AvatarImage src={p.photoURL || undefined} />
+                                                        <AvatarFallback>{p.username.charAt(0)}</AvatarFallback>
+                                                    </Avatar>
+                                                </TooltipTrigger>
+                                                <TooltipContent className="bg-gray-800 border-gray-700 text-white">
+                                                    <p>{p.username}</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    )) : (
+                                         <p className="text-sm text-gray-500">Sesli sohbette kimse yok.</p>
+                                    )}
+                                </div>
+                            )}
+
+                            <div className="flex justify-center">
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="text-gray-400 hover:text-white"
+                                    onClick={() => setVoiceStageCollapsed(!isVoiceStageCollapsed)}
+                                >
+                                    <ChevronsUpDown className="h-4 w-4 mr-2" />
+                                    {isVoiceStageCollapsed ? "Sohbeti Genişlet" : "Sohbeti Küçült"}
+                                </Button>
                             </div>
                         </div>
                     )}
