@@ -25,7 +25,7 @@ export default function NewPostForm() {
   const [text, setText] = useState("");
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
   const [croppedImage, setCroppedImage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -61,36 +61,25 @@ export default function NewPostForm() {
 
   const handleShare = async () => {
     if (!user || !userData) {
-      toast({
-        variant: 'destructive',
-        description: 'Gönderi paylaşmak için giriş yapmalısınız.',
-      });
+      toast({ variant: 'destructive', description: 'Gönderi paylaşmak için giriş yapmalısınız.' });
       return;
     }
     if (!text.trim() && !croppedImage) {
-      toast({
-        variant: 'destructive',
-        description: 'Paylaşmak için bir metin yazın veya resim seçin.',
-      });
+      toast({ variant: 'destructive', description: 'Paylaşmak için bir metin yazın veya resim seçin.' });
       return;
     }
 
-    setIsLoading(true);
+    setIsSubmitting(true);
+    let imageUrl = '';
 
     try {
-      let imageUrl = '';
-
-      // Step 1: Upload image if it exists
       if (croppedImage) {
-        const imageRef = ref(
-          storage,
-          `posts/${user.uid}/${Date.now()}_post.jpg`
-        );
+        toast({ description: "Resim yükleniyor..." });
+        const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}_post.jpg`);
         const snapshot = await uploadString(imageRef, croppedImage, 'data_url');
         imageUrl = await getDownloadURL(snapshot.ref);
       }
 
-      // Step 2: Add post document to Firestore
       await addDoc(collection(db, 'posts'), {
         uid: user.uid,
         username: userData.username || user.displayName || 'Anonim Kullanıcı',
@@ -105,36 +94,45 @@ export default function NewPostForm() {
       });
 
       toast({
+        title: "Başarılı!",
         description: 'Gönderiniz başarıyla paylaşıldı!',
       });
       router.push('/home');
+
     } catch (error) {
       console.error('Gönderi oluşturulurken hata:', error);
-
-      let description = 'Gönderi paylaşılırken bir hata oluştu. Lütfen tekrar deneyin.';
+      
+      let description = 'Gönderi paylaşılırken bilinmeyen bir hata oluştu.';
       if (error instanceof FirebaseError) {
         switch (error.code) {
           case 'storage/unauthorized':
-            description =
-              'Resim yükleme izniniz yok. Lütfen Firebase Storage kurallarınızı kontrol edin.';
+            description = 'Resim yükleme izniniz yok. Firebase Storage kurallarınızı kontrol edin.';
             break;
           case 'storage/canceled':
             description = 'Resim yükleme işlemi iptal edildi.';
             break;
+          case 'storage/object-not-found':
+             description = 'Yüklenen resim bulunamadı. Lütfen tekrar deneyin.';
+             break;
           case 'storage/unknown':
-            description =
-              'Bilinmeyen bir depolama hatası oluştu. Lütfen internet bağlantınızı kontrol edin.';
+            description = 'Bilinmeyen bir depolama hatası oluştu. İnternet bağlantınızı kontrol edin.';
+            break;
+          default:
+            description = `Bir Firebase hatası oluştu: ${error.message}`;
             break;
         }
+      } else if (error instanceof Error) {
+        description = error.message;
       }
-
+      
       toast({
         variant: 'destructive',
-        title: 'Paylaşım Hatası',
+        title: 'Paylaşım Başarısız',
         description: description,
       });
+
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -154,7 +152,7 @@ export default function NewPostForm() {
               placeholder="Aklında ne var? (#etiket) veya (@kullanıcı) bahset..."
               className="min-h-[60px] flex-1 resize-none border-0 bg-transparent p-0 text-base placeholder:text-muted-foreground/80 focus-visible:ring-0"
               rows={2}
-              disabled={isLoading}
+              disabled={isSubmitting}
             />
           </div>
           {croppedImage && (
@@ -168,7 +166,7 @@ export default function NewPostForm() {
                   variant="destructive" 
                   className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/50 hover:bg-black/70 border-0"
                   onClick={removeImage}
-                  disabled={isLoading}
+                  disabled={isSubmitting}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -185,7 +183,7 @@ export default function NewPostForm() {
             size="icon"
             className="rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
             onClick={handleImageClick}
-            disabled={isLoading || !!croppedImage}
+            disabled={isSubmitting || !!croppedImage}
           >
             <ImageIcon className="h-5 w-5" />
             <span className="sr-only">Resim Ekle</span>
@@ -194,9 +192,9 @@ export default function NewPostForm() {
           <Button 
             className="rounded-full font-semibold px-4"
             onClick={handleShare}
-            disabled={isLoading || (!text.trim() && !croppedImage)}
+            disabled={isSubmitting || (!text.trim() && !croppedImage)}
           >
-            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+            {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
             <span className="ml-2 hidden sm:inline">Paylaş</span>
           </Button>
         </div>
