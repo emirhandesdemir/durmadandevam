@@ -21,13 +21,15 @@ import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { useState, useRef } from "react";
-import { updateUserProfile } from "@/lib/actions/userActions";
-import { auth } from "@/lib/firebase";
+import { useState, useRef, useEffect } from "react";
+import { auth, db, storage } from "@/lib/firebase";
 import { updateProfile } from "firebase/auth";
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
+import { doc, updateDoc } from "firebase/firestore";
+import { ref, uploadString, getDownloadURL } from "firebase/storage";
+
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -50,6 +52,15 @@ export default function ProfilePageClient() {
     const [selectedBubble, setSelectedBubble] = useState(userData?.selectedBubble || "");
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // userData güncellendiğinde, state'i de güncelle
+    useEffect(() => {
+        if (userData) {
+            setUsername(userData.username || "");
+            setSelectedBubble(userData.selectedBubble || "");
+        }
+    }, [userData]);
+
 
     const hasChanges = username !== (user?.displayName || "") || newAvatar !== null || selectedBubble !== (userData?.selectedBubble || "");
     
@@ -78,35 +89,51 @@ export default function ProfilePageClient() {
     };
 
     const handleSaveChanges = async () => {
-        if (!user || !hasChanges) return;
-
+        if (!user || !hasChanges || !auth.currentUser) return;
+    
         setIsSaving(true);
         try {
-            const result = await updateUserProfile({
-                uid: user.uid,
-                username: username,
-                avatarDataUrl: newAvatar,
-                selectedBubble: selectedBubble,
-            });
-
-            if (result.success && auth.currentUser) {
-                // Update client-side auth state
+            const updates: { [key: string]: any } = {};
+            let finalPhotoURL = user.photoURL;
+    
+            // Eğer yeni bir avatar seçilmişse, Storage'a yükle
+            if (newAvatar) {
+                const storageRef = ref(storage, `avatars/${user.uid}`);
+                const snapshot = await uploadString(storageRef, newAvatar, 'data_url');
+                finalPhotoURL = await getDownloadURL(snapshot.ref);
+                updates.photoURL = finalPhotoURL;
+            }
+    
+            // Değişen diğer alanları güncelleme nesnesine ekle
+            if (username !== user.displayName) {
+                updates.username = username;
+            }
+            if (selectedBubble !== userData?.selectedBubble) {
+                updates.selectedBubble = selectedBubble;
+            }
+    
+            // Firestore'daki kullanıcı belgesini güncelle
+            if (Object.keys(updates).length > 0) {
+                const userDocRef = doc(db, 'users', user.uid);
+                await updateDoc(userDocRef, updates);
+            }
+    
+            // Firebase Auth profilini güncelle
+            if (username !== user.displayName || finalPhotoURL !== user.photoURL) {
                 await updateProfile(auth.currentUser, {
                     displayName: username,
-                    ...(result.data?.newPhotoURL && { photoURL: result.data.newPhotoURL }),
+                    photoURL: finalPhotoURL,
                 });
-                
-                toast({
-                    title: "Başarılı!",
-                    description: "Profiliniz başarıyla güncellendi.",
-                });
-                setNewAvatar(null); // Reset changes state
-            } else {
-                throw new Error(result.error || "Sunucuda bir hata oluştu.");
             }
-
+    
+            toast({
+                title: "Başarılı!",
+                description: "Profiliniz başarıyla güncellendi.",
+            });
+            setNewAvatar(null); // Değişiklik durumunu sıfırla
+    
         } catch (error: any) {
-             toast({
+            toast({
                 title: "Hata",
                 description: error.message || "Profil güncellenirken bir hata oluştu.",
                 variant: "destructive",

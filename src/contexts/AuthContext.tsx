@@ -7,9 +7,8 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { doc, getDoc, DocumentData } from 'firebase/firestore';
+import { doc, onSnapshot, DocumentData } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 
@@ -41,27 +40,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Firebase Auth durumundaki değişiklikleri dinleyen useEffect
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
-        // Kullanıcı giriş yapmışsa, Firestore'dan ek verilerini çek
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-          setUserData(userDocSnap.data());
-        } else {
-          setUserData(null);
-        }
-      } else {
-        // Kullanıcı çıkış yapmışsa, ek verileri temizle
+      if (!currentUser) {
+        // Kullanıcı çıkış yapmışsa, verileri temizle ve yüklemeyi bitir
         setUserData(null);
+        setLoading(false);
       }
-      setLoading(false); // Yükleme tamamlandı
+      // Kullanıcı giriş yaptığında yükleme durumu, Firestore dinleyicisi tarafından yönetilecek.
     });
-
     // Component unmount olduğunda dinleyiciyi temizle
     return () => unsubscribe();
   }, []);
+
+  // Firestore'daki kullanıcı belgesini gerçek zamanlı dinleyen useEffect
+  useEffect(() => {
+    let unsubscribeFirestore: () => void = () => {};
+
+    if (user) {
+      setLoading(true);
+      const userDocRef = doc(db, 'users', user.uid);
+      unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          setUserData(docSnap.data());
+        } else {
+          setUserData(null);
+        }
+        setLoading(false);
+      }, (error) => {
+        console.error("Firestore user listener error:", error);
+        setUserData(null);
+        setLoading(false);
+      });
+    }
+
+    // Component unmount olduğunda veya kullanıcı değiştiğinde dinleyiciyi temizle
+    return () => unsubscribeFirestore();
+  }, [user]); // Bu efekt, kullanıcı (login/logout) değiştiğinde yeniden çalışır.
+
 
   // Çıkış yapma fonksiyonu
   const handleLogout = useCallback(async () => {
