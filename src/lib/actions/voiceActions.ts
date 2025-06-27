@@ -86,7 +86,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
 
 /**
  * Kullanıcının sesli sohbetten ayrılması için sunucu eylemi.
- * Kullanıcıyı hem sesli katılımcı listesinden hem de ana katılımcı listesinden siler.
+ * Kullanıcıyı sadece sesli katılımcı listesinden siler, ana katılımcı listesinden silmez.
  * @param roomId Ayrılınacak odanın ID'si.
  * @param userId Ayrılan kullanıcının ID'si.
  */
@@ -104,30 +104,13 @@ export async function leaveVoiceChat(roomId: string, userId: string) {
                 return;
             }
 
-            const roomData = roomDoc.data() as Room;
-            // Genel katılımcı listesinden silinecek tam nesneyi bul.
-            const participantToRemove = (roomData.participants || []).find(p => p.uid === userId);
             const userVoiceDoc = await transaction.get(userVoiceRef);
             
-            const updates: {[key: string]: any} = {};
-            let needsUpdate = false;
-
             // Eğer kullanıcı sesli sohbet listesindeyse, onu sil ve sayacı azalt.
+            // Ana 'participants' dizisine dokunmuyoruz.
             if (userVoiceDoc.exists()) {
                 transaction.delete(userVoiceRef);
-                updates.voiceParticipantsCount = increment(-1);
-                needsUpdate = true;
-            }
-            
-            // Eğer kullanıcı ana katılımcı listesindeyse, oradan da sil.
-            if (participantToRemove) {
-                updates.participants = arrayRemove(participantToRemove);
-                needsUpdate = true;
-            }
-            
-            // Eğer herhangi bir değişiklik yapılacaksa, oda dökümanını tek seferde güncelle.
-            if (needsUpdate) {
-                transaction.update(roomRef, updates);
+                transaction.update(roomRef, { voiceParticipantsCount: increment(-1) });
             }
         });
         return { success: true };
