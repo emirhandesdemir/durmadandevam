@@ -25,7 +25,6 @@ export interface GameSettings {
     questionTimerSeconds: number;
     rewardAmount: number;
     cooldownSeconds: number;
-    afkTimeoutMinutes: number; // AFK zaman aşımı süresi
 }
 
 /**
@@ -59,7 +58,6 @@ export interface Room {
         role?: 'admin' | 'user';
     };
     createdAt: Timestamp;
-    expiresAt?: Timestamp;
     participants: { uid: string, username: string, photoURL?: string | null }[];
     maxParticipants: number;
     nextGameTimestamp?: Timestamp;
@@ -74,11 +72,9 @@ export interface VoiceParticipant {
     uid: string;
     username: string;
     photoURL?: string | null;
+    isSpeaker: boolean;
     isMuted: boolean;
-    isSharingScreen?: boolean;
     joinedAt: Timestamp;
-    lastActiveAt?: Timestamp; // Son aktivite zamanı (AFK takibi için)
+    lastSpokeAt?: Timestamp; // Son konuşma zamanı (inaktivite takibi için)
     selectedBubble?: string; // Kullanıcının seçtiği baloncuk stili
-    // İstemci tarafında yönetilecek, Firestore'a yazılmayacak özellikler
-    isSpeaker?: boolean; 
 }

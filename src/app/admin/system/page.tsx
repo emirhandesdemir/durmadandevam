@@ -14,7 +14,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Settings, Headphones, Loader2 } from "lucide-react";
+import { Settings, Loader2 } from "lucide-react";
 import { GameSettings as GameSettingsType } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -25,7 +25,6 @@ const settingsSchema = z.object({
   questionTimerSeconds: z.coerce.number().min(5, "Süre en az 5 saniye olmalıdır."),
   rewardAmount: z.coerce.number().min(1, "Ödül en az 1 olabilir."),
   cooldownSeconds: z.coerce.number().min(10, "Bekleme süresi en az 10 saniye olmalıdır."),
-  afkTimeoutMinutes: z.coerce.number().min(1, "Süre en az 1 dakika olmalıdır."),
 });
 
 
@@ -41,8 +40,7 @@ export default function SystemSettingsPage() {
             gameIntervalMinutes: 5,
             questionTimerSeconds: 15,
             rewardAmount: 5,
-            cooldownSeconds: 30,
-            afkTimeoutMinutes: 8,
+            cooldownSeconds: 30
         },
     });
 
@@ -68,7 +66,7 @@ export default function SystemSettingsPage() {
             await updateGameSettings(values);
             toast({
                 title: "Başarılı",
-                description: "Sistem ayarları başarıyla güncellendi."
+                description: "Oyun ayarları başarıyla güncellendi."
             });
         } catch (error) {
             toast({
@@ -96,7 +94,7 @@ export default function SystemSettingsPage() {
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <form onSubmit={form.handleSubmit(onSubmit)}>
             <Card className="mt-8">
                 <CardHeader>
                 <CardTitle>Quiz Oyunu Ayarları</CardTitle>
@@ -114,51 +112,50 @@ export default function SystemSettingsPage() {
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormField control={form.control} name="gameIntervalMinutes" render={({ field }) => (
-                                <FormItem><FormLabel>Oyun Aralığı (Dakika)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem>
+                                    <FormLabel>Oyun Aralığı (Dakika)</FormLabel>
+                                    <FormControl><Input type="number" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
                             )} />
                              <FormField control={form.control} name="questionTimerSeconds" render={({ field }) => (
-                                <FormItem><FormLabel>Soru Süresi (Saniye)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem>
+                                    <FormLabel>Soru Süresi (Saniye)</FormLabel>
+                                    <FormControl><Input type="number" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
                             )} />
                              <FormField control={form.control} name="rewardAmount" render={({ field }) => (
-                                <FormItem><FormLabel>Doğru Cevap Ödülü (Elmas)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem>
+                                    <FormLabel>Doğru Cevap Ödülü (Elmas)</FormLabel>
+                                    <FormControl><Input type="number" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
                             )} />
                              <FormField control={form.control} name="dailyDiamondLimit" render={({ field }) => (
-                                <FormItem><FormLabel>Günlük Kazanma Limiti (Elmas)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem>
+                                    <FormLabel>Günlük Kazanma Limiti (Elmas)</FormLabel>
+                                    <FormControl><Input type="number" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
                             )} />
                             <FormField control={form.control} name="cooldownSeconds" render={({ field }) => (
-                                <FormItem><FormLabel>Oyun Sonrası Bekleme (Saniye)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem>
+                                    <FormLabel>Oyun Sonrası Bekleme (Saniye)</FormLabel>
+                                    <FormControl><Input type="number" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
                             )} />
                         </div>
                     )}
                 </CardContent>
+                <CardFooter className="border-t px-6 py-4">
+                    <Button type="submit" disabled={saving || loading}>
+                        {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Ayarları Kaydet
+                    </Button>
+                </CardFooter>
             </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-3"><Headphones/> Sesli Sohbet Ayarları</CardTitle>
-                    <CardDescription>
-                        Sesli sohbet odalarının işleyişini yapılandırın.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {loading ? <Skeleton className="h-16 w-1/2" /> : (
-                         <FormField control={form.control} name="afkTimeoutMinutes" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>AFK Zaman Aşımı (Dakika)</FormLabel>
-                                <FormControl><Input type="number" className="max-w-xs" {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-                    )}
-                </CardContent>
-            </Card>
-
-            <div className="flex justify-end">
-                <Button type="submit" disabled={saving || loading}>
-                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Tüm Ayarları Kaydet
-                </Button>
-            </div>
         </form>
       </Form>
     </div>
