@@ -150,15 +150,15 @@ export default function NewPostForm() {
         if (error instanceof FirebaseError) {
             switch (error.code) {
                 case 'storage/unauthorized':
-                    title = 'Yetki Hatası';
-                    description = 'Resmi yüklemek için izniniz yok. Lütfen Firebase Storage güvenlik kurallarınızı kontrol edin.';
+                    title = 'Firebase Storage Yetki Hatası';
+                    description = 'Resminiz yüklenemedi çünkü depolama izinleriniz ayarlanmamış. Lütfen Firebase projenizdeki Storage Kurallarını güncelleyin.';
                     break;
                 case 'storage/canceled':
                     title = 'İşlem İptal Edildi';
                     description = 'Resim yükleme işlemi ağ sorunu nedeniyle iptal edildi.';
                     break;
                 case 'permission-denied':
-                    title = 'Yetki Hatası';
+                    title = 'Firestore Yetki Hatası';
                     description = 'Veritabanına yazma izniniz yok. Lütfen Firestore güvenlik kurallarınızı kontrol edin.';
                     break;
                 default:
