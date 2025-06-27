@@ -52,6 +52,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const screenSenderRef = useRef<Record<string, RTCRtpSender>>({});
     const audioAnalysers = useRef<Record<string, { analyser: AnalyserNode, dataArray: Uint8Array, context: AudioContext }>>({});
     const animationFrameId = useRef<number>();
+    const speakingStatesRef = useRef<Record<string, boolean>>({});
 
     const self = participants.find(p => p.uid === user?.uid) || null;
     const isConnected = !!self;
@@ -116,14 +117,18 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             let sum = 0;
             for (const amplitude of dataArray) { sum += amplitude * amplitude; }
             const volume = Math.sqrt(sum / dataArray.length);
-            if (volume > 20) { // Adjusted threshold for byte data
+            if (volume > 20) {
                 newSpeakingStates[uid] = true;
                 activeSpeakerFound = true;
             } else {
                 newSpeakingStates[uid] = false;
             }
         });
-        setSpeakingStates(newSpeakingStates);
+
+        if (JSON.stringify(newSpeakingStates) !== JSON.stringify(speakingStatesRef.current)) {
+            speakingStatesRef.current = newSpeakingStates;
+            setSpeakingStates(newSpeakingStates);
+        }
 
         if (activeSpeakerFound && user && activeRoomId) {
             updateLastActive(activeRoomId, user.uid);
@@ -190,11 +195,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         }
 
         try {
-            const isSecureContext = window.isSecureContext;
             if (!navigator?.mediaDevices?.getDisplayMedia) {
-                const errorMsg = isSecureContext
-                    ? 'Tarayıcınız bu özelliği desteklemiyor gibi görünüyor. Lütfen güncel bir Chrome, Firefox veya Edge tarayıcısı kullanın.'
-                    : 'Ekran paylaşımı için güvenli bir bağlantı (HTTPS) gereklidir.';
+                const errorMsg = 'Tarayıcınız bu özelliği desteklemiyor gibi görünüyor veya güvenli (HTTPS) bir bağlantı gerekli.';
                 throw new Error(errorMsg);
             }
             const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: "always" } as MediaTrackConstraints, audio: false });
@@ -212,7 +214,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
              console.error("Screen share error:", error);
             toast({ 
                 variant: 'destructive', 
-                title: 'Özellik Desteklenmiyor', 
+                title: 'Hata', 
                 description: error.message || 'Ekran paylaşımı başlatılamadı.'
             });
         }
@@ -237,7 +239,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 const context = new (window.AudioContext || (window as any).webkitAudioContext)();
                 const source = context.createMediaStreamSource(stream);
                 const analyser = context.createAnalyser();
-                analyser.fftSize = 256; // Smaller size for performance
+                analyser.fftSize = 256;
                 analyser.smoothingTimeConstant = 0.5;
                 source.connect(analyser);
                 audioAnalysers.current[uid] = { analyser, dataArray: new Uint8Array(analyser.frequencyBinCount), context };
