@@ -11,11 +11,6 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 export const metadata: Metadata = {
   title: 'HiweWalk',
   description: 'Herkese açık odalar oluşturun ve katılın.',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'default',
-    title: 'HiweWalk',
-  },
 };
 
 export default function RootLayout({
