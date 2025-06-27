@@ -1,10 +1,10 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { collection, onSnapshot, doc, addDoc, query, where, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Room, VoiceParticipant } from '@/lib/types';
+import type { Room, VoiceParticipant } from '../types';
 import { joinVoiceChat, leaveVoiceChat, updateLastActive, toggleSelfMute as toggleMuteAction, toggleScreenShare as toggleScreenShareAction } from '@/lib/actions/voiceActions';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -269,7 +269,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             toast({ variant: "destructive", title: "Katılım Başarısız", description: error.message });
             stopAndCleanup();
         } finally { setIsConnecting(false); }
-    }, [user, isConnected, activeRoom, isConnecting, toast, stopAndCleanup]);
+    }, [user, isConnected, activeRoom, isConnecting, toast, stopAndCleanup, leaveRoom]);
 
     const leaveRoom = useCallback(async () => {
         if (!user || !activeRoom) return;
