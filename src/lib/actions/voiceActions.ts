@@ -68,6 +68,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
                 photoURL: user.photoURL,
                 isSpeaker: true, 
                 isMuted: false, // Kullanıcılar varsayılan olarak konuşabilir (sessiz değil).
+                isSharingScreen: false,
                 joinedAt: serverTimestamp() as Timestamp,
                 selectedBubble: userData.selectedBubble || '',
             };
@@ -137,6 +138,28 @@ export async function toggleSelfMute(roomId: string, userId: string, isMuted: bo
         });
         return { success: true };
     } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Updates a user's screen sharing status in Firestore.
+ * @param roomId The room ID.
+ * @param userId The user's ID.
+ * @param isSharing The new screen sharing state.
+ */
+export async function toggleScreenShare(roomId: string, userId: string, isSharing: boolean) {
+    if (!userId) throw new Error("Yetkilendirme hatası.");
+
+    const userVoiceRef = doc(db, 'rooms', roomId, 'voiceParticipants', userId);
+    
+    try {
+        await updateDoc(userVoiceRef, { 
+            isSharingScreen: isSharing,
+        });
+        return { success: true };
+    } catch (error: any) {
+        console.error("Ekran paylaşım durumu güncellenirken hata:", error);
         return { success: false, error: error.message };
     }
 }

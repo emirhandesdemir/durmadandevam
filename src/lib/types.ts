@@ -75,6 +75,7 @@ export interface VoiceParticipant {
     photoURL?: string | null;
     isSpeaker: boolean;
     isMuted: boolean;
+    isSharingScreen?: boolean;
     joinedAt: Timestamp;
     lastSpokeAt?: Timestamp; // Son konuşma zamanı (inaktivite takibi için)
     selectedBubble?: string; // Kullanıcının seçtiği baloncuk stili

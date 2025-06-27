@@ -10,11 +10,11 @@ import { useEffect, useRef } from 'react';
  * Arayüzde görünmezdir.
  */
 export default function VoiceAudioPlayer() {
-    const { remoteStreams } = useVoiceChat();
+    const { remoteAudioStreams } = useVoiceChat();
     
     return (
         <div style={{ display: 'none' }}>
-            {Object.entries(remoteStreams).map(([uid, stream]) => (
+            {Object.entries(remoteAudioStreams).map(([uid, stream]) => (
                 <AudioElement key={uid} stream={stream} />
             ))}
         </div>
