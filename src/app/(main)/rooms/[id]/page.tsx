@@ -3,12 +3,11 @@
 
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, orderBy, limit, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
-import type { Room } from '@/lib/types';
 import { Loader2, Mic, MicOff, Plus, Crown, PhoneOff, ScreenShare, ScreenShareOff, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TextChat, { type Message } from '@/components/chat/text-chat';
@@ -21,6 +20,12 @@ import { kickInactiveUsers } from '@/lib/actions/voiceActions';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
+// --- Game Imports ---
+import type { Room, ActiveGame, GameSettings } from '@/lib/types';
+import GameCountdownCard from '@/components/game/GameCountdownCard';
+import RoomGameCard from '@/components/game/RoomGameCard';
+import { startGameInRoom, submitAnswer, endGameWithoutWinner, getGameSettings } from '@/lib/actions/gameActions';
+
 
 export default function RoomPage() {
     const params = useParams();
@@ -28,23 +33,15 @@ export default function RoomPage() {
     const { toast } = useToast();
     const roomId = params.id as string;
     
-    const { user, loading: authLoading } = useAuth();
+    // --- Auth & Contexts ---
+    const { user, loading: authLoading, featureFlags } = useAuth();
     const { 
-        self, 
-        isConnecting, 
-        isConnected, 
-        isSharingScreen,
-        localScreenStream,
-        remoteScreenStreams,
-        startScreenShare,
-        stopScreenShare,
-        joinRoom, 
-        leaveRoom,
-        toggleSelfMute,
-        participants,
-        setActiveRoomId,
+        self, isConnecting, isConnected, isSharingScreen, localScreenStream, remoteScreenStreams,
+        startScreenShare, stopScreenShare, joinRoom, leaveRoom, toggleSelfMute,
+        participants, setActiveRoomId,
     } = useVoiceChat();
 
+    // --- Component State ---
     const [room, setRoom] = useState<Room | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [messagesLoading, setMessagesLoading] = useState(true);
@@ -52,59 +49,119 @@ export default function RoomPage() {
     const [isVoiceStageCollapsed, setVoiceStageCollapsed] = useState(false);
     const chatScrollRef = useRef<HTMLDivElement>(null);
 
+    // --- Game State ---
+    const [activeGame, setActiveGame] = useState<ActiveGame | null>(null);
+    const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
+    const [gameLoading, setGameLoading] = useState(true);
+    const [countdown, setCountdown] = useState<number | null>(null);
+
     const isHost = user?.uid === room?.createdBy.uid;
 
     const screenSharer = useMemo(() => participants.find(p => p.isSharingScreen), [participants]);
     const remoteScreenStream = screenSharer && !isSharingScreen ? remoteScreenStreams[screenSharer.uid] : null;
 
+    // --- Effects ---
+
+    // Set active room ID for voice chat context
     useEffect(() => {
-        if (roomId) {
-            setActiveRoomId(roomId);
-        }
-        return () => {
-            setActiveRoomId(null);
-        }
+        if (roomId) setActiveRoomId(roomId);
+        return () => setActiveRoomId(null);
     }, [roomId, setActiveRoomId]);
 
-    // Oda verisini dinle (sadece oda bilgileri için, katılımcılar context'ten geliyor)
+    // Fetch game settings on mount
+    useEffect(() => {
+        getGameSettings().then(setGameSettings);
+    }, []);
+
+    // Oda verisi, AFK kick ve mesajları dinle
     useEffect(() => {
         if (!roomId) return;
         const roomUnsub = onSnapshot(doc(db, 'rooms', roomId), (docSnap) => {
-            if (docSnap.exists()) {
-                setRoom({ id: docSnap.id, ...docSnap.data() } as Room);
-            }
+            if (docSnap.exists()) setRoom({ id: docSnap.id, ...docSnap.data() } as Room);
         });
-        return () => roomUnsub();
-    }, [roomId]);
-
-    // AFK kullanıcıları atma (sadece host yapar)
-    useEffect(() => {
-        if (isHost && roomId) {
-            const interval = setInterval(() => {
-                kickInactiveUsers(roomId);
-            }, 60 * 1000); // Her dakika kontrol et
-            return () => clearInterval(interval);
-        }
-    }, [isHost, roomId]);
-
-    // Metin mesajlarını dinle
-    useEffect(() => {
-        if (!roomId) return;
-        setMessagesLoading(true);
-        const q = query(collection(db, "rooms", roomId, "messages"), orderBy("createdAt", "asc"), limit(100));
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            setMessages(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message)));
+        
+        const messagesQuery = query(collection(db, "rooms", roomId, "messages"), orderBy("createdAt", "asc"), limit(100));
+        const messagesUnsub = onSnapshot(messagesQuery, (snapshot) => {
+            setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message)));
             setMessagesLoading(false);
         });
-        return () => unsubscribe();
-    }, [roomId]);
-    
+        
+        let afkInterval: NodeJS.Timeout;
+        if (isHost) {
+            afkInterval = setInterval(() => kickInactiveUsers(roomId), 60 * 1000);
+        }
+
+        return () => {
+            roomUnsub();
+            messagesUnsub();
+            if (afkInterval) clearInterval(afkInterval);
+        };
+    }, [roomId, isHost]);
+
+    // Listen for games and countdowns
+    useEffect(() => {
+        if (!roomId || !featureFlags?.quizGameEnabled || !gameSettings) {
+            setGameLoading(false);
+            return;
+        }
+
+        setGameLoading(true);
+
+        const gamesQuery = query(collection(db, `rooms/${roomId}/games`), where("status", "==", "active"), limit(1));
+        const gameUnsub = onSnapshot(gamesQuery, (snapshot) => {
+            if (!snapshot.empty) {
+                const gameData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ActiveGame;
+                setActiveGame(gameData);
+                setCountdown(null);
+                setGameLoading(false);
+            } else {
+                setActiveGame(null);
+                // When game ends, room listener will pick up the new `nextGameTimestamp`
+            }
+        });
+        
+        // This listener is for the countdown when there's no active game.
+        const roomTimestampUnsub = onSnapshot(doc(db, 'rooms', roomId), (docSnap) => {
+             if (docSnap.exists() && !activeGame) { // only set countdown if no game is active
+                const roomData = docSnap.data() as Room;
+                const nextGameTime = roomData.nextGameTimestamp?.toDate().getTime();
+                if (nextGameTime) {
+                    const remaining = Math.round((nextGameTime - Date.now()) / 1000);
+                    setCountdown(remaining > 0 ? remaining : 0);
+                }
+            }
+            setGameLoading(false);
+        });
+
+        return () => {
+            gameUnsub();
+            roomTimestampUnsub();
+        };
+    }, [roomId, featureFlags, gameSettings, activeGame]);
+
+    // Handle countdown ticker and game start
+    useEffect(() => {
+        if (countdown === null || countdown < 0) return;
+        if (countdown === 0 && isHost && !activeGame) {
+             startGameInRoom(roomId).catch(err => console.error("Failed to start game:", err));
+        }
+
+        const timerId = setTimeout(() => {
+            setCountdown(prev => (prev !== null ? prev - 1 : null));
+        }, 1000);
+
+        return () => clearTimeout(timerId);
+    }, [countdown, isHost, roomId, activeGame]);
+
+    // Scroll chat to bottom on new message
     useEffect(() => {
         if (chatScrollRef.current) {
             chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
         }
     }, [messages]);
     
+    // --- Callbacks ---
+
     const handleJoinVoice = useCallback(async () => {
         if (!user) return;
         await joinRoom();
@@ -119,11 +176,25 @@ export default function RoomPage() {
         if (!self || !user) return;
         await toggleSelfMute();
     }, [self, user, toggleSelfMute]);
+
+    const handleAnswerSubmit = useCallback(async (answerIndex: number) => {
+        if (!user || !activeGame) return;
+        try {
+            await submitAnswer(roomId, activeGame.id, user.uid, answerIndex);
+        } catch (error: any) {
+            toast({ variant: "destructive", description: error.message || "Cevap gönderilemedi." });
+        }
+    }, [user, activeGame, roomId, toast]);
+
+    const handleGameTimerEnd = useCallback(() => {
+        if (!activeGame || !isHost) return;
+        endGameWithoutWinner(roomId, activeGame.id);
+    }, [activeGame, isHost, roomId]);
+
+    // --- Memoized Values ---
     
     const { hostParticipant, otherParticipants } = useMemo(() => {
-        if (!participants || !room) {
-            return { hostParticipant: null, otherParticipants: [] };
-        }
+        if (!participants || !room) return { hostParticipant: null, otherParticipants: [] };
         const host = participants.find(p => p.uid === room.createdBy.uid);
         const others = participants.filter(p => p.uid !== room.createdBy.uid);
         return { hostParticipant: host, otherParticipants: others };
@@ -151,7 +222,7 @@ export default function RoomPage() {
                 
                 <div className="p-4 border-b border-gray-700/50 shrink-0">
                     {screenSharer ? (
-                        <div className='animate-in fade-in duration-300'>
+                         <div className='animate-in fade-in duration-300'>
                             {isSharingScreen && localScreenStream && <ScreenShareView stream={localScreenStream} />}
                             {remoteScreenStream && <ScreenShareView stream={remoteScreenStream} />}
                             <p className="text-center text-xs text-muted-foreground mt-2">{screenSharer.username} ekranını paylaşıyor...</p>
@@ -194,24 +265,15 @@ export default function RoomPage() {
                                                         <AvatarFallback>{p.username.charAt(0)}</AvatarFallback>
                                                     </Avatar>
                                                 </TooltipTrigger>
-                                                <TooltipContent className="bg-gray-800 border-gray-700 text-white">
-                                                    <p>{p.username}</p>
-                                                </TooltipContent>
+                                                <TooltipContent className="bg-gray-800 border-gray-700 text-white"><p>{p.username}</p></TooltipContent>
                                             </Tooltip>
                                         </TooltipProvider>
-                                    )) : (
-                                         <p className="text-sm text-gray-500">Sesli sohbette kimse yok.</p>
-                                    )}
+                                    )) : ( <p className="text-sm text-gray-500">Sesli sohbette kimse yok.</p> )}
                                 </div>
                             )}
 
                             <div className="flex justify-center">
-                                <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="text-gray-400 hover:text-white"
-                                    onClick={() => setVoiceStageCollapsed(!isVoiceStageCollapsed)}
-                                >
+                                <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white" onClick={() => setVoiceStageCollapsed(!isVoiceStageCollapsed)}>
                                     <ChevronsUpDown className="h-4 w-4 mr-2" />
                                     {isVoiceStageCollapsed ? "Sohbeti Genişlet" : "Sohbeti Küçült"}
                                 </Button>
@@ -220,12 +282,31 @@ export default function RoomPage() {
                     )}
                 </div>
 
-                <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-4">
+                <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+                     {featureFlags?.quizGameEnabled && (
+                        <div className="mb-4">
+                            {gameLoading ? (
+                                <div className="flex items-center justify-center h-24">
+                                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                </div>
+                            ) : activeGame && gameSettings && user ? (
+                                <RoomGameCard 
+                                    game={activeGame}
+                                    settings={gameSettings}
+                                    onAnswerSubmit={handleAnswerSubmit}
+                                    onTimerEnd={handleGameTimerEnd}
+                                    currentUserId={user.uid}
+                                />
+                            ) : countdown !== null && countdown > 0 && countdown <= 20 ? (
+                                <GameCountdownCard timeLeft={countdown} />
+                            ) : null}
+                        </div>
+                    )}
                     <TextChat messages={messages} loading={messagesLoading} />
                 </div>
 
                 <footer className="flex items-center gap-3 p-3 border-t border-gray-700/50 bg-gray-900 shrink-0">
-                    {isConnected ? (
+                    {isConnected && user ? (
                          <>
                             <Button onClick={handleToggleMute} variant="ghost" size="icon" className="rounded-full bg-gray-700/50 hover:bg-gray-600/50">
                                 {self?.isMuted ? <MicOff className="h-5 w-5 text-red-500"/> : <Mic className="h-5 w-5 text-white"/>}
