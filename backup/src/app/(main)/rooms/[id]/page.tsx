@@ -1,3 +1,4 @@
+
 // src/app/(main)/rooms/[id]/page.tsx
 "use client";
 
@@ -6,16 +7,16 @@ import { useParams, useRouter } from 'next/navigation';
 import { doc, onSnapshot, collection, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
-import type { Room } from '@/lib/types';
-import { Loader2, Mic, MicOff, Plus, Crown, PhoneOff } from 'lucide-react';
+import type { Room, VoiceParticipant } from '@/lib/types';
+import { ChevronLeft, Loader2, MoreHorizontal, Mic, MicOff, Plus, Users, Crown, PhoneOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TextChat, { type Message } from '@/components/chat/text-chat';
 import ChatMessageInput from '@/components/chat/ChatMessageInput';
 import VoiceUserIcon from '@/components/voice/VoiceUserIcon';
 import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
-import RoomHeader from '@/components/rooms/RoomHeader';
 
 export default function RoomPage() {
     const params = useParams();
@@ -50,7 +51,7 @@ export default function RoomPage() {
                 const roomData = { id: docSnap.id, ...docSnap.data() } as Room;
                 setRoom(roomData);
             } else {
-                toast({ title: "Oda Kapatıldı", description: "Bu oda artık mevcut değil.", variant: "destructive" });
+                toast({ title: "Hata", description: "Oda bulunamadı.", variant: "destructive" });
                 router.push('/rooms');
             }
         });
@@ -116,11 +117,24 @@ export default function RoomPage() {
     return (
         <>
             <div className="flex flex-col h-dvh bg-gray-900 text-gray-200">
-                <RoomHeader 
-                    room={room} 
-                    isHost={isHost} 
-                    onParticipantListToggle={() => setIsParticipantSheetOpen(true)}
-                />
+                {/* Header */}
+                <header className="flex items-center justify-between p-3 border-b border-gray-700/50 shrink-0">
+                    <div className="flex items-center gap-2">
+                        <Button asChild variant="ghost" size="icon" className="rounded-full">
+                            <Link href="/rooms"><ChevronLeft /></Link>
+                        </Button>
+                        <h1 className="text-md font-bold text-white truncate max-w-[180px]">{room.name}</h1>
+                    </div>
+                    <div className="flex items-center gap-3">
+                         <Button variant="ghost" className="flex items-center gap-1.5 text-sm font-semibold p-2" onClick={() => setIsParticipantSheetOpen(true)}>
+                            <Users className="h-4 w-4 text-gray-400" />
+                            <span>{room.participants?.length || 0}</span>
+                        </Button>
+                        <Button variant="ghost" size="icon" className="rounded-full">
+                            <MoreHorizontal />
+                        </Button>
+                    </div>
+                </header>
 
                 {/* Main Content (Voice Stage + Chat) */}
                 <main ref={chatContainerRef} className="flex-1 overflow-y-auto p-4">

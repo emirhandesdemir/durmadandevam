@@ -91,11 +91,9 @@ export default function CreateRoomForm() {
                 return;
             }
 
-            // Oyun ve oda zamanlayıcılarını ayarla
+            // İlk oyun için zamanlayıcıyı ayarla
             const settings = await getGameSettings();
             const nextGameTimestamp = Timestamp.fromMillis(Date.now() + settings.gameIntervalMinutes * 60 * 1000);
-            const fifteenMinutesInMs = 15 * 60 * 1000;
-            const expiresAt = Timestamp.fromMillis(Date.now() + fifteenMinutesInMs);
 
             // Firestore için yeni oda nesnesi
             const newRoom = {
@@ -108,7 +106,6 @@ export default function CreateRoomForm() {
                   role: userData.role || 'user'
                 },
                 createdAt: serverTimestamp(),
-                expiresAt, // Oda kapanma zamanı
                 participants: [{
                     uid: user.uid,
                     username: user.displayName || "Anonim",

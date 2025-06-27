@@ -58,7 +58,6 @@ export interface Room {
         role?: 'admin' | 'user';
     };
     createdAt: Timestamp;
-    expiresAt?: Timestamp;
     participants: { uid: string, username: string, photoURL?: string | null }[];
     maxParticipants: number;
     nextGameTimestamp?: Timestamp;
