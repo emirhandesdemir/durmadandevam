@@ -38,7 +38,7 @@ export default function RoomPage() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [messagesLoading, setMessagesLoading] = useState(true);
     const [isParticipantSheetOpen, setIsParticipantSheetOpen] = useState(false);
-    const chatContainerRef = useRef<HTMLDivElement>(null);
+    const chatScrollRef = useRef<HTMLDivElement>(null);
 
     const isHost = user?.uid === room?.createdBy.uid;
 
@@ -75,8 +75,8 @@ export default function RoomPage() {
     
     // Yeni mesaj geldiğinde sohbeti en alta kaydır
     useEffect(() => {
-        if (chatContainerRef.current) {
-            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        if (chatScrollRef.current) {
+            chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
         }
     }, [messages]);
     
@@ -122,16 +122,15 @@ export default function RoomPage() {
                     onParticipantListToggle={() => setIsParticipantSheetOpen(true)}
                 />
 
-                {/* Main Content (Voice Stage + Chat) */}
-                <main ref={chatContainerRef} className="flex-1 overflow-y-auto p-4">
-                     {/* Voice Stage or Loader */}
+                {/* Voice Stage Area (Not scrollable) */}
+                <div className="p-4 border-b border-gray-700/50 shrink-0">
                      {showVoiceStageLoader ? (
                         <div className="flex h-48 items-center justify-center">
                             <Loader2 className="h-10 w-10 animate-spin text-primary" />
                         </div>
                      ) : (
-                        <div className="mb-4 space-y-4">
-                            {/* Host Area - with fixed height to prevent layout shift */}
+                        <div className="space-y-4">
+                            {/* Host Area */}
                             <div className="flex flex-col items-center justify-center min-h-28">
                                 {hostParticipant ? (
                                     <VoiceUserIcon
@@ -141,7 +140,7 @@ export default function RoomPage() {
                                         currentUserId={user!.uid}
                                         roomId={roomId}
                                         isParticipantTheHost={true}
-                                        size="lg" // Make host icon larger
+                                        size="lg"
                                     />
                                 ) : (
                                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
@@ -180,11 +179,12 @@ export default function RoomPage() {
                             </div>
                         </div>
                      )}
+                </div>
 
-
-                    {/* Chat Messages */}
+                {/* Messages Area (Scrollable) */}
+                <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-4">
                     <TextChat messages={messages} loading={messagesLoading} />
-                </main>
+                </div>
 
                 {/* Footer / Input */}
                 <footer className="flex items-center gap-3 p-3 border-t border-gray-700/50 bg-gray-900 shrink-0">
@@ -199,7 +199,7 @@ export default function RoomPage() {
                             </Button>
                         </>
                     ) : (
-                         <Button onClick={handleJoinVoice} disabled={isConnecting} className="rounded-full bg-primary text-primary-foreground h-10 px-4">
+                         <Button onClick={handleJoinVoice} disabled={isConnecting || !isRoomParticipant} className="rounded-full bg-primary text-primary-foreground h-10 px-4">
                             {isConnecting ? <Loader2 className="h-5 w-5 animate-spin"/> : <Mic className="h-5 w-5"/>}
                             <span className="ml-2">Katıl</span>
                          </Button>
