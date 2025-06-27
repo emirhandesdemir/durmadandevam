@@ -12,14 +12,8 @@ import { usePathname, useRouter } from 'next/navigation';
 const ICE_SERVERS = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
         {
             urls: 'turn:openrelay.metered.ca:80',
-            username: 'openrelayproject',
-            credential: 'openrelayproject',
-        },
-        {
-            urls: 'turn:openrelay.metered.ca:443',
             username: 'openrelayproject',
             credential: 'openrelayproject',
         },
@@ -67,20 +61,12 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const screenSenderRef = useRef<Record<string, RTCRtpSender>>({});
     const audioAnalysers = useRef<Record<string, { analyser: AnalyserNode, dataArray: Uint8Array, context: AudioContext }>>({});
     const animationFrameId = useRef<number>();
-    const speakingStatesRef = useRef<Record<string, boolean>>({});
     const lastActiveUpdateTimestamp = useRef<number>(0);
 
     const self = participants.find(p => p.uid === user?.uid) || null;
     const isConnected = !!self;
     const isSharingScreen = !!localScreenStream;
 
-    // 1. Core helper functions with minimal dependencies
-    const sendSignal = useCallback(async (to: string, type: string, data: any) => {
-        if (!activeRoomId || !user) return;
-        const signalsRef = collection(db, `rooms/${activeRoomId}/signals`);
-        await addDoc(signalsRef, { to, from: user.uid, type, data, createdAt: serverTimestamp() });
-    }, [activeRoomId, user]);
-    
     const _cleanupAndResetState = useCallback(() => {
         console.log("Cleaning up all connections and state.");
         Object.values(peerConnections.current).forEach(pc => pc.close());
@@ -103,7 +89,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         setIsConnecting(false);
     }, [localStream, localScreenStream]);
 
-    // 2. Functions dependent on helpers above
     const leaveRoom = useCallback(async () => {
         if (!user || !activeRoomId) return;
         await leaveVoiceChat(activeRoomId, user.uid);
@@ -141,25 +126,28 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 isSelfSpeaking = true;
             }
         });
-
-        if (JSON.stringify(newSpeakingStates) !== JSON.stringify(speakingStatesRef.current)) {
-            speakingStatesRef.current = newSpeakingStates;
-            setSpeakingStates(newSpeakingStates);
+        
+        if (JSON.stringify(newSpeakingStates) !== JSON.stringify(speakingStates)) {
+             setSpeakingStates(newSpeakingStates);
         }
 
-        // Debounced activity update
         if (isSelfSpeaking && user && activeRoomId) {
             const now = Date.now();
-            if (now - lastActiveUpdateTimestamp.current > 30000) { // Update every 30s max
+            if (now - lastActiveUpdateTimestamp.current > 30000) { 
                 lastActiveUpdateTimestamp.current = now;
                 updateLastActive(activeRoomId, user.uid);
             }
         }
 
         animationFrameId.current = requestAnimationFrame(runAudioAnalysis);
-    }, [user, activeRoomId]);
+    }, [user, activeRoomId, speakingStates]);
 
-    // 3. Inter-dependent WebRTC functions (order matters here)
+    const sendSignal = useCallback(async (to: string, type: string, data: any) => {
+        if (!activeRoomId || !user) return;
+        const signalsRef = collection(db, `rooms/${activeRoomId}/signals`);
+        await addDoc(signalsRef, { to, from: user.uid, type, data, createdAt: serverTimestamp() });
+    }, [activeRoomId, user]);
+
     const createPeerConnection = useCallback((otherUid: string) => {
         if (!user || !localStream || peerConnections.current[otherUid]) return;
 
@@ -169,7 +157,15 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
         pc.ontrack = e => e.track.kind === 'audio' ? setRemoteAudioStreams(p => ({ ...p, [otherUid]: e.streams[0] })) : setRemoteScreenStreams(p => ({ ...p, [otherUid]: e.streams[0] }));
         pc.onicecandidate = e => e.candidate && sendSignal(otherUid, 'ice-candidate', e.candidate.toJSON());
-        if (user.uid > otherUid) pc.onnegotiationneeded = async () => { try { await pc.setLocalDescription(await pc.createOffer()); if (pc.localDescription) await sendSignal(otherUid, 'offer', pc.localDescription.toJSON()); } catch (e) { console.error("Nego error:", e); } };
+        
+        if (user.uid > otherUid) {
+             pc.onnegotiationneeded = async () => { 
+                try { 
+                    await pc.setLocalDescription(await pc.createOffer()); 
+                    if (pc.localDescription) await sendSignal(otherUid, 'offer', pc.localDescription.toJSON()); 
+                } catch (e) { console.error("Nego error:", e); } 
+            };
+        }
         
         return pc;
     }, [user, localStream, sendSignal]);
@@ -190,7 +186,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         } catch (error) { console.error("Signal handling error:", type, error); }
     }, [createPeerConnection, sendSignal]);
 
-    // 4. Main user-facing actions
     const joinRoom = useCallback(async () => {
         if (!user || !activeRoomId || isConnected || isConnecting) return;
         
@@ -212,9 +207,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     }, [user, activeRoomId, isConnected, isConnecting, toast, _cleanupAndResetState]);
     
     const startScreenShare = useCallback(async () => {
-        if (!user || !activeRoomId || isSharingScreen) {
-            return;
-        }
+        if (!user || !activeRoomId || isSharingScreen) return;
 
         try {
             if (!navigator?.mediaDevices?.getDisplayMedia) {
@@ -261,9 +254,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         }
     }, [self, activeRoomId, localStream, user]);
 
-
-    // --- Side Effects (useEffect hooks) ---
-    
     useEffect(() => {
         const setupAnalyser = (stream: MediaStream, uid: string) => {
             if (!audioAnalysers.current[uid]) {
@@ -309,15 +299,17 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             if (docSnap.exists()) {
                  setActiveRoom({id: docSnap.id, ...docSnap.data()} as Room)
             } else {
-                 toast({ variant: 'destructive', title: 'Oda Bulunamadı', description: 'Bu oda artık mevcut değil veya süresi dolmuş.' });
-                 leaveRoom().then(() => { if(pathname.startsWith('/rooms/')) router.push('/rooms'); });
+                 if (activeRoomId) { // Only toast if we were actively in a room
+                    toast({ variant: 'destructive', title: 'Oda Bulunamadı', description: 'Bu oda artık mevcut değil veya süresi dolmuş.' });
+                    leaveRoom().then(() => { if(pathname.startsWith('/rooms/')) router.push('/rooms'); });
+                 }
             }
         });
 
         const participantsUnsub = onSnapshot(collection(db, "rooms", activeRoomId, "voiceParticipants"), snapshot => {
             const fetched = snapshot.docs.map(d => d.data() as VoiceParticipant);
             setParticipants(fetched);
-            if (isConnected && fetched.every(p => p.uid !== user?.uid)) {
+            if (isConnected && user && !fetched.some(p => p.uid === user.uid)) {
                 toast({ title: "Bağlantı Kesildi", description: "Sesten ayrıldınız veya atıldınız." });
                 _cleanupAndResetState();
             }
