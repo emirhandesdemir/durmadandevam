@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Image as ImageIcon, Send, Loader2, X, Sparkles } from "lucide-react";
 import { applyImageFilter } from "@/lib/actions/imageActions";
+import { compressImage } from "@/lib/imageUtils"; // Import the new utility
 
 export default function NewPostForm() {
   const router = useRouter();
@@ -26,6 +27,7 @@ export default function NewPostForm() {
   const [text, setText] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
   
   // New states for AI styling
   const [stylePrompt, setStylePrompt] = useState("");
@@ -33,21 +35,31 @@ export default function NewPostForm() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      // Increase file size limit to 10MB
       if (file.size > 10 * 1024 * 1024) { 
           toast({ variant: "destructive", title: "Dosya Çok Büyük", description: "Resim boyutu 10MB'dan büyük olamaz." });
           return;
       }
+      
+      setIsProcessingImage(true);
       const reader = new FileReader();
-      reader.onload = () => {
-        setImage(reader.result as string);
+      reader.onload = async () => {
+        try {
+          const compressedDataUrl = await compressImage(reader.result as string);
+          setImage(compressedDataUrl);
+        } catch (error) {
+          console.error("Image compression error:", error);
+          toast({ variant: "destructive", description: "Resim işlenirken bir hata oluştu." });
+        } finally {
+          setIsProcessingImage(false);
+        }
       };
       reader.readAsDataURL(file);
     }
   };
+
 
   const handleImageClick = () => {
     fileInputRef.current?.click();
@@ -73,8 +85,10 @@ export default function NewPostForm() {
             style: stylePrompt,
         });
         if (result.success && result.data?.styledPhotoDataUri) {
-            setImage(result.data.styledPhotoDataUri);
-            toast({ title: "Stil Uygulandı!", description: "Yapay zeka filtre başarıyla uygulandı."});
+            toast({ description: "Yapay zeka filtresi uygulandı, resim optimize ediliyor..."});
+            const compressedStyledImage = await compressImage(result.data.styledPhotoDataUri);
+            setImage(compressedStyledImage);
+            toast({ title: "İşlem Başarılı!", description: "Resminiz hem stilize edildi hem de optimize edildi."});
         } else {
             throw new Error(result.error || "Stil uygulanamadı.");
         }
@@ -178,52 +192,59 @@ export default function NewPostForm() {
               placeholder="Aklında ne var? (#etiket) veya (@kullanıcı) bahset..."
               className="min-h-[60px] flex-1 resize-none border-0 bg-transparent p-0 text-base placeholder:text-muted-foreground/80 focus-visible:ring-0"
               rows={2}
-              disabled={isSubmitting || isStyling}
+              disabled={isSubmitting || isStyling || isProcessingImage}
             />
           </div>
-          {image && (
-            <div className="space-y-4">
-              <div className="relative">
-                <div className="overflow-hidden rounded-xl border">
-                  <img src={image} alt="Önizleme" className="max-h-80 w-auto object-contain" />
+          <div className="space-y-4">
+            {image && (
+              <div className="space-y-4">
+                <div className="relative">
+                  <div className="overflow-hidden rounded-xl border">
+                    <img src={image} alt="Önizleme" className="max-h-80 w-auto object-contain" />
+                     {isProcessingImage && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-xl">
+                        <Loader2 className="h-8 w-8 animate-spin text-white" />
+                      </div>
+                    )}
+                  </div>
+                  <Button 
+                    size="icon" 
+                    variant="destructive" 
+                    className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/50 hover:bg-black/70 border-0"
+                    onClick={removeImage}
+                    disabled={isSubmitting || isStyling || isProcessingImage}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Button 
-                  size="icon" 
-                  variant="destructive" 
-                  className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/50 hover:bg-black/70 border-0"
-                  onClick={removeImage}
-                  disabled={isSubmitting || isStyling}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
 
-              {/* Redesigned AI Styling Section */}
-              <div className="space-y-3 rounded-xl border border-primary/20 bg-gradient-to-tr from-card to-muted/20 p-4 shadow-inner">
-                <div className="flex items-center gap-2.5">
-                    <Sparkles className="h-5 w-5 text-primary" />
-                    <h3 className="font-semibold text-foreground">Yapay Zeka ile Stil Ver</h3>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                    Resminize yaratıcı bir dokunuş ekleyin. "Van Gogh tarzı" veya "çizgi film yap" gibi komutlar deneyin.
-                </p>
-                <div className="flex gap-2 pt-1">
-                    <Input
-                        id="style-prompt"
-                        value={stylePrompt}
-                        onChange={(e) => setStylePrompt(e.target.value)}
-                        placeholder="Örn: bir sulu boya tablosu yap"
-                        className="flex-1 bg-background/50"
-                        disabled={isStyling || isSubmitting}
-                    />
-                    <Button onClick={handleApplyStyle} disabled={isStyling || isSubmitting || !stylePrompt.trim()}>
-                        {isStyling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                        Uygula
-                    </Button>
+                {/* Redesigned AI Styling Section */}
+                <div className="space-y-3 rounded-xl border border-primary/20 bg-gradient-to-tr from-card to-muted/20 p-4 shadow-inner">
+                  <div className="flex items-center gap-2.5">
+                      <Sparkles className="h-5 w-5 text-primary" />
+                      <h3 className="font-semibold text-foreground">Yapay Zeka ile Stil Ver</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                      Resminize yaratıcı bir dokunuş ekleyin. "Van Gogh tarzı" veya "çizgi film yap" gibi komutlar deneyin.
+                  </p>
+                  <div className="flex gap-2 pt-1">
+                      <Input
+                          id="style-prompt"
+                          value={stylePrompt}
+                          onChange={(e) => setStylePrompt(e.target.value)}
+                          placeholder="Örn: bir sulu boya tablosu yap"
+                          className="flex-1 bg-background/50"
+                          disabled={isStyling || isSubmitting || isProcessingImage}
+                      />
+                      <Button onClick={handleApplyStyle} disabled={isStyling || isSubmitting || !stylePrompt.trim() || isProcessingImage}>
+                          {isStyling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                          Uygula
+                      </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
         
         <div className="flex items-center justify-between border-t border-border/50 bg-muted/20 px-4 py-2">
@@ -234,7 +255,7 @@ export default function NewPostForm() {
             size="icon"
             className="rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
             onClick={handleImageClick}
-            disabled={isSubmitting || !!image || isStyling}
+            disabled={isSubmitting || !!image || isStyling || isProcessingImage}
           >
             <ImageIcon className="h-5 w-5" />
             <span className="sr-only">Resim Ekle</span>
@@ -243,7 +264,7 @@ export default function NewPostForm() {
           <Button 
             className="rounded-full font-semibold px-4"
             onClick={handleShare}
-            disabled={isSubmitting || (!text.trim() && !image) || isStyling}
+            disabled={isSubmitting || (!text.trim() && !image) || isStyling || isProcessingImage}
           >
             {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
             <span className="ml-2 hidden sm:inline">Paylaş</span>
