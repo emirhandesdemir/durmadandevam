@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, Headphones } from "lucide-react";
+import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, Headphones, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { useTheme } from "next-themes";
@@ -32,13 +32,22 @@ import { doc, updateDoc } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 
 
-const bubbleOptions = [
+const avatarBubbleOptions = [
     { id: "", name: "Yok" },
-    { id: "bubble-style-1", name: "Neon Parti" },
-    { id: "bubble-style-2", name: "Okyanus Derinliği" },
-    { id: "bubble-style-3", name: "Gün Batımı" },
-    { id: "bubble-style-4", name: "Orman Esintisi" },
-    { id: "bubble-style-5", name: "Kozmik Toz" },
+    { id: "avatar-bubble-style-1", name: "Neon Parti" },
+    { id: "avatar-bubble-style-2", name: "Okyanus" },
+    { id: "avatar-bubble-style-3", name: "Gün Batımı" },
+    { id: "avatar-bubble-style-4", name: "Orman" },
+    { id: "avatar-bubble-style-5", name: "Kozmik" },
+];
+
+const chatBubbleOptions = [
+    { id: "", name: "Yok" },
+    { id: "chat-bubble-style-1", name: "Ateşböceği" },
+    { id: "chat-bubble-style-2", name: "Dalga" },
+    { id: "chat-bubble-style-3", name: "Sakura" },
+    { id: "chat-bubble-style-4", name: "Nane" },
+    { id: "chat-bubble-style-5", name: "Lavanta" },
 ];
 
 
@@ -50,26 +59,25 @@ export default function ProfilePageClient() {
     const [username, setUsername] = useState(user?.displayName || "");
     const [newAvatar, setNewAvatar] = useState<string | null>(null);
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
-    const [selectedBubble, setSelectedBubble] = useState(userData?.selectedBubble || "");
+    const [selectedAvatarBubble, setSelectedAvatarBubble] = useState("");
+    const [selectedChatBubble, setSelectedChatBubble] = useState("");
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     
-    // Ses ayarları için state'ler
     const [isMonitoring, setIsMonitoring] = useState(false);
     const [isTogglingMic, setIsTogglingMic] = useState(false);
     const micTestStreamRef = useRef<MediaStream | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
 
 
-    // userData güncellendiğinde, state'i de güncelle
     useEffect(() => {
         if (userData) {
             setUsername(userData.username || "");
-            setSelectedBubble(userData.selectedBubble || "");
+            setSelectedAvatarBubble(userData.selectedAvatarBubble || "");
+            setSelectedChatBubble(userData.selectedChatBubble || "");
         }
     }, [userData]);
     
-    // Mikrofon dinleme özelliğinin temizlenmesi için useEffect
     useEffect(() => {
         return () => {
             if (micTestStreamRef.current) {
@@ -82,7 +90,7 @@ export default function ProfilePageClient() {
     }, []);
 
 
-    const hasChanges = username !== (user?.displayName || "") || newAvatar !== null || selectedBubble !== (userData?.selectedBubble || "");
+    const hasChanges = username !== (userData?.username || "") || newAvatar !== null || selectedAvatarBubble !== (userData?.selectedAvatarBubble || "") || selectedChatBubble !== (userData?.selectedChatBubble || "");
     
     const handleAvatarClick = () => {
         fileInputRef.current?.click();
@@ -96,16 +104,14 @@ export default function ProfilePageClient() {
                 return;
             }
             const reader = new FileReader();
-            reader.onload = () => {
-                setImageToCrop(reader.result as string);
-            };
+            reader.onload = () => setImageToCrop(reader.result as string);
             reader.readAsDataURL(file);
         }
     };
     
     const handleCropComplete = (croppedDataUrl: string) => {
         setNewAvatar(croppedDataUrl);
-        setImageToCrop(null); // Close the dialog
+        setImageToCrop(null); 
     };
 
     const handleSaveChanges = async () => {
@@ -114,43 +120,41 @@ export default function ProfilePageClient() {
         setIsSaving(true);
         try {
             const updates: { [key: string]: any } = {};
-            let finalPhotoURL = user.photoURL;
+            let authUpdates: { displayName?: string, photoURL?: string } = {};
     
-            // Eğer yeni bir avatar seçilmişse, Storage'a yükle
             if (newAvatar) {
                 const storageRef = ref(storage, `avatars/${user.uid}`);
                 const snapshot = await uploadString(storageRef, newAvatar, 'data_url');
-                finalPhotoURL = await getDownloadURL(snapshot.ref);
+                const finalPhotoURL = await getDownloadURL(snapshot.ref);
                 updates.photoURL = finalPhotoURL;
+                authUpdates.photoURL = finalPhotoURL;
             }
     
-            // Değişen diğer alanları güncelleme nesnesine ekle
-            if (username !== user.displayName) {
+            if (username !== userData?.username) {
                 updates.username = username;
+                authUpdates.displayName = username;
             }
-            if (selectedBubble !== userData?.selectedBubble) {
-                updates.selectedBubble = selectedBubble;
+            if (selectedAvatarBubble !== userData?.selectedAvatarBubble) {
+                updates.selectedAvatarBubble = selectedAvatarBubble;
+            }
+            if (selectedChatBubble !== userData?.selectedChatBubble) {
+                updates.selectedChatBubble = selectedChatBubble;
             }
     
-            // Firestore'daki kullanıcı belgesini güncelle
             if (Object.keys(updates).length > 0) {
                 const userDocRef = doc(db, 'users', user.uid);
                 await updateDoc(userDocRef, updates);
             }
     
-            // Firebase Auth profilini güncelle
-            if (username !== user.displayName || finalPhotoURL !== user.photoURL) {
-                await updateProfile(auth.currentUser, {
-                    displayName: username,
-                    photoURL: finalPhotoURL,
-                });
+            if (Object.keys(authUpdates).length > 0) {
+                await updateProfile(auth.currentUser, authUpdates);
             }
     
             toast({
                 title: "Başarılı!",
                 description: "Profiliniz başarıyla güncellendi.",
             });
-            setNewAvatar(null); // Değişiklik durumunu sıfırla
+            setNewAvatar(null); 
     
         } catch (error: any) {
             toast({
@@ -195,7 +199,7 @@ export default function ProfilePageClient() {
     };
 
     if (loading || !user) {
-        return null; // or a loading skeleton
+        return null;
     }
 
     const isAdmin = userData?.role === 'admin';
@@ -228,7 +232,7 @@ export default function ProfilePageClient() {
                         </Button>
                     </div>
                     <div className="flex items-center gap-2 mt-4">
-                        <CardTitle className="text-3xl font-bold">{user.displayName}</CardTitle>
+                        <CardTitle className="text-3xl font-bold">{userData?.username || user.displayName}</CardTitle>
                         {isAdmin && (
                             <TooltipProvider>
                                 <Tooltip>
@@ -268,13 +272,11 @@ export default function ProfilePageClient() {
                                     <Sun className="mb-2 h-6 w-6" />
                                     <span className="text-xs font-bold">Aydınlık</span>
                                     </Label>
-
                                     <Label htmlFor="dark-theme" className="flex flex-col items-center justify-center rounded-lg border-2 bg-card p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
                                     <RadioGroupItem value="dark" id="dark-theme" className="sr-only" />
                                     <Moon className="mb-2 h-6 w-6" />
                                     <span className="text-xs font-bold">Karanlık</span>
                                     </Label>
-                                    
                                     <Label htmlFor="system-theme" className="flex flex-col items-center justify-center rounded-lg border-2 bg-card p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
                                     <RadioGroupItem value="system" id="system-theme" className="sr-only" />
                                     <Laptop className="mb-2 h-6 w-6" />
@@ -283,28 +285,59 @@ export default function ProfilePageClient() {
                                 </RadioGroup>
                             </AccordionContent>
                         </AccordionItem>
-                         <AccordionItem value="bubbles">
+                         <AccordionItem value="avatar-bubbles">
                             <AccordionTrigger>
                                 <div className="flex items-center gap-3">
                                     <Sparkles className="h-5 w-5 text-muted-foreground" />
-                                    <span className="font-semibold">Sohbet Baloncuğu</span>
+                                    <span className="font-semibold">Avatar Animasyonu</span>
                                 </div>
                             </AccordionTrigger>
                             <AccordionContent>
                                <div className="grid grid-cols-3 gap-2 pt-2">
-                                 {bubbleOptions.map(option => (
+                                 {avatarBubbleOptions.map(option => (
                                     <div 
                                         key={option.id}
-                                        onClick={() => setSelectedBubble(option.id)}
+                                        onClick={() => setSelectedAvatarBubble(option.id)}
                                         className={cn(
                                             "flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer p-2 aspect-square hover:bg-accent",
-                                            selectedBubble === option.id ? "border-primary" : ""
+                                            selectedAvatarBubble === option.id ? "border-primary" : ""
                                         )}
                                     >
                                         <div className="relative h-12 w-12 bg-muted rounded-full">
                                             {option.id !== "" && (
                                                 <div className={`bubble-wrapper ${option.id}`}>
-                                                     {Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}
+                                                     {Array.from({ length: 3 }).map((_, i) => <div key={i} className="bubble floating" />)}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <span className="text-xs font-bold text-center">{option.name}</span>
+                                    </div>
+                                 ))}
+                               </div>
+                            </AccordionContent>
+                        </AccordionItem>
+                         <AccordionItem value="chat-bubbles">
+                            <AccordionTrigger>
+                                <div className="flex items-center gap-3">
+                                    <MessageCircle className="h-5 w-5 text-muted-foreground" />
+                                    <span className="font-semibold">Sohbet Mesajı Efekti</span>
+                                </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                               <div className="grid grid-cols-3 gap-2 pt-2">
+                                 {chatBubbleOptions.map(option => (
+                                    <div 
+                                        key={option.id}
+                                        onClick={() => setSelectedChatBubble(option.id)}
+                                        className={cn(
+                                            "flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer p-2 aspect-square hover:bg-accent",
+                                            selectedChatBubble === option.id ? "border-primary" : ""
+                                        )}
+                                    >
+                                        <div className="relative h-12 w-12 bg-muted rounded-full">
+                                            {option.id !== "" && (
+                                                <div className={`chat-bubble-wrapper ${option.id}`}>
+                                                     {Array.from({ length: 2 }).map((_, i) => <div key={i} className="bubble glowing" />)}
                                                 </div>
                                             )}
                                         </div>
@@ -376,5 +409,3 @@ export default function ProfilePageClient() {
         </>
     );
 }
-
-    

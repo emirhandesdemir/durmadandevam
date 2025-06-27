@@ -58,55 +58,87 @@
   }
 }
 
-/* Chat Bubble Styles */
+/* --- Bubble Styles --- */
 @layer components {
+  /* Common Wrapper for Bubbles */
   .bubble-wrapper {
     @apply absolute -inset-2 pointer-events-none;
   }
+  .chat-bubble-wrapper {
+    @apply absolute -inset-1 pointer-events-none;
+  }
   .bubble {
     @apply absolute rounded-full;
-    animation: float 6s ease-in-out infinite;
   }
 
-  /* Bubble Animation */
+  /* --- Animations --- */
+
+  /* Floating animation for Avatars */
   @keyframes float {
     0% { transform: translateY(0px) scale(1); opacity: 0.7; }
     50% { transform: translateY(-20px) scale(1.1); opacity: 1; }
     100% { transform: translateY(0px) scale(1); opacity: 0.7; }
   }
 
-  /* Style 1: Neon Party */
-  .bubble-style-1 .bubble:nth-child(1) { @apply bg-fuchsia-500 w-3 h-3 top-[10%] left-[85%]; animation-delay: 0s; }
-  .bubble-style-1 .bubble:nth-child(2) { @apply bg-cyan-400 w-4 h-4 top-[70%] left-[5%]; animation-delay: 1.5s; }
-  .bubble-style-1 .bubble:nth-child(3) { @apply bg-lime-400 w-2 h-2 top-[80%] left-[90%]; animation-delay: 3s; }
-  .bubble-style-1 .bubble:nth-child(4) { @apply bg-rose-500 w-3 h-3 top-[30%] left-[10%]; animation-delay: 4.5s; }
-  .bubble-style-1 .bubble:nth-child(5) { @apply bg-orange-400 w-2 h-2 top-[5%] left-[20%]; animation-delay: 2s; }
+  /* Glowing animation for Chat Messages */
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 2px 0px var(--glow-color); opacity: 0.6; }
+    50% { box-shadow: 0 0 8px 2px var(--glow-color); opacity: 1; }
+  }
+  
+  .bubble.floating {
+    animation: float 6s ease-in-out infinite;
+  }
 
-  /* Style 2: Ocean Deep */
-  .bubble-style-2 .bubble:nth-child(1) { @apply bg-blue-500 w-4 h-4 top-[5%] left-[15%]; animation-delay: 0s; }
-  .bubble-style-2 .bubble:nth-child(2) { @apply bg-teal-400 w-3 h-3 top-[65%] left-[85%]; animation-delay: 1s; }
-  .bubble-style-2 .bubble:nth-child(3) { @apply bg-sky-300 w-2 h-2 top-[85%] left-[25%]; animation-delay: 2s; }
-  .bubble-style-2 .bubble:nth-child(4) { @apply bg-indigo-400 w-4 h-4 top-[30%] left-[70%]; animation-delay: 3s; }
-  .bubble-style-2 .bubble:nth-child(5) { @apply bg-cyan-200 w-2 h-2 top-[50%] left-[5%]; animation-delay: 4s; }
+  .bubble.glowing {
+     animation: pulse-glow 4s ease-in-out infinite;
+  }
 
-  /* Style 3: Sunset Glow */
-  .bubble-style-3 .bubble:nth-child(1) { @apply bg-red-500 w-3 h-3 top-[80%] left-[80%]; animation-delay: 0s; }
-  .bubble-style-3 .bubble:nth-child(2) { @apply bg-orange-500 w-4 h-4 top-[15%] left-[5%]; animation-delay: 0.5s; }
-  .bubble-style-3 .bubble:nth-child(3) { @apply bg-amber-400 w-2 h-2 top-[50%] left-[90%]; animation-delay: 1s; }
-  .bubble-style-3 .bubble:nth-child(4) { @apply bg-yellow-300 w-3 h-3 top-[85%] left-[20%]; animation-delay: 1.5s; }
-  .bubble-style-3 .bubble:nth-child(5) { @apply bg-pink-400 w-2 h-2 top-[5%] left-[60%]; animation-delay: 2s; }
+  /* --- Style Definitions --- */
 
-  /* Style 4: Forest Whisper */
-  .bubble-style-4 .bubble:nth-child(1) { @apply bg-green-600 w-3 h-3 top-[20%] left-[5%]; animation-delay: 0s; }
-  .bubble-style-4 .bubble:nth-child(2) { @apply bg-emerald-500 w-4 h-4 top-[75%] left-[75%]; animation-delay: 1.2s; }
-  .bubble-style-4 .bubble:nth-child(3) { @apply bg-lime-500 w-2 h-2 top-[85%] left-[10%]; animation-delay: 2.4s; }
-  .bubble-style-4 .bubble:nth-child(4) { @apply bg-teal-400 w-3 h-3 top-[5%] left-[80%]; animation-delay: 3.6s; }
-  .bubble-style-4 .bubble:nth-child(5) { @apply bg-green-300 w-2 h-2 top-[50%] left-[40%]; animation-delay: 4.8s; }
+  /* Avatar Bubble Style 1: Neon Party */
+  .avatar-bubble-style-1 .bubble:nth-child(1) { --glow-color: hsl(283, 89%, 66%); @apply bg-fuchsia-500 w-3 h-3 top-[10%] left-[85%]; animation-delay: 0s; }
+  .avatar-bubble-style-1 .bubble:nth-child(2) { --glow-color: hsl(175, 84%, 60%); @apply bg-cyan-400 w-4 h-4 top-[70%] left-[5%]; animation-delay: 1.5s; }
+  .avatar-bubble-style-1 .bubble:nth-child(3) { --glow-color: hsl(80, 89%, 63%); @apply bg-lime-400 w-2 h-2 top-[80%] left-[90%]; animation-delay: 3s; }
 
-  /* Style 5: Cosmic Dust */
-  .bubble-style-5 .bubble:nth-child(1) { @apply bg-indigo-600 w-3 h-3 top-[50%] left-[5%]; animation-delay: 0s; }
-  .bubble-style-5 .bubble:nth-child(2) { @apply bg-purple-500 w-4 h-4 top-[10%] left-[90%]; animation-delay: 1s; }
-  .bubble-style-5 .bubble:nth-child(3) { @apply bg-slate-400 w-2 h-2 top-[90%] left-[50%]; animation-delay: 2s; }
-  .bubble-style-5 .bubble:nth-child(4) { @apply bg-violet-400 w-3 h-3 top-[80%] left-[20%]; animation-delay: 3s; }
-  .bubble-style-5 .bubble:nth-child(5) { @apply bg-blue-300 w-2 h-2 top-[20%] left-[30%]; animation-delay: 4s; }
+  /* Avatar Bubble Style 2: Ocean Deep */
+  .avatar-bubble-style-2 .bubble:nth-child(1) { --glow-color: hsl(220, 89%, 66%); @apply bg-blue-500 w-4 h-4 top-[5%] left-[15%]; animation-delay: 0s; }
+  .avatar-bubble-style-2 .bubble:nth-child(2) { --glow-color: hsl(164, 76%, 53%); @apply bg-teal-400 w-3 h-3 top-[65%] left-[85%]; animation-delay: 1s; }
+  .avatar-bubble-style-2 .bubble:nth-child(3) { --glow-color: hsl(197, 85%, 69%); @apply bg-sky-300 w-2 h-2 top-[85%] left-[25%]; animation-delay: 2s; }
+
+  /* Avatar Bubble Style 3: Sunset Glow */
+  .avatar-bubble-style-3 .bubble:nth-child(1) { --glow-color: hsl(0, 89%, 66%); @apply bg-red-500 w-3 h-3 top-[80%] left-[80%]; animation-delay: 0s; }
+  .avatar-bubble-style-3 .bubble:nth-child(2) { --glow-color: hsl(24, 95%, 53%); @apply bg-orange-500 w-4 h-4 top-[15%] left-[5%]; animation-delay: 0.5s; }
+  .avatar-bubble-style-3 .bubble:nth-child(3) { --glow-color: hsl(45, 93%, 62%); @apply bg-amber-400 w-2 h-2 top-[50%] left-[90%]; animation-delay: 1s; }
+
+  /* Avatar Bubble Style 4: Forest Whisper */
+  .avatar-bubble-style-4 .bubble:nth-child(1) { --glow-color: hsl(129, 64%, 44%); @apply bg-green-600 w-3 h-3 top-[20%] left-[5%]; animation-delay: 0s; }
+  .avatar-bubble-style-4 .bubble:nth-child(2) { --glow-color: hsl(150, 68%, 51%); @apply bg-emerald-500 w-4 h-4 top-[75%] left-[75%]; animation-delay: 1.2s; }
+  .avatar-bubble-style-4 .bubble:nth-child(3) { --glow-color: hsl(75, 80%, 55%); @apply bg-lime-500 w-2 h-2 top-[85%] left-[10%]; animation-delay: 2.4s; }
+
+  /* Avatar Bubble Style 5: Cosmic Dust */
+  .avatar-bubble-style-5 .bubble:nth-child(1) { --glow-color: hsl(231, 59%, 52%); @apply bg-indigo-600 w-3 h-3 top-[50%] left-[5%]; animation-delay: 0s; }
+  .avatar-bubble-style-5 .bubble:nth-child(2) { --glow-color: hsl(271, 76%, 53%); @apply bg-purple-500 w-4 h-4 top-[10%] left-[90%]; animation-delay: 1s; }
+  .avatar-bubble-style-5 .bubble:nth-child(3) { --glow-color: hsl(248, 49%, 60%); @apply bg-violet-400 w-3 h-3 top-[80%] left-[20%]; animation-delay: 3s; }
+  
+
+  /* Chat Bubble Style 1: Gentle Fireflies */
+  .chat-bubble-style-1 .bubble:nth-child(1) { --glow-color: hsl(54, 100%, 50%); @apply bg-yellow-300 w-2 h-2 top-[15%] left-[90%]; animation-delay: 0s; }
+  .chat-bubble-style-1 .bubble:nth-child(2) { --glow-color: hsl(54, 100%, 50%); @apply bg-yellow-300 w-1 h-1 top-[80%] left-[10%]; animation-delay: 1s; }
+
+  /* Chat Bubble Style 2: Calm Waves */
+  .chat-bubble-style-2 .bubble:nth-child(1) { --glow-color: hsl(210, 100%, 75%); @apply bg-blue-300 w-2 h-2 top-[85%] left-[80%]; animation-delay: 0s; }
+  .chat-bubble-style-2 .bubble:nth-child(2) { --glow-color: hsl(210, 100%, 75%); @apply bg-blue-300 w-1 h-1 top-[20%] left-[5%]; animation-delay: 1.5s; }
+
+  /* Chat Bubble Style 3: Sakura Petals */
+  .chat-bubble-style-3 .bubble:nth-child(1) { --glow-color: hsl(330, 100%, 85%); @apply bg-pink-300 w-2 h-2 top-[5%] left-[50%]; animation-delay: 0s; }
+  .chat-bubble-style-3 .bubble:nth-child(2) { --glow-color: hsl(330, 100%, 85%); @apply bg-pink-300 w-2 h-2 top-[75%] left-[25%]; animation-delay: 2s; }
+  
+  /* Chat Bubble Style 4: Minty Fresh */
+  .chat-bubble-style-4 .bubble:nth-child(1) { --glow-color: hsl(150, 100%, 75%); @apply bg-emerald-200 w-1 h-1 top-[50%] left-[95%]; animation-delay: 0s; }
+  .chat-bubble-style-4 .bubble:nth-child(2) { --glow-color: hsl(150, 100%, 75%); @apply bg-emerald-200 w-2 h-2 top-[25%] left-[30%]; animation-delay: 0.8s; }
+  
+  /* Chat Bubble Style 5: Lavender Haze */
+  .chat-bubble-style-5 .bubble:nth-child(1) { --glow-color: hsl(260, 100%, 90%); @apply bg-violet-200 w-2 h-2 top-[90%] left-[50%]; animation-delay: 0s; }
+  .chat-bubble-style-5 .bubble:nth-child(2) { --glow-color: hsl(260, 100%, 90%); @apply bg-violet-200 w-1 h-1 top-[10%] left-[20%]; animation-delay: 1.2s; }
 }

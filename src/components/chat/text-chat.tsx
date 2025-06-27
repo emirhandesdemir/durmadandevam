@@ -18,8 +18,7 @@ export interface Message {
   text: string;
   type?: 'system' | 'game';
   createdAt: Timestamp;
-  // Yeni: Mesaj verisine baloncuk stili eklendi.
-  selectedBubble?: string;
+  selectedChatBubble?: string; 
 }
 
 interface TextChatProps {
@@ -61,10 +60,17 @@ export default function TextChat({ messages, loading }: TextChatProps) {
         const isCurrentUser = msg.uid === currentUser.uid;
         return (
           <div key={msg.id} className={cn("flex items-end gap-3 w-full animate-in fade-in slide-in-from-bottom-4 duration-500", isCurrentUser && "flex-row-reverse")}>
-            <Avatar className="h-8 w-8">
-                <AvatarImage src={msg.photoURL || undefined} />
-                <AvatarFallback>{msg.username?.charAt(0).toUpperCase()}</AvatarFallback>
-            </Avatar>
+            <div className="relative">
+                 {msg.selectedChatBubble && (
+                    <div className={`chat-bubble-wrapper ${msg.selectedChatBubble}`}>
+                        {Array.from({ length: 2 }).map((_, i) => <div key={i} className="bubble glowing" />)}
+                    </div>
+                )}
+                <Avatar className="h-8 w-8">
+                    <AvatarImage src={msg.photoURL || undefined} />
+                    <AvatarFallback>{msg.username?.charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
+            </div>
             <div className={cn("flex flex-col gap-1 max-w-[70%]", isCurrentUser && "items-end")}>
                 <div className={cn("flex items-center gap-2", isCurrentUser && "flex-row-reverse")}>
                    <p className="font-bold text-sm text-white">{isCurrentUser ? "Siz" : msg.username}</p>
@@ -72,15 +78,8 @@ export default function TextChat({ messages, loading }: TextChatProps) {
                      {msg.createdAt ? format(msg.createdAt.toDate(), 'p', { locale: tr }) : ''}
                    </p>
                 </div>
-                <div className="relative">
-                    {msg.selectedBubble && (
-                        <div className={`bubble-wrapper ${msg.selectedBubble}`}>
-                            {Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}
-                        </div>
-                    )}
-                    <div className={cn("p-3 rounded-2xl", isCurrentUser ? "bg-primary text-primary-foreground rounded-br-lg" : "bg-gray-800 text-gray-200 rounded-bl-lg")}>
-                        <p className="text-sm break-words whitespace-pre-wrap">{msg.text}</p>
-                    </div>
+                <div className={cn("p-3 rounded-2xl", isCurrentUser ? "bg-primary text-primary-foreground rounded-br-lg" : "bg-gray-800 text-gray-200 rounded-bl-lg")}>
+                    <p className="text-sm break-words whitespace-pre-wrap">{msg.text}</p>
                 </div>
             </div>
           </div>

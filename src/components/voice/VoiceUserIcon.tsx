@@ -99,9 +99,9 @@ export default function VoiceUserIcon({
           "relative", 
           size === 'lg' ? "h-24 w-24" : "w-full"
         )}>
-          {participant.selectedBubble && (
-            <div className={`bubble-wrapper ${participant.selectedBubble}`}>
-                {Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}
+          {participant.selectedAvatarBubble && (
+            <div className={`bubble-wrapper ${participant.selectedAvatarBubble}`}>
+                {Array.from({ length: 3 }).map((_, i) => <div key={i} className="bubble floating" />)}
             </div>
           )}
           <Avatar
@@ -144,7 +144,6 @@ export default function VoiceUserIcon({
     </div>
   );
 
-  // Eğer kullanıcı yöneticiyse ve bu ikon başkasına aitse, menüyü göster
   if (isHost && !isSelf) {
     return (
       <DropdownMenu>
@@ -167,6 +166,5 @@ export default function VoiceUserIcon({
     );
   }
 
-  // Yönetici olmayanlar veya kendi ikonu için sadece avatarı göster
   return <div>{avatar}</div>;
 }
