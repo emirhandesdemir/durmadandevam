@@ -204,10 +204,10 @@ export default function NewPostForm() {
                     <Sparkles className="h-5 w-5 text-primary" />
                     <h3 className="font-semibold text-foreground">Yapay Zeka ile Stil Ver</h3>
                 </div>
-                <p className="text-xs text-muted-foreground pl-8">
+                <p className="text-xs text-muted-foreground">
                     Resminize yaratıcı bir dokunuş ekleyin. "Van Gogh tarzı" veya "çizgi film yap" gibi komutlar deneyin.
                 </p>
-                <div className="flex gap-2 pt-1 pl-8">
+                <div className="flex gap-2 pt-1">
                     <Input
                         id="style-prompt"
                         value={stylePrompt}
