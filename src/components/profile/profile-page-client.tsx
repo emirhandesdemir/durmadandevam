@@ -35,16 +35,17 @@ import { toggleProfilePrivacy } from "@/lib/actions/followActions";
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
-    { id: "bubble-style-1", name: "Neon Parti" },
+    { id: "bubble-style-1", name: "Neon" },
     { id: "bubble-style-2", name: "Okyanus" },
     { id: "bubble-style-3", name: "Gün Batımı" },
     { id: "bubble-style-4", name: "Orman" },
-    { id: "bubble-style-5", name: "Kozmik" },
+    { id: "bubble-style-fire", name: "Alevli" },
 ];
 
 const avatarFrameOptions = [
     { id: "", name: "Yok" },
     { id: "avatar-frame-angel", name: "Melek Kanadı" },
+    { id: "avatar-frame-devil", name: "Şeytan Kanadı" },
     { id: "avatar-frame-snake", name: "Yılan" },
 ];
 
