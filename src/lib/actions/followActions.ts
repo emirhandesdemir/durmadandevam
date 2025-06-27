@@ -45,16 +45,19 @@ export async function followUser(currentUserId: string, targetUserId: string, cu
         });
       }
     } else {
-      transaction.update(currentUserRef, {
+      const batch = writeBatch(db);
+      batch.update(currentUserRef, {
         following: arrayUnion(targetUserId),
       });
-      transaction.update(targetUserRef, {
+      batch.update(targetUserRef, {
         followers: arrayUnion(currentUserId),
       });
+      await batch.commit();
+
        await createNotification({
             recipientId: targetUserId,
             senderId: currentUserId,
-            senderUsername: currentUserInfo.username,
+            senderUsername: currentUserInfo.username || 'Biri',
             senderAvatar: currentUserInfo.photoURL,
             type: 'follow',
         });
@@ -74,7 +77,7 @@ export async function unfollowUser(currentUserId: string, targetUserId: string) 
     following: arrayRemove(targetUserId),
   });
   batch.update(targetUserRef, {
-    followers: arrayRemove(targetUserId),
+    followers: arrayRemove(currentUserId),
   });
 
   await batch.commit();
@@ -113,7 +116,7 @@ export async function handleFollowRequest(currentUserId: string, requesterId: st
       await createNotification({
             recipientId: requesterId,
             senderId: currentUserId,
-            senderUsername: currentUserData.username,
+            senderUsername: currentUserData.username || 'Biri',
             senderAvatar: currentUserData.photoURL,
             type: 'follow_accept', // A new type for accepted request
         });
@@ -122,4 +125,5 @@ export async function handleFollowRequest(currentUserId: string, requesterId: st
 
   revalidatePath('/requests');
   revalidatePath(`/profile/${requesterId}`);
+  revalidatePath(`/profile/${currentUserId}`);
 }
