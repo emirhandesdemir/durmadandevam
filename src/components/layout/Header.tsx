@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Send, Users } from "lucide-react";
+import { Send, Users, PlusCircle } from "lucide-react";
 
 /**
  * Ana uygulama için üst navigasyon çubuğu (Header).
@@ -22,6 +22,12 @@ export default function Header() {
                     </span>
                 </Link>
                 <div className="flex items-center gap-2">
+                     <Button asChild variant="ghost" size="icon" className="rounded-full">
+                        <Link href="/create-post">
+                            <PlusCircle className="h-6 w-6" />
+                            <span className="sr-only">Yeni Gönderi</span>
+                        </Link>
+                    </Button>
                     <Button variant="ghost" size="icon" className="rounded-full">
                         <Send className="h-5 w-5" />
                         <span className="sr-only">Mesajlar</span>

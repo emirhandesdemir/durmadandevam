@@ -14,8 +14,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Image as ImageIcon, Send, Loader2, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Image as ImageIcon, Send, Loader2, X, Sparkles } from "lucide-react";
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
+import { applyImageFilter } from "@/lib/actions/imageActions";
 
 export default function NewPostForm() {
   const router = useRouter();
@@ -27,13 +29,18 @@ export default function NewPostForm() {
   const [croppedImage, setCroppedImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // New states for AI styling
+  const [stylePrompt, setStylePrompt] = useState("");
+  const [isStyling, setIsStyling] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-          toast({ variant: "destructive", title: "Dosya Çok Büyük", description: "Resim boyutu 5MB'dan büyük olamaz." });
+      // Increase file size limit to 10MB
+      if (file.size > 10 * 1024 * 1024) { 
+          toast({ variant: "destructive", title: "Dosya Çok Büyük", description: "Resim boyutu 10MB'dan büyük olamaz." });
           return;
       }
       const reader = new FileReader();
@@ -59,6 +66,32 @@ export default function NewPostForm() {
     setImageToCrop(null);
   }
 
+  // New function to handle AI image styling
+  const handleApplyStyle = async () => {
+    if (!croppedImage || !stylePrompt.trim()) {
+        toast({ variant: 'destructive', description: "Lütfen stil için bir komut girin."});
+        return;
+    }
+    setIsStyling(true);
+    try {
+        const result = await applyImageFilter({
+            photoDataUri: croppedImage,
+            style: stylePrompt,
+        });
+        if (result.success && result.data?.styledPhotoDataUri) {
+            setCroppedImage(result.data.styledPhotoDataUri);
+            toast({ title: "Stil Uygulandı!", description: "Yapay zeka filtre başarıyla uygulandı."});
+        } else {
+            throw new Error(result.error || "Stil uygulanamadı.");
+        }
+    } catch (error: any) {
+        console.error("AI styling error:", error);
+        toast({ variant: 'destructive', title: "Hata", description: error.message || "Yapay zeka stili uygulanırken bir sorun oluştu."});
+    } finally {
+        setIsStyling(false);
+    }
+  }
+
   const handleShare = async () => {
     if (!user || !userData) {
       toast({ variant: 'destructive', description: 'Gönderi paylaşmak için giriş yapmalısınız.' });
@@ -74,21 +107,19 @@ export default function NewPostForm() {
     try {
         let imageUrl = "";
 
-        // Adım 1: Resmi yükle (varsa)
         if (croppedImage) {
             const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}_post.jpg`);
             const snapshot = await uploadString(imageRef, croppedImage, 'data_url');
             imageUrl = await getDownloadURL(snapshot.ref);
         }
 
-        // Adım 2: Gönderi belgesini Firestore'a oluştur
         await addDoc(collection(db, 'posts'), {
             uid: user.uid,
             username: userData.username || user.displayName || 'Anonim Kullanıcı',
             userAvatar: userData.photoURL || user.photoURL,
             userRole: userData.role || 'user',
             text: text,
-            imageUrl: imageUrl, // Resim yoksa boş string olacak
+            imageUrl: imageUrl, 
             createdAt: serverTimestamp(),
             likes: [],
             likeCount: 0,
@@ -106,7 +137,6 @@ export default function NewPostForm() {
         let title = "Bir Hata Oluştu";
         let description = "Gönderiniz paylaşılamadı. Lütfen tekrar deneyin.";
 
-        // Firebase hatalarını daha anlaşılır hale getir
         if (error instanceof FirebaseError) {
             switch (error.code) {
                 case 'storage/unauthorized':
@@ -117,7 +147,7 @@ export default function NewPostForm() {
                     title = 'İşlem İptal Edildi';
                     description = 'Resim yükleme işlemi ağ sorunu nedeniyle iptal edildi.';
                     break;
-                case 'permission-denied': // Bu Firestore hatasıdır
+                case 'permission-denied':
                     title = 'Yetki Hatası';
                     description = 'Veritabanına yazma izniniz yok. Lütfen Firestore güvenlik kurallarınızı kontrol edin.';
                     break;
@@ -135,12 +165,9 @@ export default function NewPostForm() {
         });
 
     } finally {
-        // Bu blok, işlem başarılı da olsa başarısız da olsa çalışır.
-        // Bu sayede yükleme göstergesi asla takılı kalmaz.
         setIsSubmitting(false);
     }
   };
-
 
   return (
     <>
@@ -157,7 +184,7 @@ export default function NewPostForm() {
               placeholder="Aklında ne var? (#etiket) veya (@kullanıcı) bahset..."
               className="min-h-[60px] flex-1 resize-none border-0 bg-transparent p-0 text-base placeholder:text-muted-foreground/80 focus-visible:ring-0"
               rows={2}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isStyling}
             />
           </div>
           {croppedImage && (
@@ -171,10 +198,32 @@ export default function NewPostForm() {
                   variant="destructive" 
                   className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/50 hover:bg-black/70 border-0"
                   onClick={removeImage}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isStyling}
                 >
                   <X className="h-4 w-4" />
                 </Button>
+              </div>
+
+              {/* AI Styling Section */}
+              <div className="space-y-2 rounded-lg border bg-muted/50 p-3">
+                <label htmlFor="style-prompt" className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    Yapay Zeka ile Stil Ver
+                </label>
+                <div className="flex gap-2">
+                    <Input
+                        id="style-prompt"
+                        value={stylePrompt}
+                        onChange={(e) => setStylePrompt(e.target.value)}
+                        placeholder="Örn: bir sulu boya tablosu yap"
+                        className="flex-1"
+                        disabled={isStyling || isSubmitting}
+                    />
+                    <Button onClick={handleApplyStyle} disabled={isStyling || isSubmitting || !stylePrompt.trim()}>
+                        {isStyling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                        Uygula
+                    </Button>
+                </div>
               </div>
             </div>
           )}
@@ -188,7 +237,7 @@ export default function NewPostForm() {
             size="icon"
             className="rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
             onClick={handleImageClick}
-            disabled={isSubmitting || !!croppedImage}
+            disabled={isSubmitting || !!croppedImage || isStyling}
           >
             <ImageIcon className="h-5 w-5" />
             <span className="sr-only">Resim Ekle</span>
@@ -197,7 +246,7 @@ export default function NewPostForm() {
           <Button 
             className="rounded-full font-semibold px-4"
             onClick={handleShare}
-            disabled={isSubmitting || (!text.trim() && !croppedImage)}
+            disabled={isSubmitting || (!text.trim() && !croppedImage) || isStyling}
           >
             {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
             <span className="ml-2 hidden sm:inline">Paylaş</span>
