@@ -85,47 +85,41 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (!roomId) {
             if (activeRoom) {
-                // We navigated away from the room, but let the persistent bar handle leaving.
+                cleanupConnections(true);
             }
             return;
         }
 
-        // If we are already connected to a different room, leave it first.
         if(activeRoom && activeRoom.id !== roomId) {
             leaveRoom(true);
         }
 
         if (!activeRoom || activeRoom.id !== roomId) {
              const roomRef = doc(db, 'rooms', roomId);
-             getDoc(roomRef).then(docSnap => {
+             const unsub = onSnapshot(roomRef, (docSnap) => {
                 if (docSnap.exists()) {
                     setActiveRoom({ id: docSnap.id, ...docSnap.data() } as Room);
+                } else {
+                    // Oda silinmiş veya artık mevcut değilse temizlik yap
+                    cleanupConnections(true);
                 }
             });
+             return () => unsub();
         }
 
-    }, [roomId, activeRoom, leaveRoom]);
+    }, [roomId, leaveRoom]);
     
-    // --- Katılımcı ve Sinyal Dinleyicileri ---
+    // --- Participant and Signal Listeners ---
     useEffect(() => {
-        if (!user || !activeRoom) {
-            return;
-        }
+        if (!user || !activeRoom) return;
         
         const currentRoomId = activeRoom.id;
-        console.log(`Setting up listeners for room: ${currentRoomId}`);
 
-        // Katılımcıları dinle
         const participantsUnsub = onSnapshot(collection(db, "rooms", currentRoomId, "voiceParticipants"), (snapshot) => {
             const fetchedParticipants = snapshot.docs.map(doc => doc.data() as VoiceParticipant);
             setParticipants(fetchedParticipants);
-            console.log("Updated participants:", fetchedParticipants);
-        }, (error) => {
-             console.error("Voice participants listener error:", error);
-             toast({ variant: "destructive", title: "Bağlantı Hatası", description: "Sesli sohbet durumu alınamadı." });
         });
         
-        // Sinyalleri dinle
         const signalsRef = collection(db, `rooms/${currentRoomId}/signals`);
         const q = query(signalsRef, where('to', '==', user.uid));
         
@@ -133,95 +127,37 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             snapshot.docChanges().forEach(async (change) => {
                 if (change.type === 'added') {
                     const signal = change.doc.data();
-                    console.log("Received signal:", signal.type, "from:", signal.from);
                     handleSignal(signal.from, signal.type, signal.data);
                     try {
                         await deleteDoc(change.doc.ref);
-                    } catch (e) {
-                        console.error("Sinyal silinirken hata:", e);
-                    }
+                    } catch (e) { console.error("Error deleting signal:", e); }
                 }
             });
         });
 
         return () => {
-            console.log(`Cleaning up listeners for room: ${currentRoomId}`);
             participantsUnsub();
             signalsUnsub();
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user, activeRoom]);
-
-
-    // --- Peer Connection Yöneticisi ---
-    useEffect(() => {
-        if (!isConnected || !localStream || !user) return;
-        
-        const existingPeerIds = Object.keys(peerConnections.current);
-        const newParticipantIds = participants.map(p => p.uid).filter(uid => uid !== user.uid);
-
-        // Yeni katılımcılar için bağlantı kur
-        newParticipantIds.forEach(otherUid => {
-            if (!existingPeerIds.includes(otherUid)) {
-                // "Glare" (her iki tarafın da aynı anda başlatıcı olması) durumunu önlemek için,
-                // UID'si alfabetik olarak daha büyük olan kullanıcı bağlantıyı başlatır.
-                const isInitiator = user.uid > otherUid;
-                if (isInitiator) {
-                    console.log(`Initiating connection to ${otherUid}`);
-                    createPeerConnection(otherUid, true);
-                } else {
-                    console.log(`Waiting for offer from ${otherUid}`);
-                }
-            }
-        });
-
-        // Ayrılan katılımcılar için bağlantıları temizle
-        existingPeerIds.forEach(uid => {
-            if (!newParticipantIds.includes(uid)) {
-                console.log("Closing peer connection to:", uid);
-                peerConnections.current[uid]?.close();
-                delete peerConnections.current[uid];
-                setRemoteStreams(prev => {
-                    const newStreams = {...prev};
-                    delete newStreams[uid];
-                    return newStreams;
-                });
-            }
-        });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [participants, isConnected, localStream, user?.uid]);
-    
-    // Tarayıcı kapatıldığında/sayfadan ayrıldığında odadan ayrıl
-    useEffect(() => {
-        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-             if (isConnected && activeRoom && user) {
-                // Bu senkron bir işlemdir, bu nedenle async fonksiyonu çağırmak
-                // tamamlanacağını garanti etmez, ancak yapabileceğimizin en iyisidir.
-                leaveVoiceChat(activeRoom.id, user.uid);
-            }
-        };
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => {
-            window.removeEventListener('beforeunload', handleBeforeUnload);
-        };
-    }, [isConnected, activeRoom, user]);
 
 
     const sendSignal = async (to: string, type: string, data: any) => {
         if (!activeRoom || !user) return;
-        console.log("Sending signal:", type, "to:", to);
         const signalsRef = collection(db, `rooms/${activeRoom.id}/signals`);
         await addDoc(signalsRef, { to, from: user.uid, type, data, createdAt: serverTimestamp() });
     };
 
-    const createPeerConnection = (uid: string, isInitiator: boolean) => {
-        if (!localStream || !user) return null;
+    const createPeerConnection = useCallback((uid: string, isInitiator: boolean) => {
+        if (!user || !activeRoom) return null;
 
-        console.log(`Creating peer connection for ${uid}. Initiator: ${isInitiator}`);
+        console.log(`Creating peer connection for ${uid}. Initiator: ${isInitiator}. Local stream exists: ${!!localStream}`);
         const pc = new RTCPeerConnection(ICE_SERVERS);
         peerConnections.current[uid] = pc;
         
-        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+        if (localStream) {
+            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+        }
 
         pc.onicecandidate = event => {
             if (event.candidate) {
@@ -230,12 +166,10 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         };
 
         pc.ontrack = event => {
-            console.log("Received remote track from:", uid);
             setRemoteStreams(prev => ({ ...prev, [uid]: event.streams[0] }));
         };
 
         pc.onconnectionstatechange = () => {
-            console.log(`Peer connection state for ${uid}: ${pc.connectionState}`);
             if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected' || pc.connectionState === 'closed') {
                peerConnections.current[uid]?.close();
                delete peerConnections.current[uid];
@@ -255,9 +189,9 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 }).catch(e => console.error("Offer creation failed:", e));
         }
         return pc;
-    };
-    
-    const handleSignal = async (from: string, type: string, data: any) => {
+    }, [user, activeRoom, localStream]);
+
+    const handleSignal = useCallback(async (from: string, type: string, data: any) => {
         const pc = peerConnections.current[from] || createPeerConnection(from, false);
         if (!pc) return;
         
@@ -269,51 +203,82 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 if(pc.localDescription) await sendSignal(from, 'answer', pc.localDescription.toJSON());
             } else if (type === 'answer') {
                 await pc.setRemoteDescription(new RTCSessionDescription(data));
-            } else if (type === 'ice-candidate') {
-                 if (data && pc.remoteDescription) { // Only add candidates after remote description is set
-                    await pc.addIceCandidate(new RTCIceCandidate(data));
-                 }
+            } else if (type === 'ice-candidate' && pc.remoteDescription) {
+                 if (data) await pc.addIceCandidate(new RTCIceCandidate(data));
             }
         } catch (error) {
             console.error("Error handling signal:", type, error);
         }
-    };
+    }, [createPeerConnection]);
+
+    // --- Peer Connection Management ---
+    useEffect(() => {
+        if (!user || !activeRoom) return;
+        
+        const existingPeerIds = Object.keys(peerConnections.current);
+        const newParticipantIds = participants.map(p => p.uid).filter(uid => uid !== user.uid);
+
+        newParticipantIds.forEach(otherUid => {
+            if (!existingPeerIds.includes(otherUid)) {
+                const isInitiator = user.uid > otherUid;
+                if (isInitiator) {
+                    createPeerConnection(otherUid, true);
+                }
+            }
+        });
+
+        existingPeerIds.forEach(uid => {
+            if (!newParticipantIds.includes(uid)) {
+                peerConnections.current[uid]?.close();
+                delete peerConnections.current[uid];
+                setRemoteStreams(prev => {
+                    const newStreams = {...prev};
+                    delete newStreams[uid];
+                    return newStreams;
+                });
+            }
+        });
+    }, [participants, user, activeRoom, createPeerConnection]);
 
     const joinRoom = useCallback(async (roomToJoin: Room) => {
         if (!user || isConnected || isConnecting) return;
         
-        console.log("Attempting to join room:", roomToJoin.id);
         setIsConnecting(true);
-
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
             setLocalStream(stream);
 
-            const result = await joinVoiceChat(roomToJoin.id, {
+            await joinVoiceChat(roomToJoin.id, {
                 uid: user.uid, displayName: user.displayName, photoURL: user.photoURL,
             });
-
-            if (!result.success) {
-                throw new Error(result.error || 'Sesli sohbete katılırken bir hata oluştu.');
-            }
-            // setActiveRoom is now handled by the URL effect, but we can set it here for quicker UI response
-            setActiveRoom(roomToJoin); 
-            console.log("Successfully joined room server-side:", roomToJoin.id);
+            
+            // After joining, renegotiate with existing peers to send our new stream
+            Object.entries(peerConnections.current).forEach(([uid, pc]) => {
+                stream.getTracks().forEach(track => {
+                    if (!pc.getSenders().find(s => s.track === track)) {
+                       pc.addTrack(track, stream);
+                    }
+                });
+                const isInitiator = user.uid > uid;
+                if (isInitiator) {
+                    pc.createOffer()
+                        .then(offer => pc.setLocalDescription(offer))
+                        .then(() => {
+                            if(pc.localDescription) sendSignal(uid, 'offer', pc.localDescription.toJSON());
+                        }).catch(e => console.error(`Renegotiation offer to ${uid} failed:`, e));
+                }
+            });
 
         } catch (error: any) {
-            console.error("Could not join voice chat:", error);
             toast({ variant: "destructive", title: "Katılım Başarısız", description: error.message });
-            cleanupConnections(true);
+            cleanupConnections(false); // Don't clear room, just cleanup connections
         } finally {
             setIsConnecting(false);
         }
     }, [user, isConnected, isConnecting, toast, cleanupConnections]);
 
-
-    
     const toggleSelfMute = useCallback(async () => {
         if (!self || !activeRoom || !localStream) return;
-
         const audioTrack = localStream.getAudioTracks()[0];
         if (audioTrack) {
             const newMutedState = !self.isMuted;
