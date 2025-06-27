@@ -16,7 +16,6 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Image as ImageIcon, Send, Loader2, X, Sparkles } from "lucide-react";
-import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { applyImageFilter } from "@/lib/actions/imageActions";
 
 export default function NewPostForm() {
@@ -25,8 +24,7 @@ export default function NewPostForm() {
   const { toast } = useToast();
   
   const [text, setText] = useState("");
-  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
-  const [croppedImage, setCroppedImage] = useState<string | null>(null);
+  const [image, setImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // New states for AI styling
@@ -44,7 +42,9 @@ export default function NewPostForm() {
           return;
       }
       const reader = new FileReader();
-      reader.onload = () => setImageToCrop(reader.result as string);
+      reader.onload = () => {
+        setImage(reader.result as string);
+      };
       reader.readAsDataURL(file);
     }
   };
@@ -54,32 +54,26 @@ export default function NewPostForm() {
   };
 
   const removeImage = () => {
-      setImageToCrop(null);
-      setCroppedImage(null);
+      setImage(null);
       if(fileInputRef.current) {
           fileInputRef.current.value = "";
       }
   }
 
-  const handleCropComplete = (croppedDataUrl: string) => {
-    setCroppedImage(croppedDataUrl);
-    setImageToCrop(null);
-  }
-
   // New function to handle AI image styling
   const handleApplyStyle = async () => {
-    if (!croppedImage || !stylePrompt.trim()) {
+    if (!image || !stylePrompt.trim()) {
         toast({ variant: 'destructive', description: "Lütfen stil için bir komut girin."});
         return;
     }
     setIsStyling(true);
     try {
         const result = await applyImageFilter({
-            photoDataUri: croppedImage,
+            photoDataUri: image,
             style: stylePrompt,
         });
         if (result.success && result.data?.styledPhotoDataUri) {
-            setCroppedImage(result.data.styledPhotoDataUri);
+            setImage(result.data.styledPhotoDataUri);
             toast({ title: "Stil Uygulandı!", description: "Yapay zeka filtre başarıyla uygulandı."});
         } else {
             throw new Error(result.error || "Stil uygulanamadı.");
@@ -97,7 +91,7 @@ export default function NewPostForm() {
       toast({ variant: 'destructive', description: 'Gönderi paylaşmak için giriş yapmalısınız.' });
       return;
     }
-    if (!text.trim() && !croppedImage) {
+    if (!text.trim() && !image) {
       toast({ variant: 'destructive', description: 'Paylaşmak için bir metin yazın veya resim seçin.' });
       return;
     }
@@ -107,9 +101,9 @@ export default function NewPostForm() {
     try {
         let imageUrl = "";
 
-        if (croppedImage) {
+        if (image) {
             const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}_post.jpg`);
-            const snapshot = await uploadString(imageRef, croppedImage, 'data_url');
+            const snapshot = await uploadString(imageRef, image, 'data_url');
             imageUrl = await getDownloadURL(snapshot.ref);
         }
 
@@ -187,11 +181,11 @@ export default function NewPostForm() {
               disabled={isSubmitting || isStyling}
             />
           </div>
-          {croppedImage && (
+          {image && (
             <div className="ml-16 space-y-4">
               <div className="relative">
                 <div className="overflow-hidden rounded-xl border">
-                  <img src={croppedImage} alt="Önizleme" className="max-h-80 w-auto object-contain" />
+                  <img src={image} alt="Önizleme" className="max-h-80 w-auto object-contain" />
                 </div>
                 <Button 
                   size="icon" 
@@ -204,19 +198,22 @@ export default function NewPostForm() {
                 </Button>
               </div>
 
-              {/* AI Styling Section */}
-              <div className="space-y-2 rounded-lg border bg-muted/50 p-3">
-                <label htmlFor="style-prompt" className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    Yapay Zeka ile Stil Ver
-                </label>
-                <div className="flex gap-2">
+              {/* Redesigned AI Styling Section */}
+              <div className="space-y-3 rounded-xl border border-primary/20 bg-gradient-to-tr from-card to-muted/20 p-4 shadow-inner">
+                <div className="flex items-center gap-2.5">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    <h3 className="font-semibold text-foreground">Yapay Zeka ile Stil Ver</h3>
+                </div>
+                <p className="text-xs text-muted-foreground pl-8">
+                    Resminize yaratıcı bir dokunuş ekleyin. "Van Gogh tarzı" veya "çizgi film yap" gibi komutlar deneyin.
+                </p>
+                <div className="flex gap-2 pt-1 pl-8">
                     <Input
                         id="style-prompt"
                         value={stylePrompt}
                         onChange={(e) => setStylePrompt(e.target.value)}
                         placeholder="Örn: bir sulu boya tablosu yap"
-                        className="flex-1"
+                        className="flex-1 bg-background/50"
                         disabled={isStyling || isSubmitting}
                     />
                     <Button onClick={handleApplyStyle} disabled={isStyling || isSubmitting || !stylePrompt.trim()}>
@@ -237,7 +234,7 @@ export default function NewPostForm() {
             size="icon"
             className="rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
             onClick={handleImageClick}
-            disabled={isSubmitting || !!croppedImage || isStyling}
+            disabled={isSubmitting || !!image || isStyling}
           >
             <ImageIcon className="h-5 w-5" />
             <span className="sr-only">Resim Ekle</span>
@@ -246,20 +243,13 @@ export default function NewPostForm() {
           <Button 
             className="rounded-full font-semibold px-4"
             onClick={handleShare}
-            disabled={isSubmitting || (!text.trim() && !croppedImage) || isStyling}
+            disabled={isSubmitting || (!text.trim() && !image) || isStyling}
           >
             {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
             <span className="ml-2 hidden sm:inline">Paylaş</span>
           </Button>
         </div>
       </Card>
-      <ImageCropperDialog
-        isOpen={!!imageToCrop}
-        setIsOpen={(isOpen) => !isOpen && setImageToCrop(null)}
-        imageSrc={imageToCrop}
-        aspectRatio={16 / 9}
-        onCropComplete={handleCropComplete}
-      />
     </>
   );
 }
