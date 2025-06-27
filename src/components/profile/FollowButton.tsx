@@ -20,7 +20,7 @@ export default function FollowButton({ currentUser, targetUser }: FollowButtonPr
   const [isLoading, setIsLoading] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
 
-  // Takip durumunu belirle
+  // Takip durumunu ve istek durumunu belirle
   const isFollowing = currentUser?.following?.includes(targetUser.uid);
   const hasSentRequest = targetUser.followRequests?.some((req: any) => req.uid === currentUser?.uid);
 
@@ -59,9 +59,10 @@ export default function FollowButton({ currentUser, targetUser }: FollowButtonPr
   }
 
   if (isLoading) {
-    return <Button disabled className="w-28"><Loader2 className="animate-spin" /></Button>;
+    return <Button disabled className="w-32"><Loader2 className="animate-spin" /></Button>;
   }
 
+  // Eğer zaten takip ediliyorsa...
   if (isFollowing) {
     return (
       <Button
@@ -69,16 +70,23 @@ export default function FollowButton({ currentUser, targetUser }: FollowButtonPr
         onClick={handleUnfollow}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
-        className="w-28"
+        className="w-28 transition-all"
       >
         {isHovering ? "Takibi Bırak" : "Takiptesin"}
       </Button>
     );
   }
-
-  if (targetUser.privateProfile && hasSentRequest) {
-      return <Button variant="secondary" disabled className="w-28">İstek Gönderildi</Button>
+  
+  // Eğer profil GİZLİ ise...
+  if (targetUser.privateProfile) {
+    // ve istek gönderilmişse...
+    if (hasSentRequest) {
+        return <Button variant="secondary" disabled className="w-32">İstek Gönderildi</Button>;
+    }
+    // ve istek gönderilmemişse...
+    return <Button onClick={handleFollow} className="w-40">Takip İsteği Gönder</Button>;
   }
 
+  // Eğer profil HERKESE AÇIK ve takip edilmiyorsa...
   return <Button onClick={handleFollow} className="w-28">Takip Et</Button>;
 }
