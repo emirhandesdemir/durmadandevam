@@ -1,0 +1,100 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Users Collection
+    // - Anyone can read a user's public profile info.
+    // - Only the owner can write to their own document.
+    // - Anyone can create a user document (signup).
+    match /users/{userId} {
+      allow read: if true;
+      allow update: if isOwner(userId);
+      allow create: if isSignedIn();
+      // Deletion should be handled by a Cloud Function for cleanup
+      allow delete: if false; 
+    }
+
+    // Posts Collection
+    // - Anyone can read any post.
+    // - Only signed-in users can create posts.
+    // - Only the owner of a post can update or delete it.
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isOwner(resource.data.uid);
+
+      // Comments Subcollection
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn();
+        // Only comment owner can delete
+        allow delete: if isOwner(resource.data.uid);
+      }
+    }
+    
+    // Notifications Collection
+    // - Users can only read their own notifications.
+    // - Notifications are created by server-side actions (Cloud Functions or server actions),
+    //   so client creation is disallowed for security.
+    match /notifications/{notificationId} {
+      allow read: if isOwner(resource.data.recipientId);
+      allow create, update, delete: if false;
+    }
+
+    // Rooms Collection
+    // - Anyone can read room data to list them.
+    // - Signed-in users can create rooms.
+    // - Only the room creator can update the room details (e.g. topic).
+    // - Only room creator can delete the room.
+    match /rooms/{roomId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isOwner(resource.data.createdBy.uid);
+      allow delete: if isOwner(resource.data.createdBy.uid);
+
+      // Messages, Participants, Signals Subcollections
+      function isRoomParticipant() {
+        return isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.participants;
+      }
+
+      match /messages/{messageId} {
+        allow read, create: if isRoomParticipant();
+        allow update, delete: if false; // Disallow editing/deleting messages for simplicity
+      }
+
+      match /voiceParticipants/{participantId} {
+        allow read: if true;
+        // Joining/leaving is handled by server actions, but allow creation/deletion by owner
+        allow create, delete: if isOwner(participantId);
+        allow update: if isOwner(participantId); // for mute/unmute status
+      }
+      
+      match /signals/{signalId} {
+        // Can only send a signal to yourself
+        allow create: if isOwner(request.resource.data.to);
+        allow read, update, delete: if false;
+      }
+      
+      match /games/{gameId} {
+        allow read, create, update: if true; // Game logic is handled by server actions
+        allow delete: if false;
+      }
+    }
+
+    // Config collections (Admin only, handled by server actions/admin SDK)
+    match /config/{docId} {
+      allow read: if true; // some configs might be needed by clients
+      allow write: if false; // Should only be written by Admin SDK
+    }
+  }
+}

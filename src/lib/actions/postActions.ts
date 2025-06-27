@@ -10,21 +10,29 @@ import {
     deleteDoc,
     updateDoc,
     increment,
+    getDoc,
 } from "firebase/firestore";
 import { ref, deleteObject } from "firebase/storage";
 import { createNotification } from "./notificationActions";
-import type { Post } from "../types";
-
 
 export async function deletePost(postId: string, imageUrl?: string) {
     const postRef = doc(db, "posts", postId);
+    
+    // To delete subcollections, you need a recursive function,
+    // which is best handled by a Cloud Function trigger for robustness.
+    // For now, we only delete the post document itself.
     await deleteDoc(postRef);
 
     if (imageUrl) {
-        const imageRef = ref(storage, imageUrl);
-        await deleteObject(imageRef).catch(error => {
-            console.error("Storage resmi silinirken hata oluştu (göz ardı edilebilir):", error);
-        });
+        try {
+            const imageRef = ref(storage, imageUrl);
+            await deleteObject(imageRef);
+        } catch (error: any) {
+            // It's okay if the file doesn't exist (e.g., already deleted).
+            if (error.code !== 'storage/object-not-found') {
+                console.error("Storage resmi silinirken hata oluştu:", error);
+            }
+        }
     }
 }
 
@@ -36,10 +44,22 @@ export async function updatePost(postId: string, newText: string) {
     });
 }
 
+// Refactored to be more robust and less reliant on client-side data
+export async function likePost(
+    postId: string,
+    postAuthorUid: string,
+    postImageUrl: string | null,
+    currentUser: { uid: string, displayName: string | null, photoURL: string | null }
+) {
+    const postRef = doc(db, "posts", postId);
+    const postSnap = await getDoc(postRef);
+    if (!postSnap.exists()) {
+        throw new Error("Gönderi bulunamadı.");
+    }
+    const postData = postSnap.data();
 
-export async function likePost(post: Post, currentUser: { uid: string, displayName: string | null, photoURL: string | null }) {
-    const isCurrentlyLiked = (post.likes || []).includes(currentUser.uid);
-    const postRef = doc(db, "posts", post.id);
+    const isCurrentlyLiked = (postData.likes || []).includes(currentUser.uid);
+    
     const batch = writeBatch(db);
 
     if (isCurrentlyLiked) {
@@ -55,16 +75,16 @@ export async function likePost(post: Post, currentUser: { uid: string, displayNa
     }
     await batch.commit();
 
-    // Beğeniyi geri alırken bildirim gönderme, sadece beğenirken gönder
-    if (!isCurrentlyLiked && post.uid !== currentUser.uid) {
+    // Send notification only when liking, not unliking
+    if (!isCurrentlyLiked && postAuthorUid !== currentUser.uid) {
         await createNotification({
-            recipientId: post.uid,
+            recipientId: postAuthorUid,
             senderId: currentUser.uid,
             senderUsername: currentUser.displayName || "Biri",
             senderAvatar: currentUser.photoURL,
             type: 'like',
-            postId: post.id,
-            postImage: post.imageUrl || null,
+            postId: postId,
+            postImage: postImageUrl,
         });
     }
 }

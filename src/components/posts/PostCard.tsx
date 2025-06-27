@@ -80,11 +80,16 @@ export default function PostCard({ post }: PostCardProps) {
         if (!currentUser || isLiking) return;
         setIsLiking(true);
         try {
-            await likePost(post, {
-                uid: currentUser.uid,
-                displayName: currentUser.displayName,
-                photoURL: currentUser.photoURL,
-            });
+            await likePost(
+                post.id,
+                post.uid,
+                post.imageUrl || null,
+                {
+                    uid: currentUser.uid,
+                    displayName: currentUser.displayName,
+                    photoURL: currentUser.photoURL,
+                }
+            );
         } catch (error) {
             console.error("Error liking post:", error);
             toast({ variant: "destructive", description: "Beğenirken bir hata oluştu." });
