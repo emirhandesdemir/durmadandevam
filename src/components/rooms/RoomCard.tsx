@@ -12,6 +12,7 @@ import { db } from "@/lib/firebase";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import type { Room } from "@/lib/types";
 
 /**
  * Oda Listeleme Kartı (RoomCard)
@@ -21,24 +22,6 @@ import { cn } from "@/lib/utils";
  * - Katılımcı avatarlarını yığılmış bir şekilde gösterir.
  * - Kullanıcının odaya katılması veya zaten katılmışsa girmesi için butonlar içerir.
  */
-
-// Oda verisinin arayüzü
-export interface Room {
-    id: string;
-    name: string;
-    description: string;
-    createdBy: {
-        uid: string;
-        username: string;
-        photoURL?: string | null;
-        role?: 'admin' | 'user';
-    };
-    createdAt: Timestamp;
-    participants: { uid: string, username: string, photoURL?: string | null }[];
-    maxParticipants: number;
-    nextGameTimestamp?: Timestamp;
-}
-
 interface RoomCardProps {
     room: Room;
 }
