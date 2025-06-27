@@ -69,7 +69,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
                 isSpeaker: true, 
                 isMuted: false, // Kullanıcılar varsayılan olarak konuşabilir (sessiz değil).
                 joinedAt: serverTimestamp() as Timestamp,
-                selectedAvatarBubble: userData.selectedAvatarBubble || '',
+                selectedBubble: userData.selectedBubble || '',
             };
             
             transaction.set(userVoiceRef, participantData);

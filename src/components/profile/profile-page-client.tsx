@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, Headphones, MessageCircle } from "lucide-react";
+import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, Headphones } from "lucide-react";
 import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { useTheme } from "next-themes";
@@ -32,22 +32,13 @@ import { doc, updateDoc } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 
 
-const avatarBubbleOptions = [
+const bubbleOptions = [
     { id: "", name: "Yok" },
-    { id: "avatar-bubble-style-1", name: "Neon Parti" },
-    { id: "avatar-bubble-style-2", name: "Okyanus" },
-    { id: "avatar-bubble-style-3", name: "Gün Batımı" },
-    { id: "avatar-bubble-style-4", name: "Orman" },
-    { id: "avatar-bubble-style-5", name: "Kozmik" },
-];
-
-const chatBubbleOptions = [
-    { id: "", name: "Yok" },
-    { id: "chat-bubble-style-1", name: "Ateşböceği" },
-    { id: "chat-bubble-style-2", name: "Dalga" },
-    { id: "chat-bubble-style-3", name: "Sakura" },
-    { id: "chat-bubble-style-4", name: "Nane" },
-    { id: "chat-bubble-style-5", name: "Lavanta" },
+    { id: "bubble-style-1", name: "Neon Parti" },
+    { id: "bubble-style-2", name: "Okyanus" },
+    { id: "bubble-style-3", name: "Gün Batımı" },
+    { id: "bubble-style-4", name: "Orman" },
+    { id: "bubble-style-5", name: "Kozmik" },
 ];
 
 
@@ -59,8 +50,7 @@ export default function ProfilePageClient() {
     const [username, setUsername] = useState(user?.displayName || "");
     const [newAvatar, setNewAvatar] = useState<string | null>(null);
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
-    const [selectedAvatarBubble, setSelectedAvatarBubble] = useState("");
-    const [selectedChatBubble, setSelectedChatBubble] = useState("");
+    const [selectedBubble, setSelectedBubble] = useState("");
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     
@@ -73,8 +63,7 @@ export default function ProfilePageClient() {
     useEffect(() => {
         if (userData) {
             setUsername(userData.username || "");
-            setSelectedAvatarBubble(userData.selectedAvatarBubble || "");
-            setSelectedChatBubble(userData.selectedChatBubble || "");
+            setSelectedBubble(userData.selectedBubble || "");
         }
     }, [userData]);
     
@@ -90,7 +79,7 @@ export default function ProfilePageClient() {
     }, []);
 
 
-    const hasChanges = username !== (userData?.username || "") || newAvatar !== null || selectedAvatarBubble !== (userData?.selectedAvatarBubble || "") || selectedChatBubble !== (userData?.selectedChatBubble || "");
+    const hasChanges = username !== (userData?.username || "") || newAvatar !== null || selectedBubble !== (userData?.selectedBubble || "");
     
     const handleAvatarClick = () => {
         fileInputRef.current?.click();
@@ -134,11 +123,8 @@ export default function ProfilePageClient() {
                 updates.username = username;
                 authUpdates.displayName = username;
             }
-            if (selectedAvatarBubble !== userData?.selectedAvatarBubble) {
-                updates.selectedAvatarBubble = selectedAvatarBubble;
-            }
-            if (selectedChatBubble !== userData?.selectedChatBubble) {
-                updates.selectedChatBubble = selectedChatBubble;
+            if (selectedBubble !== userData?.selectedBubble) {
+                updates.selectedBubble = selectedBubble;
             }
     
             if (Object.keys(updates).length > 0) {
@@ -285,59 +271,28 @@ export default function ProfilePageClient() {
                                 </RadioGroup>
                             </AccordionContent>
                         </AccordionItem>
-                         <AccordionItem value="avatar-bubbles">
+                         <AccordionItem value="bubbles">
                             <AccordionTrigger>
                                 <div className="flex items-center gap-3">
                                     <Sparkles className="h-5 w-5 text-muted-foreground" />
-                                    <span className="font-semibold">Avatar Animasyonu</span>
+                                    <span className="font-semibold">Sohbet Baloncuğu</span>
                                 </div>
                             </AccordionTrigger>
                             <AccordionContent>
                                <div className="grid grid-cols-3 gap-2 pt-2">
-                                 {avatarBubbleOptions.map(option => (
+                                 {bubbleOptions.map(option => (
                                     <div 
                                         key={option.id}
-                                        onClick={() => setSelectedAvatarBubble(option.id)}
+                                        onClick={() => setSelectedBubble(option.id)}
                                         className={cn(
                                             "flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer p-2 aspect-square hover:bg-accent",
-                                            selectedAvatarBubble === option.id ? "border-primary" : ""
+                                            selectedBubble === option.id ? "border-primary" : ""
                                         )}
                                     >
                                         <div className="relative h-12 w-12 bg-muted rounded-full">
                                             {option.id !== "" && (
                                                 <div className={`bubble-wrapper ${option.id}`}>
-                                                     {Array.from({ length: 3 }).map((_, i) => <div key={i} className="bubble floating" />)}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <span className="text-xs font-bold text-center">{option.name}</span>
-                                    </div>
-                                 ))}
-                               </div>
-                            </AccordionContent>
-                        </AccordionItem>
-                         <AccordionItem value="chat-bubbles">
-                            <AccordionTrigger>
-                                <div className="flex items-center gap-3">
-                                    <MessageCircle className="h-5 w-5 text-muted-foreground" />
-                                    <span className="font-semibold">Sohbet Mesajı Efekti</span>
-                                </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                               <div className="grid grid-cols-3 gap-2 pt-2">
-                                 {chatBubbleOptions.map(option => (
-                                    <div 
-                                        key={option.id}
-                                        onClick={() => setSelectedChatBubble(option.id)}
-                                        className={cn(
-                                            "flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer p-2 aspect-square hover:bg-accent",
-                                            selectedChatBubble === option.id ? "border-primary" : ""
-                                        )}
-                                    >
-                                        <div className="relative h-12 w-12 bg-muted rounded-full">
-                                            {option.id !== "" && (
-                                                <div className={`chat-bubble-wrapper ${option.id}`}>
-                                                     {Array.from({ length: 2 }).map((_, i) => <div key={i} className="bubble glowing" />)}
+                                                     {Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}
                                                 </div>
                                             )}
                                         </div>
