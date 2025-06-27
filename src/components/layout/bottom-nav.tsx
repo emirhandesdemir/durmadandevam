@@ -20,8 +20,8 @@ export default function BottomNav() {
     }
 
     return (
-        <footer className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card/80 backdrop-blur-sm">
-            {/* Yükseklik h-20'den (80px) h-16'ya (64px) düşürüldü */}
+        // The component is no longer 'fixed'. It's positioned by the parent flex container.
+        <footer className="border-t bg-card/80 backdrop-blur-sm shrink-0">
             <nav className="grid h-16 grid-cols-3">
                 {navItems.map((item) => {
                     const isActive = pathname === item.href;
@@ -33,7 +33,6 @@ export default function BottomNav() {
                                 isActive ? "text-primary scale-105" : "hover:text-primary"
                             )}>
                             <div className={cn("p-2 rounded-full transition-colors", isActive ? "bg-primary/10" : "")}>
-                                 {/* İkon boyutu h-6'dan h-5'e düşürüldü */}
                                 <item.icon className="h-5 w-5"/>
                             </div>
                             <span>{item.label}</span>

@@ -15,12 +15,21 @@ export default function MainAppLayout({
 }) {
   return (
     <VoiceChatProvider>
-      <div className="relative flex min-h-screen w-full flex-col bg-background">
+      {/* 
+        This is now a flex container that takes up the dynamic viewport height (h-dvh).
+        This provides a stable structure for children layouts.
+      */}
+      <div className="flex h-dvh w-full flex-col bg-background">
         <Header />
-        {/* Ana içerik alanı, alt navigasyonun kaplayacağı alanı boş bırakmak için alttan padding alır */}
-        <main className="flex-1 pb-16">{children}</main>
+        {/* 
+          The main content area now fills the remaining space and handles its own scrolling
+          for pages with long content (like the home feed).
+        */}
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
         
-        {/* Sesli sohbet ve diğer sabit durum çubukları */}
+        {/* Voice chat components are outside the main scroll area */}
         <VoiceAudioPlayer />
         <PersistentVoiceBar />
         <BottomNav />

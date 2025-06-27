@@ -115,14 +115,15 @@ export default function RoomPage() {
 
     return (
         <>
-            <div className="flex flex-col h-full bg-gray-900 text-gray-200">
+            {/* This root div fills the parent <main> tag and establishes a new flex context */}
+            <div className="flex h-full flex-col bg-gray-900 text-gray-200">
                 <RoomHeader 
                     room={room} 
                     isHost={isHost} 
                     onParticipantListToggle={() => setIsParticipantSheetOpen(true)}
                 />
 
-                {/* Voice Stage Area (Not scrollable) */}
+                {/* Voice Stage (Not scrollable) */}
                 <div className="p-4 border-b border-gray-700/50 shrink-0">
                      {showVoiceStageLoader ? (
                         <div className="flex h-48 items-center justify-center">
@@ -175,12 +176,12 @@ export default function RoomPage() {
                      )}
                 </div>
 
-                {/* Messages Area (Scrollable) */}
+                {/* Messages Area (This div is the only one that scrolls) */}
                 <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-4">
                     <TextChat messages={messages} loading={messagesLoading} />
                 </div>
 
-                {/* Footer / Input */}
+                {/* Footer / Input (Not scrollable) */}
                 <footer className="flex items-center gap-3 p-3 border-t border-gray-700/50 bg-gray-900 shrink-0">
                     {isConnected ? (
                          <>
