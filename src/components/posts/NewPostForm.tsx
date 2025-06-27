@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { db, storage } from "@/lib/firebase";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
+import { FirebaseError } from "firebase/app";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -60,31 +61,40 @@ export default function NewPostForm() {
 
   const handleShare = async () => {
     if (!user || !userData) {
-      toast({ variant: "destructive", description: "Gönderi paylaşmak için giriş yapmalısınız." });
+      toast({
+        variant: 'destructive',
+        description: 'Gönderi paylaşmak için giriş yapmalısınız.',
+      });
       return;
     }
     if (!text.trim() && !croppedImage) {
-      toast({ variant: "destructive", description: "Paylaşmak için bir metin yazın veya resim seçin." });
+      toast({
+        variant: 'destructive',
+        description: 'Paylaşmak için bir metin yazın veya resim seçin.',
+      });
       return;
     }
 
     setIsLoading(true);
 
     try {
-      let imageUrl = "";
+      let imageUrl = '';
+
+      // Step 1: Upload image if it exists
       if (croppedImage) {
-        toast({ description: "Resim yükleniyor..." });
-        const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}_post.jpg`);
+        const imageRef = ref(
+          storage,
+          `posts/${user.uid}/${Date.now()}_post.jpg`
+        );
         const snapshot = await uploadString(imageRef, croppedImage, 'data_url');
         imageUrl = await getDownloadURL(snapshot.ref);
-        toast({ description: "Resim başarıyla yüklendi!" });
       }
 
-      toast({ description: "Gönderi oluşturuluyor..." });
-      await addDoc(collection(db, "posts"), {
+      // Step 2: Add post document to Firestore
+      await addDoc(collection(db, 'posts'), {
         uid: user.uid,
-        username: userData.username || "Anonim Kullanıcı",
-        userAvatar: userData.photoURL,
+        username: userData.username || user.displayName || 'Anonim Kullanıcı',
+        userAvatar: userData.photoURL || user.photoURL,
         userRole: userData.role || 'user',
         text: text,
         imageUrl: imageUrl,
@@ -93,23 +103,41 @@ export default function NewPostForm() {
         likeCount: 0,
         commentCount: 0,
       });
-      
-      setText("");
-      removeImage();
-      toast({ description: "Gönderiniz başarıyla paylaşıldı!" });
-      router.push('/home');
 
+      toast({
+        description: 'Gönderiniz başarıyla paylaşıldı!',
+      });
+      router.push('/home');
     } catch (error) {
-      console.error("Gönderi oluşturulurken hata:", error);
-      toast({ 
-        variant: "destructive", 
-        title: "Paylaşım Hatası", 
-        description: "Gönderi paylaşılırken bir hata oluştu. Lütfen tekrar deneyin veya Firebase Storage kurallarınızı kontrol edin." 
+      console.error('Gönderi oluşturulurken hata:', error);
+
+      let description = 'Gönderi paylaşılırken bir hata oluştu. Lütfen tekrar deneyin.';
+      if (error instanceof FirebaseError) {
+        switch (error.code) {
+          case 'storage/unauthorized':
+            description =
+              'Resim yükleme izniniz yok. Lütfen Firebase Storage kurallarınızı kontrol edin.';
+            break;
+          case 'storage/canceled':
+            description = 'Resim yükleme işlemi iptal edildi.';
+            break;
+          case 'storage/unknown':
+            description =
+              'Bilinmeyen bir depolama hatası oluştu. Lütfen internet bağlantınızı kontrol edin.';
+            break;
+        }
+      }
+
+      toast({
+        variant: 'destructive',
+        title: 'Paylaşım Hatası',
+        description: description,
       });
     } finally {
       setIsLoading(false);
     }
   };
+
 
   return (
     <>
