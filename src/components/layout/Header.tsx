@@ -3,17 +3,23 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Send, Users, PlusCircle, Bell } from "lucide-react";
+import { Send, Users, PlusCircle, Bell, Settings } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePathname } from 'next/navigation';
 
 /**
  * Ana uygulama için üst navigasyon çubuğu (Header).
  * Logo, uygulama adı ve çeşitli eylem butonları içerir.
  */
 export default function Header() {
-    const { featureFlags, userData } = useAuth();
+    const { user, featureFlags, userData } = useAuth();
+    const pathname = usePathname(); // Geçerli URL yolunu al
+
     const postFeedEnabled = featureFlags?.postFeedEnabled ?? true;
     const followRequestCount = userData?.followRequests?.length || 0;
+
+    // Kullanıcının kendi profil sayfasında olup olmadığını kontrol et
+    const isOwnProfilePage = user && pathname === `/profile/${user.uid}`;
 
     return (
         <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -27,29 +33,42 @@ export default function Header() {
                     </span>
                 </Link>
                 <div className="flex items-center gap-1">
-                     {postFeedEnabled && (
+                     {isOwnProfilePage ? (
+                        // Kendi profil sayfasındaysa sadece Ayarlar butonunu göster
                         <Button asChild variant="ghost" size="icon" className="rounded-full">
-                            <Link href="/create-post">
-                                <PlusCircle className="h-6 w-6" />
-                                <span className="sr-only">Yeni Gönderi</span>
+                            <Link href="/profile">
+                                <Settings className="h-5 w-5" />
+                                <span className="sr-only">Ayarlar</span>
                             </Link>
                         </Button>
-                     )}
-                    <Button asChild variant="ghost" size="icon" className="rounded-full">
-                         <Link href="/requests" className="relative">
-                            <Bell className="h-5 w-5" />
-                            {followRequestCount > 0 && (
-                                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
-                                    {followRequestCount}
-                                </span>
+                     ) : (
+                        // Diğer sayfalardaysa standart butonları göster
+                        <>
+                            {postFeedEnabled && (
+                                <Button asChild variant="ghost" size="icon" className="rounded-full">
+                                    <Link href="/create-post">
+                                        <PlusCircle className="h-6 w-6" />
+                                        <span className="sr-only">Yeni Gönderi</span>
+                                    </Link>
+                                </Button>
                             )}
-                            <span className="sr-only">Takip İstekleri</span>
-                        </Link>
-                    </Button>
-                    <Button variant="ghost" size="icon" className="rounded-full">
-                        <Send className="h-5 w-5" />
-                        <span className="sr-only">Mesajlar</span>
-                    </Button>
+                            <Button asChild variant="ghost" size="icon" className="rounded-full">
+                                <Link href="/requests" className="relative">
+                                    <Bell className="h-5 w-5" />
+                                    {followRequestCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
+                                            {followRequestCount}
+                                        </span>
+                                    )}
+                                    <span className="sr-only">Takip İstekleri</span>
+                                </Link>
+                            </Button>
+                            <Button variant="ghost" size="icon" className="rounded-full">
+                                <Send className="h-5 w-5" />
+                                <span className="sr-only">Mesajlar</span>
+                            </Button>
+                        </>
+                     )}
                 </div>
             </div>
         </header>
