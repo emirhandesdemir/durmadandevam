@@ -101,11 +101,11 @@ export default function RoomPage() {
 
     const isLoading = authLoading || !room;
     
-    const showVoiceStageLoader = isConnecting;
+    const showVoiceStageLoader = isConnecting && !isConnected;
 
     if (isLoading) {
         return (
-            <div className="flex min-h-dvh items-center justify-center bg-gray-900">
+            <div className="flex h-full items-center justify-center bg-gray-900">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
             </div>
         );
@@ -115,7 +115,7 @@ export default function RoomPage() {
 
     return (
         <>
-            <div className="flex flex-col h-dvh bg-gray-900 text-gray-200">
+            <div className="flex flex-col h-full bg-gray-900 text-gray-200">
                 <RoomHeader 
                     room={room} 
                     isHost={isHost} 
@@ -153,29 +153,23 @@ export default function RoomPage() {
                             </div>
 
                             {/* Other Participants Area */}
-                            <div className="grid grid-cols-4 gap-4 text-center">
-                                {Array.from({ length: 8 }).map((_, index) => {
-                                    const participant = otherParticipants[index];
-                                    if (participant) {
-                                        return (
-                                            <VoiceUserIcon
-                                                key={participant.uid}
-                                                participant={participant}
-                                                isHost={isHost}
-                                                currentUserId={user!.uid}
-                                                roomId={roomId}
-                                                isParticipantTheHost={false}
-                                                size="sm"
-                                            />
-                                        );
-                                    } else {
-                                        return (
-                                            <div key={`placeholder-${index}`} className="flex flex-col items-center justify-center aspect-square bg-gray-800/40 rounded-full">
-                                                <Plus className="h-6 w-6 text-gray-600" />
-                                            </div>
-                                        );
-                                    }
-                                })}
+                             <div className="grid grid-cols-4 gap-4 text-center">
+                                {otherParticipants.map((participant) => (
+                                    <VoiceUserIcon
+                                        key={participant.uid}
+                                        participant={participant}
+                                        isHost={isHost}
+                                        currentUserId={user!.uid}
+                                        roomId={roomId}
+                                        isParticipantTheHost={false}
+                                        size="sm"
+                                    />
+                                ))}
+                                {Array.from({ length: Math.max(0, 8 - otherParticipants.length) }).map((_, index) => (
+                                    <div key={`placeholder-${index}`} className="flex flex-col items-center justify-center aspect-square bg-gray-800/40 rounded-full">
+                                        <Plus className="h-6 w-6 text-gray-600" />
+                                    </div>
+                                ))}
                             </div>
                         </div>
                      )}
