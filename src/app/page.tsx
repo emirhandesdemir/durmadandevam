@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Users } from "lucide-react";
+import { Users, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 export default function Home() {
@@ -17,12 +17,23 @@ export default function Home() {
     }
   }, [user, loading, router]);
 
-  if (loading || user) {
+  // Auth durumu belirlenirken bir yükleme animasyonu göster.
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+      </div>
+    );
+  }
+  
+  // Kullanıcı giriş yapmışsa, yönlendirme yapılırken null döndürmek sorun değil.
+  if (user) {
     return null;
   }
 
+  // Yükleme tamamlanmışsa ve kullanıcı yoksa, hoş geldin sayfasını göster.
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8 text-center">
+    <main className="flex min-h-screen flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500">
       <div className="flex flex-col items-center gap-4">
         <div className="rounded-full bg-primary/20 p-4 text-primary">
           <Users className="h-12 w-12" />
