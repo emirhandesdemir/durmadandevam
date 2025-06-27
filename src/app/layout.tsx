@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from 'next';
+import type { Metadata } from 'next';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import './globals.css';
@@ -11,16 +11,11 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 export const metadata: Metadata = {
   title: 'HiweWalk',
   description: 'Herkese açık odalar oluşturun ve katılın.',
-  manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: 'HiweWalk',
   },
-};
-
-export const viewport: Viewport = {
-  themeColor: '#8b5cf6',
 };
 
 export default function RootLayout({
