@@ -3,65 +3,15 @@
 
 import { db, storage } from "@/lib/firebase";
 import { 
-    collection, 
-    addDoc, 
-    serverTimestamp, 
     doc, 
     writeBatch, 
     arrayUnion, 
     arrayRemove,
-    getDoc,
     deleteDoc,
     updateDoc,
     increment,
-    runTransaction
 } from "firebase/firestore";
-import { ref, uploadString, getDownloadURL, deleteObject } from "firebase/storage";
-
-interface AddPostArgs {
-    text: string;
-    image: string | null; // Artık sadece base64 string veya null olabilir
-    user: {
-        uid: string;
-        displayName: string | null;
-        photoURL: string | null;
-    };
-    role?: 'admin' | 'user';
-}
-
-/**
- * Yeni bir gönderi oluşturur, gerekirse resim yükler ve Firestore'a kaydeder.
- * @param {AddPostArgs} args - Gönderi metni, resim dosyası (base64 string) ve kullanıcı bilgileri.
- */
-export async function addPost({ text, image, user, role }: AddPostArgs) {
-    if (!user || !user.uid) {
-        throw new Error("Yetkilendirme hatası: Kullanıcı bilgileri eksik.");
-    }
-    
-    let imageUrl = "";
-    if (image) {
-        const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}_post`);
-        
-        // Gelen resim her zaman bir data URI (base64) string'dir.
-        // 'data_url' formatında yükle
-        const snapshot = await uploadString(imageRef, image, 'data_url');
-        imageUrl = await getDownloadURL(snapshot.ref);
-    }
-
-    // Yeni gönderi dökümanını Firestore'a ekle
-    await addDoc(collection(db, "posts"), {
-        uid: user.uid,
-        username: user.displayName || "Anonim Kullanıcı",
-        userAvatar: user.photoURL,
-        userRole: role || 'user', // Kullanıcı rolünü kaydet
-        text: text,
-        imageUrl: imageUrl,
-        createdAt: serverTimestamp(),
-        likes: [],
-        likeCount: 0,
-        commentCount: 0,
-    });
-}
+import { ref, deleteObject } from "firebase/storage";
 
 /**
  * Bir gönderiyi siler ve eğer varsa ilişkili resmi Storage'dan kaldırır.

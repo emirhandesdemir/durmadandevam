@@ -4,8 +4,11 @@
 import { useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { addPost } from "@/lib/actions/postActions";
 import { useRouter } from "next/navigation";
+import { db, storage } from "@/lib/firebase";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { ref, uploadString, getDownloadURL } from "firebase/storage";
+
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -78,16 +81,27 @@ export default function NewPostForm() {
     setIsLoading(true);
 
     try {
-      await addPost({
-        text,
-        image: croppedImage,
-        user: {
-          uid: user.uid,
-          displayName: user.displayName,
-          photoURL: user.photoURL,
-        },
-        role: userData?.role,
-      });
+        let imageUrl = "";
+        // 1. Upload image if it exists
+        if (croppedImage) {
+            const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}_post`);
+            const snapshot = await uploadString(imageRef, croppedImage, 'data_url');
+            imageUrl = await getDownloadURL(snapshot.ref);
+        }
+
+        // 2. Add post document to Firestore
+        await addDoc(collection(db, "posts"), {
+            uid: user.uid,
+            username: user.displayName || "Anonim Kullanıcı",
+            userAvatar: user.photoURL,
+            userRole: userData?.role || 'user',
+            text: text,
+            imageUrl: imageUrl, // Use the uploaded URL
+            createdAt: serverTimestamp(),
+            likes: [],
+            likeCount: 0,
+            commentCount: 0,
+        });
       
       setText("");
       removeImage();
