@@ -1,5 +1,5 @@
 // src/app/(main)/profile/[uid]/page.tsx
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, Timestamp } from 'firebase/firestore'; // Import Timestamp
 import { db } from '@/lib/firebase';
 import { notFound } from 'next/navigation';
 import type { UserProfile } from '@/lib/types';
@@ -13,10 +13,6 @@ interface ProfilePageProps {
   };
 }
 
-/**
- * Herhangi bir kullanıcının profilini görüntülemek için kullanılan dinamik sayfa.
- * @param params - URL'den gelen kullanıcı UID'sini içerir.
- */
 export default async function UserProfilePage({ params }: ProfilePageProps) {
   const { uid } = params;
   
@@ -34,12 +30,14 @@ export default async function UserProfilePage({ params }: ProfilePageProps) {
   // Next.js, 'toJSON' metoduna sahip nesnelerin prop olarak geçirilmesini desteklemez.
   const serializableProfileUser = {
     ...profileUserData,
-    createdAt: profileUserData.createdAt.toDate().toISOString(),
-    // Gelen isteklere ait zaman damgalarını da serileştir
+    createdAt: profileUserData.createdAt instanceof Timestamp 
+        ? profileUserData.createdAt.toDate().toISOString() 
+        : null,
     followRequests: (profileUserData.followRequests || []).map(req => ({
       ...req,
-      // `requestedAt` Timestamp nesnesini ISO string'e çevir
-      requestedAt: req.requestedAt.toDate().toISOString(),
+      requestedAt: req.requestedAt instanceof Timestamp 
+        ? req.requestedAt.toDate().toISOString()
+        : null,
     })),
   };
 
