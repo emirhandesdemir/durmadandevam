@@ -174,10 +174,10 @@ export default function RoomCard({ room }: RoomCardProps) {
                       onClick={handleJoinRoom} 
                       disabled={isJoining || isFull} 
                       className={cn(
-                          "rounded-full shadow-lg transition-transform hover:scale-105 text-white",
+                          "rounded-full shadow-lg transition-transform hover:scale-105",
                           isFull 
-                            ? "bg-destructive" 
-                            : "bg-gradient-to-r from-purple-500 to-pink-500 shadow-primary/30"
+                            ? "bg-destructive text-destructive-foreground" 
+                            : "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-primary/30"
                       )}
                     >
                         {isJoining ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (isFull ? <AlertTriangle className="mr-2 h-4 w-4" /> : <LogIn className="mr-2 h-4 w-4" />)}

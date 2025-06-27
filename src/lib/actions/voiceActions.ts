@@ -34,6 +34,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
 
     const roomRef = doc(db, 'rooms', roomId);
     const userVoiceRef = doc(roomRef, 'voiceParticipants', user.uid);
+    const userDbRef = doc(db, 'users', user.uid);
 
     try {
         await runTransaction(db, async (transaction) => {
@@ -48,6 +49,13 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
                 return;
             }
 
+            const userDbDoc = await transaction.get(userDbRef);
+            if (!userDbDoc.exists()) {
+                throw new Error("Kullanıcı profili bulunamadı.");
+            }
+            const userData = userDbDoc.data();
+
+
             const roomData = roomDoc.data() as Room;
             const voiceCount = roomData.voiceParticipantsCount || 0;
             if (voiceCount >= roomData.maxParticipants) {
@@ -61,6 +69,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
                 isSpeaker: true, 
                 isMuted: false, // Kullanıcılar varsayılan olarak konuşabilir (sessiz değil).
                 joinedAt: serverTimestamp() as Timestamp,
+                selectedBubble: userData.selectedBubble || '',
             };
             
             transaction.set(userVoiceRef, participantData);

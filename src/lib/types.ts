@@ -76,4 +76,5 @@ export interface VoiceParticipant {
     isMuted: boolean;
     joinedAt: Timestamp;
     lastSpokeAt?: Timestamp; // Son konuşma zamanı (inaktivite takibi için)
+    selectedBubble?: string; // Kullanıcının seçtiği baloncuk stili
 }

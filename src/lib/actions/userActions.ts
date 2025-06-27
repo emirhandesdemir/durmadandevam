@@ -9,9 +9,10 @@ interface UpdateUserArgs {
     uid: string;
     username: string;
     avatarDataUrl?: string | null;
+    selectedBubble?: string;
 }
 
-export async function updateUserProfile({ uid, username, avatarDataUrl }: UpdateUserArgs) {
+export async function updateUserProfile({ uid, username, avatarDataUrl, selectedBubble }: UpdateUserArgs) {
     if (!uid) {
         throw new Error("Kullanıcı ID'si gerekli.");
     }
@@ -30,6 +31,10 @@ export async function updateUserProfile({ uid, username, avatarDataUrl }: Update
 
         if (username) {
             updates.username = username;
+        }
+
+        if (typeof selectedBubble === 'string') {
+            updates.selectedBubble = selectedBubble;
         }
         
         if (Object.keys(updates).length > 0) {

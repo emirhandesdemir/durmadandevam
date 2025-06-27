@@ -88,7 +88,6 @@ export default function VoiceUserIcon({
     </DropdownMenuContent>
   );
   
-  const avatarSize = size === 'lg' ? "h-24 w-24" : "aspect-square h-auto w-full";
   const nameSize = size === 'lg' ? "text-sm" : "text-xs";
   const iconSize = size === 'lg' ? "h-5 w-5" : "h-4 w-4";
   const iconBadgePos = size === 'lg' ? "bottom-1 right-1 p-2" : "bottom-1 right-1 p-1.5";
@@ -96,28 +95,35 @@ export default function VoiceUserIcon({
 
   const avatar = (
     <div className="relative flex flex-col items-center gap-1.5">
-      <div className="relative">
-        <Avatar
-          className={cn(
-            "border-2 transition-all duration-300",
-            speakingRing
-              ? "border-green-500 shadow-lg shadow-green-500/50 ring-4 ring-green-500/30 animate-pulse"
-              : "border-transparent",
-             size === 'lg' ? "h-24 w-24" : "w-full h-auto aspect-square"
+       <div className={cn(
+          "relative", 
+          size === 'lg' ? "h-24 w-24" : "w-full"
+        )}>
+          {participant.selectedBubble && (
+            <div className={`bubble-wrapper ${participant.selectedBubble}`}>
+                {Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}
+            </div>
           )}
-        >
-          <AvatarImage src={participant.photoURL || undefined} />
-          <AvatarFallback className="bg-gray-700 text-gray-300">
-            {participant.username?.charAt(0).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-        <div className={cn("absolute bg-gray-900/70 backdrop-blur-sm rounded-full shadow-md", iconBadgePos)}>
-          {participant.isMuted ? (
-            <MicOff className={cn(iconSize, "text-red-500")} />
-          ) : (
-            <Mic className={cn(iconSize, "text-white")} />
-          )}
-        </div>
+          <Avatar
+            className={cn(
+              "border-2 transition-all duration-300 w-full h-full",
+              speakingRing
+                ? "border-green-500 shadow-lg shadow-green-500/50 ring-4 ring-green-500/30 animate-pulse"
+                : "border-transparent",
+            )}
+          >
+            <AvatarImage src={participant.photoURL || undefined} />
+            <AvatarFallback className="bg-gray-700 text-gray-300">
+              {participant.username?.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className={cn("absolute bg-gray-900/70 backdrop-blur-sm rounded-full shadow-md", iconBadgePos)}>
+            {participant.isMuted ? (
+              <MicOff className={cn(iconSize, "text-red-500")} />
+            ) : (
+              <Mic className={cn(iconSize, "text-white")} />
+            )}
+          </div>
       </div>
 
       <div className="flex items-center justify-center gap-1 w-full">

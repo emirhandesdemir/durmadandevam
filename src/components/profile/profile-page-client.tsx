@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2 } from "lucide-react";
+import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { useTheme } from "next-themes";
@@ -26,6 +26,17 @@ import { updateUserProfile } from "@/lib/actions/userActions";
 import { auth } from "@/lib/firebase";
 import { updateProfile } from "firebase/auth";
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { cn } from "@/lib/utils";
+
+const bubbleOptions = [
+    { id: "", name: "Yok" },
+    { id: "bubble-style-1", name: "Neon Parti" },
+    { id: "bubble-style-2", name: "Okyanus Derinliği" },
+    { id: "bubble-style-3", name: "Gün Batımı" },
+    { id: "bubble-style-4", name: "Orman Esintisi" },
+    { id: "bubble-style-5", name: "Kozmik Toz" },
+];
 
 
 export default function ProfilePageClient() {
@@ -36,10 +47,11 @@ export default function ProfilePageClient() {
     const [username, setUsername] = useState(user?.displayName || "");
     const [newAvatar, setNewAvatar] = useState<string | null>(null);
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+    const [selectedBubble, setSelectedBubble] = useState(userData?.selectedBubble || "");
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const hasChanges = username !== user?.displayName || newAvatar !== null;
+    const hasChanges = username !== (user?.displayName || "") || newAvatar !== null || selectedBubble !== (userData?.selectedBubble || "");
     
     const handleAvatarClick = () => {
         fileInputRef.current?.click();
@@ -74,13 +86,13 @@ export default function ProfilePageClient() {
                 uid: user.uid,
                 username: username,
                 avatarDataUrl: newAvatar,
+                selectedBubble: selectedBubble,
             });
 
             if (result.success && auth.currentUser) {
                 // Update client-side auth state
                 await updateProfile(auth.currentUser, {
                     displayName: username,
-                    // Only update photoURL if it was changed
                     ...(result.data?.newPhotoURL && { photoURL: result.data.newPhotoURL }),
                 });
                 
@@ -154,7 +166,7 @@ export default function ProfilePageClient() {
                     </div>
                     <CardDescription>{user.email}</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6 px-8">
+                <CardContent className="space-y-4 px-6">
                     <div className="space-y-4">
                         <div>
                             <Label htmlFor="username">Kullanıcı Adı</Label>
@@ -162,33 +174,73 @@ export default function ProfilePageClient() {
                         </div>
                     </div>
                     <Separator />
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                            <Palette className="h-5 w-5 text-muted-foreground" />
-                            <Label>Görünüm</Label>
-                        </div>
-                        <RadioGroup value={theme} onValueChange={setTheme} className="grid grid-cols-3 gap-2">
-                            <Label htmlFor="light-theme" className="flex flex-col items-center justify-center rounded-lg border-2 bg-card p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
-                            <RadioGroupItem value="light" id="light-theme" className="sr-only" />
-                            <Sun className="mb-2 h-6 w-6" />
-                            <span className="text-xs font-bold">Aydınlık</span>
-                            </Label>
+                    
+                    <Accordion type="single" collapsible className="w-full">
+                        <AccordionItem value="theme">
+                           <AccordionTrigger>
+                                <div className="flex items-center gap-3">
+                                    <Palette className="h-5 w-5 text-muted-foreground" />
+                                    <span className="font-semibold">Görünüm</span>
+                                </div>
+                            </AccordionTrigger>
+                             <AccordionContent>
+                                <RadioGroup value={theme} onValueChange={setTheme} className="grid grid-cols-3 gap-2 pt-2">
+                                    <Label htmlFor="light-theme" className="flex flex-col items-center justify-center rounded-lg border-2 bg-card p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
+                                    <RadioGroupItem value="light" id="light-theme" className="sr-only" />
+                                    <Sun className="mb-2 h-6 w-6" />
+                                    <span className="text-xs font-bold">Aydınlık</span>
+                                    </Label>
 
-                            <Label htmlFor="dark-theme" className="flex flex-col items-center justify-center rounded-lg border-2 bg-card p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
-                            <RadioGroupItem value="dark" id="dark-theme" className="sr-only" />
-                            <Moon className="mb-2 h-6 w-6" />
-                            <span className="text-xs font-bold">Karanlık</span>
-                            </Label>
-                            
-                            <Label htmlFor="system-theme" className="flex flex-col items-center justify-center rounded-lg border-2 bg-card p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
-                            <RadioGroupItem value="system" id="system-theme" className="sr-only" />
-                            <Laptop className="mb-2 h-6 w-6" />
-                            <span className="text-xs font-bold">Sistem</span>
-                            </Label>
-                        </RadioGroup>
-                    </div>
+                                    <Label htmlFor="dark-theme" className="flex flex-col items-center justify-center rounded-lg border-2 bg-card p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
+                                    <RadioGroupItem value="dark" id="dark-theme" className="sr-only" />
+                                    <Moon className="mb-2 h-6 w-6" />
+                                    <span className="text-xs font-bold">Karanlık</span>
+                                    </Label>
+                                    
+                                    <Label htmlFor="system-theme" className="flex flex-col items-center justify-center rounded-lg border-2 bg-card p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
+                                    <RadioGroupItem value="system" id="system-theme" className="sr-only" />
+                                    <Laptop className="mb-2 h-6 w-6" />
+                                    <span className="text-xs font-bold">Sistem</span>
+                                    </Label>
+                                </RadioGroup>
+                            </AccordionContent>
+                        </AccordionItem>
+                         <AccordionItem value="bubbles">
+                            <AccordionTrigger>
+                                <div className="flex items-center gap-3">
+                                    <Sparkles className="h-5 w-5 text-muted-foreground" />
+                                    <span className="font-semibold">Sohbet Baloncuğu</span>
+                                </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                               <div className="grid grid-cols-3 gap-2 pt-2">
+                                 {bubbleOptions.map(option => (
+                                    <div 
+                                        key={option.id}
+                                        onClick={() => setSelectedBubble(option.id)}
+                                        className={cn(
+                                            "flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer p-2 aspect-square hover:bg-accent",
+                                            selectedBubble === option.id ? "border-primary" : ""
+                                        )}
+                                    >
+                                        <div className="relative h-12 w-12 bg-muted rounded-full">
+                                            {option.id !== "" && (
+                                                <div className={`bubble-wrapper ${option.id}`}>
+                                                     {Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <span className="text-xs font-bold text-center">{option.name}</span>
+                                    </div>
+                                 ))}
+                               </div>
+                            </AccordionContent>
+                        </AccordionItem>
+                    </Accordion>
+
+
                 </CardContent>
-                <CardFooter className="flex flex-wrap justify-center gap-4 p-8">
+                <CardFooter className="flex flex-wrap justify-center gap-4 p-6 border-t mt-4">
                     <Button onClick={handleLogout} variant="outline" className="w-full sm:w-auto rounded-full">
                         <LogOut className="mr-2" />
                         Çıkış Yap
