@@ -50,7 +50,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     const peerConnections = useRef<Record<string, RTCPeerConnection>>({});
     const screenSenderRef = useRef<Record<string, RTCRtpSender>>({});
-    const audioAnalysers = useRef<Record<string, { analyser: AnalyserNode, dataArray: Float32Array, context: AudioContext }>>({});
+    const audioAnalysers = useRef<Record<string, { analyser: AnalyserNode, dataArray: Uint8Array, context: AudioContext }>>({});
     const animationFrameId = useRef<number>();
 
     const self = participants.find(p => p.uid === user?.uid) || null;
@@ -112,7 +112,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         const newSpeakingStates: Record<string, boolean> = {};
         let activeSpeakerFound = false;
         Object.entries(audioAnalysers.current).forEach(([uid, { analyser, dataArray }]) => {
-            analyser.getByteFrequencyData(dataArray as unknown as Uint8Array); // Corrected type for getByteFrequencyData
+            analyser.getByteFrequencyData(dataArray);
             let sum = 0;
             for (const amplitude of dataArray) { sum += amplitude * amplitude; }
             const volume = Math.sqrt(sum / dataArray.length);
@@ -240,7 +240,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 analyser.fftSize = 256; // Smaller size for performance
                 analyser.smoothingTimeConstant = 0.5;
                 source.connect(analyser);
-                audioAnalysers.current[uid] = { analyser, dataArray: new Float32Array(analyser.frequencyBinCount), context };
+                audioAnalysers.current[uid] = { analyser, dataArray: new Uint8Array(analyser.frequencyBinCount), context };
             }
         };
 
