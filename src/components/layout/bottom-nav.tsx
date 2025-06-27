@@ -15,23 +15,27 @@ const navItems = [
 export default function BottomNav() {
     const pathname = usePathname();
 
+    // Oda detay sayfasında (örn: /rooms/abc-123) alt barı gizle
+    if (pathname.startsWith('/rooms/') && pathname !== '/rooms') {
+        return null;
+    }
+
     return (
         <footer className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card/80 backdrop-blur-sm">
-            <nav className="grid h-20 grid-cols-4">
+            {/* Yükseklik h-20'den (80px) h-16'ya (64px) düşürüldü */}
+            <nav className="grid h-16 grid-cols-4">
                 {navItems.map((item) => {
-                    const isHomeActive = item.href === "/home" && (pathname === "/home");
-                    const isRoomsActive = item.href === "/rooms" && (pathname === "/rooms" || pathname.startsWith("/rooms/"));
-                    const isOtherActive = item.href !== "/home" && item.href !== "/rooms" && pathname.startsWith(item.href);
-                    const isActive = isHomeActive || isRoomsActive || isOtherActive;
+                    const isActive = pathname === item.href;
                     
                     return (
                         <Link href={item.href} key={item.label}
                             className={cn(
-                                "flex flex-col items-center justify-center gap-1 text-xs font-medium text-muted-foreground transition-all duration-300",
-                                isActive ? "text-primary scale-110" : "hover:text-primary"
+                                "flex flex-col items-center justify-center gap-1 text-xs font-medium text-muted-foreground transition-all duration-200",
+                                isActive ? "text-primary scale-105" : "hover:text-primary"
                             )}>
-                            <div className={cn("p-2 rounded-full transition-all", isActive ? "bg-primary/10" : "")}>
-                                <item.icon className="h-6 w-6"/>
+                            <div className={cn("p-2 rounded-full transition-colors", isActive ? "bg-primary/10" : "")}>
+                                 {/* İkon boyutu h-6'dan h-5'e düşürüldü */}
+                                <item.icon className="h-5 w-5"/>
                             </div>
                             <span>{item.label}</span>
                         </Link>

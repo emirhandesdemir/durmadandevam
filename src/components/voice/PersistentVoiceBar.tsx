@@ -16,7 +16,7 @@ export default function PersistentVoiceBar() {
     const pathname = usePathname();
 
     // Odanın kendi sayfasındaysak veya bağlı değilsek bu çubuğu gösterme
-    if (!isConnected || pathname.startsWith(`/rooms/${activeRoom?.id}`)) {
+    if (!isConnected || (activeRoom && pathname.startsWith(`/rooms/${activeRoom.id}`))) {
         return null;
     }
 
@@ -29,7 +29,7 @@ export default function PersistentVoiceBar() {
     const isSpeaking = self?.isSpeaker && !self?.isMuted;
 
     return (
-        <div className="fixed bottom-24 right-4 z-50 flex items-start gap-2 animate-in slide-in-from-right-5 duration-300">
+        <div className="fixed bottom-20 right-4 z-50 flex items-start gap-2 animate-in slide-in-from-right-5 duration-300">
              {/* Kapatma Butonu */}
             <Button 
                 onClick={handleLeave} 

@@ -15,8 +15,8 @@ export default function MainAppLayout({
   return (
     <VoiceChatProvider>
       <div className="relative flex min-h-screen w-full flex-col bg-background">
-        {/* Ana içerik alanı, alt navigasyonun kaplayacağı alanı boş bırakmak için alttan padding alır */}
-        <main className="flex-1 pb-20">{children}</main>
+        {/* Ana içerik alanı, alt navigasyonun kaplayacağı alanı boş bırakmak için alttan padding alır (pb-20 -> pb-16) */}
+        <main className="flex-1 pb-16">{children}</main>
         
         {/* Sesli sohbet ve diğer sabit durum çubukları */}
         <VoiceAudioPlayer />
