@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { collection, onSnapshot, doc, addDoc, query, where, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -171,9 +171,13 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         }
 
         try {
-            // Directly attempt to get display media.
-            // Browser security will prevent this on non-HTTPS sites,
-            // which will be caught by the catch block.
+            if (!navigator?.mediaDevices?.getDisplayMedia) {
+                const isSecureContext = window.isSecureContext;
+                const errorMsg = isSecureContext
+                    ? 'Your browser does not support screen sharing. Please use a modern browser like Chrome, Firefox, or Edge.'
+                    : 'Screen sharing requires a secure context (HTTPS).';
+                throw new Error(errorMsg);
+            }
             const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: "always" } as MediaTrackConstraints, audio: false });
             const screenTrack = screenStream.getVideoTracks()[0];
             if (!screenTrack) throw new Error("No screen track found");
@@ -189,13 +193,11 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
              console.error("Screen share error:", error);
             toast({ 
                 variant: 'destructive', 
-                title: 'Hata', 
-                description: error.name === 'NotAllowedError' 
-                    ? 'Ekran paylaşımı için izin vermelisiniz.' 
-                    : 'Ekran paylaşımı başlatılamadı. Bu özellik güncel bir tarayıcı ve güvenli (HTTPS) bir bağlantı gerektirebilir.' 
+                title: 'Feature Not Supported', 
+                description: error.message || 'Screen sharing could not be started.'
             });
         }
-    }, [user, activeRoomId, isSharingScreen, stopScreenShare, toast, toggleScreenShareAction]);
+    }, [user, activeRoomId, isSharingScreen, stopScreenShare, toast]);
 
     const createPeerConnection = useCallback((otherUid: string) => {
         if (!user || !localStream || peerConnections.current[otherUid]) return;
