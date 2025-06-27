@@ -38,6 +38,7 @@ export interface Notification {
     recipientId: string;
     senderId: string;
     senderUsername: string;
+
     senderAvatar: string | null;
     type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite';
     postId?: string | null;
@@ -131,4 +132,35 @@ export interface FeatureFlags {
 
 export interface VoiceStats {
     totalUsers: number;
+}
+
+// YENİ: Direkt Mesajlaşma Sistemi için Türler
+export interface DirectMessage {
+    id: string;
+    senderId: string;
+    receiverId: string;
+    text: string;
+    createdAt: Timestamp;
+    read: boolean;
+    edited: boolean;
+    editedAt?: Timestamp;
+}
+
+export interface DirectMessageMetadata {
+    id: string; // chatId
+    participantUids: string[];
+    participantInfo: {
+        [uid: string]: {
+            username: string;
+            photoURL: string | null;
+        }
+    };
+    lastMessage: {
+        text: string;
+        senderId: string;
+        timestamp: Timestamp;
+    } | null;
+    unreadCounts: {
+        [uid: string]: number;
+    };
 }

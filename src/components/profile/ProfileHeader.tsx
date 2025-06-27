@@ -3,19 +3,24 @@
 
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import FollowButton from './FollowButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 import FollowListDialog from './FollowListDialog';
+import { getChatId } from '@/lib/actions/dmActions';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+
 
 interface ProfileHeaderProps {
   profileUser: any;
 }
 
 export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
-  const { userData: currentUser } = useAuth();
+  const { user: authUser, userData: currentUser } = useAuth();
+  const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<'followers' | 'following'>('followers');
 
@@ -29,6 +34,12 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
     setDialogOpen(true);
   };
   
+  const handleMessageClick = () => {
+    if (!authUser) return;
+    const chatId = getChatId(authUser.uid, profileUser.uid);
+    router.push(`/dm/${chatId}`);
+  };
+
   const userIdsToShow = dialogType === 'followers' ? profileUser.followers : profileUser.following;
 
   return (
@@ -44,17 +55,23 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
         <div className="flex flex-col items-center sm:items-start flex-1 gap-4">
           <div className="flex items-center gap-4">
               <h1 className="text-2xl font-bold">{profileUser.username}</h1>
-              {!isOwnProfile && (
-                  <div className="flex gap-2">
-                      <FollowButton currentUser={currentUser} targetUser={profileUser} />
-                      {(!profileUser.privateProfile || isFollower) && (
-                          <Button variant="secondary">
-                              <MessageSquare className="h-4 w-4" />
-                              <span className="ml-2 hidden sm:inline">Mesaj</span>
-                          </Button>
-                      )}
-                  </div>
-              )}
+              <div className="flex gap-2">
+                {isOwnProfile ? (
+                   <Button asChild variant="outline" size="sm">
+                        <Link href="/profile">
+                            <Settings className="mr-2 h-4 w-4" /> Profili Düzenle
+                        </Link>
+                    </Button>
+                ) : (
+                  <>
+                    <FollowButton currentUser={currentUser} targetUser={profileUser} />
+                    <Button variant="secondary" onClick={handleMessageClick}>
+                        <MessageSquare className="h-4 w-4" />
+                        <span className="ml-2 hidden sm:inline">Mesaj</span>
+                    </Button>
+                  </>
+                )}
+              </div>
           </div>
           
           <div className="flex gap-6 text-center">

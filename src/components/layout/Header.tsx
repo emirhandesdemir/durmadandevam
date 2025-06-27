@@ -15,7 +15,8 @@ export default function Header() {
     const postFeedEnabled = featureFlags?.postFeedEnabled ?? true;
     const hasUnreadNotifications = userData?.hasUnreadNotifications || false;
 
-    const isOwnProfilePage = user && pathname === `/profile/${user.uid}`;
+    // Kendi profil ayarları sayfasında olup olmadığını kontrol et
+    const isSettingsPage = pathname === '/profile';
 
     return (
         <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -30,13 +31,11 @@ export default function Header() {
                     </span>
                 </Link>
                 <div className="flex items-center gap-1">
-                     {isOwnProfilePage ? (
-                        <Button asChild variant="ghost" size="icon" className="rounded-full">
-                            <Link href="/profile">
-                                <Settings className="h-5 w-5" />
-                                <span className="sr-only">Ayarlar</span>
-                            </Link>
-                        </Button>
+                     {isSettingsPage ? (
+                        // Bu buton artık gereksiz çünkü profil sayfasında kendi ayarları var.
+                        // Gelecekte farklı bir amaç için kullanılabilir.
+                        // Şimdilik boş bırakalım veya başka bir ikon koyalım.
+                        <></>
                      ) : (
                         <>
                             {postFeedEnabled && (
@@ -59,9 +58,11 @@ export default function Header() {
                                     <span className="sr-only">Bildirimler</span>
                                 </Link>
                             </Button>
-                            <Button variant="ghost" size="icon" className="rounded-full">
-                                <Send className="h-5 w-5" />
-                                <span className="sr-only">Mesajlar</span>
+                             <Button asChild variant="ghost" size="icon" className="rounded-full">
+                                <Link href="/dm">
+                                    <Send className="h-5 w-5" />
+                                    <span className="sr-only">Mesajlar</span>
+                                </Link>
                             </Button>
                         </>
                      )}
