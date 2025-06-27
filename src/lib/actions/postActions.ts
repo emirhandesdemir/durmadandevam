@@ -10,10 +10,12 @@ import {
     deleteDoc,
     updateDoc,
     increment,
-    getDoc,
+    runTransaction,
+    collection,
+    serverTimestamp
 } from "firebase/firestore";
 import { ref, deleteObject } from "firebase/storage";
-import { createNotification } from "./notificationActions";
+import { revalidatePath } from "next/cache";
 
 export async function deletePost(postId: string, imageUrl?: string) {
     const postRef = doc(db, "posts", postId);
@@ -44,45 +46,56 @@ export async function updatePost(postId: string, newText: string) {
     });
 }
 
-// Refactored to be more robust and less reliant on client-side data
+// Refactored to be more robust and use a transaction
 export async function likePost(
     postId: string,
     currentUser: { uid: string, displayName: string | null, photoURL: string | null }
 ) {
     const postRef = doc(db, "posts", postId);
-    const postSnap = await getDoc(postRef);
-    if (!postSnap.exists()) {
-        throw new Error("Gönderi bulunamadı.");
-    }
-    const postData = postSnap.data();
-
-    const isCurrentlyLiked = (postData.likes || []).includes(currentUser.uid);
     
-    const batch = writeBatch(db);
+    await runTransaction(db, async (transaction) => {
+        const postSnap = await transaction.get(postRef);
+        if (!postSnap.exists()) {
+            throw new Error("Gönderi bulunamadı.");
+        }
+        const postData = postSnap.data();
+        const isCurrentlyLiked = (postData.likes || []).includes(currentUser.uid);
 
-    if (isCurrentlyLiked) {
-        batch.update(postRef, {
-            likes: arrayRemove(currentUser.uid),
-            likeCount: increment(-1)
-        });
-    } else {
-        batch.update(postRef, {
-            likes: arrayUnion(currentUser.uid),
-            likeCount: increment(1)
-        });
-    }
-    await batch.commit();
+        if (isCurrentlyLiked) {
+            transaction.update(postRef, {
+                likes: arrayRemove(currentUser.uid),
+                likeCount: increment(-1)
+            });
+        } else {
+            transaction.update(postRef, {
+                likes: arrayUnion(currentUser.uid),
+                likeCount: increment(1)
+            });
+            
+            // Send notification only when liking, not unliking, and not to self
+            if (postData.uid !== currentUser.uid) {
+                const notificationsRef = collection(db, 'notifications');
+                const newNotifRef = doc(notificationsRef);
+                transaction.set(newNotifRef, {
+                    recipientId: postData.uid,
+                    senderId: currentUser.uid,
+                    senderUsername: currentUser.displayName || "Biri",
+                    senderAvatar: currentUser.photoURL,
+                    type: 'like',
+                    postId: postId,
+                    postImage: postData.imageUrl || null,
+                    createdAt: serverTimestamp(),
+                    read: false,
+                });
+                
+                const recipientUserRef = doc(db, 'users', postData.uid);
+                transaction.update(recipientUserRef, {
+                    hasUnreadNotifications: true
+                });
+            }
+        }
+    });
 
-    // Send notification only when liking, not unliking, and not to self
-    if (!isCurrentlyLiked && postData.uid !== currentUser.uid) {
-        await createNotification({
-            recipientId: postData.uid, // Get author ID from post data
-            senderId: currentUser.uid,
-            senderUsername: currentUser.displayName || "Biri",
-            senderAvatar: currentUser.photoURL,
-            type: 'like',
-            postId: postId,
-            postImage: postData.imageUrl || null, // Get image URL from post data
-        });
-    }
+    revalidatePath(`/profile/${postData.uid}`);
+    revalidatePath(`/home`);
 }

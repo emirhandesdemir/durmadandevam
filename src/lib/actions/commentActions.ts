@@ -12,7 +12,6 @@ import {
     increment,
     getDoc
 } from "firebase/firestore";
-import { createNotification } from "./notificationActions";
 
 interface AddCommentArgs {
     postId: string;
@@ -37,6 +36,7 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
 
     const batch = writeBatch(db);
     
+    // Create new comment document
     const newCommentRef = doc(commentsColRef); 
     batch.set(newCommentRef, {
         uid: user.uid,
@@ -47,18 +47,19 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
         replyTo: replyTo || null,
     });
 
+    // Increment comment count on post
     batch.update(postRef, {
         commentCount: increment(1)
     });
     
-    await batch.commit();
-
-    // Gönderi sahibine bildirim gönder
+    // Atomically create notification if not commenting on own post
     const postSnap = await getDoc(postRef);
     const postData = postSnap.data();
 
     if (postData && postData.uid !== user.uid) {
-        await createNotification({
+        const notificationsRef = collection(db, 'notifications');
+        const newNotifRef = doc(notificationsRef);
+        batch.set(newNotifRef, {
             recipientId: postData.uid,
             senderId: user.uid,
             senderUsername: user.displayName || "Biri",
@@ -67,8 +68,17 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
             postId: postId,
             postImage: postData.imageUrl || null,
             commentText: text,
+            createdAt: serverTimestamp(),
+            read: false,
+        });
+
+        const recipientUserRef = doc(db, 'users', postData.uid);
+        batch.update(recipientUserRef, {
+            hasUnreadNotifications: true
         });
     }
+
+    await batch.commit();
 }
 
 
@@ -78,8 +88,10 @@ export async function deleteComment(postId: string, commentId: string) {
 
     const batch = writeBatch(db);
 
+    // Delete comment
     batch.delete(commentRef);
 
+    // Decrement comment count on post
     batch.update(postRef, {
         commentCount: increment(-1)
     });

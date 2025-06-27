@@ -67,11 +67,13 @@ Yardımcı fonksiyonlar, konfigürasyonlar ve sunucu eylemleri (server actions).
 
 ## 3. Ana Sistemlerin Çalışma Prensibi
 
-### Kimlik Doğrulama ve Veri Akışı
-1.  Kullanıcı `login` veya `signup` sayfalarından Firebase Authentication ile giriş yapar.
-2.  `AuthContext`, `onAuthStateChanged` ile kullanıcının oturum durumunu anlık olarak takip eder.
-3.  Kullanıcı giriş yaptığında, `AuthContext` aynı zamanda Firestore'daki `users` koleksiyonundan o kullanıcının dokümanını (`userData`), `config` koleksiyonundan `featureFlags` ve `notifications` koleksiyonundan okunmamış bildirim olup olmadığını dinlemeye başlar.
-4.  Tüm bu veriler, `useAuth()` hook'u ile uygulama genelinde kullanılabilir hale gelir.
+### Kimlik Doğrulama ve Güvenlik
+1.  **Firebase Kuralları (`firestore.rules` ve `firebase-rules.txt`):** Uygulamanın bel kemiğidir. Veritabanı ve depolama erişimi, sunucuda zorunlu kılınan bu kurallarla sıkı bir şekilde kontrol edilir. Örneğin, bir kullanıcı sadece kendi profilini güncelleyebilir, sadece bir odanın katılımcıları o odaya mesaj gönderebilir ve sadece yöneticiler sistem ayarlarını değiştirebilir. Bu, istemci tarafı kodunun manipüle edilmesine karşı en güçlü savunmadır.
+2.  **Kimlik Doğrulama Akışı**:
+    - Kullanıcı `login` veya `signup` sayfalarından Firebase Authentication ile giriş yapar.
+    - `AuthContext`, `onAuthStateChanged` ile kullanıcının oturum durumunu anlık olarak takip eder.
+    - Kullanıcı giriş yaptığında, `AuthContext` aynı zamanda Firestore'daki `users` koleksiyonundan o kullanıcının dokümanını (`userData`), `config` koleksiyonundan `featureFlags` ve `notifications` koleksiyonundan okunmamış bildirim olup olmadığını dinlemeye başlar.
+    - Tüm bu veriler, `useAuth()` hook'u ile uygulama genelinde kullanılabilir hale gelir.
 
 ### Takip ve Bildirim Sistemi
 1.  **Veritabanı Yapısı**: Her kullanıcının `users` koleksiyonundaki dokümanında `followers` (takipçiler), `following` (takip edilenler), `privateProfile` (gizli hesap durumu) ve `followRequests` (takip istekleri) dizileri bulunur.
@@ -82,7 +84,7 @@ Yardımcı fonksiyonlar, konfigürasyonlar ve sunucu eylemleri (server actions).
     - Kullanıcı, `/requests` sayfasına giderek `followRequests` dizisindeki istekleri görür.
     - "Onayla" butonuna tıklandığında, `handleFollowRequest` eylemi tetiklenir. Bu eylem, isteği diziden kaldırır, takipçi/takip edilen listelerini günceller ve istek gönderen kullanıcıya "isteğiniz kabul edildi" şeklinde bir bildirim gönderir.
 4.  **Beğeni/Yorum Bildirimleri**:
-    - Bir kullanıcı bir gönderiyi beğendiğinde (`likePost` eylemi) veya yorum yaptığında (`addComment` eylemi), bu eylemler ilgili veritabanı işlemini yaptıktan sonra `notificationActions.ts` içindeki `createNotification` fonksiyonunu çağırır.
-    - Bu fonksiyon, gönderi sahibine `type`'ı 'like' veya 'comment' olan yeni bir bildirim dokümanı oluşturur ve gönderi sahibinin `hasUnreadNotifications` bayrağını `true` olarak işaretler.
+    - Bir kullanıcı bir gönderiyi beğendiğinde (`likePost` eylemi) veya yorum yaptığında (`addComment` eylemi), bu eylemler ilgili veritabanı işlemini yaptıktan sonra **atomik bir işlemle** aynı anda ilgili kullanıcıya bir bildirim dokümanı oluşturur.
+    - Bu işlem, gönderi sahibinin `hasUnreadNotifications` bayrağını `true` olarak işaretler.
 5.  **Bildirimleri Görüntüleme**:
     - Kullanıcı `/notifications` sayfasına girdiğinde, `NotificationList` bileşeni kullanıcının okunmamış bildirimlerini çeker ve `markNotificationsAsRead` eylemini tetikleyerek `hasUnreadNotifications` bayrağını `false` yapar. Bu, `Header`'daki bildirim noktasının sönmesini sağlar.

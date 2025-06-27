@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, query, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import RoomListItem from "./RoomListItem";
@@ -46,17 +46,18 @@ export default function RoomList({ searchTerm }: RoomListProps) {
     return () => unsubscribe();
   }, [user]);
 
-  const filteredRooms = rooms.filter(room => 
-    room.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredRooms = rooms
+    .filter(room => !room.expiresAt || (room.expiresAt as Timestamp).toDate() > new Date())
+    .filter(room => room.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   const handleRandomJoin = async () => {
     if (!user) return;
     setIsJoiningRandom(true);
     const availableRooms = rooms.filter(r => {
+        const isExpired = r.expiresAt && (r.expiresAt as Timestamp).toDate() < new Date();
         const isFull = (r.participants?.length || 0) >= r.maxParticipants;
         const isParticipant = r.participants?.some(p => p.uid === user.uid);
-        return !isFull && !isParticipant;
+        return !isExpired && !isFull && !isParticipant;
     });
 
     if (availableRooms.length === 0) {
