@@ -182,7 +182,7 @@ export default function NewPostForm() {
             />
           </div>
           {image && (
-            <div className="ml-16 space-y-4">
+            <div className="space-y-4">
               <div className="relative">
                 <div className="overflow-hidden rounded-xl border">
                   <img src={image} alt="Önizleme" className="max-h-80 w-auto object-contain" />
