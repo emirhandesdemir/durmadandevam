@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, Headphones } from "lucide-react";
+import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, Headphones, Gem } from "lucide-react";
 import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { useTheme } from "next-themes";
@@ -80,6 +80,7 @@ export default function ProfilePageClient() {
 
 
     const hasChanges = username !== (userData?.username || "") || newAvatar !== null || selectedBubble !== (userData?.selectedBubble || "");
+    const diamondCount = userData?.diamonds ?? 0;
     
     const handleAvatarClick = () => {
         fileInputRef.current?.click();
@@ -242,6 +243,10 @@ export default function ProfilePageClient() {
                         )}
                     </div>
                     <CardDescription>{user.email}</CardDescription>
+                    <div className="mt-4 flex items-center gap-2 rounded-full border bg-muted px-4 py-2 text-lg font-bold text-primary shadow-sm">
+                        <Gem className="h-5 w-5" />
+                        <span>{diamondCount}</span>
+                    </div>
                 </CardHeader>
                 <CardContent className="space-y-4 px-6">
                     <div className="space-y-4">

@@ -89,6 +89,7 @@ export default function SignUpForm() {
                 email: values.email,
                 role: userRole,
                 createdAt: serverTimestamp(),
+                diamonds: 0,
             });
 
             toast({
