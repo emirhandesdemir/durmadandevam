@@ -30,8 +30,18 @@ export default async function UserProfilePage({ params }: ProfilePageProps) {
   
   const profileUserData = profileUserSnap.data() as UserProfile;
 
-  // Client Component'e geçirmeden önce veriyi serileştir.
-  const plainProfileUser = JSON.parse(JSON.stringify(profileUserData));
+  // Client Component'lere gönderilmeden önce Timestamp nesnelerini manuel olarak serileştir.
+  // Next.js, 'toJSON' metoduna sahip nesnelerin prop olarak geçirilmesini desteklemez.
+  const serializableProfileUser = {
+    ...profileUserData,
+    createdAt: profileUserData.createdAt.toDate().toISOString(),
+    // Gelen isteklere ait zaman damgalarını da serileştir
+    followRequests: (profileUserData.followRequests || []).map(req => ({
+      ...req,
+      // `requestedAt` Timestamp nesnesini ISO string'e çevir
+      requestedAt: req.requestedAt.toDate().toISOString(),
+    })),
+  };
 
   return (
     <>
@@ -39,11 +49,11 @@ export default async function UserProfilePage({ params }: ProfilePageProps) {
       <div className="container mx-auto max-w-3xl px-4 py-6 md:py-8">
         <div className="flex flex-col gap-8">
           <ProfileHeader 
-            profileUser={plainProfileUser} 
+            profileUser={serializableProfileUser} 
           />
           <ProfilePosts 
               userId={uid} 
-              profileUser={plainProfileUser} 
+              profileUser={serializableProfileUser} 
           />
         </div>
       </div>
