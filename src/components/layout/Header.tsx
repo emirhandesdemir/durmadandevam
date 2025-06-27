@@ -14,8 +14,12 @@ export default function Header() {
         <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="container flex h-16 items-center justify-between">
                 <Link href="/home" className="flex items-center gap-2">
-                    <Users className="h-7 w-7 text-primary" />
-                    <span className="text-xl font-bold tracking-tight">HiweWalk</span>
+                    <div className="flex items-center justify-center h-8 w-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500">
+                         <Users className="h-5 w-5 text-white" />
+                    </div>
+                    <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
+                        HiweWalk
+                    </span>
                 </Link>
                 <div className="flex items-center gap-2">
                     <Button variant="ghost" size="icon" className="rounded-full">

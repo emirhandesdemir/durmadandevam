@@ -126,13 +126,13 @@ export default function RoomPage() {
                 <main ref={chatContainerRef} className="flex-1 overflow-y-auto p-4">
                      {/* Voice Stage or Loader */}
                      {showVoiceStageLoader ? (
-                        <div className="flex h-64 items-center justify-center">
+                        <div className="flex h-48 items-center justify-center">
                             <Loader2 className="h-10 w-10 animate-spin text-primary" />
                         </div>
                      ) : (
-                        <div className="mb-6 space-y-8">
+                        <div className="mb-4 space-y-4">
                             {/* Host Area - with fixed height to prevent layout shift */}
-                            <div className="flex flex-col items-center justify-center min-h-36">
+                            <div className="flex flex-col items-center justify-center min-h-28">
                                 {hostParticipant ? (
                                     <VoiceUserIcon
                                         key={hostParticipant.uid}
@@ -145,7 +145,7 @@ export default function RoomPage() {
                                     />
                                 ) : (
                                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                                        <div className="flex items-center justify-center h-24 w-24 rounded-full bg-gray-800/40 border-2 border-dashed border-gray-600">
+                                        <div className="flex items-center justify-center h-20 w-20 rounded-full bg-gray-800/40 border-2 border-dashed border-gray-600">
                                             <Crown className="h-8 w-8 text-gray-600" />
                                         </div>
                                         <p className="text-xs font-semibold">Oda Sahibi</p>
