@@ -126,6 +126,7 @@ export default function NewPostForm() {
             uid: user.uid,
             username: userData.username || user.displayName || 'Anonim Kullanıcı',
             userAvatar: userData.photoURL || user.photoURL,
+            userAvatarFrame: userData.selectedAvatarFrame || '',
             userRole: userData.role || 'user',
             text: text,
             imageUrl: imageUrl, 

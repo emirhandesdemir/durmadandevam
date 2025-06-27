@@ -64,6 +64,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
                 joinedAt: serverTimestamp() as Timestamp,
                 lastActiveAt: serverTimestamp() as Timestamp,
                 selectedBubble: userData.selectedBubble || '',
+                selectedAvatarFrame: userData.selectedAvatarFrame || '',
             };
             
             transaction.set(userVoiceRef, participantData);

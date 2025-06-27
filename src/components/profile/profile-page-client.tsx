@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, Headphones, Gem } from "lucide-react";
+import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, Headphones, Gem, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { useTheme } from "next-themes";
@@ -41,6 +41,12 @@ const bubbleOptions = [
     { id: "bubble-style-5", name: "Kozmik" },
 ];
 
+const avatarFrameOptions = [
+    { id: "", name: "Yok" },
+    { id: "avatar-frame-angel", name: "Melek Kanadı" },
+    { id: "avatar-frame-snake", name: "Yılan" },
+];
+
 
 export default function ProfilePageClient() {
     const { user, userData, loading, handleLogout } = useAuth();
@@ -51,6 +57,7 @@ export default function ProfilePageClient() {
     const [newAvatar, setNewAvatar] = useState<string | null>(null);
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
     const [selectedBubble, setSelectedBubble] = useState("");
+    const [selectedAvatarFrame, setSelectedAvatarFrame] = useState("");
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     
@@ -64,6 +71,7 @@ export default function ProfilePageClient() {
         if (userData) {
             setUsername(userData.username || "");
             setSelectedBubble(userData.selectedBubble || "");
+            setSelectedAvatarFrame(userData.selectedAvatarFrame || "");
         }
     }, [userData]);
     
@@ -79,7 +87,7 @@ export default function ProfilePageClient() {
     }, []);
 
 
-    const hasChanges = username !== (userData?.username || "") || newAvatar !== null || selectedBubble !== (userData?.selectedBubble || "");
+    const hasChanges = username !== (userData?.username || "") || newAvatar !== null || selectedBubble !== (userData?.selectedBubble || "") || selectedAvatarFrame !== (userData?.selectedAvatarFrame || "");
     const diamondCount = userData?.diamonds ?? 0;
     
     const handleAvatarClick = () => {
@@ -124,8 +132,11 @@ export default function ProfilePageClient() {
                 updates.username = username;
                 authUpdates.displayName = username;
             }
-            if (selectedBubble !== userData?.selectedBubble) {
+            if (selectedBubble !== (userData?.selectedBubble || "")) {
                 updates.selectedBubble = selectedBubble;
+            }
+             if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || "")) {
+                updates.selectedAvatarFrame = selectedAvatarFrame;
             }
     
             if (Object.keys(updates).length > 0) {
@@ -212,16 +223,18 @@ export default function ProfilePageClient() {
                         className="hidden"
                     />
                     <div className="relative">
-                        <Avatar className="h-32 w-32 border-4 border-white shadow-lg">
-                            <AvatarImage src={newAvatar || user.photoURL || undefined} />
-                            <AvatarFallback className="text-5xl bg-primary/20">
-                                {user.displayName?.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                        </Avatar>
+                        <div className={cn("avatar-frame-wrapper p-2", selectedAvatarFrame)}>
+                            <Avatar className="h-32 w-32 border-4 border-white shadow-lg">
+                                <AvatarImage src={newAvatar || user.photoURL || undefined} />
+                                <AvatarFallback className="text-5xl bg-primary/20">
+                                    {user.displayName?.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                            </Avatar>
+                        </div>
                         <Button 
                             size="icon" 
                             variant="outline" 
-                            className="absolute -bottom-2 -right-2 rounded-full h-10 w-10 border-2 border-background bg-card"
+                            className="absolute bottom-2 right-2 rounded-full h-10 w-10 border-2 border-background bg-card"
                             onClick={handleAvatarClick}
                         >
                             <Edit className="h-5 w-5" />
@@ -288,7 +301,7 @@ export default function ProfilePageClient() {
                          <AccordionItem value="bubbles">
                             <AccordionTrigger>
                                 <div className="flex items-center gap-3">
-                                    <Sparkles className="h-5 w-5 text-muted-foreground" />
+                                    <MessageCircle className="h-5 w-5 text-muted-foreground" />
                                     <span className="font-semibold">Sohbet Baloncuğu</span>
                                 </div>
                             </AccordionTrigger>
@@ -309,6 +322,33 @@ export default function ProfilePageClient() {
                                                      {Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}
                                                 </div>
                                             )}
+                                        </div>
+                                        <span className="text-xs font-bold text-center">{option.name}</span>
+                                    </div>
+                                 ))}
+                               </div>
+                            </AccordionContent>
+                        </AccordionItem>
+                         <AccordionItem value="avatar-frames">
+                            <AccordionTrigger>
+                                <div className="flex items-center gap-3">
+                                    <Sparkles className="h-5 w-5 text-muted-foreground" />
+                                    <span className="font-semibold">Avatar Çerçevesi</span>
+                                </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                               <div className="grid grid-cols-3 gap-2 pt-2">
+                                 {avatarFrameOptions.map(option => (
+                                    <div 
+                                        key={option.id}
+                                        onClick={() => setSelectedAvatarFrame(option.id)}
+                                        className={cn(
+                                            "flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer p-2 aspect-square hover:bg-accent",
+                                            selectedAvatarFrame === option.id ? "border-primary" : ""
+                                        )}
+                                    >
+                                        <div className={cn("avatar-frame-wrapper h-12 w-12", option.id)}>
+                                            <Avatar className="h-full w-full bg-muted" />
                                         </div>
                                         <span className="text-xs font-bold text-center">{option.name}</span>
                                     </div>

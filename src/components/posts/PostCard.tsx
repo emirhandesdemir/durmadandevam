@@ -155,10 +155,12 @@ export default function PostCard({ post }: PostCardProps) {
                     {/* Üst Kısım: Avatar, İsim ve Menü */}
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10 border">
-                                <AvatarImage src={post.userAvatar} />
-                                <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
-                            </Avatar>
+                            <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
+                                <Avatar className="h-10 w-10 border">
+                                    <AvatarImage src={post.userAvatar} />
+                                    <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                            </div>
                             <div>
                                 <div className="flex items-center gap-1.5">
                                     <p className="font-bold text-sm">{post.username}</p>

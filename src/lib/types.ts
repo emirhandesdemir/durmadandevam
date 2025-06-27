@@ -80,6 +80,7 @@ export interface VoiceParticipant {
     joinedAt: Timestamp;
     lastActiveAt?: Timestamp; // Son aktivite zamanı (AFK takibi için)
     selectedBubble?: string; // Kullanıcının seçtiği baloncuk stili
+    selectedAvatarFrame?: string; // Kullanıcının seçtiği avatar çerçevesi
 }
 
 /**

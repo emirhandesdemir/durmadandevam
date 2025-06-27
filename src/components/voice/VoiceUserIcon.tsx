@@ -95,7 +95,8 @@ export default function VoiceUserIcon({
 
   const avatar = (
     <div className="relative flex flex-col items-center gap-1.5">
-       <div className={cn(
+      <div className={cn("avatar-frame-wrapper", participant.selectedAvatarFrame)}>
+        <div className={cn(
           "relative", 
           size === 'lg' ? "h-24 w-24" : "w-full"
         )}>
@@ -124,7 +125,8 @@ export default function VoiceUserIcon({
               <Mic className={cn(iconSize, "text-white")} />
             )}
           </div>
-      </div>
+        </div>
+       </div>
 
       <div className="flex items-center justify-center gap-1 w-full">
           <p className={cn("font-semibold text-white truncate", nameSize, size === 'lg' ? 'max-w-[120px]' : 'max-w-[60px]')}>{participant.username}</p>

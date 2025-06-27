@@ -38,8 +38,8 @@ export default function ChatMessageInput({ roomId, canSendMessage }: ChatMessage
             text: textToSend,
             createdAt: serverTimestamp(),
             type: 'user',
-            // Yeni: Kullanıcının seçtiği baloncuk stilini mesaja ekle
             selectedBubble: userData?.selectedBubble || '',
+            selectedAvatarFrame: userData?.selectedAvatarFrame || '',
         });
     } catch (error: any) {
         console.error("Mesaj gönderilirken hata: ", error);
