@@ -6,16 +6,18 @@ import { Button } from "@/components/ui/button";
 import { MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FollowButton from "./FollowButton";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProfileHeaderProps {
   profileUser: any;
-  currentUser: any | null;
 }
 
 /**
- * Dinamik profil sayfasının başlık bölümü.
+ * Dinamik profil sayfasının başlık bölümü. Artık bir Client Component.
  */
-export default function ProfileHeader({ profileUser, currentUser }: ProfileHeaderProps) {
+export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
+  const { userData: currentUser } = useAuth();
+  
   const isOwnProfile = currentUser?.uid === profileUser.uid;
   const isFollower = (profileUser.followers || []).includes(currentUser?.uid || '');
   const canViewStats = !profileUser.privateProfile || isFollower || isOwnProfile;

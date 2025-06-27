@@ -5,7 +5,6 @@ import { notFound } from 'next/navigation';
 import type { UserProfile } from '@/lib/types';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import ProfilePosts from '@/components/profile/ProfilePosts';
-import { auth } from '@/lib/firebase';
 
 interface ProfilePageProps {
   params: {
@@ -20,10 +19,7 @@ interface ProfilePageProps {
 export default async function UserProfilePage({ params }: ProfilePageProps) {
   const { uid } = params;
   
-  // Sunucu tarafında oturum açmış kullanıcıyı al (isteğe bağlı)
-  const currentUserId = auth.currentUser?.uid;
-
-  // Profil verisini ve mevcut kullanıcının verisini Firestore'dan çek
+  // Sadece profil verisini sunucu tarafında çek
   const profileUserRef = doc(db, 'users', uid);
   const profileUserSnap = await getDoc(profileUserRef);
   
@@ -33,39 +29,19 @@ export default async function UserProfilePage({ params }: ProfilePageProps) {
   
   const profileUserData = profileUserSnap.data() as UserProfile;
 
-  let currentUserData: UserProfile | null = null;
-  if (currentUserId) {
-    const currentUserRef = doc(db, 'users', currentUserId);
-    const currentUserSnap = await getDoc(currentUserRef);
-    if (currentUserSnap.exists()) {
-      currentUserData = currentUserSnap.data() as UserProfile;
-    }
-  }
-
-  // Firestore Timestamps are not serializable and cannot be passed from Server to Client Components.
-  // We convert them to a plain JSON object. `JSON.stringify` automatically handles Timestamps.
+  // Client Component'e geçirmeden önce veriyi serileştir.
   const plainProfileUser = JSON.parse(JSON.stringify(profileUserData));
-  const plainCurrentUser = currentUserData ? JSON.parse(JSON.stringify(currentUserData)) : null;
-
-  // Kullanıcının takipçisi olup olmadığını kontrol et
-  const isFollower = (profileUserData.followers || []).includes(currentUserId || '');
-  const canViewContent = !profileUserData.privateProfile || isFollower || currentUserId === uid;
 
   return (
     <div className="container mx-auto max-w-3xl px-4 py-6 md:py-8">
       <div className="flex flex-col gap-8">
         <ProfileHeader 
           profileUser={plainProfileUser} 
-          currentUser={plainCurrentUser} 
         />
-        {canViewContent ? (
-          <ProfilePosts userId={uid} />
-        ) : (
-          <div className="text-center py-10 border-t">
-            <h2 className="text-lg font-semibold">Bu Hesap Gizli</h2>
-            <p className="text-muted-foreground">Gönderilerini görmek için bu hesabı takip et.</p>
-          </div>
-        )}
+        <ProfilePosts 
+            userId={uid} 
+            profileUser={plainProfileUser} 
+        />
       </div>
     </div>
   );
