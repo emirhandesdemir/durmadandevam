@@ -17,16 +17,6 @@ import {
 } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
 
-/**
- * İki kullanıcı ID'sinden her zaman tutarlı bir sohbet ID'si oluşturur.
- * @param uid1 Birinci kullanıcının ID'si.
- * @param uid2 İkinci kullanıcının ID'si.
- * @returns Alfabetik olarak sıralanmış ve birleştirilmiş sohbet ID'si.
- */
-export function getChatId(uid1: string, uid2: string): string {
-  return [uid1, uid2].sort().join('_');
-}
-
 interface UserInfo {
   uid: string;
   username: string;

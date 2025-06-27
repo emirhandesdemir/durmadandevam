@@ -9,7 +9,7 @@ import FollowButton from './FollowButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 import FollowListDialog from './FollowListDialog';
-import { getChatId } from '@/lib/actions/dmActions';
+import { getChatId } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
