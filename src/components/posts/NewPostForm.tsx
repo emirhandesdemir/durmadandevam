@@ -102,12 +102,18 @@ export default function NewPostForm() {
   }
 
   const handleShare = async () => {
-    if (!user || !userData) {
-      toast({ variant: 'destructive', description: 'Gönderi paylaşmak için giriş yapmalısınız.' });
-      return;
+    // --- ROBUST CHECKS ---
+    if (!user) {
+        toast({ variant: 'destructive', description: 'Bu işlemi yapmak için giriş yapmalısınız.', duration: 5000 });
+        router.push('/login');
+        return;
+    }
+    if (!userData) {
+        toast({ variant: 'destructive', title: 'Veri Yükleniyor', description: 'Kullanıcı profiliniz henüz yüklenmedi. Lütfen bir saniye sonra tekrar deneyin.', duration: 5000 });
+        return;
     }
     if (!text.trim() && !image) {
-      toast({ variant: 'destructive', description: 'Paylaşmak için bir metin yazın veya resim seçin.' });
+      toast({ variant: 'destructive', description: 'Paylaşmak için bir metin yazın veya resim seçin.', duration: 5000 });
       return;
     }
 
@@ -122,7 +128,7 @@ export default function NewPostForm() {
             imageUrl = await getDownloadURL(snapshot.ref);
         }
 
-        await addDoc(collection(db, 'posts'), {
+        const postData = {
             uid: user.uid,
             username: userData.username || user.displayName || 'Anonim Kullanıcı',
             userAvatar: userData.photoURL || user.photoURL,
@@ -134,7 +140,9 @@ export default function NewPostForm() {
             likes: [],
             likeCount: 0,
             commentCount: 0,
-        });
+        };
+
+        await addDoc(collection(db, 'posts'), postData);
 
         toast({
             title: "Başarıyla Paylaşıldı!",
@@ -143,28 +151,30 @@ export default function NewPostForm() {
         router.push('/home');
 
     } catch (error) {
-        console.error("Gönderi paylaşılırken hata oluştu:", error);
+        console.error("Gönderi paylaşılırken detaylı hata:", error);
         let title = "Bir Hata Oluştu";
         let description = "Gönderiniz paylaşılamadı. Lütfen tekrar deneyin.";
 
         if (error instanceof FirebaseError) {
             switch (error.code) {
                 case 'storage/unauthorized':
-                    title = 'Firebase Storage Yetki Hatası';
-                    description = 'Resminiz yüklenemedi çünkü depolama izinleriniz ayarlanmamış. Lütfen Firebase projenizdeki Storage Kurallarını güncelleyin.';
+                    title = 'Depolama Yetki Hatası';
+                    description = 'Resminiz yüklenemedi. Firebase projenizdeki Storage Kurallarını kontrol edin. Bu kurallar, giriş yapmış kullanıcıların kendi klasörlerine yazmasına izin vermelidir.';
                     break;
                 case 'storage/canceled':
-                    title = 'İşlem İptal Edildi';
+                    title = 'Yükleme İptal Edildi';
                     description = 'Resim yükleme işlemi ağ sorunu nedeniyle iptal edildi.';
                     break;
                 case 'permission-denied':
-                    title = 'Firestore Yetki Hatası';
+                    title = 'Veritabanı Yetki Hatası';
                     description = 'Veritabanına yazma izniniz yok. Lütfen Firestore güvenlik kurallarınızı kontrol edin.';
                     break;
                 default:
                     title = `Hata Kodu: ${error.code}`;
-                    description = "Beklenmedik bir hata oluştu. Lütfen daha sonra tekrar deneyin.";
+                    description = `Beklenmedik bir hata oluştu: ${error.message}`;
             }
+        } else if (error instanceof Error) {
+            description = error.message;
         }
         
         toast({

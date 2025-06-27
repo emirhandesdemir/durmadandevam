@@ -277,6 +277,31 @@ export default function ProfilePageClient() {
                                         ))}
                                     </div>
                                 </div>
+                                 {/* NEW: Live Preview Section */}
+                                <div className="mt-6 space-y-3">
+                                    <h4 className="text-sm font-semibold text-muted-foreground">Canlı Önizleme</h4>
+                                    <div className="rounded-xl border bg-gradient-to-tr from-card to-muted/20 p-4 shadow-inner min-h-[100px] flex items-center justify-center">
+                                        <div className="flex items-end gap-3 w-full max-w-xs mx-auto">
+                                            <div className={cn("avatar-frame-wrapper", selectedAvatarFrame)}>
+                                                <Avatar className="h-10 w-10">
+                                                    <AvatarImage src={newAvatar || user?.photoURL || undefined} />
+                                                    <AvatarFallback>{(userData?.username || user.displayName)?.charAt(0).toUpperCase()}</AvatarFallback>
+                                                </Avatar>
+                                            </div>
+                                            <div className="flex flex-col flex-1 gap-1">
+                                                <p className="font-bold text-sm truncate">{userData?.username || user.displayName}</p>
+                                                <div className="relative p-3 rounded-xl bg-primary text-primary-foreground rounded-bl-lg w-fit">
+                                                    {selectedBubble && (
+                                                        <div className={`bubble-wrapper ${selectedBubble}`}>
+                                                            {Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}
+                                                        </div>
+                                                    )}
+                                                    <p className="relative z-10">Bu bir önizleme!</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </AccordionContent>
                         </AccordionItem>
                     </Accordion>
