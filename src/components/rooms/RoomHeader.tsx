@@ -7,7 +7,7 @@ import { ChevronLeft, MoreHorizontal, Users, Timer, AlertTriangle } from 'lucide
 import { Button } from '@/components/ui/button';
 import type { Room } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { addSystemMessage, deleteRoomAsOwner } from '@/lib/actions/roomActions';
+import { addSystemMessage, deleteExpiredRoom } from '@/lib/actions/roomActions';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -52,24 +52,25 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle }: Ro
     useEffect(() => {
         if (timeLeft === null || !user) return;
         
-        // 15-saniye uyarısı
+        // 15-saniye uyarısı (sadece host tarafından gönderilir, spamı önlemek için)
         if (timeLeft <= 15 && !warningSent && isHost) {
             setWarningSent(true);
             addSystemMessage(room.id, "⚠️ Bu oda 15 saniye içinde otomatik olarak kapanacak.");
         }
 
-        // Oda silme
-        if (timeLeft <= 0 && isHost) {
-            // Prevent multiple triggers from the same client session
+        // Oda silme (odadaki herhangi bir kullanıcı tarafından tetiklenir)
+        if (timeLeft <= 0) {
+            // Aynı istemci tarafından birden fazla tetiklemeyi önle
             if (sessionStorage.getItem(`room_deleted_${room.id}`) === 'true') return;
             sessionStorage.setItem(`room_deleted_${room.id}`, 'true');
 
-            deleteRoomAsOwner(room.id, user.uid).then(result => {
+            // Yeni ve güvenli sunucu eylemini çağır
+            deleteExpiredRoom(room.id).then(result => {
                 if(result.success) {
                     toast({ description: `"${room.name}" odası süresi dolduğu için kapatıldı.` });
-                } else if(result.error) {
-                    toast({ variant: 'destructive', description: result.error });
                 }
+                // Hata durumunda (örn: oda zaten silinmiş veya süresi dolmamış),
+                // bir şey yapmaya gerek yok çünkü başka bir istemci işlemi yapmış olabilir.
             });
         }
     }, [timeLeft, warningSent, isHost, room.id, user, toast]);
