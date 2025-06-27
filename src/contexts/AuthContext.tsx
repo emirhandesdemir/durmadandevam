@@ -11,12 +11,14 @@ import { doc, onSnapshot, DocumentData } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import type { FeatureFlags } from '@/lib/types';
 
 
 // Context'in tip tanımı
 interface AuthContextType {
   user: User | null;
   userData: DocumentData | null; // Firestore'dan gelen ek kullanıcı verileri (örn: rol)
+  featureFlags: FeatureFlags | null; // Uygulama genelindeki özellik bayrakları
   loading: boolean;
   handleLogout: () => Promise<void>; // Çıkış fonksiyonu eklendi
 }
@@ -25,6 +27,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   userData: null,
+  featureFlags: null,
   loading: true,
   handleLogout: async () => {}, // Boş bir async fonksiyon
 });
@@ -34,28 +37,33 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<DocumentData | null>(null);
+  const [featureFlags, setFeatureFlags] = useState<FeatureFlags | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
 
-  // Firebase Auth durumundaki değişiklikleri dinleyen useEffect
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (!currentUser) {
-        // Kullanıcı çıkış yapmışsa, verileri temizle ve yüklemeyi bitir
         setUserData(null);
         setLoading(false);
       }
-      // Kullanıcı giriş yaptığında yükleme durumu, Firestore dinleyicisi tarafından yönetilecek.
     });
-    // Component unmount olduğunda dinleyiciyi temizle
     return () => unsubscribe();
   }, []);
 
-  // Firestore'daki kullanıcı belgesini gerçek zamanlı dinleyen useEffect
   useEffect(() => {
     let unsubscribeFirestore: () => void = () => {};
+    let unsubscribeFeatures: () => void = () => {};
+    
+    // Özellik bayraklarını her zaman dinle
+    const featuresRef = doc(db, 'config', 'featureFlags');
+    unsubscribeFeatures = onSnapshot(featuresRef, (docSnap) => {
+        setFeatureFlags(docSnap.exists() ? docSnap.data() as FeatureFlags : { quizGameEnabled: true, postFeedEnabled: true });
+        // Kullanıcı bilgisi ve özellikler yüklendiğinde yüklemeyi bitir
+        if (!user) setLoading(false);
+    });
 
     if (user) {
       setLoading(true);
@@ -66,7 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setUserData(null);
         }
-        setLoading(false);
+        // Kullanıcı bilgisi ve özellikler yüklendiğinde yüklemeyi bitir
+        if (featureFlags !== null) setLoading(false);
       }, (error) => {
         console.error("Firestore user listener error:", error);
         setUserData(null);
@@ -74,9 +83,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     }
 
-    // Component unmount olduğunda veya kullanıcı değiştiğinde dinleyiciyi temizle
-    return () => unsubscribeFirestore();
-  }, [user]); // Bu efekt, kullanıcı (login/logout) değiştiğinde yeniden çalışır.
+    return () => {
+        unsubscribeFirestore();
+        unsubscribeFeatures();
+    };
+  }, [user, featureFlags]);
 
 
   // Çıkış yapma fonksiyonu
@@ -87,8 +98,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             title: "Oturum Kapatıldı",
             description: "Başarıyla çıkış yaptınız.",
         });
-        // Kullanıcıyı login sayfasına yönlendir.
-        // `window.location` kullanmak, state'lerin tamamen sıfırlanmasını sağlar.
         window.location.href = '/login'; 
     } catch (error) {
         console.error("Logout error", error);
@@ -102,7 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
   // Context aracılığıyla paylaşılacak değerler
-  const value = { user, userData, loading, handleLogout };
+  const value = { user, userData, loading, handleLogout, featureFlags };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

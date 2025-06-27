@@ -2,13 +2,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, onSnapshot, getCountFromServer } from "firebase/firestore";
+import { collection, onSnapshot, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import StatCard from "@/components/admin/stat-card";
-import { Users, MessageSquare, FileText, Puzzle } from "lucide-react";
+import { Users, MessageSquare, FileText, Puzzle, Headphones } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import type { VoiceStats } from "@/lib/types";
 
 export default function DashboardPage() {
   // Veri sayımları ve yükleme durumu için state'ler
@@ -16,57 +17,32 @@ export default function DashboardPage() {
   const [roomCount, setRoomCount] = useState(0);
   const [postCount, setPostCount] = useState(0);
   const [questionCount, setQuestionCount] = useState(0);
+  const [voiceUserCount, setVoiceUserCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   // Firestore'dan verileri anlık olarak dinlemek için useEffect
   useEffect(() => {
     setIsLoading(true);
-    let active = true;
 
-    // Tüm sayımları yapmak için bir async fonksiyon
-    const fetchCounts = async () => {
-        // Kullanıcı sayısını dinle
-        const userUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
-            if (active) setUserCount(snapshot.size);
-        });
+    const unsubscribers = [
+        onSnapshot(collection(db, "users"), (snapshot) => setUserCount(snapshot.size)),
+        onSnapshot(collection(db, "rooms"), (snapshot) => setRoomCount(snapshot.size)),
+        onSnapshot(collection(db, "posts"), (snapshot) => setPostCount(snapshot.size)),
+        onSnapshot(collection(db, "game_questions"), (snapshot) => setQuestionCount(snapshot.size)),
+        onSnapshot(doc(db, "config", "voiceStats"), (doc) => {
+            if (doc.exists()) {
+                setVoiceUserCount((doc.data() as VoiceStats).totalUsers || 0);
+            }
+        }),
+    ];
 
-        // Oda sayısını dinle
-        const roomUnsub = onSnapshot(collection(db, "rooms"), (snapshot) => {
-            if (active) setRoomCount(snapshot.size);
-        });
-
-        // Gönderi sayısını dinle
-        const postUnsub = onSnapshot(collection(db, "posts"), (snapshot) => {
-            if (active) setPostCount(snapshot.size);
-        });
-
-        // Soru sayısını dinle
-        const questionUnsub = onSnapshot(collection(db, "game_questions"), (snapshot) => {
-            if (active) setQuestionCount(snapshot.size);
-        });
-
-        if(active) {
-            // Tüm dinleyiciler kurulduktan bir süre sonra yükleme durumunu false yap
-            const timer = setTimeout(() => setIsLoading(false), 500);
-            return { userUnsub, roomUnsub, postUnsub, questionUnsub, timer };
-        }
-        return null;
-    }
-
-    const subscriptions = fetchCounts();
+    // Tüm dinleyiciler kurulduktan bir süre sonra yükleme durumunu false yap
+    const timer = setTimeout(() => setIsLoading(false), 800);
 
     // Component unmount olduğunda dinleyicileri ve zamanlayıcıyı temizle
     return () => {
-        active = false;
-        subscriptions.then(subs => {
-            if(subs) {
-                subs.userUnsub();
-                subs.roomUnsub();
-                subs.postUnsub();
-                subs.questionUnsub();
-                clearTimeout(subs.timer);
-            }
-        })
+        unsubscribers.forEach(unsub => unsub());
+        clearTimeout(timer);
     };
   }, []);
 
@@ -84,7 +60,7 @@ export default function DashboardPage() {
         <StatCard title="Toplam Kullanıcı" value={userCount} icon={Users} isLoading={isLoading} />
         <StatCard title="Aktif Odalar" value={roomCount} icon={MessageSquare} isLoading={isLoading} />
         <StatCard title="Toplam Gönderi" value={postCount} icon={FileText} isLoading={isLoading} />
-        <StatCard title="Quiz Soruları" value={questionCount} icon={Puzzle} isLoading={isLoading} />
+        <StatCard title="Sesli Aktif Kullanıcı" value={voiceUserCount} icon={Headphones} isLoading={isLoading} />
       </div>
 
        {/* Hızlı Erişim Kartları */}
@@ -112,24 +88,6 @@ export default function DashboardPage() {
              <Card className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-3">
-                        <MessageSquare className="w-6 h-6 text-primary"/>
-                        Oda Yönetimi
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-muted-foreground text-sm">
-                       Aktif odaları görüntüleyin, sohbetleri izleyin veya odaları kapatın.
-                    </p>
-                </CardContent>
-                <CardFooter>
-                    <Button asChild variant="outline">
-                        <Link href="/admin/rooms">Odaları Yönet</Link>
-                    </Button>
-                </CardFooter>
-            </Card>
-             <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-3">
                         <FileText className="w-6 h-6 text-primary"/>
                         Gönderi Yönetimi
                     </CardTitle>
@@ -142,6 +100,24 @@ export default function DashboardPage() {
                 <CardFooter>
                     <Button asChild variant="outline">
                         <Link href="/admin/posts">Gönderileri Yönet</Link>
+                    </Button>
+                </CardFooter>
+            </Card>
+             <Card className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-3">
+                        <Puzzle className="w-6 h-6 text-primary"/>
+                        Quiz Soru Yönetimi
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground text-sm">
+                        Oyun için yeni sorular ekleyin, düzenleyin veya silin. Toplam: {questionCount}
+                    </p>
+                </CardContent>
+                <CardFooter>
+                     <Button asChild variant="outline">
+                        <Link href="/admin/questions">Soruları Yönet</Link>
                     </Button>
                 </CardFooter>
             </Card>

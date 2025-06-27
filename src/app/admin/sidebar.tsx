@@ -17,7 +17,8 @@ import {
   Palette,
   Settings,
   X,
-  Swords
+  Swords,
+  SlidersHorizontal, // Yeni ikon
 } from "lucide-react";
 import { Button } from "../ui/button";
 
@@ -28,6 +29,7 @@ const navItems = [
   { href: "/admin/rooms", label: "Odalar", icon: MessageSquare },
   { href: "/admin/posts", label: "Gönderiler", icon: FileText },
   { href: "/admin/questions", label: "Quiz Soruları", icon: Puzzle },
+  { href: "/admin/features", label: "Özellik Yönetimi", icon: SlidersHorizontal }, // Yeni sayfa
   { href: "/admin/theme", label: "Tema Ayarları", icon: Palette },
   { href: "/admin/system", label: "Sistem Ayarları", icon: Settings },
 ];

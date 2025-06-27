@@ -25,6 +25,7 @@ export interface GameSettings {
     questionTimerSeconds: number;
     rewardAmount: number;
     cooldownSeconds: number;
+    afkTimeoutMinutes: number; // AFK zaman aşımı süresi (dakika)
 }
 
 /**
@@ -58,6 +59,7 @@ export interface Room {
         role?: 'admin' | 'user';
     };
     createdAt: Timestamp;
+    expiresAt?: Timestamp; // Odanın otomatik olarak kapanacağı zaman
     participants: { uid: string, username: string, photoURL?: string | null }[];
     maxParticipants: number;
     nextGameTimestamp?: Timestamp;
@@ -74,7 +76,25 @@ export interface VoiceParticipant {
     photoURL?: string | null;
     isSpeaker: boolean;
     isMuted: boolean;
+    isSharingScreen: boolean; // Kullanıcının ekranını paylaşıp paylaşmadığı
     joinedAt: Timestamp;
-    lastSpokeAt?: Timestamp; // Son konuşma zamanı (inaktivite takibi için)
+    lastActiveAt?: Timestamp; // Son aktivite zamanı (AFK takibi için)
     selectedBubble?: string; // Kullanıcının seçtiği baloncuk stili
+}
+
+/**
+ * Uygulama özelliklerinin durumunu tanımlar.
+ * Firestore'daki `config/featureFlags` dokümanına karşılık gelir.
+ */
+export interface FeatureFlags {
+    quizGameEnabled: boolean;
+    postFeedEnabled: boolean;
+}
+
+/**
+ * Genel sesli sohbet istatistiklerini tanımlar.
+ * Firestore'daki `config/voiceStats` dokümanına karşılık gelir.
+ */
+export interface VoiceStats {
+    totalUsers: number;
 }

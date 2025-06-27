@@ -4,12 +4,16 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Send, Users, PlusCircle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 /**
  * Ana uygulama için üst navigasyon çubuğu (Header).
  * Logo, uygulama adı ve mesajlar (DM) butonu içerir.
  */
 export default function Header() {
+    const { featureFlags } = useAuth();
+    const postFeedEnabled = featureFlags?.postFeedEnabled ?? true;
+
     return (
         <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="container flex h-16 items-center justify-between">
@@ -22,12 +26,14 @@ export default function Header() {
                     </span>
                 </Link>
                 <div className="flex items-center gap-2">
-                     <Button asChild variant="ghost" size="icon" className="rounded-full">
-                        <Link href="/create-post">
-                            <PlusCircle className="h-6 w-6" />
-                            <span className="sr-only">Yeni Gönderi</span>
-                        </Link>
-                    </Button>
+                     {postFeedEnabled && (
+                        <Button asChild variant="ghost" size="icon" className="rounded-full">
+                            <Link href="/create-post">
+                                <PlusCircle className="h-6 w-6" />
+                                <span className="sr-only">Yeni Gönderi</span>
+                            </Link>
+                        </Button>
+                     )}
                     <Button variant="ghost" size="icon" className="rounded-full">
                         <Send className="h-5 w-5" />
                         <span className="sr-only">Mesajlar</span>

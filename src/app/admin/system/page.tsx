@@ -14,7 +14,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Settings, Loader2 } from "lucide-react";
+import { Settings, Loader2, Gamepad2, UserX } from "lucide-react";
 import { GameSettings as GameSettingsType } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -25,6 +25,7 @@ const settingsSchema = z.object({
   questionTimerSeconds: z.coerce.number().min(5, "Süre en az 5 saniye olmalıdır."),
   rewardAmount: z.coerce.number().min(1, "Ödül en az 1 olabilir."),
   cooldownSeconds: z.coerce.number().min(10, "Bekleme süresi en az 10 saniye olmalıdır."),
+  afkTimeoutMinutes: z.coerce.number().min(1, "AFK süresi en az 1 dakika olmalıdır."),
 });
 
 
@@ -40,7 +41,8 @@ export default function SystemSettingsPage() {
             gameIntervalMinutes: 5,
             questionTimerSeconds: 15,
             rewardAmount: 5,
-            cooldownSeconds: 30
+            cooldownSeconds: 30,
+            afkTimeoutMinutes: 8,
         },
     });
 
@@ -66,7 +68,7 @@ export default function SystemSettingsPage() {
             await updateGameSettings(values);
             toast({
                 title: "Başarılı",
-                description: "Oyun ayarları başarıyla güncellendi."
+                description: "Sistem ayarları başarıyla güncellendi."
             });
         } catch (error) {
             toast({
@@ -97,10 +99,13 @@ export default function SystemSettingsPage() {
         <form onSubmit={form.handleSubmit(onSubmit)}>
             <Card className="mt-8">
                 <CardHeader>
-                <CardTitle>Quiz Oyunu Ayarları</CardTitle>
-                <CardDescription>
-                    Oda içi quiz oyununun çalışma şeklini ve ödüllerini buradan yönetin.
-                </CardDescription>
+                    <div className="flex items-center gap-3">
+                        <Gamepad2 className="h-6 w-6 text-muted-foreground" />
+                        <CardTitle>Quiz Oyunu Ayarları</CardTitle>
+                    </div>
+                    <CardDescription>
+                        Oda içi quiz oyununun çalışma şeklini ve ödüllerini buradan yönetin.
+                    </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                     {loading ? (
@@ -149,13 +154,35 @@ export default function SystemSettingsPage() {
                         </div>
                     )}
                 </CardContent>
-                <CardFooter className="border-t px-6 py-4">
-                    <Button type="submit" disabled={saving || loading}>
-                        {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Ayarları Kaydet
-                    </Button>
-                </CardFooter>
             </Card>
+             <Card className="mt-8">
+                <CardHeader>
+                    <div className="flex items-center gap-3">
+                        <UserX className="h-6 w-6 text-muted-foreground" />
+                        <CardTitle>Sesli Sohbet Ayarları</CardTitle>
+                    </div>
+                    <CardDescription>
+                        Sesli sohbet odalarının işleyişiyle ilgili kuralları belirleyin.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                     {loading ? <Skeleton className="h-16 w-full md:w-1/2" /> : (
+                        <FormField control={form.control} name="afkTimeoutMinutes" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>AFK Zaman Aşımı (Dakika)</FormLabel>
+                                <FormControl><Input type="number" {...field} className="max-w-sm" /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                    )}
+                </CardContent>
+            </Card>
+             <div className="flex justify-end mt-8">
+                <Button type="submit" disabled={saving || loading} size="lg">
+                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Tüm Ayarları Kaydet
+                </Button>
+            </div>
         </form>
       </Form>
     </div>
