@@ -32,8 +32,8 @@ export default function NewPostForm() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (file.size > 5 * 1024 * 1024) {
-          toast({ variant: "destructive", description: "Resim boyutu 5MB'dan büyük olamaz." });
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+          toast({ variant: "destructive", title: "Dosya Çok Büyük", description: "Resim boyutu 5MB'dan büyük olamaz." });
           return;
       }
       const reader = new FileReader();
@@ -70,11 +70,11 @@ export default function NewPostForm() {
     }
 
     setIsSubmitting(true);
-    let imageUrl = '';
 
     try {
+      let imageUrl = '';
+
       if (croppedImage) {
-        toast({ description: "Resim yükleniyor..." });
         const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}_post.jpg`);
         const snapshot = await uploadString(imageRef, croppedImage, 'data_url');
         imageUrl = await getDownloadURL(snapshot.ref);
@@ -94,41 +94,28 @@ export default function NewPostForm() {
       });
 
       toast({
-        title: "Başarılı!",
-        description: 'Gönderiniz başarıyla paylaşıldı!',
+        title: "Paylaşıldı!",
+        description: "Gönderiniz başarıyla oluşturuldu.",
       });
       router.push('/home');
 
     } catch (error) {
-      console.error('Gönderi oluşturulurken hata:', error);
+      console.error("Gönderi oluşturulurken hata:", error);
+      let description = 'Paylaşım sırasında bir hata oluştu. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.';
       
-      let description = 'Gönderi paylaşılırken bilinmeyen bir hata oluştu.';
       if (error instanceof FirebaseError) {
-        switch (error.code) {
-          case 'storage/unauthorized':
-            description = 'Resim yükleme izniniz yok. Firebase Storage kurallarınızı kontrol edin.';
-            break;
-          case 'storage/canceled':
-            description = 'Resim yükleme işlemi iptal edildi.';
-            break;
-          case 'storage/object-not-found':
-             description = 'Yüklenen resim bulunamadı. Lütfen tekrar deneyin.';
-             break;
-          case 'storage/unknown':
-            description = 'Bilinmeyen bir depolama hatası oluştu. İnternet bağlantınızı kontrol edin.';
-            break;
-          default:
-            description = `Bir Firebase hatası oluştu: ${error.message}`;
-            break;
+        if (error.code === 'storage/unauthorized') {
+          description = 'Resim yükleme izniniz yok. Lütfen Firebase Storage güvenlik kurallarınızı kontrol edin.';
+        } else if (error.code === 'permission-denied') {
+          description = 'Veritabanına yazma izniniz yok. Lütfen Firestore güvenlik kurallarınızı kontrol edin.';
         }
-      } else if (error instanceof Error) {
-        description = error.message;
       }
       
       toast({
         variant: 'destructive',
         title: 'Paylaşım Başarısız',
         description: description,
+        duration: 9000,
       });
 
     } finally {
