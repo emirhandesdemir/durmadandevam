@@ -34,6 +34,7 @@ import {
 import { Textarea } from "../ui/textarea";
 import CommentSheet from "../comments/CommentSheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import Link from "next/link";
 
 
 interface PostCardProps {
@@ -154,7 +155,7 @@ export default function PostCard({ post }: PostCardProps) {
                 <div className="p-4">
                     {/* Üst Kısım: Avatar, İsim ve Menü */}
                     <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
+                        <Link href={`/profile/${post.uid}`} className="flex items-center gap-3 group">
                             <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
                                 <Avatar className="h-10 w-10 border">
                                     <AvatarImage src={post.userAvatar} />
@@ -163,7 +164,7 @@ export default function PostCard({ post }: PostCardProps) {
                             </div>
                             <div>
                                 <div className="flex items-center gap-1.5">
-                                    <p className="font-bold text-sm">{post.username}</p>
+                                    <p className="font-bold text-sm group-hover:underline">{post.username}</p>
                                     {post.userRole === 'admin' && (
                                         <TooltipProvider>
                                             <Tooltip>
@@ -179,7 +180,7 @@ export default function PostCard({ post }: PostCardProps) {
                                 </div>
                                 <p className="text-xs text-muted-foreground">{timeAgo}</p>
                             </div>
-                        </div>
+                        </Link>
                         {isOwner && !isEditing && (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>

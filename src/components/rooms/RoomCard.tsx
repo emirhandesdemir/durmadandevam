@@ -13,6 +13,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { Room } from "@/lib/types";
+import Link from 'next/link';
 
 /**
  * Oda Listeleme Kartı (RoomCard)
@@ -95,20 +96,20 @@ export default function RoomCard({ room }: RoomCardProps) {
         <Card className="flex flex-col group transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1 rounded-3xl border-0 bg-card shadow-lg shadow-black/5 overflow-hidden">
             {/* Üst Kısım: Renkli Başlık */}
             <div className={cn("p-5 text-white bg-gradient-to-br", bgClass)}>
-                 <div className="flex items-center gap-3">
+                 <Link href={`/profile/${creator.uid}`} className="flex items-center gap-3 group/header">
                     <Avatar className="h-10 w-10 border-2 border-white/50 shadow-sm">
                         <AvatarImage src={creator.photoURL || undefined} />
                         <AvatarFallback className="bg-black/20 text-white">{creator.username?.charAt(0).toUpperCase() || '?'}</AvatarFallback>
                     </Avatar>
                     <div>
                         <div className="flex items-center gap-1.5">
-                            <p className="text-base font-bold leading-tight">{creator.username}</p>
+                            <p className="text-base font-bold leading-tight group-hover/header:underline">{creator.username}</p>
                             <Crown className="h-4 w-4" />
                             {creator.role === 'admin' && <ShieldCheck className="h-4 w-4" />}
                         </div>
                         <p className="text-xs text-white/80">Oda Sahibi</p>
                     </div>
-                </div>
+                </Link>
             </div>
             
             {/* Orta Kısım: Oda Bilgileri */}
@@ -123,10 +124,12 @@ export default function RoomCard({ room }: RoomCardProps) {
                 <div className="flex items-center gap-2">
                     <div className="flex -space-x-3 overflow-hidden">
                         {participants.slice(0, 3).map(p => (
-                            <Avatar key={p.uid} className="h-8 w-8 rounded-full border-2 border-background">
-                                <AvatarImage src={p.photoURL || undefined} />
-                                <AvatarFallback className="text-xs">{p.username.charAt(0)}</AvatarFallback>
-                            </Avatar>
+                            <Link key={p.uid} href={`/profile/${p.uid}`}>
+                                <Avatar className="h-8 w-8 rounded-full border-2 border-background hover:ring-2 hover:ring-primary">
+                                    <AvatarImage src={p.photoURL || undefined} />
+                                    <AvatarFallback className="text-xs">{p.username.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                            </Link>
                         ))}
                     </div>
                      {participants.length > 3 && (

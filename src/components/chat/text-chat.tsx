@@ -6,6 +6,7 @@ import { Timestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import Link from 'next/link';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Loader2 } from 'lucide-react';
@@ -61,19 +62,21 @@ export default function TextChat({ messages, loading }: TextChatProps) {
         const isCurrentUser = msg.uid === currentUser.uid;
         return (
           <div key={msg.id} className={cn("flex items-end gap-3 w-full animate-in fade-in slide-in-from-bottom-4 duration-500", isCurrentUser && "flex-row-reverse")}>
-            <div className="relative">
-                 {msg.selectedBubble && (
-                    <div className={`bubble-wrapper ${msg.selectedBubble}`}>
-                        {Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}
+            <Link href={`/profile/${msg.uid}`}>
+                <div className="relative">
+                     {msg.selectedBubble && (
+                        <div className={`bubble-wrapper ${msg.selectedBubble}`}>
+                            {Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}
+                        </div>
+                    )}
+                    <div className={cn("avatar-frame-wrapper", msg.selectedAvatarFrame)}>
+                        <Avatar className="h-8 w-8">
+                            <AvatarImage src={msg.photoURL || undefined} />
+                            <AvatarFallback>{msg.username?.charAt(0).toUpperCase()}</AvatarFallback>
+                        </Avatar>
                     </div>
-                )}
-                <div className={cn("avatar-frame-wrapper", msg.selectedAvatarFrame)}>
-                    <Avatar className="h-8 w-8">
-                        <AvatarImage src={msg.photoURL || undefined} />
-                        <AvatarFallback>{msg.username?.charAt(0).toUpperCase()}</AvatarFallback>
-                    </Avatar>
                 </div>
-            </div>
+            </Link>
             <div className={cn("flex flex-col gap-1 max-w-[70%]", isCurrentUser && "items-end")}>
                 <div className={cn("flex items-center gap-2", isCurrentUser && "flex-row-reverse")}>
                    <p className="font-bold text-sm text-white">{isCurrentUser ? "Siz" : msg.username}</p>

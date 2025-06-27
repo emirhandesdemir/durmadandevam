@@ -53,26 +53,6 @@ export default function SignUpForm() {
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsLoading(true);
         try {
-             // Kullanıcı rolünü e-postaya göre belirle
-            const isAdminEmail = values.email === 'admin@example.com';
-            
-            // Eğer admin olarak kayıt olunmaya çalışılıyorsa, mevcut bir admin var mı diye kontrol et
-            if (isAdminEmail) {
-                const usersRef = collection(db, "users");
-                const q = query(usersRef, where("role", "==", "admin"));
-                const querySnapshot = await getDocs(q);
-
-                if (!querySnapshot.empty) {
-                    toast({
-                        title: "Kayıt Başarısız",
-                        description: "Yönetici hesabı zaten mevcut. Yeni bir yönetici hesabı oluşturulamaz.",
-                        variant: "destructive",
-                    });
-                    setIsLoading(false);
-                    return; // İşlemi durdur
-                }
-            }
-
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const user = userCredential.user;
             
@@ -80,21 +60,28 @@ export default function SignUpForm() {
                 displayName: values.username,
             });
             
+            const isAdminEmail = values.email === 'admin@example.com';
             const userRole = isAdminEmail ? 'admin' : 'user';
 
-            // Firestore'a kullanıcı dökümanını rolüyle birlikte kaydet
+            // Firestore'a yeni kullanıcı belgesini oluştur
             await setDoc(doc(db, "users", user.uid), {
                 uid: user.uid,
                 username: values.username,
                 email: values.email,
+                photoURL: user.photoURL,
                 role: userRole,
                 createdAt: serverTimestamp(),
                 diamonds: 0,
+                // Takip sistemi için yeni alanlar
+                followers: [],
+                following: [],
+                privateProfile: false, // Varsayılan olarak herkese açık profil
+                followRequests: [],
             });
 
             toast({
                 title: "Hesap Oluşturuldu",
-                description: `Harika! Artık giriş yapabilirsiniz. ${isAdminEmail ? 'Admin yetkilerine sahipsiniz.' : ''}`,
+                description: `Harika! Artık giriş yapabilirsiniz.`,
             });
             
             router.push('/login');

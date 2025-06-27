@@ -4,6 +4,37 @@
 import { Timestamp } from "firebase/firestore";
 
 /**
+ * Kullanıcının temel veri yapısını tanımlar.
+ * Firestore'daki `users` koleksiyonundaki dokümanlara karşılık gelir.
+ */
+export interface UserProfile {
+    uid: string;
+    username: string;
+    email: string;
+    photoURL?: string | null;
+    role: 'admin' | 'user';
+    createdAt: Timestamp;
+    privateProfile: boolean;
+    followers: string[]; // Takipçi UID'leri
+    following: string[]; // Takip edilen UID'leri
+    followRequests: FollowRequest[]; // Gelen takip istekleri
+    diamonds: number;
+    selectedBubble?: string;
+    selectedAvatarFrame?: string;
+}
+
+/**
+ * Gelen bir takip isteğinin yapısını tanımlar.
+ */
+export interface FollowRequest {
+    uid: string;
+    username: string;
+    photoURL: string | null;
+    requestedAt: Timestamp;
+}
+
+
+/**
  * Quiz oyunu için bir sorunun yapısını tanımlar.
  * Firestore'daki `game_questions` koleksiyonundaki dokümanlara karşılık gelir.
  */

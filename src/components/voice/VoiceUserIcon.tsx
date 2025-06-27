@@ -23,9 +23,11 @@ import {
   MicOff,
   LogOut,
   Loader2,
+  User,
 } from "lucide-react";
 import { useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useRouter } from "next/navigation";
 
 
 interface VoiceUserIconProps {
@@ -50,6 +52,7 @@ export default function VoiceUserIcon({
   isParticipantTheHost,
 }: VoiceUserIconProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
 
   const isSelf = participant.uid === currentUserId;
@@ -73,18 +76,28 @@ export default function VoiceUserIcon({
       setIsProcessing(false);
     }
   };
+  
+  const handleViewProfile = () => {
+      router.push(`/profile/${participant.uid}`);
+  }
 
   const menuContent = (
     <DropdownMenuContent align="center" className="bg-gray-800 border-gray-700 text-white">
       <DropdownMenuLabel>{participant.username}</DropdownMenuLabel>
       <DropdownMenuSeparator className="bg-gray-700"/>
-      <DropdownMenuItem
-        className="text-red-400 focus:text-red-400 focus:bg-red-900/50"
-        onClick={() => handleAction(kickFromVoice)}
-      >
-        <LogOut className="mr-2 h-4 w-4" />
-        <span>Sesten At</span>
+       <DropdownMenuItem onClick={handleViewProfile}>
+          <User className="mr-2 h-4 w-4" />
+          <span>Profili Görüntüle</span>
       </DropdownMenuItem>
+      {isHost && (
+        <DropdownMenuItem
+          className="text-red-400 focus:text-red-400 focus:bg-red-900/50"
+          onClick={() => handleAction(kickFromVoice)}
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>Sesten At</span>
+        </DropdownMenuItem>
+      )}
     </DropdownMenuContent>
   );
   
@@ -146,9 +159,7 @@ export default function VoiceUserIcon({
     </div>
   );
 
-  // Eğer kullanıcı yöneticiyse ve bu ikon başkasına aitse, menüyü göster
-  if (isHost && !isSelf) {
-    return (
+  return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
@@ -167,8 +178,4 @@ export default function VoiceUserIcon({
         {menuContent}
       </DropdownMenu>
     );
-  }
-
-  // Yönetici olmayanlar veya kendi ikonu için sadece avatarı göster
-  return <div>{avatar}</div>;
 }

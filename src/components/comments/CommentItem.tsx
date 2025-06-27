@@ -11,6 +11,7 @@ import { useState } from "react";
 import { Timestamp } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { deleteComment } from "@/lib/actions/commentActions";
+import Link from 'next/link';
 
 import {
   DropdownMenu,
@@ -82,16 +83,18 @@ export default function CommentItem({ comment, postId, onReply }: CommentItemPro
 
     return (
         <div className="flex items-start gap-3">
-            <Avatar className="h-9 w-9">
-                <AvatarImage src={comment.userAvatar} />
-                <AvatarFallback>{comment.username?.charAt(0)}</AvatarFallback>
-            </Avatar>
+            <Link href={`/profile/${comment.uid}`}>
+                <Avatar className="h-9 w-9">
+                    <AvatarImage src={comment.userAvatar} />
+                    <AvatarFallback>{comment.username?.charAt(0)}</AvatarFallback>
+                </Avatar>
+            </Link>
             <div className="flex-1">
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm">
-                        <span className="font-bold">{comment.username}</span>
+                     <Link href={`/profile/${comment.uid}`} className="flex items-center gap-2 text-sm group">
+                        <span className="font-bold group-hover:underline">{comment.username}</span>
                         <span className="text-xs text-muted-foreground">{timeAgo}</span>
-                    </div>
+                    </Link>
                     {isOwner && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>

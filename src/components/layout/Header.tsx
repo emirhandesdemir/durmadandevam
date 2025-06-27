@@ -3,16 +3,17 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Send, Users, PlusCircle } from "lucide-react";
+import { Send, Users, PlusCircle, Bell } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 /**
  * Ana uygulama için üst navigasyon çubuğu (Header).
- * Logo, uygulama adı ve mesajlar (DM) butonu içerir.
+ * Logo, uygulama adı ve çeşitli eylem butonları içerir.
  */
 export default function Header() {
-    const { featureFlags } = useAuth();
+    const { featureFlags, userData } = useAuth();
     const postFeedEnabled = featureFlags?.postFeedEnabled ?? true;
+    const followRequestCount = userData?.followRequests?.length || 0;
 
     return (
         <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -25,7 +26,7 @@ export default function Header() {
                         HiweWalk
                     </span>
                 </Link>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                      {postFeedEnabled && (
                         <Button asChild variant="ghost" size="icon" className="rounded-full">
                             <Link href="/create-post">
@@ -34,6 +35,17 @@ export default function Header() {
                             </Link>
                         </Button>
                      )}
+                    <Button asChild variant="ghost" size="icon" className="rounded-full">
+                         <Link href="/requests" className="relative">
+                            <Bell className="h-5 w-5" />
+                            {followRequestCount > 0 && (
+                                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
+                                    {followRequestCount}
+                                </span>
+                            )}
+                            <span className="sr-only">Takip İstekleri</span>
+                        </Link>
+                    </Button>
                     <Button variant="ghost" size="icon" className="rounded-full">
                         <Send className="h-5 w-5" />
                         <span className="sr-only">Mesajlar</span>
