@@ -15,7 +15,9 @@ import {
     arrayRemove,
     getDocs,
     writeBatch,
-    arrayUnion
+    arrayUnion,
+    query,
+    where
 } from 'firebase/firestore';
 import { getGameSettings } from './gameActions';
 import type { Room, VoiceParticipant } from '../types';
@@ -128,7 +130,10 @@ export async function toggleSelfMute(roomId: string, userId: string, isMuted: bo
     if (!userId) throw new Error("Yetkilendirme hatası.");
     const userVoiceRef = doc(db, 'rooms', roomId, 'voiceParticipants', userId);
     try {
-        await updateDoc(userVoiceRef, { isMuted: isMuted });
+        await updateDoc(userVoiceRef, { 
+            isMuted: isMuted,
+            lastActiveAt: serverTimestamp() // Unmuting is an activity
+        });
         return { success: true };
     } catch (error: any) { return { success: false, error: error.message }; }
 }
@@ -195,22 +200,23 @@ export async function kickInactiveUsers(roomId: string) {
     const settings = await getGameSettings();
     const timeoutMinutes = settings.afkTimeoutMinutes || 8;
     const timeoutMs = timeoutMinutes * 60 * 1000;
-    const now = Date.now();
+    const inactiveThreshold = Timestamp.fromMillis(Date.now() - timeoutMs);
 
     const voiceParticipantsRef = collection(db, 'rooms', roomId, 'voiceParticipants');
+    const q = query(voiceParticipantsRef, where('lastActiveAt', '<', inactiveThreshold));
     
     try {
-        const querySnapshot = await getDocs(voiceParticipantsRef);
+        const querySnapshot = await getDocs(q);
+        if (querySnapshot.empty) {
+            return { success: true, kickedCount: 0 };
+        }
+
         const batch = writeBatch(db);
         let kickedCount = 0;
 
         querySnapshot.forEach(doc => {
-            const participant = doc.data() as VoiceParticipant;
-            const lastActive = participant.lastActiveAt?.toMillis() || 0;
-            if (now - lastActive > timeoutMs) {
-                batch.delete(doc.ref);
-                kickedCount++;
-            }
+            batch.delete(doc.ref);
+            kickedCount++;
         });
 
         if (kickedCount > 0) {
@@ -220,8 +226,8 @@ export async function kickInactiveUsers(roomId: string) {
             await batch.commit();
         }
         return { success: true, kickedCount };
-    } catch (error) {
+    } catch (error: any) {
         console.error("AFK kullanıcıları atılırken hata:", error);
-        return { success: false };
+        return { success: false, error: "AFK kullanıcıları sorgulanırken hata. Gerekli veritabanı indeksi eksik olabilir." };
     }
 }

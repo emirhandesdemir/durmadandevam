@@ -13,7 +13,6 @@ const ICE_SERVERS = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
-        // Add public TURN servers for better connectivity in restrictive networks
         {
             urls: 'turn:openrelay.metered.ca:80',
             username: 'openrelayproject',
@@ -69,6 +68,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const audioAnalysers = useRef<Record<string, { analyser: AnalyserNode, dataArray: Uint8Array, context: AudioContext }>>({});
     const animationFrameId = useRef<number>();
     const speakingStatesRef = useRef<Record<string, boolean>>({});
+    const lastActiveUpdateTimestamp = useRef<number>(0);
 
     const self = participants.find(p => p.uid === user?.uid) || null;
     const isConnected = !!self;
@@ -127,17 +127,18 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     const runAudioAnalysis = useCallback(() => {
         const newSpeakingStates: Record<string, boolean> = {};
-        let activeSpeakerFound = false;
+        let isSelfSpeaking = false;
+        
         Object.entries(audioAnalysers.current).forEach(([uid, { analyser, dataArray }]) => {
             analyser.getByteFrequencyData(dataArray);
             let sum = 0;
             for (const amplitude of dataArray) { sum += amplitude * amplitude; }
             const volume = Math.sqrt(sum / dataArray.length);
-            if (volume > 20) {
-                newSpeakingStates[uid] = true;
-                activeSpeakerFound = true;
-            } else {
-                newSpeakingStates[uid] = false;
+            
+            const isSpeaking = volume > 20;
+            newSpeakingStates[uid] = isSpeaking;
+            if (uid === user?.uid && isSpeaking) {
+                isSelfSpeaking = true;
             }
         });
 
@@ -146,8 +147,13 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             setSpeakingStates(newSpeakingStates);
         }
 
-        if (activeSpeakerFound && user && activeRoomId) {
-            updateLastActive(activeRoomId, user.uid);
+        // Debounced activity update
+        if (isSelfSpeaking && user && activeRoomId) {
+            const now = Date.now();
+            if (now - lastActiveUpdateTimestamp.current > 30000) { // Update every 30s max
+                lastActiveUpdateTimestamp.current = now;
+                updateLastActive(activeRoomId, user.uid);
+            }
         }
 
         animationFrameId.current = requestAnimationFrame(runAudioAnalysis);
@@ -248,8 +254,9 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             const newMutedState = !self.isMuted;
             audioTrack.enabled = !newMutedState;
             await toggleMuteAction(activeRoomId, self.uid, newMutedState);
-            if (!newMutedState && user) { // If unmuted
-                await updateLastActive(activeRoomId, user.uid);
+            if (!newMutedState && user) {
+                updateLastActive(activeRoomId, user.uid);
+                lastActiveUpdateTimestamp.current = Date.now();
             }
         }
     }, [self, activeRoomId, localStream, user]);
@@ -345,12 +352,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             }
         });
     }, [participants, isConnected, user, localStream, createPeerConnection]);
-
-    useEffect(() => {
-        if (!isConnected || !user || !activeRoomId) return;
-        const interval = setInterval(() => updateLastActive(activeRoomId, user.uid), 60 * 1000);
-        return () => clearInterval(interval);
-    }, [isConnected, user, activeRoomId]);
 
     const memoizedParticipants = useMemo(() => {
         return participants.map(p => ({ ...p, isSpeaker: !!speakingStates[p.uid] }));
