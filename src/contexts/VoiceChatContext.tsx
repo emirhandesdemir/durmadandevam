@@ -165,7 +165,12 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     }, [user, activeRoom, localScreenStream]);
 
     const startScreenShare = useCallback(async () => {
-        if (!user || !activeRoom || isSharingScreen || !navigator?.mediaDevices?.getDisplayMedia) return;
+        if (!user || !activeRoom || isSharingScreen || !navigator?.mediaDevices?.getDisplayMedia) {
+             if (!navigator?.mediaDevices?.getDisplayMedia) {
+                toast({ variant: 'destructive', title: 'Özellik Desteklenmiyor', description: 'Tarayıcınız ekran paylaşımını desteklemiyor veya güvenli bir bağlantı (HTTPS) üzerinde değilsiniz.' });
+            }
+            return;
+        }
         try {
             const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: "always" } as MediaTrackConstraints, audio: false });
             const screenTrack = screenStream.getVideoTracks()[0];
@@ -256,6 +261,13 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         return () => clearInterval(interval);
     }, [isConnected, user, activeRoomId]);
 
+    const leaveRoom = useCallback(async () => {
+        if (!user || !activeRoom) return;
+        await leaveVoiceChat(activeRoom.id, user.uid);
+        stopAndCleanup();
+        router.push('/rooms');
+    }, [user, activeRoom, stopAndCleanup, router]);
+
     const joinRoom = useCallback(async (roomToJoin: Room) => {
         if (!user || (isConnected && activeRoom?.id === roomToJoin.id) || isConnecting) return;
         if (activeRoom && activeRoom.id !== roomToJoin.id) await leaveRoom();
@@ -264,19 +276,12 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000, channelCount: 2 }, video: false });
             setLocalStream(stream);
             const result = await joinVoiceChat(roomToJoin.id, { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL });
-            if (!result.success) throw new Error(result.error);
+            if (!result.success) throw new Error(result.error || 'Join voice chat failed');
         } catch (error: any) {
             toast({ variant: "destructive", title: "Katılım Başarısız", description: error.message });
             stopAndCleanup();
         } finally { setIsConnecting(false); }
     }, [user, isConnected, activeRoom, isConnecting, toast, stopAndCleanup, leaveRoom]);
-
-    const leaveRoom = useCallback(async () => {
-        if (!user || !activeRoom) return;
-        await leaveVoiceChat(activeRoom.id, user.uid);
-        stopAndCleanup();
-        router.push('/rooms');
-    }, [user, activeRoom, stopAndCleanup, router]);
     
     const toggleSelfMute = useCallback(async () => {
         if (!self || !activeRoom || !localStream) return;
