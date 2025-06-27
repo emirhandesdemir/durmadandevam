@@ -1,5 +1,5 @@
 // src/app/(main)/profile/[uid]/page.tsx
-import { doc, getDoc, Timestamp } from 'firebase/firestore'; // Import Timestamp
+import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { notFound } from 'next/navigation';
 import type { UserProfile } from '@/lib/types';
@@ -16,28 +16,31 @@ interface ProfilePageProps {
 export default async function UserProfilePage({ params }: ProfilePageProps) {
   const { uid } = params;
   
-  // Sadece profil verisini sunucu tarafında çek
   const profileUserRef = doc(db, 'users', uid);
   const profileUserSnap = await getDoc(profileUserRef);
   
   if (!profileUserSnap.exists()) {
-    notFound(); // Kullanıcı bulunamazsa 404 sayfasına yönlendir
+    notFound();
   }
   
   const profileUserData = profileUserSnap.data() as UserProfile;
 
-  // Client Component'lere gönderilmeden önce Timestamp nesnelerini manuel olarak serileştir.
-  // Next.js, 'toJSON' metoduna sahip nesnelerin prop olarak geçirilmesini desteklemez.
+  // This is the crucial part: manually serializing Timestamp objects.
+  // We need to convert any Firestore Timestamp to a simple string (ISO format)
+  // before passing it to a Client Component like ProfileHeader or ProfilePosts.
   const serializableProfileUser = {
     ...profileUserData,
+    // Convert the main createdAt field
     createdAt: profileUserData.createdAt instanceof Timestamp 
         ? profileUserData.createdAt.toDate().toISOString() 
-        : null,
+        : null, // Default to null if not a valid Timestamp
+    
+    // Also convert the timestamp inside the followRequests array
     followRequests: (profileUserData.followRequests || []).map(req => ({
       ...req,
       requestedAt: req.requestedAt instanceof Timestamp 
         ? req.requestedAt.toDate().toISOString()
-        : null,
+        : null, // Default to null if not a valid Timestamp
     })),
   };
 
