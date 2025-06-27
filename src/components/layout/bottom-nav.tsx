@@ -37,7 +37,7 @@ export default function BottomNav() {
 
     return (
         <footer className="border-t bg-card/80 backdrop-blur-sm shrink-0">
-            <nav className={`grid h-16 grid-cols-${enabledNavItems.length}`}>
+            <nav className={`grid h-14 grid-cols-${enabledNavItems.length}`}>
                 {enabledNavItems.map((item) => {
                     // /profile/[uid] rotası için özel kontrol
                     const isActive = item.href.startsWith('/profile/') ? pathname.startsWith('/profile/') : pathname === item.href;

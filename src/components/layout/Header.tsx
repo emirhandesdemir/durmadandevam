@@ -3,9 +3,10 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Send, Users, PlusCircle, Bell, Settings } from "lucide-react";
+import { Send, PlusCircle, Bell, Settings } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePathname } from 'next/navigation';
+import { cn } from "@/lib/utils";
 
 export default function Header() {
     const { user, featureFlags, userData } = useAuth();
@@ -18,12 +19,13 @@ export default function Header() {
 
     return (
         <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="container flex h-16 items-center justify-between">
+            <div className="container flex h-14 items-center justify-between">
                 <Link href="/home" className="flex items-center gap-2">
-                    <div className="flex items-center justify-center h-8 w-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500">
-                         <Users className="h-5 w-5 text-white" />
-                    </div>
-                    <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
+                    <span className={cn(
+                        "text-xl font-bold tracking-tight bg-clip-text text-transparent",
+                        "bg-gradient-to-r from-fuchsia-500 via-red-500 to-amber-500",
+                        "animate-rainbow-text"
+                    )}>
                         HiweWalk
                     </span>
                 </Link>
