@@ -76,6 +76,7 @@ export default function SignUpForm() {
                 followers: [],
                 following: [],
                 privateProfile: false, // Varsayılan olarak herkese açık profil
+                acceptsFollowRequests: true, // Varsayılan olarak istekleri kabul et
                 followRequests: [],
             });
 

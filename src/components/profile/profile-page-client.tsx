@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, Headphones, Gem, MessageCircle, Lock, Unlock } from "lucide-react";
+import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, MessageCircle, Lock, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { useTheme } from "next-themes";
@@ -30,7 +30,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { cn } from "@/lib/utils";
 import { doc, updateDoc } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { toggleProfilePrivacy } from "@/lib/actions/followActions";
 
 
 const bubbleOptions = [
@@ -58,6 +57,7 @@ export default function ProfilePageClient() {
     // State'ler
     const [username, setUsername] = useState("");
     const [privateProfile, setPrivateProfile] = useState(false);
+    const [acceptsFollowRequests, setAcceptsFollowRequests] = useState(true);
     const [newAvatar, setNewAvatar] = useState<string | null>(null);
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
     const [selectedBubble, setSelectedBubble] = useState("");
@@ -70,6 +70,7 @@ export default function ProfilePageClient() {
         if (userData) {
             setUsername(userData.username || "");
             setPrivateProfile(userData.privateProfile || false);
+            setAcceptsFollowRequests(userData.acceptsFollowRequests ?? true); // Yeni eklendi
             setSelectedBubble(userData.selectedBubble || "");
             setSelectedAvatarFrame(userData.selectedAvatarFrame || "");
         }
@@ -79,11 +80,10 @@ export default function ProfilePageClient() {
     const hasChanges = 
         username !== (userData?.username || "") || 
         privateProfile !== (userData?.privateProfile || false) || 
+        acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true) || // Yeni eklendi
         newAvatar !== null || 
         selectedBubble !== (userData?.selectedBubble || "") || 
         selectedAvatarFrame !== (userData?.selectedAvatarFrame || "");
-
-    const diamondCount = userData?.diamonds ?? 0;
     
     const handleAvatarClick = () => { fileInputRef.current?.click(); };
 
@@ -127,6 +127,9 @@ export default function ProfilePageClient() {
             }
              if (privateProfile !== userData?.privateProfile) {
                 updates.privateProfile = privateProfile;
+            }
+            if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) {
+                updates.acceptsFollowRequests = acceptsFollowRequests;
             }
             if (selectedBubble !== (userData?.selectedBubble || "")) {
                 updates.selectedBubble = selectedBubble;
@@ -197,52 +200,83 @@ export default function ProfilePageClient() {
                     <CardDescription>{user.email}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 px-6">
-                    <div className="space-y-4">
-                        <div>
-                            <Label htmlFor="username">Kullanıcı Adı</Label>
-                            <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} className="rounded-full" />
-                        </div>
-                        <div className="flex items-center justify-between rounded-full border p-2 pl-4">
-                            <div className="flex items-center gap-2">
-                                {privateProfile ? <Lock className="text-destructive"/> : <Unlock className="text-green-500"/>}
-                                <Label htmlFor="privacy-mode" className="font-semibold">Gizli Profil</Label>
-                            </div>
-                            <Switch id="privacy-mode" checked={privateProfile} onCheckedChange={setPrivateProfile} />
-                        </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="username">Kullanıcı Adı</Label>
+                        <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} className="rounded-full" />
                     </div>
                     <Separator />
                     
                     <Accordion type="single" collapsible className="w-full">
-                         <AccordionItem value="bubbles">
+                         <AccordionItem value="privacy">
                             <AccordionTrigger>
-                                <div className="flex items-center gap-3"><MessageCircle className="h-5 w-5 text-muted-foreground" /><span className="font-semibold">Sohbet Baloncuğu</span></div>
+                                <div className="flex items-center gap-3"><Lock className="h-5 w-5 text-muted-foreground" /><span className="font-semibold">Gizlilik Ayarları</span></div>
                             </AccordionTrigger>
-                            <AccordionContent>
-                               <div className="grid grid-cols-3 gap-2 pt-2">
-                                 {bubbleOptions.map(option => (
-                                    <div key={option.id} onClick={() => setSelectedBubble(option.id)} className={cn("flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer p-2 aspect-square hover:bg-accent", selectedBubble === option.id ? "border-primary" : "")}>
-                                        <div className="relative h-12 w-12 bg-muted rounded-full">
-                                            {option.id !== "" && (<div className={`bubble-wrapper ${option.id}`}>{Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}</div>)}
-                                        </div>
-                                        <span className="text-xs font-bold text-center">{option.name}</span>
+                            <AccordionContent className="space-y-4 pt-2">
+                                <div className="flex items-center justify-between rounded-lg border p-3">
+                                    <div>
+                                        <Label htmlFor="privacy-mode" className="font-semibold">Gizli Hesap</Label>
+                                        <p className="text-xs text-muted-foreground">Aktif olduğunda, sadece onayladığın kişiler seni takip edebilir.</p>
                                     </div>
-                                 ))}
-                               </div>
+                                    <Switch id="privacy-mode" checked={privateProfile} onCheckedChange={setPrivateProfile} />
+                                </div>
+                                <div className="flex items-center justify-between rounded-lg border p-3">
+                                    <div>
+                                        <Label htmlFor="requests-mode" className={cn("font-semibold transition-colors", !privateProfile && "text-muted-foreground/50")}>Takip İsteklerine İzin Ver</Label>
+                                        <p className={cn("text-xs text-muted-foreground transition-colors", !privateProfile && "text-muted-foreground/50")}>Kapalıysa, kimse size takip isteği gönderemez.</p>
+                                    </div>
+                                    <Switch id="requests-mode" checked={acceptsFollowRequests} onCheckedChange={setAcceptsFollowRequests} disabled={!privateProfile}/>
+                                </div>
                             </AccordionContent>
                         </AccordionItem>
-                         <AccordionItem value="avatar-frames">
+                        <AccordionItem value="appearance">
                             <AccordionTrigger>
-                                <div className="flex items-center gap-3"><Sparkles className="h-5 w-5 text-muted-foreground" /><span className="font-semibold">Avatar Çerçevesi</span></div>
+                                <div className="flex items-center gap-3"><Palette className="h-5 w-5 text-muted-foreground" /><span className="font-semibold">Görünüm Ayarları</span></div>
                             </AccordionTrigger>
-                            <AccordionContent>
-                               <div className="grid grid-cols-3 gap-2 pt-2">
-                                 {avatarFrameOptions.map(option => (
-                                    <div key={option.id} onClick={() => setSelectedAvatarFrame(option.id)} className={cn("flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer p-2 aspect-square hover:bg-accent", selectedAvatarFrame === option.id ? "border-primary" : "")}>
-                                        <div className={cn("avatar-frame-wrapper h-12 w-12", option.id)}><Avatar className="h-full w-full bg-muted" /></div>
-                                        <span className="text-xs font-bold text-center">{option.name}</span>
+                            <AccordionContent className="space-y-4 pt-2">
+                                <div>
+                                    <Label className="text-sm font-medium">Tema</Label>
+                                    <RadioGroup value={theme} onValueChange={setTheme} className="grid grid-cols-3 gap-2 pt-2">
+                                        <Label htmlFor="light-theme" className="flex flex-col items-center justify-center rounded-lg border-2 bg-card p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
+                                        <RadioGroupItem value="light" id="light-theme" className="sr-only" />
+                                        <Sun className="mb-2 h-6 w-6" />
+                                        <span className="text-xs font-bold">Aydınlık</span>
+                                        </Label>
+                                        <Label htmlFor="dark-theme" className="flex flex-col items-center justify-center rounded-lg border-2 bg-card p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
+                                        <RadioGroupItem value="dark" id="dark-theme" className="sr-only" />
+                                        <Moon className="mb-2 h-6 w-6" />
+                                        <span className="text-xs font-bold">Karanlık</span>
+                                        </Label>
+                                        <Label htmlFor="system-theme" className="flex flex-col items-center justify-center rounded-lg border-2 bg-card p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
+                                        <RadioGroupItem value="system" id="system-theme" className="sr-only" />
+                                        <Laptop className="mb-2 h-6 w-6" />
+                                        <span className="text-xs font-bold">Sistem</span>
+                                        </Label>
+                                    </RadioGroup>
+                                </div>
+                                <div>
+                                    <Label className="text-sm font-medium">Sohbet Baloncuğu</Label>
+                                    <div className="grid grid-cols-3 gap-2 pt-2">
+                                        {bubbleOptions.map(option => (
+                                            <div key={option.id} onClick={() => setSelectedBubble(option.id)} className={cn("flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer p-2 aspect-square hover:bg-accent", selectedBubble === option.id ? "border-primary" : "")}>
+                                                <div className="relative h-12 w-12 bg-muted rounded-full overflow-hidden">
+                                                    {option.id !== "" && (<div className={`bubble-wrapper ${option.id}`}>{Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}</div>)}
+                                                </div>
+                                                <span className="text-xs font-bold text-center">{option.name}</span>
+                                            </div>
+                                        ))}
                                     </div>
-                                 ))}
-                               </div>
+                                </div>
+                                <div>
+                                    <Label className="text-sm font-medium">Avatar Çerçevesi</Label>
+                                     <div className="grid grid-cols-3 gap-2 pt-2">
+                                        {avatarFrameOptions.map(option => (
+                                            <div key={option.id} onClick={() => setSelectedAvatarFrame(option.id)} className={cn("flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer p-2 aspect-square hover:bg-accent", selectedAvatarFrame === option.id ? "border-primary" : "")}>
+                                                <div className={cn("avatar-frame-wrapper h-12 w-12", option.id)}><Avatar className="h-full w-full bg-muted" /></div>
+                                                <span className="text-xs font-bold text-center">{option.name}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             </AccordionContent>
                         </AccordionItem>
                     </Accordion>

@@ -15,6 +15,7 @@ export interface UserProfile {
     role: 'admin' | 'user';
     createdAt: Timestamp;
     privateProfile: boolean;
+    acceptsFollowRequests: boolean; // Yeni eklendi
     followers: string[]; // Takipçi UID'leri
     following: string[]; // Takip edilen UID'leri
     followRequests: FollowRequest[]; // Gelen takip istekleri

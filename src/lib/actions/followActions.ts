@@ -50,6 +50,10 @@ export async function followUser(currentUserId: string, targetUserId: string, cu
 
     // Kullanıcının gizli profili varsa takip isteği gönder
     if (targetUserData.privateProfile) {
+      // Kullanıcının takip isteklerini kabul edip etmediğini kontrol et
+      if (targetUserData.acceptsFollowRequests === false) {
+          throw new Error('Bu kullanıcı şu anda takip isteği kabul etmiyor.');
+      }
       const newRequest = {
         uid: currentUserId,
         username: currentUserInfo.username,
