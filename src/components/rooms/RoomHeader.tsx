@@ -3,13 +3,14 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, MoreHorizontal, Users, Timer, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Users, Timer, AlertTriangle, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Room } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { addSystemMessage, deleteExpiredRoom } from '@/lib/actions/roomActions';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import InviteDialog from './InviteDialog';
 
 interface RoomHeaderProps {
   room: Room;
@@ -30,6 +31,7 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle }: Ro
     const { toast } = useToast();
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
     const [warningSent, setWarningSent] = useState(false);
+    const [isInviteOpen, setIsInviteOpen] = useState(false);
 
     const expiresAt = room.expiresAt?.toDate().getTime();
 
@@ -69,8 +71,6 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle }: Ro
                 if(result.success) {
                     toast({ description: `"${room.name}" odası süresi dolduğu için kapatıldı.` });
                 }
-                // Hata durumunda (örn: oda zaten silinmiş veya süresi dolmamış),
-                // bir şey yapmaya gerek yok çünkü başka bir istemci işlemi yapmış olabilir.
             });
         }
     }, [timeLeft, warningSent, isHost, room.id, user, toast]);
@@ -78,32 +78,43 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle }: Ro
     const isWarningTime = timeLeft !== null && timeLeft <= 15;
 
     return (
-        <header className="flex items-center justify-between p-3 border-b border-gray-700/50 shrink-0">
-            <div className="flex items-center gap-2">
-                <Button asChild variant="ghost" size="icon" className="rounded-full">
-                    <Link href="/rooms"><ChevronLeft /></Link>
-                </Button>
-                <h1 className="text-md font-bold text-white truncate max-w-[120px] sm:max-w-[180px]">{room.name}</h1>
-            </div>
+        <>
+            <header className="flex items-center justify-between p-3 border-b border-gray-700/50 shrink-0">
+                <div className="flex items-center gap-2">
+                    <Button asChild variant="ghost" size="icon" className="rounded-full">
+                        <Link href="/rooms"><ChevronLeft /></Link>
+                    </Button>
+                    <h1 className="text-md font-bold text-white truncate max-w-[120px] sm:max-w-[180px]">{room.name}</h1>
+                </div>
 
-            <div className="flex items-center gap-2 sm:gap-3">
-                 {timeLeft !== null && expiresAt && (
-                     <div className={cn(
-                        "flex items-center gap-1.5 text-sm font-semibold p-2 rounded-full transition-colors",
-                        isWarningTime ? "bg-destructive/20 text-destructive" : "text-gray-400"
-                     )}>
-                        {isWarningTime ? <AlertTriangle className="h-4 w-4" /> : <Timer className="h-4 w-4" />}
-                        <span>{formatTime(timeLeft)}</span>
-                    </div>
-                 )}
-                 <Button variant="ghost" className="flex items-center gap-1.5 text-sm font-semibold p-2" onClick={onParticipantListToggle}>
-                    <Users className="h-4 w-4 text-gray-400" />
-                    <span>{room.participants?.length || 0}</span>
-                </Button>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                    <MoreHorizontal />
-                </Button>
-            </div>
-        </header>
+                <div className="flex items-center gap-1 sm:gap-2">
+                    {timeLeft !== null && expiresAt && (
+                        <div className={cn(
+                            "flex items-center gap-1.5 text-sm font-semibold p-2 rounded-full transition-colors",
+                            isWarningTime ? "bg-destructive/20 text-destructive" : "text-gray-400"
+                        )}>
+                            {isWarningTime ? <AlertTriangle className="h-4 w-4" /> : <Timer className="h-4 w-4" />}
+                            <span className="hidden sm:inline">{formatTime(timeLeft)}</span>
+                        </div>
+                    )}
+                    <Button variant="ghost" className="flex items-center gap-1.5 text-sm font-semibold p-2" onClick={onParticipantListToggle}>
+                        <Users className="h-4 w-4 text-gray-400" />
+                        <span>{room.participants?.length || 0}</span>
+                    </Button>
+                    <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setIsInviteOpen(true)}>
+                        <UserPlus className="h-5 w-5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="rounded-full">
+                        <MoreHorizontal />
+                    </Button>
+                </div>
+            </header>
+            <InviteDialog
+                isOpen={isInviteOpen}
+                onOpenChange={setIsInviteOpen}
+                roomId={room.id}
+                roomName={room.name}
+            />
+        </>
     );
 }

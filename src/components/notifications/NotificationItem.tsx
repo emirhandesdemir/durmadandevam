@@ -2,21 +2,46 @@
 'use client';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import type { Notification } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Heart, MessageCircle, UserPlus } from 'lucide-react';
+import { Heart, MessageCircle, UserPlus, DoorOpen, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
+import { joinRoom } from '@/lib/actions/roomActions';
 
 interface NotificationItemProps {
   notification: Notification;
 }
 
 export default function NotificationItem({ notification }: NotificationItemProps) {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [isJoining, setIsJoining] = useState(false);
+  
   const timeAgo = formatDistanceToNow(notification.createdAt.toDate(), {
     addSuffix: true,
     locale: tr,
   });
+  
+  const handleJoinClick = async (e: React.MouseEvent) => {
+      e.preventDefault();
+      if (!user || !notification.roomId) return;
+      setIsJoining(true);
+      try {
+          await joinRoom(notification.roomId, { uid: user.uid, username: user.displayName, photoURL: user.photoURL });
+          router.push(`/rooms/${notification.roomId}`);
+      } catch (error: any) {
+          toast({ variant: 'destructive', description: error.message });
+      } finally {
+          setIsJoining(false);
+      }
+  };
 
   const renderContent = () => {
     switch (notification.type) {
@@ -75,6 +100,37 @@ export default function NotificationItem({ notification }: NotificationItemProps
                     <p className="text-xs text-muted-foreground">{timeAgo}</p>
                 </div>
             </>
+        );
+      case 'follow_accept':
+          return (
+              <>
+                  <UserPlus className="h-5 w-5 text-green-500" />
+                  <div className="flex-1">
+                      <Link href={`/profile/${notification.senderId}`} className="font-bold hover:underline">
+                          {notification.senderUsername}
+                      </Link>
+                      {' '}takip isteğini kabul etti.
+                      <p className="text-xs text-muted-foreground">{timeAgo}</p>
+                  </div>
+              </>
+          );
+      case 'room_invite':
+        return (
+          <>
+            <DoorOpen className="h-5 w-5 text-green-500" />
+            <div className="flex-1">
+              <Link href={`/profile/${notification.senderId}`} className="font-bold hover:underline">
+                {notification.senderUsername}
+              </Link>{' '}
+              seni <span className="font-semibold">{notification.roomName}</span> odasına davet etti.
+              <p className="text-xs text-muted-foreground">{timeAgo}</p>
+            </div>
+            {notification.roomId && (
+                <Button size="sm" onClick={handleJoinClick} disabled={isJoining}>
+                    {isJoining ? <Loader2 className="h-4 w-4 animate-spin" /> : "Katıl"}
+                </Button>
+            )}
+          </>
         );
       default:
         return null;

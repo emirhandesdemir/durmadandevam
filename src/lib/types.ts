@@ -32,10 +32,12 @@ export interface Notification {
     senderId: string;
     senderUsername: string;
     senderAvatar: string | null;
-    type: 'like' | 'comment' | 'follow' | 'follow_accept';
+    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite';
     postId?: string | null;
     postImage?: string | null;
     commentText?: string;
+    roomId?: string;
+    roomName?: string;
     createdAt: Timestamp;
     read: boolean;
 }

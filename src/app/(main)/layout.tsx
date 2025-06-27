@@ -1,35 +1,37 @@
-// src/app/(main)/layout.tsx
-// Bu, ana uygulama düzenidir (giriş, kayıt ve admin paneli dışındaki sayfalar).
-// Üst ve alt navigasyon çubuklarını içerir ve içeriği onların arasında gösterir.
+'use client';
 
 import BottomNav from "@/components/layout/bottom-nav";
 import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
 import PersistentVoiceBar from "@/components/voice/PersistentVoiceBar";
 import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
 import Header from "@/components/layout/Header";
+import { motion, AnimatePresence } from 'framer-motion';
+import { usePathname } from "next/navigation";
 
 export default function MainAppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+
   return (
     <VoiceChatProvider>
-      {/* 
-        This is now a flex container that takes up the dynamic viewport height (h-dvh).
-        This provides a stable structure for children layouts.
-      */}
       <div className="flex h-dvh w-full flex-col bg-background">
         <Header />
-        {/* 
-          The main content area now fills the remaining space and handles its own scrolling
-          for pages with long content (like the home feed).
-        */}
-        <main className="flex-1 overflow-y-auto">
-          {children}
-        </main>
+        <AnimatePresence mode="wait">
+          <motion.main
+            key={pathname}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 15 }}
+            transition={{ duration: 0.3 }}
+            className="flex-1 overflow-y-auto"
+          >
+            {children}
+          </motion.main>
+        </AnimatePresence>
         
-        {/* Voice chat components are outside the main scroll area */}
         <VoiceAudioPlayer />
         <PersistentVoiceBar />
         <BottomNav />
