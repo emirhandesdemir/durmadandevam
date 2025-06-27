@@ -196,8 +196,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
         try {
             if (!navigator?.mediaDevices?.getDisplayMedia) {
-                const errorMsg = 'Tarayıcınız bu özelliği desteklemiyor gibi görünüyor veya güvenli (HTTPS) bir bağlantı gerekli.';
-                throw new Error(errorMsg);
+                throw new Error('Tarayıcınız bu özelliği desteklemiyor gibi görünüyor.');
             }
             const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: "always" } as MediaTrackConstraints, audio: false });
             const screenTrack = screenStream.getVideoTracks()[0];
@@ -212,10 +211,16 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             await toggleScreenShareAction(activeRoomId, user.uid, true);
         } catch (error: any) {
              console.error("Screen share error:", error);
+             let description = 'Ekran paylaşımı başlatılamadı.';
+             if (error.name === 'NotAllowedError') {
+                 description = 'Ekran paylaşımı için izin vermeniz gerekiyor. Lütfen tekrar deneyin ve tarayıcı istemine izin verin.';
+             } else {
+                description = `Bu özellik güncel bir tarayıcı ve güvenli (HTTPS) bir bağlantı gerektirebilir. Hata: ${error.message}`;
+             }
             toast({ 
                 variant: 'destructive', 
                 title: 'Hata', 
-                description: error.message || 'Ekran paylaşımı başlatılamadı.'
+                description: description
             });
         }
     }, [user, activeRoomId, isSharingScreen, stopScreenShare, toast]);
@@ -224,9 +229,12 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         if (!self || !activeRoomId || !localStream) return;
         const audioTrack = localStream.getAudioTracks()[0];
         if (audioTrack) {
-            audioTrack.enabled = self.isMuted;
-            await toggleMuteAction(activeRoomId, self.uid, !self.isMuted);
-            if (!self.isMuted && user) await updateLastActive(activeRoomId, user.uid);
+            const newMutedState = !self.isMuted;
+            audioTrack.enabled = !newMutedState;
+            await toggleMuteAction(activeRoomId, self.uid, newMutedState);
+            if (!newMutedState && user) { // If unmuted
+                await updateLastActive(activeRoomId, user.uid);
+            }
         }
     }, [self, activeRoomId, localStream, user]);
 
