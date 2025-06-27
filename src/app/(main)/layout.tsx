@@ -15,12 +15,13 @@ export default function MainAppLayout({
 }) {
   return (
     <VoiceChatProvider>
-      <div className="relative flex min-h-screen w-full flex-col bg-background">
+      <div className="flex h-dvh w-full flex-col bg-background">
         <Header />
-        {/* Ana içerik alanı, alt navigasyonun kaplayacağı alanı boş bırakmak için alttan padding alır */}
-        <main className="flex-1 pb-16">{children}</main>
+        {/* Ana içerik alanı, kendisine ayrılan tüm alanı kaplar ve taşan içeriği gizleyerek
+            çocuk bileşenlerin kendi kaydırma davranışlarını yönetmesine olanak tanır. */}
+        <main className="flex flex-1 flex-col overflow-hidden">{children}</main>
         
-        {/* Sesli sohbet ve diğer sabit durum çubukları */}
+        {/* Sesli sohbet ve diğer sabit durum çubukları (overlay) */}
         <VoiceAudioPlayer />
         <PersistentVoiceBar />
         <BottomNav />
