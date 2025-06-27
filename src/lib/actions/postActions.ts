@@ -47,8 +47,6 @@ export async function updatePost(postId: string, newText: string) {
 // Refactored to be more robust and less reliant on client-side data
 export async function likePost(
     postId: string,
-    postAuthorUid: string,
-    postImageUrl: string | null,
     currentUser: { uid: string, displayName: string | null, photoURL: string | null }
 ) {
     const postRef = doc(db, "posts", postId);
@@ -75,16 +73,16 @@ export async function likePost(
     }
     await batch.commit();
 
-    // Send notification only when liking, not unliking
-    if (!isCurrentlyLiked && postAuthorUid !== currentUser.uid) {
+    // Send notification only when liking, not unliking, and not to self
+    if (!isCurrentlyLiked && postData.uid !== currentUser.uid) {
         await createNotification({
-            recipientId: postAuthorUid,
+            recipientId: postData.uid, // Get author ID from post data
             senderId: currentUser.uid,
             senderUsername: currentUser.displayName || "Biri",
             senderAvatar: currentUser.photoURL,
             type: 'like',
             postId: postId,
-            postImage: postImageUrl,
+            postImage: postData.imageUrl || null, // Get image URL from post data
         });
     }
 }

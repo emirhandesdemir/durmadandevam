@@ -82,8 +82,6 @@ export default function PostCard({ post }: PostCardProps) {
         try {
             await likePost(
                 post.id,
-                post.uid,
-                post.imageUrl || null,
                 {
                     uid: currentUser.uid,
                     displayName: currentUser.displayName,

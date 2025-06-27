@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Resizes and compresses an image client-side to improve upload speed.
+ * Resizes and compresses an image client-side from a data URL.
  *
  * @param dataUrl The data URI of the image to process.
  * @param maxWidth The maximum width for the output image. Defaults to 1920px.
@@ -20,12 +20,12 @@ export function compressImage(
       const ctx = canvas.getContext('2d');
 
       if (!ctx) {
-        return reject(new Error('Canvas context could not be created.'));
+        return reject(new Error('Canvas context oluşturulamadı.'));
       }
 
       let { width, height } = img;
 
-      // Calculate the new dimensions while maintaining aspect ratio
+      // En-boy oranını koruyarak yeniden boyutlandır
       if (width > maxWidth) {
         height = (maxWidth / width) * height;
         width = maxWidth;
@@ -34,16 +34,16 @@ export function compressImage(
       canvas.width = width;
       canvas.height = height;
 
-      // Draw the image onto the canvas
+      // Resmi canvas'a çiz
       ctx.drawImage(img, 0, 0, width, height);
 
-      // Get the Blob of the new, compressed image
+      // Yeni, sıkıştırılmış resmin Blob'unu al
       canvas.toBlob(
         (blob) => {
           if (blob) {
             resolve(blob);
           } else {
-            reject(new Error('Canvas to Blob conversion failed.'));
+            reject(new Error('Canvas -> Blob dönüşümü başarısız oldu.'));
           }
         },
         'image/jpeg',
@@ -51,8 +51,8 @@ export function compressImage(
       );
     };
 
-    img.onerror = (err) => {
-      reject(new Error('Image could not be loaded.'));
+    img.onerror = () => {
+      reject(new Error('Resim yüklenemedi. Dosya bozuk olabilir.'));
     };
 
     img.src = dataUrl;
