@@ -157,7 +157,16 @@ export default function ProfilePageClient() {
         setIsTogglingMic(true);
         if (checked) {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                        sampleRate: 48000,
+                        channelCount: 2
+                    },
+                    video: false
+                });
                 micTestStreamRef.current = stream;
                 const context = new (window.AudioContext || (window as any).webkitAudioContext)();
                 const source = context.createMediaStreamSource(stream);

@@ -221,7 +221,16 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
         setIsConnecting(true);
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    sampleRate: 48000,
+                    channelCount: 2
+                },
+                video: false
+            });
             setLocalStream(stream);
 
             const result = await joinVoiceChat(roomToJoin.id, {
