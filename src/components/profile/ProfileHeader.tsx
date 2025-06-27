@@ -2,6 +2,8 @@
 "use client";
 
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FollowButton from "./FollowButton";
 
@@ -12,7 +14,6 @@ interface ProfileHeaderProps {
 
 /**
  * Dinamik profil sayfasının başlık bölümü.
- * Avatar, kullanıcı adı, takipçi/takip edilen sayıları ve takip butonunu içerir.
  */
 export default function ProfileHeader({ profileUser, currentUser }: ProfileHeaderProps) {
   const isOwnProfile = currentUser?.uid === profileUser.uid;
@@ -32,10 +33,16 @@ export default function ProfileHeader({ profileUser, currentUser }: ProfileHeade
         <div className="flex items-center gap-4">
             <h1 className="text-2xl font-bold">{profileUser.username}</h1>
              {!isOwnProfile && (
-              <FollowButton 
-                currentUser={currentUser} 
-                targetUser={profileUser}
-              />
+                <div className="flex gap-2">
+                    <FollowButton currentUser={currentUser} targetUser={profileUser} />
+                    {/* Eğer profil gizli değilse veya takip ediyorsan mesaj gönder butonu göster */}
+                    {(!profileUser.privateProfile || isFollower) && (
+                        <Button variant="secondary">
+                            <MessageSquare className="h-4 w-4" />
+                            <span className="ml-2 hidden sm:inline">Mesaj</span>
+                        </Button>
+                    )}
+                </div>
             )}
         </div>
         

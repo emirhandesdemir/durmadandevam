@@ -16,7 +16,7 @@ export default function ProfilePage() {
           Geri
         </Link>
       </Button>
-      <div className="w-full animate-in zoom-in-95 duration-500">
+      <div className="w-full max-w-2xl animate-in zoom-in-95 duration-500">
         <ProfilePageClient />
       </div>
     </main>
