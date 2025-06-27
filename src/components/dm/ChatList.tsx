@@ -3,7 +3,8 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+// orderBy kaldırıldı, Timestamp türü eklendi
+import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { DirectMessageMetadata } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -31,10 +32,10 @@ export default function ChatList({ selectedChatId }: ChatListProps) {
 
     // Kullanıcının dahil olduğu sohbet metadatalarını dinle
     const metadataRef = collection(db, 'directMessagesMetadata');
+    // İndeks hatasını önlemek için orderBy kaldırıldı. Sıralama istemci tarafında yapılacak.
     const q = query(
       metadataRef,
-      where('participantUids', 'array-contains', user.uid),
-      orderBy('lastMessage.timestamp', 'desc')
+      where('participantUids', 'array-contains', user.uid)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -42,6 +43,19 @@ export default function ChatList({ selectedChatId }: ChatListProps) {
         id: doc.id,
         ...doc.data(),
       } as DirectMessageMetadata));
+
+      // Verileri istemci tarafında sırala
+      chatsData.sort((a, b) => {
+        const timeA = a.lastMessage?.timestamp;
+        const timeB = b.lastMessage?.timestamp;
+
+        // Firestore Timestamp nesnelerini karşılaştır
+        const millisA = timeA instanceof Timestamp ? timeA.toMillis() : 0;
+        const millisB = timeB instanceof Timestamp ? timeB.toMillis() : 0;
+        
+        return millisB - millisA; // En yeni en üste
+      });
+
       setChats(chatsData);
       setLoading(false);
     }, (error) => {
