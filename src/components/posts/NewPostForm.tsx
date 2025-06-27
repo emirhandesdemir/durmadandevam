@@ -70,23 +70,44 @@ export default function NewPostForm() {
     }
 
     setIsSubmitting(true);
+    let imageUrl = '';
 
-    try {
-      let imageUrl = '';
-
-      if (croppedImage) {
+    // Step 1: Upload image if it exists
+    if (croppedImage) {
+      try {
         const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}_post.jpg`);
         const snapshot = await uploadString(imageRef, croppedImage, 'data_url');
         imageUrl = await getDownloadURL(snapshot.ref);
+      } catch (error) {
+        console.error("Firebase Storage yükleme hatası:", error);
+        let description = 'Resim yüklenirken bir hata oluştu. Lütfen internet bağlantınızı ve Firebase Storage kurallarınızı kontrol edin.';
+        if (error instanceof FirebaseError) {
+          if (error.code === 'storage/unauthorized') {
+            description = 'Bu resmi yükleme yetkiniz yok.';
+          } else if (error.code === 'storage/canceled') {
+            description = 'Resim yükleme iptal edildi.';
+          }
+        }
+        toast({
+          variant: 'destructive',
+          title: 'Resim Yüklenemedi',
+          description: description,
+          duration: 9000,
+        });
+        setIsSubmitting(false); // Stop the process on failure
+        return;
       }
+    }
 
+    // Step 2: Create post document in Firestore
+    try {
       await addDoc(collection(db, 'posts'), {
         uid: user.uid,
         username: userData.username || user.displayName || 'Anonim Kullanıcı',
         userAvatar: userData.photoURL || user.photoURL,
         userRole: userData.role || 'user',
         text: text,
-        imageUrl: imageUrl,
+        imageUrl: imageUrl, // Will be empty string if no image
         createdAt: serverTimestamp(),
         likes: [],
         likeCount: 0,
@@ -100,24 +121,17 @@ export default function NewPostForm() {
       router.push('/home');
 
     } catch (error) {
-      console.error("Gönderi oluşturulurken hata:", error);
-      let description = 'Paylaşım sırasında bir hata oluştu. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.';
-      
-      if (error instanceof FirebaseError) {
-        if (error.code === 'storage/unauthorized') {
-          description = 'Resim yükleme izniniz yok. Lütfen Firebase Storage güvenlik kurallarınızı kontrol edin.';
-        } else if (error.code === 'permission-denied') {
-          description = 'Veritabanına yazma izniniz yok. Lütfen Firestore güvenlik kurallarınızı kontrol edin.';
-        }
+      console.error("Firestore gönderi oluşturma hatası:", error);
+      let description = 'Gönderiniz veritabanına kaydedilirken bir hata oluştu. Lütfen Firestore kurallarınızı kontrol edin.';
+      if (error instanceof FirebaseError && error.code === 'permission-denied') {
+        description = 'Veritabanına yazma izniniz yok.';
       }
-      
       toast({
         variant: 'destructive',
-        title: 'Paylaşım Başarısız',
+        title: 'Gönderi Oluşturulamadı',
         description: description,
         duration: 9000,
       });
-
     } finally {
       setIsSubmitting(false);
     }
