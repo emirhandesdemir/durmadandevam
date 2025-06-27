@@ -12,12 +12,10 @@ import {
     increment,
 } from "firebase/firestore";
 import { ref, deleteObject } from "firebase/storage";
+import { createNotification } from "./notificationActions";
+import type { Post } from "../types";
 
-/**
- * Bir gönderiyi siler ve eğer varsa ilişkili resmi Storage'dan kaldırır.
- * @param postId Silinecek gönderinin ID'si.
- * @param imageUrl Gönderiye ait resmin URL'si (varsa).
- */
+
 export async function deletePost(postId: string, imageUrl?: string) {
     const postRef = doc(db, "posts", postId);
     await deleteDoc(postRef);
@@ -25,19 +23,12 @@ export async function deletePost(postId: string, imageUrl?: string) {
     if (imageUrl) {
         const imageRef = ref(storage, imageUrl);
         await deleteObject(imageRef).catch(error => {
-            // Eğer dosya zaten yoksa veya başka bir hata olursa logla, ama işlemi durdurma
             console.error("Storage resmi silinirken hata oluştu (göz ardı edilebilir):", error);
         });
     }
-    // Not: Alt koleksiyondaki yorumları silmek için bir 'Cloud Function' kullanmak daha verimlidir.
-    // Bu örnekte, istemci tarafında basitlik için bu adım atlanmıştır.
 }
 
-/**
- * Bir gönderinin metin içeriğini günceller.
- * @param postId Güncellenecek gönderinin ID'si.
- * @param newText Yeni metin içeriği.
- */
+
 export async function updatePost(postId: string, newText: string) {
     const postRef = doc(db, "posts", postId);
     await updateDoc(postRef, {
@@ -46,26 +37,34 @@ export async function updatePost(postId: string, newText: string) {
 }
 
 
-/**
- * Bir gönderiyi beğenir veya beğeniyi geri alır.
- * @param postId Beğenilecek gönderinin ID'si.
- * @param userId Beğenen kullanıcının ID'si.
- * @param isCurrentlyLiked Kullanıcının gönderiyi şu an beğenip beğenmediği.
- */
-export async function likePost(postId: string, userId: string, isCurrentlyLiked: boolean) {
-    const postRef = doc(db, "posts", postId);
+export async function likePost(post: Post, currentUser: { uid: string, displayName: string | null, photoURL: string | null }) {
+    const isCurrentlyLiked = (post.likes || []).includes(currentUser.uid);
+    const postRef = doc(db, "posts", post.id);
     const batch = writeBatch(db);
 
     if (isCurrentlyLiked) {
         batch.update(postRef, {
-            likes: arrayRemove(userId),
+            likes: arrayRemove(currentUser.uid),
             likeCount: increment(-1)
         });
     } else {
         batch.update(postRef, {
-            likes: arrayUnion(userId),
+            likes: arrayUnion(currentUser.uid),
             likeCount: increment(1)
         });
     }
     await batch.commit();
+
+    // Beğeniyi geri alırken bildirim gönderme, sadece beğenirken gönder
+    if (!isCurrentlyLiked && post.uid !== currentUser.uid) {
+        await createNotification({
+            recipientId: post.uid,
+            senderId: currentUser.uid,
+            senderUsername: currentUser.displayName || "Biri",
+            senderAvatar: currentUser.photoURL,
+            type: 'like',
+            postId: post.id,
+            postImage: post.imageUrl || null,
+        });
+    }
 }

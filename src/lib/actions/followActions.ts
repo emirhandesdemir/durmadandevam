@@ -9,30 +9,10 @@ import {
   arrayRemove,
   serverTimestamp,
   runTransaction,
-  updateDoc,
 } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
+import { createNotification } from './notificationActions';
 
-/**
- * Bir kullanıcının profil gizliliğini açıp kapatır.
- * @param userId - Ayarı değiştirilecek kullanıcının UID'si.
- * @param isPrivate - Yeni gizlilik durumu (true: gizli, false: herkese açık).
- */
-export async function toggleProfilePrivacy(userId: string, isPrivate: boolean) {
-  if (!userId) {
-    throw new Error('Kullanıcı IDsi gerekli.');
-  }
-  const userRef = doc(db, 'users', userId);
-  await updateDoc(userRef, { privateProfile: isPrivate });
-  revalidatePath(`/profile/${userId}`);
-  revalidatePath('/profile'); // Kendi profil ayarları sayfası için
-}
-
-/**
- * Bir kullanıcıyı takip etme veya takip isteği gönderme işlemini gerçekleştirir.
- * @param currentUserId - Takip eden kullanıcının UID'si.
- * @param targetUserId - Takip edilecek kullanıcının UID'si.
- */
 export async function followUser(currentUserId: string, targetUserId: string, currentUserInfo: { username: string, photoURL: string | null}) {
   if (currentUserId === targetUserId) {
     throw new Error('Kendinizi takip edemezsiniz.');
@@ -48,10 +28,8 @@ export async function followUser(currentUserId: string, targetUserId: string, cu
     }
     const targetUserData = targetUserDoc.data();
 
-    // Kullanıcının gizli profili varsa takip isteği gönder
     if (targetUserData.privateProfile) {
-      // Kullanıcının takip isteklerini kabul edip etmediğini kontrol et
-      if (targetUserData.acceptsFollowRequests === false) {
+       if (targetUserData.acceptsFollowRequests === false) {
           throw new Error('Bu kullanıcı şu anda takip isteği kabul etmiyor.');
       }
       const newRequest = {
@@ -60,7 +38,6 @@ export async function followUser(currentUserId: string, targetUserId: string, cu
         photoURL: currentUserInfo.photoURL,
         requestedAt: serverTimestamp(),
       };
-      // Aynı isteğin tekrar gönderilmesini engelle
       const requestExists = targetUserData.followRequests?.some((req: any) => req.uid === currentUserId);
       if (!requestExists) {
         transaction.update(targetUserRef, {
@@ -68,26 +45,25 @@ export async function followUser(currentUserId: string, targetUserId: string, cu
         });
       }
     } else {
-      // Profil herkese açıksa doğrudan takip et
-      const batch = writeBatch(db);
-      batch.update(currentUserRef, {
+      transaction.update(currentUserRef, {
         following: arrayUnion(targetUserId),
       });
-      batch.update(targetUserRef, {
+      transaction.update(targetUserRef, {
         followers: arrayUnion(currentUserId),
       });
-      await batch.commit();
+       await createNotification({
+            recipientId: targetUserId,
+            senderId: currentUserId,
+            senderUsername: currentUserInfo.username,
+            senderAvatar: currentUserInfo.photoURL,
+            type: 'follow',
+        });
     }
   });
 
   revalidatePath(`/profile/${targetUserId}`);
 }
 
-/**
- * Bir kullanıcıyı takipten çıkarır.
- * @param currentUserId - Takipten çıkan kullanıcının UID'si.
- * @param targetUserId - Takipten çıkılan kullanıcının UID'si.
- */
 export async function unfollowUser(currentUserId: string, targetUserId: string) {
   const currentUserRef = doc(db, 'users', currentUserId);
   const targetUserRef = doc(db, 'users', targetUserId);
@@ -98,31 +74,28 @@ export async function unfollowUser(currentUserId: string, targetUserId: string) 
     following: arrayRemove(targetUserId),
   });
   batch.update(targetUserRef, {
-    followers: arrayRemove(currentUserId),
+    followers: arrayRemove(targetUserId),
   });
 
   await batch.commit();
   revalidatePath(`/profile/${targetUserId}`);
 }
 
-/**
- * Bir takip isteğini kabul veya reddeder.
- * @param currentUserId - İsteği yöneten (gizli profil sahibi) kullanıcının UID'si.
- * @param requesterId - İsteği gönderen kullanıcının UID'si.
- * @param action - Yapılacak işlem: 'accept' veya 'deny'.
- */
 export async function handleFollowRequest(currentUserId: string, requesterId: string, action: 'accept' | 'deny') {
   const currentUserRef = doc(db, 'users', currentUserId);
   const requesterRef = doc(db, 'users', requesterId);
 
   await runTransaction(db, async (transaction) => {
-    const currentUserDoc = await transaction.get(currentUserRef);
-    if (!currentUserDoc.exists()) {
+    const [currentUserDoc, requesterDoc] = await Promise.all([
+        transaction.get(currentUserRef),
+        transaction.get(requesterRef)
+    ]);
+    
+    if (!currentUserDoc.exists() || !requesterDoc.exists()) {
       throw new Error('Kullanıcı bulunamadı.');
     }
     const currentUserData = currentUserDoc.data();
 
-    // İsteği 'followRequests' dizisinden bul ve kaldır
     const requestToRemove = currentUserData.followRequests?.find((req: any) => req.uid === requesterId);
     if (requestToRemove) {
       transaction.update(currentUserRef, {
@@ -130,7 +103,6 @@ export async function handleFollowRequest(currentUserId: string, requesterId: st
       });
     }
 
-    // İstek kabul edildiyse, takipçi/takip edilen listelerini güncelle
     if (action === 'accept') {
       transaction.update(currentUserRef, {
         followers: arrayUnion(requesterId),
@@ -138,6 +110,13 @@ export async function handleFollowRequest(currentUserId: string, requesterId: st
       transaction.update(requesterRef, {
         following: arrayUnion(currentUserId),
       });
+      await createNotification({
+            recipientId: requesterId,
+            senderId: currentUserId,
+            senderUsername: currentUserData.username,
+            senderAvatar: currentUserData.photoURL,
+            type: 'follow_accept', // A new type for accepted request
+        });
     }
   });
 

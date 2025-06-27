@@ -1,0 +1,22 @@
+// Bu kurallar, Firebase projenizin Storage bölümündeki "Rules" sekmesine yapıştırılmalıdır.
+// Bu, uygulamanızın güvenli bir şekilde resim yüklemesine ve göstermesine olanak tanır.
+
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Herhangi bir yol
+    match /{allPaths=**} {
+    
+      // Herkesin okumasına izin ver. Bu, profil resimleri ve gönderi resimleri gibi
+      // herkese açık içeriklerin görüntülenebilmesi için gereklidir.
+      allow read: if true;
+      
+      // Yazma (yükleme, güncelleme, silme) işlemlerine sadece giriş yapmış
+      // (authenticated) kullanıcılar için izin ver. Bu, kimliği belirsiz kişilerin
+      // depolama alanınıza dosya yüklemesini engeller.
+      allow write: if request.auth != null;
+    }
+  }
+}

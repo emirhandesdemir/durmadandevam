@@ -9,8 +9,10 @@ import {
     doc,
     deleteDoc,
     writeBatch,
-    increment
+    increment,
+    getDoc
 } from "firebase/firestore";
+import { createNotification } from "./notificationActions";
 
 interface AddCommentArgs {
     postId: string;
@@ -26,10 +28,6 @@ interface AddCommentArgs {
     }
 }
 
-/**
- * Bir gönderiye yeni bir yorum ekler ve gönderinin yorum sayısını artırır.
- * @param {AddCommentArgs} args - Yorum bilgileri.
- */
 export async function addComment({ postId, text, user, replyTo }: AddCommentArgs) {
     if (!user || !user.uid) throw new Error("Yetkilendirme hatası.");
     if (!text.trim()) throw new Error("Yorum metni boş olamaz.");
@@ -39,8 +37,7 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
 
     const batch = writeBatch(db);
     
-    // Yeni yorum dökümanı oluştur
-    const newCommentRef = doc(commentsColRef); // ID'yi önceden al
+    const newCommentRef = doc(commentsColRef); 
     batch.set(newCommentRef, {
         uid: user.uid,
         username: user.displayName || "Anonim Kullanıcı",
@@ -50,30 +47,39 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
         replyTo: replyTo || null,
     });
 
-    // Gönderideki yorum sayısını artır
     batch.update(postRef, {
         commentCount: increment(1)
     });
     
     await batch.commit();
+
+    // Gönderi sahibine bildirim gönder
+    const postSnap = await getDoc(postRef);
+    const postData = postSnap.data();
+
+    if (postData && postData.uid !== user.uid) {
+        await createNotification({
+            recipientId: postData.uid,
+            senderId: user.uid,
+            senderUsername: user.displayName || "Biri",
+            senderAvatar: user.photoURL,
+            type: 'comment',
+            postId: postId,
+            postImage: postData.imageUrl || null,
+            commentText: text,
+        });
+    }
 }
 
 
-/**
- * Bir yorumu siler ve gönderinin yorum sayısını azaltır.
- * @param postId Yorumun ait olduğu gönderinin ID'si.
- * @param commentId Silinecek yorumun ID'si.
- */
 export async function deleteComment(postId: string, commentId: string) {
     const postRef = doc(db, "posts", postId);
     const commentRef = doc(postRef, "comments", commentId);
 
     const batch = writeBatch(db);
 
-    // Yorumu sil
     batch.delete(commentRef);
 
-    // Gönderideki yorum sayısını azalt
     batch.update(postRef, {
         commentCount: increment(-1)
     });

@@ -42,16 +42,10 @@ interface PostCardProps {
     post: Post;
 }
 
-/**
- * PostCard Bileşeni
- * Tek bir gönderiyi daha zarif ve şerit benzeri bir tasarımla görüntüleyen karttır.
- * Düzenleme, silme ve yorum yapma işlevlerini barındırır.
- */
 export default function PostCard({ post }: PostCardProps) {
     const { user: currentUser } = useAuth();
     const { toast } = useToast();
 
-    // State'ler
     const [isLiking, setIsLiking] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -60,11 +54,9 @@ export default function PostCard({ post }: PostCardProps) {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showComments, setShowComments] = useState(false);
 
-    // Kontroller
     const isOwner = currentUser?.uid === post.uid;
     const isLiked = currentUser ? (post.likes || []).includes(currentUser.uid) : false;
     
-    // Hata: Hem Timestamp hem de serileştirilmiş nesne formatını işle
     const createdAtDate = post.createdAt instanceof Timestamp 
         ? post.createdAt.toDate() 
         : new Date((post.createdAt as { seconds: number }).seconds * 1000);
@@ -75,23 +67,24 @@ export default function PostCard({ post }: PostCardProps) {
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    // Düzenleme moduna girildiğinde textarea'yı odakla ve boyutlandır
     useEffect(() => {
         if (isEditing && textareaRef.current) {
             textareaRef.current.focus();
-            // Otomatik boyutlandırma
             textareaRef.current.style.height = 'inherit';
             const scrollHeight = textareaRef.current.scrollHeight;
             textareaRef.current.style.height = `${scrollHeight}px`;
         }
     }, [isEditing]);
 
-    // Beğenme fonksiyonu
     const handleLike = async () => {
         if (!currentUser || isLiking) return;
         setIsLiking(true);
         try {
-            await likePost(post.id, currentUser.uid, isLiked);
+            await likePost(post, {
+                uid: currentUser.uid,
+                displayName: currentUser.displayName,
+                photoURL: currentUser.photoURL,
+            });
         } catch (error) {
             console.error("Error liking post:", error);
             toast({ variant: "destructive", description: "Beğenirken bir hata oluştu." });
@@ -100,7 +93,6 @@ export default function PostCard({ post }: PostCardProps) {
         }
     };
 
-    // Silme fonksiyonu
     const handleDelete = async () => {
         if (!isOwner) return;
         setIsDeleting(true);
@@ -116,7 +108,6 @@ export default function PostCard({ post }: PostCardProps) {
         }
     };
 
-    // Düzenlemeyi kaydetme fonksiyonu
     const handleSaveEdit = async () => {
         if (!isOwner || !editedText.trim()) return;
         setIsSaving(true);
@@ -132,7 +123,6 @@ export default function PostCard({ post }: PostCardProps) {
         }
     };
 
-    // Gönderi metnini hashtag ve mention'lar ile işleyen fonksiyon
     const renderTextWithLinks = (text: string) => {
         if (!text) return null;
         const parts = text.split(/(#\w+|@\w+)/g);
@@ -158,9 +148,7 @@ export default function PostCard({ post }: PostCardProps) {
     return (
         <>
             <Card className="w-full animate-in fade-in-50 duration-500 overflow-hidden rounded-2xl border bg-card/50 shadow-lg shadow-black/5">
-                {/* Gönderi içeriği, esnek bir yapı ile */}
                 <div className="p-4">
-                    {/* Üst Kısım: Avatar, İsim ve Menü */}
                     <div className="flex items-center justify-between mb-3">
                         <Link href={`/profile/${post.uid}`} className="flex items-center gap-3 group">
                             <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
@@ -209,7 +197,6 @@ export default function PostCard({ post }: PostCardProps) {
                         )}
                     </div>
 
-                    {/* Metin ve Resim Alanı */}
                     <div className="space-y-3">
                         {isEditing ? (
                             <div className="space-y-2">
@@ -250,7 +237,6 @@ export default function PostCard({ post }: PostCardProps) {
                     </div>
                 </div>
 
-                {/* Alt Kısım: Beğeni ve Yorum Butonları */}
                 <div className="border-t px-4 py-2 flex items-center justify-start gap-1">
                     <Button
                         variant="ghost"
@@ -278,8 +264,7 @@ export default function PostCard({ post }: PostCardProps) {
                 </div>
             </Card>
 
-            {/* Silme Onay Dialogu */}
-             <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+            <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                     <AlertDialogTitle>Emin misiniz?</AlertDialogTitle>
@@ -297,7 +282,6 @@ export default function PostCard({ post }: PostCardProps) {
                 </AlertDialogContent>
             </AlertDialog>
             
-            {/* Yorumlar Paneli */}
             <CommentSheet 
                 open={showComments} 
                 onOpenChange={setShowComments}

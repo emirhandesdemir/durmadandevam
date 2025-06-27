@@ -35,66 +35,54 @@ Next.js App Router'ın merkezi. Sayfa yönlendirmeleri, layout'lar ve global sti
   - **`/home/page.tsx`**: Ana sayfa (gönderi akışı).
   - **`/rooms/[id]/page.tsx`**: Dinamik sohbet odası sayfası.
   - **`/profile/[uid]/page.tsx`**: Dinamik kullanıcı profili sayfası.
+  - **`/requests/page.tsx`**: Gelen takip isteklerinin yönetildiği sayfa.
+  - **`/notifications/page.tsx`**: Beğeni, yorum ve yeni takipçi bildirimlerinin listelendiği sayfa.
 - **`/admin`**: Yönetim paneli sayfalarını gruplayan dizin.
-  - **`layout.tsx`**: Admin paneli için özel layout (Sidebar, yetki kontrolü).
-  - **`/dashboard/page.tsx`**: Admin paneli ana sayfası.
 - **`/login`, `/signup`**: Giriş ve kayıt sayfaları.
 
 #### `/src/components`
 Yeniden kullanılabilir React bileşenlerinin bulunduğu yer.
 - **`/ui`**: ShadCN tarafından otomatik olarak oluşturulan temel UI bileşenleri (Button, Card, Input vb.).
-- **`/admin`**: Sadece yönetim panelinde kullanılan bileşenler (örn: `UsersTable`, `StatCard`).
 - **`/auth`**: Kimlik doğrulama formları (`login-form`, `signup-form`).
 - **`/posts`**: Gönderi sistemiyle ilgili bileşenler (`PostCard`, `NewPostForm`).
-- **`/rooms`**: Sohbet odalarıyla ilgili bileşenler (`RoomCard`, `RoomHeader`).
-- **`/voice`**: Sesli sohbet arayüzü bileşenleri (`VoiceUserIcon`, `PersistentVoiceBar`).
-- **`/profile`**: Profil sayfalarında kullanılan bileşenler.
+- **`/profile`**: Profil sayfalarında kullanılan bileşenler (`ProfileHeader`, `FollowButton`, `FollowListDialog`).
+- **`/notifications`**: Bildirim sistemiyle ilgili bileşenler (`NotificationList`, `NotificationItem`).
 - **`/layout`**: Genel layout bileşenleri (`Header`, `BottomNav`).
 
 #### `/src/contexts`
 Uygulama genelinde state (durum) yönetimi için kullanılan React Context'leri.
 - **`AuthContext.tsx`**: Kullanıcı kimlik doğrulama durumunu, Firestore'dan gelen kullanıcı verilerini (`userData`) ve özellik bayraklarını (`featureFlags`) yönetir ve tüm uygulamaya sağlar.
-- **`VoiceChatContext.tsx`**: WebRTC tabanlı sesli sohbet bağlantılarını, katılımcı listesini ve ilgili tüm durumları (bağlı mı, sessizde mi vb.) yönetir.
 
 #### `/src/lib`
 Yardımcı fonksiyonlar, konfigürasyonlar ve sunucu eylemleri (server actions).
 - **`firebase.ts`**: Firebase projesinin başlatılması ve konfigürasyonu.
-- **`utils.ts`**: Genel yardımcı fonksiyonlar (örn: `cn` for Tailwind class merging).
 - **`types.ts`**: Uygulama genelinde kullanılan TypeScript arayüzleri (interface) ve türleri.
 - **`/actions`**: Sunucuda çalışan ve Firestore ile etkileşime giren fonksiyonlar. Bu, istemci kodunu daha temiz tutar ve güvenliği artırır.
-  - `postActions.ts`, `roomActions.ts`, `followActions.ts` vb.
-
-#### `/src/ai`
-Yapay zeka (AI) ile ilgili tüm mantığın bulunduğu dizin.
-- **`genkit.ts`**: Genkit'in başlatıldığı ve temel modelin yapılandırıldığı yer.
-- **`/flows`**: Belirli bir görevi yerine getiren yapay zeka akışları (örn: `imageStyleFlow.ts` resmi düzenler).
+  - `postActions.ts`: Gönderi beğenme, silme gibi işlemleri ve bildirim oluşturmayı yönetir.
+  - `commentActions.ts`: Yorum ekleme, silme gibi işlemleri ve bildirim oluşturmayı yönetir.
+  - `followActions.ts`: Takip etme, takipten çıkma, istek yönetimi gibi işlemleri ve bildirim oluşturmayı yönetir.
+  - `notificationActions.ts`: Bildirim oluşturma ve okundu olarak işaretleme gibi merkezi bildirim işlemlerini yönetir.
 
 ---
 
 ## 3. Ana Sistemlerin Çalışma Prensibi
 
-### Kimlik Doğrulama (Authentication)
-1.  Kullanıcı, `login` veya `signup` sayfalarından Firebase Authentication ile giriş/kayıt yapar.
-2.  `AuthContext`, `onAuthStateChanged` dinleyicisi ile kullanıcının oturum durumunu anlık olarak takip eder.
-3.  Kullanıcı giriş yaptığında, `AuthContext` aynı zamanda Firestore'daki `users` koleksiyonundan o kullanıcının dokümanını (`userData`) ve `config` koleksiyonundan özellik bayraklarını (`featureFlags`) dinlemeye başlar.
-4.  Tüm bu veriler (user, userData, featureFlags), `useAuth()` hook'u ile uygulama genelinde kullanılabilir hale gelir.
+### Kimlik Doğrulama ve Veri Akışı
+1.  Kullanıcı `login` veya `signup` sayfalarından Firebase Authentication ile giriş yapar.
+2.  `AuthContext`, `onAuthStateChanged` ile kullanıcının oturum durumunu anlık olarak takip eder.
+3.  Kullanıcı giriş yaptığında, `AuthContext` aynı zamanda Firestore'daki `users` koleksiyonundan o kullanıcının dokümanını (`userData`), `config` koleksiyonundan `featureFlags` ve `notifications` koleksiyonundan okunmamış bildirim olup olmadığını dinlemeye başlar.
+4.  Tüm bu veriler, `useAuth()` hook'u ile uygulama genelinde kullanılabilir hale gelir.
 
-### Sohbet Odaları ve Sesli Sohbet (WebRTC)
-1.  Kullanıcı bir odaya katıldığında, `VoiceChatContext` devreye girer.
-2.  Kullanıcı "Katıl" butonuna bastığında, tarayıcıdan mikrofon izni alınır ve bir **yerel ses akışı (localStream)** oluşturulur.
-3.  `joinVoiceChat` sunucu eylemi, kullanıcıyı odanın `voiceParticipants` alt koleksiyonuna ekler.
-4.  `VoiceChatContext`, odadaki diğer tüm katılımcılarla bir **RTCPeerConnection** (eşler arası bağlantı) kurar.
-5.  Bağlantı kurma süreci (teklif/cevap sinyalleşmesi), Firestore üzerinden anlık olarak gerçekleştirilir.
-6.  Bağlantı başarılı olduğunda, diğer kullanıcılardan gelen **uzak ses akışları (remoteStreams)**, `VoiceAudioPlayer` bileşeni tarafından arkaplanda oynatılır.
-7.  Kullanıcı odadan ayrıldığında veya bağlantısı koptuğunda, `leaveVoiceChat` eylemi tetiklenir ve tüm bağlantılar temizlenir.
-
-### Takip Sistemi
-1.  `users` koleksiyonundaki her doküman, `followers`, `following`, `privateProfile` ve `followRequests` alanlarını içerir.
-2.  Kullanıcı profil sayfasındaki `FollowButton` bileşeni, ziyaret edilen profilin `privateProfile` durumuna ve mevcut kullanıcının takip durumuna göre "Takip Et", "Takip İsteği Gönder" veya "Takiptesin" butonlarını gösterir.
-3.  Tüm işlemler (`followUser`, `unfollowUser`, `handleFollowRequest`), `followActions.ts` içindeki sunucu eylemleri aracılığıyla güvenli bir şekilde yapılır.
-
-### Yapay Zeka (Genkit)
-1.  Kullanıcı, "Yeni Gönderi" sayfasında bir resim yükleyip bir stil komutu girdiğinde `applyImageFilter` sunucu eylemi çağrılır.
-2.  Bu eylem, `/ai/flows/imageStyleFlow.ts` içindeki Genkit akışını tetikler.
-3.  `styleImageFlow`, Google'ın `gemini-2.0-flash-preview-image-generation` modelini kullanarak verilen resmi ve metin komutunu işler.
-4.  Modelden dönen yeni (stilli) resim, data URI olarak istemciye geri gönderilir ve kullanıcının ekranında gösterilir.
+### Takip ve Bildirim Sistemi
+1.  **Veritabanı Yapısı**: Her kullanıcının `users` koleksiyonundaki dokümanında `followers` (takipçiler), `following` (takip edilenler), `privateProfile` (gizli hesap durumu) ve `followRequests` (takip istekleri) dizileri bulunur.
+2.  **Takip Etme**:
+    - **Herkese Açık Profil**: Bir kullanıcı "Takip Et" butonuna tıkladığında, `followActions.ts` içindeki `followUser` eylemi tetiklenir. Bu eylem, her iki kullanıcının da `followers` ve `following` dizilerini atomik bir `writeBatch` işlemiyle günceller. Aynı zamanda `notificationActions.ts` üzerinden takip edilen kullanıcıya bir 'follow' tipinde bildirim gönderir.
+    - **Gizli Profil**: "Takip İsteği Gönder" butonuna tıklandığında, `followUser` eylemi bu durumu anlar ve karşı tarafın `followRequests` dizisine istek gönderen kullanıcının bilgilerini ekler.
+3.  **İstek Yönetimi**:
+    - Kullanıcı, `/requests` sayfasına giderek `followRequests` dizisindeki istekleri görür.
+    - "Onayla" butonuna tıklandığında, `handleFollowRequest` eylemi tetiklenir. Bu eylem, isteği diziden kaldırır, takipçi/takip edilen listelerini günceller ve istek gönderen kullanıcıya "isteğiniz kabul edildi" şeklinde bir bildirim gönderir.
+4.  **Beğeni/Yorum Bildirimleri**:
+    - Bir kullanıcı bir gönderiyi beğendiğinde (`likePost` eylemi) veya yorum yaptığında (`addComment` eylemi), bu eylemler ilgili veritabanı işlemini yaptıktan sonra `notificationActions.ts` içindeki `createNotification` fonksiyonunu çağırır.
+    - Bu fonksiyon, gönderi sahibine `type`'ı 'like' veya 'comment' olan yeni bir bildirim dokümanı oluşturur ve gönderi sahibinin `hasUnreadNotifications` bayrağını `true` olarak işaretler.
+5.  **Bildirimleri Görüntüleme**:
+    - Kullanıcı `/notifications` sayfasına girdiğinde, `NotificationList` bileşeni kullanıcının okunmamış bildirimlerini çeker ve `markNotificationsAsRead` eylemini tetikleyerek `hasUnreadNotifications` bayrağını `false` yapar. Bu, `Header`'daki bildirim noktasının sönmesini sağlar.

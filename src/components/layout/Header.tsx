@@ -7,18 +7,13 @@ import { Send, Users, PlusCircle, Bell, Settings } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePathname } from 'next/navigation';
 
-/**
- * Ana uygulama için üst navigasyon çubuğu (Header).
- * Logo, uygulama adı ve çeşitli eylem butonları içerir.
- */
 export default function Header() {
     const { user, featureFlags, userData } = useAuth();
-    const pathname = usePathname(); // Geçerli URL yolunu al
+    const pathname = usePathname();
 
     const postFeedEnabled = featureFlags?.postFeedEnabled ?? true;
-    const followRequestCount = userData?.followRequests?.length || 0;
+    const hasUnreadNotifications = userData?.hasUnreadNotifications || false;
 
-    // Kullanıcının kendi profil sayfasında olup olmadığını kontrol et
     const isOwnProfilePage = user && pathname === `/profile/${user.uid}`;
 
     return (
@@ -34,7 +29,6 @@ export default function Header() {
                 </Link>
                 <div className="flex items-center gap-1">
                      {isOwnProfilePage ? (
-                        // Kendi profil sayfasındaysa sadece Ayarlar butonunu göster
                         <Button asChild variant="ghost" size="icon" className="rounded-full">
                             <Link href="/profile">
                                 <Settings className="h-5 w-5" />
@@ -42,7 +36,6 @@ export default function Header() {
                             </Link>
                         </Button>
                      ) : (
-                        // Diğer sayfalardaysa standart butonları göster
                         <>
                             {postFeedEnabled && (
                                 <Button asChild variant="ghost" size="icon" className="rounded-full">
@@ -53,14 +46,15 @@ export default function Header() {
                                 </Button>
                             )}
                             <Button asChild variant="ghost" size="icon" className="rounded-full">
-                                <Link href="/requests" className="relative">
+                                <Link href="/notifications" className="relative">
                                     <Bell className="h-5 w-5" />
-                                    {followRequestCount > 0 && (
-                                        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
-                                            {followRequestCount}
+                                    {hasUnreadNotifications && (
+                                        <span className="absolute top-0 right-0 flex h-2.5 w-2.5">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-destructive"></span>
                                         </span>
                                     )}
-                                    <span className="sr-only">Takip İstekleri</span>
+                                    <span className="sr-only">Bildirimler</span>
                                 </Link>
                             </Button>
                             <Button variant="ghost" size="icon" className="rounded-full">
