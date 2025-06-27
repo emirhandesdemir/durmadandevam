@@ -25,6 +25,7 @@ export interface GameSettings {
     questionTimerSeconds: number;
     rewardAmount: number;
     cooldownSeconds: number;
+    afkTimeoutMinutes: number; // AFK zaman aşımı süresi
 }
 
 /**
@@ -73,10 +74,11 @@ export interface VoiceParticipant {
     uid: string;
     username: string;
     photoURL?: string | null;
-    isSpeaker: boolean;
     isMuted: boolean;
     isSharingScreen?: boolean;
     joinedAt: Timestamp;
-    lastSpokeAt?: Timestamp; // Son konuşma zamanı (inaktivite takibi için)
+    lastActiveAt?: Timestamp; // Son aktivite zamanı (AFK takibi için)
     selectedBubble?: string; // Kullanıcının seçtiği baloncuk stili
+    // İstemci tarafında yönetilecek, Firestore'a yazılmayacak özellikler
+    isSpeaker?: boolean; 
 }

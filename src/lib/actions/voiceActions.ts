@@ -5,7 +5,6 @@ import { db } from '@/lib/firebase';
 import { 
     collection, 
     doc, 
-    writeBatch,
     runTransaction,
     getDoc,
     serverTimestamp,
@@ -13,8 +12,11 @@ import {
     updateDoc,
     Timestamp,
     deleteDoc,
-    arrayRemove
+    arrayRemove,
+    getDocs,
+    writeBatch
 } from 'firebase/firestore';
+import { getGameSettings } from './gameActions';
 import type { Room, VoiceParticipant } from '../types';
 
 interface UserInfo {
@@ -23,11 +25,10 @@ interface UserInfo {
     photoURL: string | null;
 }
 
+const voiceStatsRef = doc(db, 'config', 'voiceStats');
+
 /**
  * Kullanıcının bir odanın sesli sohbetine katılması için sunucu eylemi.
- * Bu, atomik bir işlemle kullanıcıyı ekler ve sayacı günceller.
- * @param roomId Katılınacak odanın ID'si.
- * @param user Katılan kullanıcı bilgileri.
  */
 export async function joinVoiceChat(roomId: string, user: UserInfo) {
     if (!user || !user.uid) throw new Error("Yetkilendirme hatası: Giriş yapmalısınız.");
@@ -38,43 +39,35 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
 
     try {
         await runTransaction(db, async (transaction) => {
-            const roomDoc = await transaction.get(roomRef);
-            if (!roomDoc.exists()) {
-                throw new Error("Oda bulunamadı.");
-            }
+            const [roomDoc, userVoiceDoc, userDbDoc] = await Promise.all([
+                transaction.get(roomRef),
+                transaction.get(userVoiceRef),
+                transaction.get(userDbRef)
+            ]);
+
+            if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
+            if (userVoiceDoc.exists()) return;
+            if (!userDbDoc.exists()) throw new Error("Kullanıcı profili bulunamadı.");
             
-            const userVoiceDoc = await transaction.get(userVoiceRef);
-            if (userVoiceDoc.exists()) {
-                // User is already in chat, consider it a success.
-                return;
-            }
-
-            const userDbDoc = await transaction.get(userDbRef);
-            if (!userDbDoc.exists()) {
-                throw new Error("Kullanıcı profili bulunamadı.");
-            }
             const userData = userDbDoc.data();
-
-
             const roomData = roomDoc.data() as Room;
             const voiceCount = roomData.voiceParticipantsCount || 0;
-            if (voiceCount >= roomData.maxParticipants) {
-                throw new Error("Sesli sohbet dolu.");
-            }
+            if (voiceCount >= roomData.maxParticipants) throw new Error("Sesli sohbet dolu.");
 
-            const participantData: VoiceParticipant = {
+            const participantData: Omit<VoiceParticipant, 'isSpeaker'> = {
                 uid: user.uid,
                 username: user.displayName || 'Anonim',
                 photoURL: user.photoURL,
-                isSpeaker: true, 
-                isMuted: false, // Kullanıcılar varsayılan olarak konuşabilir (sessiz değil).
+                isMuted: false,
                 isSharingScreen: false,
                 joinedAt: serverTimestamp() as Timestamp,
+                lastActiveAt: serverTimestamp() as Timestamp,
                 selectedBubble: userData.selectedBubble || '',
             };
             
             transaction.set(userVoiceRef, participantData);
             transaction.update(roomRef, { voiceParticipantsCount: increment(1) });
+            transaction.set(voiceStatsRef, { totalUsers: increment(1) }, { merge: true });
         });
         
         return { success: true };
@@ -84,12 +77,8 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
     }
 }
 
-
 /**
  * Kullanıcının sesli sohbetten ayrılması için sunucu eylemi.
- * Kullanıcıyı sadece sesli katılımcı listesinden siler, ana katılımcı listesinden silmez.
- * @param roomId Ayrılınacak odanın ID'si.
- * @param userId Ayrılan kullanıcının ID'si.
  */
 export async function leaveVoiceChat(roomId: string, userId: string) {
     if (!userId) throw new Error("Yetkilendirme hatası.");
@@ -99,19 +88,17 @@ export async function leaveVoiceChat(roomId: string, userId: string) {
 
      try {
         await runTransaction(db, async (transaction) => {
-            const roomDoc = await transaction.get(roomRef);
-            if (!roomDoc.exists()) {
-                // Oda zaten silinmiş, yapacak bir şey yok.
-                return;
-            }
-
-            const userVoiceDoc = await transaction.get(userVoiceRef);
+            const [roomDoc, userVoiceDoc] = await Promise.all([
+                transaction.get(roomRef),
+                transaction.get(userVoiceRef)
+            ]);
             
-            // Eğer kullanıcı sesli sohbet listesindeyse, onu sil ve sayacı azalt.
-            // Ana 'participants' dizisine dokunmuyoruz.
             if (userVoiceDoc.exists()) {
                 transaction.delete(userVoiceRef);
-                transaction.update(roomRef, { voiceParticipantsCount: increment(-1) });
+                if (roomDoc.exists()) {
+                    transaction.update(roomRef, { voiceParticipantsCount: increment(-1) });
+                }
+                transaction.set(voiceStatsRef, { totalUsers: increment(-1) }, { merge: true });
             }
         });
         return { success: true };
@@ -122,93 +109,106 @@ export async function leaveVoiceChat(roomId: string, userId: string) {
 }
 
 /**
- * Kullanıcının kendi mikrofon durumunu (sessiz/sesli) değiştirmesi için sunucu eylemi.
- * @param roomId Oda ID'si.
- * @param userId İşlemi yapan kullanıcı ID'si.
- * @param isMuted Mikrofonun yeni durumu.
+ * Kullanıcının kendi mikrofon durumunu günceller.
  */
 export async function toggleSelfMute(roomId: string, userId: string, isMuted: boolean) {
     if (!userId) throw new Error("Yetkilendirme hatası.");
-
     const userVoiceRef = doc(db, 'rooms', roomId, 'voiceParticipants', userId);
-    
     try {
-        await updateDoc(userVoiceRef, { 
-            isMuted: isMuted,
-        });
+        await updateDoc(userVoiceRef, { isMuted: isMuted });
         return { success: true };
-    } catch (error: any) {
-        return { success: false, error: error.message };
-    }
+    } catch (error: any) { return { success: false, error: error.message }; }
 }
 
 /**
- * Updates a user's screen sharing status in Firestore.
- * @param roomId The room ID.
- * @param userId The user's ID.
- * @param isSharing The new screen sharing state.
+ * Kullanıcının ekran paylaşım durumunu günceller.
  */
 export async function toggleScreenShare(roomId: string, userId: string, isSharing: boolean) {
     if (!userId) throw new Error("Yetkilendirme hatası.");
-
     const userVoiceRef = doc(db, 'rooms', roomId, 'voiceParticipants', userId);
-    
     try {
-        await updateDoc(userVoiceRef, { 
-            isSharingScreen: isSharing,
-        });
+        await updateDoc(userVoiceRef, { isSharingScreen: isSharing });
         return { success: true };
-    } catch (error: any) {
-        console.error("Ekran paylaşım durumu güncellenirken hata:", error);
-        return { success: false, error: error.message };
-    }
+    } catch (error: any) { return { success: false, error: error.message }; }
 }
 
-
-// --- Yönetici (Host) Eylemleri ---
+/**
+ * Kullanıcının son aktif zamanını günceller.
+ */
+export async function updateLastActive(roomId: string, userId: string) {
+    if (!userId) return;
+    const userVoiceRef = doc(db, 'rooms', roomId, 'voiceParticipants', userId);
+    try {
+        await updateDoc(userVoiceRef, { lastActiveAt: serverTimestamp() });
+    } catch (error) { console.error("Aktivite güncellenirken hata:", error); }
+}
 
 /**
  * Oda yöneticisinin bir katılımcıyı sesli sohbetten atması.
- * @param roomId Oda ID'si.
- * @param currentUserId İşlemi yapan yönetici ID'si.
- * @param targetUserId Atılacak kullanıcının ID'si.
  */
 export async function kickFromVoice(roomId: string, currentUserId: string, targetUserId: string) {
-    if (!currentUserId) throw new Error("Yetkilendirme hatası.");
-    if (currentUserId === targetUserId) throw new Error("Kendinizi atamazsınız.");
+    if (!currentUserId || currentUserId === targetUserId) return { success: false, error: "Geçersiz işlem." };
 
     const roomRef = doc(db, 'rooms', roomId);
     const targetUserVoiceRef = doc(roomRef, 'voiceParticipants', targetUserId);
 
     try {
         await runTransaction(db, async (transaction) => {
-             const roomDoc = await transaction.get(roomRef);
+            const roomDoc = await transaction.get(roomRef);
             if (!roomDoc.exists() || roomDoc.data()?.createdBy.uid !== currentUserId) {
                 throw new Error("Bu işlemi yapma yetkiniz yok.");
             }
             
-            const roomData = roomDoc.data() as Room;
-            const participantToRemove = (roomData.participants || []).find(p => p.uid === targetUserId);
-
             const targetUserDoc = await transaction.get(targetUserVoiceRef);
-            if (!targetUserDoc.exists()) {
-                return; // User already gone.
-            }
+            if (!targetUserDoc.exists()) return;
             
             transaction.delete(targetUserVoiceRef);
-
-            const updates: {[key: string]: any} = {
-                voiceParticipantsCount: increment(-1)
-            };
-
-            if (participantToRemove) {
-                updates.participants = arrayRemove(participantToRemove);
-            }
-
-            transaction.update(roomRef, updates);
+            transaction.update(roomRef, { 
+                voiceParticipantsCount: increment(-1),
+                participants: arrayRemove((roomDoc.data() as Room).participants.find(p => p.uid === targetUserId))
+            });
+            transaction.set(voiceStatsRef, { totalUsers: increment(-1) }, { merge: true });
         });
         return { success: true };
     } catch (error: any) {
         return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Odadaki aktif olmayan kullanıcıları kontrol eder ve atar.
+ */
+export async function kickInactiveUsers(roomId: string) {
+    const settings = await getGameSettings();
+    const timeoutMinutes = settings.afkTimeoutMinutes || 8;
+    const timeoutMs = timeoutMinutes * 60 * 1000;
+    const now = Date.now();
+
+    const voiceParticipantsRef = collection(db, 'rooms', roomId, 'voiceParticipants');
+    
+    try {
+        const querySnapshot = await getDocs(voiceParticipantsRef);
+        const batch = writeBatch(db);
+        let kickedCount = 0;
+
+        querySnapshot.forEach(doc => {
+            const participant = doc.data() as VoiceParticipant;
+            const lastActive = participant.lastActiveAt?.toMillis() || 0;
+            if (now - lastActive > timeoutMs) {
+                batch.delete(doc.ref);
+                kickedCount++;
+            }
+        });
+
+        if (kickedCount > 0) {
+            const roomRef = doc(db, 'rooms', roomId);
+            batch.update(roomRef, { voiceParticipantsCount: increment(-kickedCount) });
+            batch.set(voiceStatsRef, { totalUsers: increment(-kickedCount) }, { merge: true });
+            await batch.commit();
+        }
+        return { success: true, kickedCount };
+    } catch (error) {
+        console.error("AFK kullanıcıları atılırken hata:", error);
+        return { success: false };
     }
 }

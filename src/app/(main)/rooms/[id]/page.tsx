@@ -1,7 +1,7 @@
 // src/app/(main)/rooms/[id]/page.tsx
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -17,11 +17,11 @@ import VoiceUserIcon from '@/components/voice/VoiceUserIcon';
 import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
 import RoomHeader from '@/components/rooms/RoomHeader';
 import ScreenShareView from '@/components/voice/ScreenShareView';
+import { kickInactiveUsers } from '@/lib/actions/voiceActions';
 
 
 export default function RoomPage() {
     const params = useParams();
-    const router = useRouter();
     const { toast } = useToast();
     const roomId = params.id as string;
     
@@ -39,6 +39,7 @@ export default function RoomPage() {
         leaveRoom,
         toggleSelfMute,
         participants,
+        setActiveRoomId,
     } = useVoiceChat();
 
     const [room, setRoom] = useState<Room | null>(null);
@@ -53,29 +54,42 @@ export default function RoomPage() {
     const remoteScreenStream = screenSharer && !isSharingScreen ? remoteScreenStreams[screenSharer.uid] : null;
 
     useEffect(() => {
+        if (roomId) {
+            setActiveRoomId(roomId);
+        }
+        return () => {
+            setActiveRoomId(null);
+        }
+    }, [roomId, setActiveRoomId]);
+
+    // Oda verisini dinle (sadece oda bilgileri için, katılımcılar context'ten geliyor)
+    useEffect(() => {
         if (!roomId) return;
         const roomUnsub = onSnapshot(doc(db, 'rooms', roomId), (docSnap) => {
             if (docSnap.exists()) {
-                const roomData = { id: docSnap.id, ...docSnap.data() } as Room;
-                setRoom(roomData);
-            } else {
-                toast({ title: "Oda Kapatıldı", description: "Bu oda artık mevcut değil.", variant: "destructive" });
-                router.push('/rooms');
+                setRoom({ id: docSnap.id, ...docSnap.data() } as Room);
             }
         });
         return () => roomUnsub();
-    }, [roomId, router, toast]);
+    }, [roomId]);
 
+    // AFK kullanıcıları atma (sadece host yapar)
+    useEffect(() => {
+        if (isHost && roomId) {
+            const interval = setInterval(() => {
+                kickInactiveUsers(roomId);
+            }, 60 * 1000); // Her dakika kontrol et
+            return () => clearInterval(interval);
+        }
+    }, [isHost, roomId]);
+
+    // Metin mesajlarını dinle
     useEffect(() => {
         if (!roomId) return;
         setMessagesLoading(true);
         const q = query(collection(db, "rooms", roomId, "messages"), orderBy("createdAt", "asc"), limit(100));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const msgs: Message[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
-            setMessages(msgs);
-            setMessagesLoading(false);
-        }, (error) => {
-            console.error("Mesajlar alınırken hata:", error);
+            setMessages(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message)));
             setMessagesLoading(false);
         });
         return () => unsubscribe();
@@ -87,15 +101,15 @@ export default function RoomPage() {
         }
     }, [messages]);
     
-    const handleJoinVoice = async () => {
+    const handleJoinVoice = useCallback(async () => {
         if (!user || !room) return;
         await joinRoom(room);
-    };
+    }, [user, room, joinRoom]);
 
-    const handleToggleMute = async () => {
+    const handleToggleMute = useCallback(async () => {
         if (!self || !user) return;
         await toggleSelfMute();
-    };
+    }, [self, user, toggleSelfMute]);
     
     const { hostParticipant, otherParticipants } = useMemo(() => {
         if (!participants || !room) {
@@ -107,7 +121,6 @@ export default function RoomPage() {
     }, [participants, room]);
 
     const isLoading = authLoading || !room;
-    const showVoiceStageLoader = isConnecting && !isConnected;
     const isRoomParticipant = room?.participants?.some(p => p.uid === user?.uid);
 
     if (isLoading) {
@@ -133,10 +146,6 @@ export default function RoomPage() {
                             {isSharingScreen && localScreenStream && <ScreenShareView stream={localScreenStream} />}
                             {remoteScreenStream && <ScreenShareView stream={remoteScreenStream} />}
                             <p className="text-center text-xs text-muted-foreground mt-2">{screenSharer.username} ekranını paylaşıyor...</p>
-                        </div>
-                    ) : showVoiceStageLoader ? (
-                        <div className="flex h-48 items-center justify-center">
-                            <Loader2 className="h-10 w-10 animate-spin text-primary" />
                         </div>
                     ) : (
                         <div className="space-y-4">
