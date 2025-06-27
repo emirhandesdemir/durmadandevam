@@ -1,3 +1,4 @@
+
 // src/app/(main)/profile/[uid]/page.tsx
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -13,10 +14,20 @@ interface ProfilePageProps {
   };
 }
 
-// Helper function to reliably check for Timestamp-like objects
-const isTimestamp = (value: any): value is Timestamp => {
-  return value && typeof value.toDate === 'function';
-};
+// A more robust converter that handles both actual Timestamp instances and plain objects.
+const convertTimestamp = (value: any): string | null => {
+    if (!value) return null;
+    if (value instanceof Timestamp) {
+        return value.toDate().toISOString();
+    }
+    // Check for plain object structure as a fallback
+    if (typeof value === 'object' && typeof value.seconds === 'number' && typeof value.nanoseconds === 'number') {
+        return new Date(value.seconds * 1000 + value.nanoseconds / 1000000).toISOString();
+    }
+    // If it's already a string or some other primitive, return it as is, or null if invalid
+    return typeof value === 'string' ? value : null;
+}
+
 
 export default async function UserProfilePage({ params }: ProfilePageProps) {
   const { uid } = params;
@@ -33,15 +44,10 @@ export default async function UserProfilePage({ params }: ProfilePageProps) {
   // Robustly serialize all Timestamp objects before passing to client components.
   const serializableProfileUser = {
     ...profileUserData,
-    createdAt: isTimestamp(profileUserData.createdAt)
-      ? profileUserData.createdAt.toDate().toISOString()
-      : null,
-    
+    createdAt: convertTimestamp(profileUserData.createdAt),
     followRequests: (profileUserData.followRequests || []).map(req => ({
       ...req,
-      requestedAt: isTimestamp(req.requestedAt)
-        ? req.requestedAt.toDate().toISOString()
-        : null,
+      requestedAt: convertTimestamp(req.requestedAt),
     })),
   };
 
