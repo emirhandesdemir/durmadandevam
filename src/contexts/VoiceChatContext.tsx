@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef, useMemo } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { collection, onSnapshot, doc, addDoc, query, where, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -143,14 +143,14 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         }
         return () => { if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current); };
     }, [isConnected, runAudioAnalysis]);
-
+    
     const leaveRoom = useCallback(async () => {
         if (!user || !activeRoomId) return;
         await leaveVoiceChat(activeRoomId, user.uid);
         _cleanupAndResetState();
         setActiveRoomId(null);
     }, [user, activeRoomId, _cleanupAndResetState]);
-
+    
     const stopScreenShare = useCallback(async () => {
         if (!user || !activeRoomId || !localScreenStream) return;
         localScreenStream.getTracks().forEach(track => track.stop());
@@ -170,20 +170,10 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             return;
         }
 
-        if (typeof navigator?.mediaDevices?.getDisplayMedia !== 'function') {
-            const description = window.isSecureContext
-                ? 'Tarayıcınız bu özelliği desteklemiyor gibi görünüyor. Lütfen güncel bir Chrome, Firefox veya Edge tarayıcısı kullanın.'
-                : 'Ekran paylaşımı için güvenli bir bağlantı (HTTPS) gereklidir.';
-            
-            toast({ 
-                variant: 'destructive', 
-                title: 'Özellik Kullanılamıyor', 
-                description: description 
-            });
-            return;
-        }
-
         try {
+            // Directly attempt to get display media.
+            // Browser security will prevent this on non-HTTPS sites,
+            // which will be caught by the catch block.
             const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: "always" } as MediaTrackConstraints, audio: false });
             const screenTrack = screenStream.getVideoTracks()[0];
             if (!screenTrack) throw new Error("No screen track found");
@@ -196,9 +186,16 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             }
             await toggleScreenShareAction(activeRoomId, user.uid, true);
         } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Hata', description: error.name === 'NotAllowedError' ? 'Ekran paylaşımı için izin vermelisiniz.' : 'Ekran paylaşımı başlatılamadı.' });
+             console.error("Screen share error:", error);
+            toast({ 
+                variant: 'destructive', 
+                title: 'Hata', 
+                description: error.name === 'NotAllowedError' 
+                    ? 'Ekran paylaşımı için izin vermelisiniz.' 
+                    : 'Ekran paylaşımı başlatılamadı. Bu özellik güncel bir tarayıcı ve güvenli (HTTPS) bir bağlantı gerektirebilir.' 
+            });
         }
-    }, [user, activeRoomId, isSharingScreen, stopScreenShare, toast]);
+    }, [user, activeRoomId, isSharingScreen, stopScreenShare, toast, toggleScreenShareAction]);
 
     const createPeerConnection = useCallback((otherUid: string) => {
         if (!user || !localStream || peerConnections.current[otherUid]) return;
@@ -291,7 +288,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     }, [isConnected, user, activeRoomId]);
 
     const joinRoom = useCallback(async () => {
-        if (!user || !activeRoomId || !activeRoom || isConnected || isConnecting) return;
+        if (!user || !activeRoomId || isConnected || isConnecting) return;
         
         setIsConnecting(true);
         try {
@@ -308,7 +305,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         } finally {
             setIsConnecting(false);
         }
-    }, [user, activeRoomId, activeRoom, isConnected, isConnecting, toast, _cleanupAndResetState]);
+    }, [user, activeRoomId, isConnected, isConnecting, toast, _cleanupAndResetState]);
     
     const toggleSelfMute = useCallback(async () => {
         if (!self || !activeRoomId || !localStream) return;
