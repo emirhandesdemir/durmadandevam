@@ -14,6 +14,7 @@ import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { deletePost, updatePost, likePost } from "@/lib/actions/postActions";
+import { Timestamp } from "firebase/firestore";
 
 import {
   DropdownMenu,
@@ -62,8 +63,14 @@ export default function PostCard({ post }: PostCardProps) {
     // Kontroller
     const isOwner = currentUser?.uid === post.uid;
     const isLiked = currentUser ? (post.likes || []).includes(currentUser.uid) : false;
+    
+    // Hata: Hem Timestamp hem de serileştirilmiş nesne formatını işle
+    const createdAtDate = post.createdAt instanceof Timestamp 
+        ? post.createdAt.toDate() 
+        : new Date((post.createdAt as { seconds: number }).seconds * 1000);
+
     const timeAgo = post.createdAt
-        ? formatDistanceToNow(post.createdAt.toDate(), { addSuffix: true, locale: tr })
+        ? formatDistanceToNow(createdAtDate, { addSuffix: true, locale: tr })
         : "az önce";
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);

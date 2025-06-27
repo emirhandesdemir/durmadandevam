@@ -18,7 +18,7 @@ export interface Post {
     userRole?: 'admin' | 'user';
     text: string;
     imageUrl?: string;
-    createdAt: Timestamp;
+    createdAt: Timestamp | { seconds: number; nanoseconds: number };
     likes: string[]; // Beğenen kullanıcıların UID'lerini tutan dizi
     likeCount: number;
     commentCount: number;

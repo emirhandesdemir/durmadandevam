@@ -33,7 +33,11 @@ export default async function ProfilePosts({ userId }: ProfilePostsProps) {
   // Sıralamadan sonra limiti uygula.
   const limitedPosts = posts.slice(0, 20);
 
-  if (limitedPosts.length === 0) {
+  // İstemci bileşenine geçirmeden önce veriyi serileştir
+  const serializedPosts = JSON.parse(JSON.stringify(limitedPosts));
+
+
+  if (serializedPosts.length === 0) {
     return (
         <Card className="text-center p-8 border-dashed rounded-xl mt-4">
             <CardContent className="p-0">
@@ -46,7 +50,7 @@ export default async function ProfilePosts({ userId }: ProfilePostsProps) {
 
   return (
     <div className="flex flex-col gap-8 border-t pt-8">
-      {limitedPosts.map(post => (
+      {serializedPosts.map((post: Post) => (
         <PostCard key={post.id} post={post} />
       ))}
     </div>
