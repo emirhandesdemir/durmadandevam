@@ -6,17 +6,26 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // Herhangi bir yol
-    match /{allPaths=**} {
-    
-      // Herkesin okumasına izin ver. Bu, profil resimleri ve gönderi resimleri gibi
-      // herkese açık içeriklerin görüntülenebilmesi için gereklidir.
+    // Kullanıcı avatarları için kurallar
+    // /avatars/{userId} yolundaki dosyalara erişimi yönetir
+    match /avatars/{userId} {
+      // Herkesin avatar resimlerini okumasına (görmesine) izin ver
       allow read: if true;
       
-      // Yazma (yükleme, güncelleme, silme) işlemlerine sadece giriş yapmış
-      // (authenticated) kullanıcılar için izin ver. Bu, kimliği belirsiz kişilerin
-      // depolama alanınıza dosya yüklemesini engeller.
-      allow write: if request.auth != null;
+      // Sadece giriş yapmış ve kimliği eşleşen kullanıcının
+      // kendi avatarını yazmasına (yüklemesine/güncellemesine) izin ver.
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Kullanıcı gönderileri için kurallar
+    // /posts/{userId}/ altındaki tüm dosyalara erişimi yönetir
+    match /posts/{userId}/{allPaths=**} {
+      // Herkesin gönderi resimlerini okumasına (görmesine) izin ver
+      allow read: if true;
+      
+      // Sadece giriş yapmış ve kimliği eşleşen kullanıcının
+      // kendi gönderi klasörüne yazmasına (yüklemesine) izin ver.
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
