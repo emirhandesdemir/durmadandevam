@@ -2,12 +2,12 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, onSnapshot, doc, Timestamp, addDoc, query, where, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, addDoc, query, where, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Room, VoiceParticipant } from '@/lib/types';
 import { joinVoiceChat, leaveVoiceChat, toggleSelfMute as toggleMuteAction } from '@/lib/actions/voiceActions';
 import { useToast } from '@/hooks/use-toast';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 const ICE_SERVERS = {
     iceServers: [
@@ -24,7 +24,7 @@ interface VoiceChatContextType {
     isConnected: boolean;
     remoteStreams: Record<string, MediaStream>;
     joinRoom: (roomToJoin: Room) => Promise<void>;
-    leaveRoom: (force?: boolean) => Promise<void>;
+    leaveRoom: () => Promise<void>;
     toggleSelfMute: () => Promise<void>;
 }
 
@@ -34,9 +34,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const { user } = useAuth();
     const { toast } = useToast();
     const router = useRouter();
-    const pathname = usePathname();
-    const roomId = pathname.startsWith('/rooms/') && pathname.split('/').length > 2 ? pathname.split('/')[2] : null;
 
+    // Internal state, NOT derived from URL. This is the key change.
     const [activeRoom, setActiveRoom] = useState<Room | null>(null);
     const [participants, setParticipants] = useState<VoiceParticipant[]>([]);
     const [isConnecting, setIsConnecting] = useState(false);
@@ -47,7 +46,21 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     const self = participants.find(p => p.uid === user?.uid) || null;
     const isConnected = !!self;
+    
+    // Completely reset the voice chat state and connections.
+    const cleanupConnections = useCallback(() => {
+        console.log("Cleaning up all connections and resetting state.");
+        Object.values(peerConnections.current).forEach(pc => pc.close());
+        peerConnections.current = {};
+        
+        localStream?.getTracks().forEach(track => track.stop());
+        setLocalStream(null);
 
+        setRemoteStreams({});
+        setParticipants([]);
+        setActiveRoom(null); // This clears the active room and triggers listener cleanup
+    }, [localStream]);
+    
     const sendSignal = useCallback(async (to: string, type: string, data: any) => {
         if (!activeRoom || !user) return;
         const signalsRef = collection(db, `rooms/${activeRoom.id}/signals`);
@@ -55,16 +68,17 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     }, [activeRoom, user]);
     
     const createPeerConnection = useCallback((otherUid: string) => {
-        if (!user) return;
+        if (!user || !localStream) return;
+        if (peerConnections.current[otherUid]) return peerConnections.current[otherUid];
 
+        console.log(`Creating peer connection to ${otherUid}`);
         const pc = new RTCPeerConnection(ICE_SERVERS);
         peerConnections.current[otherUid] = pc;
         
-        if (localStream) {
-            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-        }
+        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
 
         pc.ontrack = event => {
+            console.log(`Received remote track from ${otherUid}`);
             setRemoteStreams(prev => ({ ...prev, [otherUid]: event.streams[0] }));
         };
 
@@ -74,27 +88,28 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             }
         };
 
-        // The 'polite' peer (lexicographically smaller UID) waits for offer.
-        // The 'impolite' peer (lexicographically larger UID) creates the offer.
         const isInitiator = user.uid > otherUid;
         if (isInitiator) {
-            pc.onnegotiationneeded = async () => {
+             pc.onnegotiationneeded = async () => {
                 try {
-                    const offer = await pc.createOffer();
-                    await pc.setLocalDescription(offer);
+                    await pc.setLocalDescription(await pc.createOffer());
                     if (pc.localDescription) {
-                        sendSignal(otherUid, 'offer', pc.localDescription.toJSON());
+                       await sendSignal(otherUid, 'offer', pc.localDescription.toJSON());
                     }
                 } catch (e) {
                     console.error("Negotiation error:", e);
                 }
             };
         }
+        return pc;
     }, [user, localStream, sendSignal]);
 
     const handleSignal = useCallback(async (from: string, type: string, data: any) => {
         const pc = peerConnections.current[from];
-        if (!pc) return;
+        if (!pc) {
+            console.warn(`Received signal from ${from}, but no peer connection exists.`);
+            return;
+        }
 
         try {
             if (type === 'offer') {
@@ -102,98 +117,55 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
                 if (pc.localDescription) {
-                    sendSignal(from, 'answer', pc.localDescription.toJSON());
+                    await sendSignal(from, 'answer', pc.localDescription.toJSON());
                 }
             } else if (type === 'answer') {
                 await pc.setRemoteDescription(new RTCSessionDescription(data));
             } else if (type === 'ice-candidate') {
-                if (data && pc.remoteDescription) {
+                 if (data && pc.remoteDescription) {
                     await pc.addIceCandidate(new RTCIceCandidate(data));
-                }
+                 }
             }
         } catch (error) {
             console.error("Signal handling error:", type, error);
         }
     }, [sendSignal]);
 
-    const cleanupConnections = useCallback((shouldClearActiveRoom = true) => {
-        Object.values(peerConnections.current).forEach(pc => pc.close());
-        peerConnections.current = {};
-        
-        localStream?.getTracks().forEach(track => track.stop());
-        setLocalStream(null);
-
-        setRemoteStreams({});
-        setParticipants([]);
-        if (shouldClearActiveRoom) {
-            setActiveRoom(null);
-        }
-    }, [localStream]);
-
-    const leaveRoom = useCallback(async (force = false) => {
-        if (!user || !activeRoom) return;
-        
-        if (!force) {
-            await leaveVoiceChat(activeRoom.id, user.uid);
-        }
-        cleanupConnections(true);
-    }, [user, activeRoom, cleanupConnections]);
-    
-    // Effect to handle navigation and room data listening
-    useEffect(() => {
-        if (!roomId) {
-            return;
-        }
-
-        if (activeRoom && activeRoom.id !== roomId) {
-            leaveRoom(true); 
-        }
-
-        const roomRef = doc(db, 'rooms', roomId);
-        const unsubscribe = onSnapshot(roomRef, (docSnap) => {
-            if (docSnap.exists()) {
-                setActiveRoom({ id: docSnap.id, ...docSnap.data() } as Room);
-            } else {
-                if (activeRoom?.id === roomId) {
-                    toast({
-                        title: "Oda Kapatıldı",
-                        description: "Bulunduğunuz oda kapatıldığı için bağlantınız kesildi.",
-                        variant: "destructive"
-                    });
-                    cleanupConnections(true);
-                    router.push('/rooms');
-                }
-            }
-        });
-
-        return () => unsubscribe();
-    }, [roomId, activeRoom, leaveRoom, router, toast, cleanupConnections]);
-    
-    // Effect to listen to participants and signals
+    // This effect sets up all Firestore listeners when `activeRoom` is set.
     useEffect(() => {
         if (!user || !activeRoom) {
             return;
         }
         
         const currentRoomId = activeRoom.id;
+        console.log(`Setting up listeners for room: ${currentRoomId}`);
+
+        const roomUnsub = onSnapshot(doc(db, "rooms", currentRoomId), (docSnap) => {
+            if (!docSnap.exists()) {
+                toast({
+                    title: "Oda Kapatıldı",
+                    description: "Bulunduğunuz oda kapatıldığı için bağlantınız kesildi.",
+                    variant: "destructive"
+                });
+                cleanupConnections();
+                router.push('/rooms');
+            }
+        });
 
         const participantsUnsub = onSnapshot(collection(db, "rooms", currentRoomId, "voiceParticipants"), (snapshot) => {
             const fetchedParticipants = snapshot.docs.map(doc => doc.data() as VoiceParticipant);
             setParticipants(fetchedParticipants);
-             if (isConnected && !fetchedParticipants.some(p => p.uid === user.uid)) {
+
+            if (isConnected && !fetchedParticipants.some(p => p.uid === user.uid)) {
                 toast({
                     title: "Bağlantı Kesildi",
                     description: "Sesten ayrıldınız veya atıldınız.",
-                    variant: "destructive"
                 });
-                cleanupConnections(false);
+                cleanupConnections();
             }
         });
         
-        const signalsRef = collection(db, `rooms/${currentRoomId}/signals`);
-        const q = query(signalsRef, where('to', '==', user.uid));
-        
-        const signalsUnsub = onSnapshot(q, (snapshot) => {
+        const signalsUnsub = onSnapshot(query(collection(db, `rooms/${currentRoomId}/signals`), where('to', '==', user.uid)), (snapshot) => {
             snapshot.docChanges().forEach(async (change) => {
                 if (change.type === 'added') {
                     const signal = change.doc.data();
@@ -204,14 +176,16 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         });
 
         return () => {
+            console.log(`Cleaning up listeners for room: ${currentRoomId}`);
+            roomUnsub();
             participantsUnsub();
             signalsUnsub();
         };
-    }, [user, activeRoom, handleSignal, isConnected, cleanupConnections, toast]);
-
-    // Effect to manage peer connections based on participant list
+    }, [user, activeRoom, isConnected, cleanupConnections, handleSignal, router, toast]);
+    
+    // This effect manages peer connections based on the participant list.
     useEffect(() => {
-        if (!user || !activeRoom) return;
+        if (!isConnected || !user || !localStream) return;
         
         const otherParticipants = participants.filter(p => p.uid !== user.uid);
         const existingPeerIds = Object.keys(peerConnections.current);
@@ -224,6 +198,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
         existingPeerIds.forEach(uid => {
             if (!otherParticipants.some(p => p.uid === uid)) {
+                console.log(`Closing peer connection to ${uid}`);
                 peerConnections.current[uid]?.close();
                 delete peerConnections.current[uid];
                 setRemoteStreams(prev => {
@@ -233,36 +208,44 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 });
             }
         });
-    }, [user, activeRoom, participants, createPeerConnection]);
+    }, [participants, isConnected, user, localStream, createPeerConnection]);
+
 
     const joinRoom = useCallback(async (roomToJoin: Room) => {
-        if (!user || isConnected || isConnecting) return;
+        if (!user || (isConnected && activeRoom?.id === roomToJoin.id) || isConnecting) return;
         
+        if (activeRoom && activeRoom.id !== roomToJoin.id) {
+             await leaveVoiceChat(activeRoom.id, user.uid);
+             cleanupConnections();
+        }
+
         setIsConnecting(true);
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
             setLocalStream(stream);
 
-            await joinVoiceChat(roomToJoin.id, {
+            const result = await joinVoiceChat(roomToJoin.id, {
                 uid: user.uid, displayName: user.displayName, photoURL: user.photoURL,
             });
+
+            if (!result.success) throw new Error(result.error || 'Sesli sohbete katılırken bir hata oluştu.');
             
-            Object.values(peerConnections.current).forEach(pc => {
-                 stream.getTracks().forEach(track => {
-                    if (!pc.getSenders().find(s => s.track === track)) {
-                       pc.addTrack(track, stream);
-                    }
-                });
-            })
+            setActiveRoom(roomToJoin);
 
         } catch (error: any) {
             toast({ variant: "destructive", title: "Katılım Başarısız", description: error.message });
-            cleanupConnections(false);
+            cleanupConnections();
         } finally {
             setIsConnecting(false);
         }
-    }, [user, isConnected, isConnecting, toast, cleanupConnections]);
+    }, [user, isConnected, activeRoom, isConnecting, toast, cleanupConnections]);
 
+    const leaveRoom = useCallback(async () => {
+        if (!user || !activeRoom) return;
+        await leaveVoiceChat(activeRoom.id, user.uid);
+        cleanupConnections();
+    }, [user, activeRoom, cleanupConnections]);
+    
     const toggleSelfMute = useCallback(async () => {
         if (!self || !activeRoom || !localStream) return;
         const audioTrack = localStream.getAudioTracks()[0];
@@ -292,5 +275,3 @@ export const useVoiceChat = () => {
     }
     return context;
 };
-
-    
