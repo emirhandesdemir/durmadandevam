@@ -1,7 +1,7 @@
 // src/components/profile/ProfilePosts.tsx
 "use client";
 
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Post } from '@/components/posts/PostsFeed';
 import PostCard from '@/components/posts/PostCard';
@@ -40,10 +40,19 @@ export default function ProfilePosts({ userId, profileUser }: ProfilePostsProps)
             setLoading(true);
             try {
                 const postsRef = collection(db, 'posts');
-                const q = query(postsRef, where('uid', '==', userId), orderBy('createdAt', 'desc'));
+                // The query now only filters by user ID, removing the orderBy clause that requires an index.
+                const q = query(postsRef, where('uid', '==', userId));
                 const querySnapshot = await getDocs(q);
                 
                 const fetchedPosts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post));
+
+                // Sorting is now done on the client-side after fetching, newest first.
+                fetchedPosts.sort((a, b) => {
+                    const timeA = (a.createdAt as Timestamp).toMillis();
+                    const timeB = (b.createdAt as Timestamp).toMillis();
+                    return timeB - timeA;
+                });
+
                 setPosts(fetchedPosts);
             } catch (error) {
                 console.error("Gönderiler çekilirken hata:", error);
