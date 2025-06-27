@@ -9,7 +9,23 @@ import { joinVoiceChat, leaveVoiceChat, updateLastActive, toggleSelfMute as togg
 import { useToast } from '@/hooks/use-toast';
 import { usePathname, useRouter } from 'next/navigation';
 
-const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
+const ICE_SERVERS = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        // Add public TURN servers for better connectivity in restrictive networks
+        {
+            urls: 'turn:openrelay.metered.ca:80',
+            username: 'openrelayproject',
+            credential: 'openrelayproject',
+        },
+        {
+            urls: 'turn:openrelay.metered.ca:443',
+            username: 'openrelayproject',
+            credential: 'openrelayproject',
+        },
+    ],
+};
 
 interface VoiceChatContextType {
     activeRoom: Room | null;

@@ -62,10 +62,13 @@ export default function RoomPage() {
 
     // --- Effects ---
 
-    // Set active room ID for voice chat context
+    // Set active room ID for voice chat context. This effect ensures that the context knows
+    // which room we're in, but it no longer clears the ID on unmount. The connection state
+    // is now managed entirely within the context via explicit join/leave actions.
     useEffect(() => {
-        if (roomId) setActiveRoomId(roomId);
-        return () => setActiveRoomId(null);
+        if (roomId) {
+            setActiveRoomId(roomId);
+        }
     }, [roomId, setActiveRoomId]);
 
     // Fetch game settings on mount
