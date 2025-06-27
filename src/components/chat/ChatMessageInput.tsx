@@ -16,7 +16,8 @@ interface ChatMessageInputProps {
 }
 
 export default function ChatMessageInput({ roomId, canSendMessage }: ChatMessageInputProps) {
-  const { user: currentUser } = useAuth();
+  // userData'yı da AuthContext'ten alıyoruz.
+  const { user: currentUser, userData } = useAuth();
   const { toast } = useToast();
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -37,6 +38,8 @@ export default function ChatMessageInput({ roomId, canSendMessage }: ChatMessage
             text: textToSend,
             createdAt: serverTimestamp(),
             type: 'user',
+            // Yeni: Kullanıcının seçtiği baloncuk stilini mesaja ekle
+            selectedBubble: userData?.selectedBubble || '',
         });
     } catch (error: any) {
         console.error("Mesaj gönderilirken hata: ", error);

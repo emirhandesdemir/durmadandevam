@@ -116,14 +116,15 @@ export default function CreateRoomForm() {
                 nextGameTimestamp, // İlk oyun zamanı
             };
             
-            // Firestore'a yeni odayı ekle
-            await addDoc(collection(db, "rooms"), newRoom);
+            // Firestore'a yeni odayı ekle ve referansını al
+            const docRef = await addDoc(collection(db, "rooms"), newRoom);
 
             toast({
                 title: "Oda Oluşturuldu!",
-                description: `"${values.name}" odası başarıyla oluşturuldu.`,
+                description: `"${values.name}" odasına yönlendiriliyorsunuz...`,
             });
-            router.push('/rooms'); // Odalar sayfasına yönlendir
+            // Kullanıcıyı yeni oluşturulan odaya yönlendir
+            router.push(`/rooms/${docRef.id}`); 
         } catch (error) {
             console.error("Error creating room: ", error);
             toast({
