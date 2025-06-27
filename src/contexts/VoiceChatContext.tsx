@@ -166,12 +166,23 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     }, [user, activeRoomId, localScreenStream]);
 
     const startScreenShare = useCallback(async () => {
-        if (!user || !activeRoomId || isSharingScreen || !navigator?.mediaDevices?.getDisplayMedia) {
-             if (!navigator?.mediaDevices?.getDisplayMedia) {
-                toast({ variant: 'destructive', title: 'Özellik Desteklenmiyor', description: 'Tarayıcınız ekran paylaşımını desteklemiyor veya güvenli bir bağlantı (HTTPS) üzerinde değilsiniz.' });
-            }
+        if (!user || !activeRoomId || isSharingScreen) {
             return;
         }
+
+        if (typeof navigator?.mediaDevices?.getDisplayMedia !== 'function') {
+            const description = window.isSecureContext
+                ? 'Tarayıcınız bu özelliği desteklemiyor gibi görünüyor. Lütfen güncel bir Chrome, Firefox veya Edge tarayıcısı kullanın.'
+                : 'Ekran paylaşımı için güvenli bir bağlantı (HTTPS) gereklidir.';
+            
+            toast({ 
+                variant: 'destructive', 
+                title: 'Özellik Kullanılamıyor', 
+                description: description 
+            });
+            return;
+        }
+
         try {
             const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: "always" } as MediaTrackConstraints, audio: false });
             const screenTrack = screenStream.getVideoTracks()[0];
