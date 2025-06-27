@@ -6,13 +6,13 @@
  * @param dataUrl The data URI of the image to process.
  * @param maxWidth The maximum width for the output image. Defaults to 1920px.
  * @param quality The quality of the output JPEG image (0 to 1). Defaults to 0.85.
- * @returns A promise that resolves with the data URI of the new, compressed image.
+ * @returns A promise that resolves with a Blob of the new, compressed image.
  */
 export function compressImage(
   dataUrl: string,
   maxWidth: number = 1920,
   quality: number = 0.85
-): Promise<string> {
+): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -37,8 +37,18 @@ export function compressImage(
       // Draw the image onto the canvas
       ctx.drawImage(img, 0, 0, width, height);
 
-      // Get the data URI of the new, compressed image
-      resolve(canvas.toDataURL('image/jpeg', quality));
+      // Get the Blob of the new, compressed image
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Canvas to Blob conversion failed.'));
+          }
+        },
+        'image/jpeg',
+        quality
+      );
     };
 
     img.onerror = (err) => {

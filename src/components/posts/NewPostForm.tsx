@@ -1,13 +1,13 @@
 // src/components/posts/NewPostForm.tsx
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { db, storage } from "@/lib/firebase";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { ref, uploadString, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { FirebaseError } from "firebase/app";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Image as ImageIcon, Send, Loader2, X, Sparkles } from "lucide-react";
 import { applyImageFilter } from "@/lib/actions/imageActions";
-import { compressImage } from "@/lib/imageUtils"; // Import the new utility
+import { compressImage } from "@/lib/imageUtils";
 
 export default function NewPostForm() {
   const router = useRouter();
@@ -25,15 +25,24 @@ export default function NewPostForm() {
   const { toast } = useToast();
   
   const [text, setText] = useState("");
-  const [image, setImage] = useState<string | null>(null);
+  const [imageBlob, setImageBlob] = useState<Blob | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   
-  // New states for AI styling
   const [stylePrompt, setStylePrompt] = useState("");
   const [isStyling, setIsStyling] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Effect to clean up the object URL to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (imagePreviewUrl) {
+        URL.revokeObjectURL(imagePreviewUrl);
+      }
+    };
+  }, [imagePreviewUrl]);
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -47,8 +56,10 @@ export default function NewPostForm() {
       const reader = new FileReader();
       reader.onload = async () => {
         try {
-          const compressedDataUrl = await compressImage(reader.result as string);
-          setImage(compressedDataUrl);
+          const compressedBlob = await compressImage(reader.result as string);
+          setImageBlob(compressedBlob);
+          if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+          setImagePreviewUrl(URL.createObjectURL(compressedBlob));
         } catch (error) {
           console.error("Image compression error:", error);
           toast({ variant: "destructive", description: "Resim işlenirken bir hata oluştu." });
@@ -66,29 +77,40 @@ export default function NewPostForm() {
   };
 
   const removeImage = () => {
-      setImage(null);
+      setImageBlob(null);
+      if (imagePreviewUrl) {
+        URL.revokeObjectURL(imagePreviewUrl);
+        setImagePreviewUrl(null);
+      }
       if(fileInputRef.current) {
           fileInputRef.current.value = "";
       }
   }
 
-  // New function to handle AI image styling
   const handleApplyStyle = async () => {
-    if (!image || !stylePrompt.trim()) {
+    if (!imagePreviewUrl) {
+        toast({ variant: 'destructive', description: "Lütfen önce bir resim seçin."});
+        return;
+    }
+    if (!stylePrompt.trim()) {
         toast({ variant: 'destructive', description: "Lütfen stil için bir komut girin."});
         return;
     }
     setIsStyling(true);
     try {
         const result = await applyImageFilter({
-            photoDataUri: image,
+            photoDataUri: imagePreviewUrl,
             style: stylePrompt,
         });
         if (result.success && result.data?.styledPhotoDataUri) {
             toast({ description: "Yapay zeka filtresi uygulandı, resim optimize ediliyor..."});
-            const compressedStyledImage = await compressImage(result.data.styledPhotoDataUri);
-            setImage(compressedStyledImage);
-            setStylePrompt(""); // Clear the prompt input
+            const compressedStyledBlob = await compressImage(result.data.styledPhotoDataUri);
+            
+            setImageBlob(compressedStyledBlob);
+            if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+            setImagePreviewUrl(URL.createObjectURL(compressedStyledBlob));
+
+            setStylePrompt("");
             toast({ title: "İşlem Başarılı!", description: "Resminiz hem stilize edildi hem de optimize edildi."});
         } else {
             throw new Error(result.error || "Stil uygulanamadı.");
@@ -102,7 +124,6 @@ export default function NewPostForm() {
   }
 
   const handleShare = async () => {
-    // --- ROBUST CHECKS ---
     if (!user) {
         toast({ variant: 'destructive', description: 'Bu işlemi yapmak için giriş yapmalısınız.', duration: 5000 });
         router.push('/login');
@@ -112,7 +133,7 @@ export default function NewPostForm() {
         toast({ variant: 'destructive', title: 'Veri Yükleniyor', description: 'Kullanıcı profiliniz henüz yüklenmedi. Lütfen bir saniye sonra tekrar deneyin.', duration: 5000 });
         return;
     }
-    if (!text.trim() && !image) {
+    if (!text.trim() && !imageBlob) {
       toast({ variant: 'destructive', description: 'Paylaşmak için bir metin yazın veya resim seçin.', duration: 5000 });
       return;
     }
@@ -122,9 +143,9 @@ export default function NewPostForm() {
     try {
         let imageUrl = "";
 
-        if (image) {
+        if (imageBlob) {
             const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}_post.jpg`);
-            const snapshot = await uploadString(imageRef, image, 'data_url');
+            const snapshot = await uploadBytes(imageRef, imageBlob);
             imageUrl = await getDownloadURL(snapshot.ref);
         }
 
@@ -159,7 +180,11 @@ export default function NewPostForm() {
             switch (error.code) {
                 case 'storage/unauthorized':
                     title = 'Depolama Yetki Hatası';
-                    description = 'Resminiz yüklenemedi. Firebase projenizdeki Storage Kurallarını kontrol edin. Bu kurallar, giriş yapmış kullanıcıların kendi klasörlerine yazmasına izin vermelidir.';
+                    description = 'Resminiz yüklenemedi. Firebase projenizdeki Storage Kurallarını kontrol edin.';
+                    break;
+                case 'storage/retry-limit-exceeded':
+                    title = 'Yükleme Zaman Aşımı';
+                    description = 'Resim yüklenemedi, ağ bağlantınız yavaş olabilir. Lütfen daha sonra tekrar deneyin.';
                     break;
                 case 'storage/canceled':
                     title = 'Yükleme İptal Edildi';
@@ -208,12 +233,12 @@ export default function NewPostForm() {
             />
           </div>
           <div className="space-y-4">
-            {image && (
+            {imagePreviewUrl && (
               <div className="space-y-4">
                 <div className="relative">
                   <div className="overflow-hidden rounded-xl border">
-                    <img src={image} alt="Önizleme" className="max-h-80 w-auto object-contain" />
-                     {isProcessingImage && (
+                    <img src={imagePreviewUrl} alt="Önizleme" className="max-h-80 w-auto object-contain" />
+                     {(isProcessingImage || isStyling) && (
                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-xl">
                         <Loader2 className="h-8 w-8 animate-spin text-white" />
                       </div>
@@ -267,7 +292,7 @@ export default function NewPostForm() {
             size="icon"
             className="rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
             onClick={handleImageClick}
-            disabled={isSubmitting || !!image || isStyling || isProcessingImage}
+            disabled={isSubmitting || !!imageBlob || isStyling || isProcessingImage}
           >
             <ImageIcon className="h-5 w-5" />
             <span className="sr-only">Resim Ekle</span>
@@ -276,7 +301,7 @@ export default function NewPostForm() {
           <Button 
             className="rounded-full font-semibold px-4"
             onClick={handleShare}
-            disabled={isSubmitting || (!text.trim() && !image) || isStyling || isProcessingImage}
+            disabled={isSubmitting || (!text.trim() && !imageBlob) || isStyling || isProcessingImage}
           >
             {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
             <span className="ml-2 hidden sm:inline">Paylaş</span>
