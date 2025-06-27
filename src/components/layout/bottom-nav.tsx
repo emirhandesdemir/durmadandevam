@@ -15,12 +15,12 @@ export default function BottomNav() {
     const pathname = usePathname();
 
     // Oda detay sayfasında (örn: /rooms/abc-123) alt barı gizle
-    if (pathname.startsWith('/rooms/') && pathname.split('/').length > 3) {
+    if (pathname.startsWith('/rooms/') && pathname.split('/').length > 2) {
         return null;
     }
 
     return (
-        <footer className="z-50 border-t bg-card/80 backdrop-blur-sm shrink-0">
+        <footer className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card/80 backdrop-blur-sm">
             {/* Yükseklik h-20'den (80px) h-16'ya (64px) düşürüldü */}
             <nav className="grid h-16 grid-cols-3">
                 {navItems.map((item) => {
