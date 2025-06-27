@@ -227,7 +227,7 @@ export default function NewPostForm() {
                   <p className="text-xs text-muted-foreground">
                       Resminize yaratıcı bir dokunuş ekleyin. "Van Gogh tarzı" veya "çizgi film yap" gibi komutlar deneyin.
                   </p>
-                  <div className="flex gap-2 pt-1">
+                  <div className="flex flex-col sm:flex-row gap-2 pt-1">
                       <Input
                           id="style-prompt"
                           value={stylePrompt}
