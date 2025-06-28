@@ -238,7 +238,7 @@ export default function RoomPage() {
                     onBackClick={() => setShowExitDialog(true)}
                 />
                 
-                <div className="p-4 border-b border-gray-700/50 shrink-0">
+                <div className="p-4 shrink-0">
                     {screenSharer ? (
                          <div className='animate-in fade-in duration-300'>
                             {isSharingScreen && localScreenStream && <ScreenShareView stream={localScreenStream} />}
