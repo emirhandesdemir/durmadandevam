@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { ChevronLeft, MoreHorizontal, Users, Timer, AlertTriangle, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Room } from '@/lib/types';
@@ -16,6 +15,7 @@ interface RoomHeaderProps {
   room: Room;
   isHost: boolean;
   onParticipantListToggle: () => void;
+  onBackClick: () => void; // Onay penceresini tetiklemek için yeni prop
 }
 
 // Zamanı hh:mm:ss formatına dönüştüren yardımcı fonksiyon
@@ -26,7 +26,7 @@ const formatTime = (totalSeconds: number) => {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
 
-export default function RoomHeader({ room, isHost, onParticipantListToggle }: RoomHeaderProps) {
+export default function RoomHeader({ room, isHost, onParticipantListToggle, onBackClick }: RoomHeaderProps) {
     const { user } = useAuth();
     const { toast } = useToast();
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -73,7 +73,7 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle }: Ro
                 }
             });
         }
-    }, [timeLeft, warningSent, isHost, room.id, user, toast]);
+    }, [timeLeft, warningSent, isHost, room.id, user, toast, room.name]);
 
     const isWarningTime = timeLeft !== null && timeLeft <= 15;
 
@@ -81,8 +81,8 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle }: Ro
         <>
             <header className="flex items-center justify-between p-3 border-b border-gray-700/50 shrink-0">
                 <div className="flex items-center gap-2">
-                    <Button asChild variant="ghost" size="icon" className="rounded-full">
-                        <Link href="/rooms"><ChevronLeft /></Link>
+                    <Button onClick={onBackClick} variant="ghost" size="icon" className="rounded-full">
+                        <ChevronLeft />
                     </Button>
                     <h1 className="text-md font-bold text-white truncate max-w-[120px] sm:max-w-[180px]">{room.name}</h1>
                 </div>

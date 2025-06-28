@@ -18,6 +18,15 @@ import RoomHeader from '@/components/rooms/RoomHeader';
 import ScreenShareView from '@/components/voice/ScreenShareView';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 // --- Game Imports ---
 import type { Room, ActiveGame, GameSettings } from '@/lib/types';
@@ -46,6 +55,7 @@ export default function RoomPage() {
     const [messagesLoading, setMessagesLoading] = useState(true);
     const [isParticipantSheetOpen, setIsParticipantSheetOpen] = useState(false);
     const [isVoiceStageCollapsed, setVoiceStageCollapsed] = useState(false);
+    const [showExitDialog, setShowExitDialog] = useState(false);
     const chatScrollRef = useRef<HTMLDivElement>(null);
 
     // --- Game State ---
@@ -216,6 +226,7 @@ export default function RoomPage() {
                     room={room} 
                     isHost={isHost} 
                     onParticipantListToggle={() => setIsParticipantSheetOpen(true)}
+                    onBackClick={() => setShowExitDialog(true)}
                 />
                 
                 <div className="p-4 border-b border-gray-700/50 shrink-0">
@@ -331,6 +342,30 @@ export default function RoomPage() {
                 onOpenChange={setIsParticipantSheetOpen}
                 participants={room.participants || []}
             />
+            <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Odadan Ayrıl</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Ne yapmak istersiniz? Odayı arka plana alabilir veya sesli sohbetten tamamen ayrılabilirsiniz.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                         <Button variant="outline" onClick={() => {
+                            router.push('/rooms');
+                            setShowExitDialog(false);
+                         }}>
+                            Arka Plana Al
+                        </Button>
+                        <Button onClick={() => {
+                            handleLeaveAndNavigate();
+                            setShowExitDialog(false);
+                        }}>
+                            Ayrıl ve Kapat
+                        </Button>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }

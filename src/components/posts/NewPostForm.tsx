@@ -133,9 +133,9 @@ export default function NewPostForm() {
              if (error.code === 'storage/retry-limit-exceeded') {
                 description = 'Resim yüklenemedi, ağ bağlantınız yavaş olabilir. Lütfen daha sonra tekrar deneyin.';
              } else if (error.code === 'storage/unauthorized') {
-                description = 'Resminiz yüklenemedi. Lütfen Firebase projenizdeki Storage Kurallarını kontrol edin.';
-             } else if (error.code === 'permission-denied') {
-                description = 'Veritabanına yazma izniniz yok. Lütfen Firestore güvenlik kurallarınızı kontrol edin.';
+                description = 'Resim yükleme yetkiniz yok. Lütfen Firebase projenizdeki Storage Kurallarını kontrol edin.';
+             } else if (error.code.includes('permission-denied')) {
+                description = 'Veritabanına veya depolamaya yazma izniniz yok. Lütfen Firebase güvenlik kurallarınızı kontrol edin.';
              }
         }
         toast({ variant: 'destructive', title: 'Bir Hata Oluştu', description, duration: 9000 });
