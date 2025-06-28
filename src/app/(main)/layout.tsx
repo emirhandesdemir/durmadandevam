@@ -62,7 +62,7 @@ export default function MainAppLayout({
         
         <main
           ref={mainRef}
-          className="flex-1 overflow-y-auto"
+          className="flex-1 overflow-y-auto pb-24"
         >
           <motion.div
             key={pathname}
