@@ -6,6 +6,7 @@ import CreateRoomCard from "@/components/rooms/CreateRoomCard";
 import RoomList from "@/components/rooms/RoomList";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+import LeadershipBoard from "@/components/rooms/LeadershipBoard";
 
 export default function RoomsPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -15,6 +16,8 @@ export default function RoomsPage() {
       <main className="container mx-auto max-w-7xl px-4 py-6 md:py-8">
         <div className="flex flex-col gap-6">
           <CreateRoomCard />
+
+          <LeadershipBoard />
           
           <div className="space-y-4">
             <h2 className="text-2xl font-bold tracking-tight">Herkese Açık Odalar</h2>

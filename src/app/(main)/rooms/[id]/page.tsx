@@ -64,14 +64,15 @@ export default function RoomPage() {
     const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
     const [gameLoading, setGameLoading] = useState(true);
     const [countdown, setCountdown] = useState<number | null>(null);
-
-    // Ref to hold the latest activeGame state to prevent stale closures in listeners
     const activeGameRef = useRef(activeGame);
+
     useEffect(() => {
         activeGameRef.current = activeGame;
     }, [activeGame]);
 
     const isHost = user?.uid === room?.createdBy.uid;
+    const isModerator = room?.moderators?.includes(user?.uid || '') || false;
+
 
     const screenSharer = useMemo(() => participants.find(p => p.isSharingScreen), [participants]);
     const remoteScreenStream = screenSharer && !isSharingScreen ? remoteScreenStreams[screenSharer.uid] : null;
@@ -112,7 +113,7 @@ export default function RoomPage() {
     }, [roomId, router, toast]);
     
     // Listen for games and countdowns
-    useEffect(() => {
+     useEffect(() => {
         if (!roomId || !featureFlags?.quizGameEnabled || !gameSettings) {
             setGameLoading(false);
             return;
@@ -123,10 +124,15 @@ export default function RoomPage() {
         const gamesQuery = query(collection(db, `rooms/${roomId}/games`), where("status", "==", "active"), limit(1));
         const gameUnsub = onSnapshot(gamesQuery, (snapshot) => {
             if (!snapshot.empty) {
-                setActiveGame({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ActiveGame);
+                const gameData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ActiveGame;
+                if(JSON.stringify(gameData) !== JSON.stringify(activeGameRef.current)){
+                    setActiveGame(gameData);
+                }
                 setCountdown(null);
             } else {
-                setActiveGame(null);
+                 if (activeGameRef.current) {
+                    setActiveGame(null);
+                 }
             }
             setGameLoading(false);
         });
@@ -140,9 +146,6 @@ export default function RoomPage() {
                     setCountdown(remaining > 0 ? remaining : 0);
                 }
             }
-             if(!activeGameRef.current) {
-                setGameLoading(false);
-             }
         });
 
         return () => {
@@ -243,7 +246,7 @@ export default function RoomPage() {
                                     <div className="space-y-4 animate-in fade-in duration-300">
                                         <div className="flex flex-col items-center justify-center min-h-28">
                                             {hostParticipant ? (
-                                                <VoiceUserIcon key={hostParticipant.uid} participant={hostParticipant} isHost={isHost} currentUserId={user!.uid} roomId={roomId} isParticipantTheHost={true} size="lg"/>
+                                                <VoiceUserIcon key={hostParticipant.uid} room={room} participant={hostParticipant} isHost={isHost} isModerator={isModerator} currentUserId={user!.uid}  size="lg"/>
                                             ) : (
                                                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
                                                     <div className="flex items-center justify-center h-20 w-20 rounded-full bg-muted/40 border-2 border-dashed border-border">
@@ -255,7 +258,7 @@ export default function RoomPage() {
                                         </div>
                                         <div className="grid grid-cols-4 gap-4 text-center">
                                             {otherParticipants.map((participant) => (
-                                                <VoiceUserIcon key={participant.uid} participant={participant} isHost={isHost} currentUserId={user!.uid} roomId={roomId} isParticipantTheHost={false} size="sm"/>
+                                                <VoiceUserIcon key={participant.uid} room={room} participant={participant} isHost={isHost} isModerator={isModerator} currentUserId={user!.uid}  size="sm"/>
                                             ))}
                                             {Array.from({ length: Math.max(0, 8 - otherParticipants.length) }).map((_, index) => (
                                                 <div key={`placeholder-${index}`} className="flex flex-col items-center justify-center aspect-square bg-muted/40 rounded-full">
@@ -332,7 +335,7 @@ export default function RoomPage() {
                     </div>
                 </footer>
             </div>
-             <ParticipantListSheet isOpen={isParticipantSheetOpen} onOpenChange={setIsParticipantSheetOpen} participants={room?.participants || []} />
+             <ParticipantListSheet isOpen={isParticipantSheetOpen} onOpenChange={setIsParticipantSheetOpen} room={room} />
             <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
                 <AlertDialogContent>
                     <AlertDialogHeader>

@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { Label } from "@/components/ui/label";
 
 const formSchema = z.object({
   name: z.string().min(3, { message: "Ad en az 3 karakter olmalıdır." }).max(50, {message: "Ad en fazla 50 karakter olabilir."}),
@@ -75,6 +74,7 @@ export default function CreateRoomForm() {
                   photoURL: user.photoURL,
                   role: userData.role || 'user'
                 },
+                moderators: [user.uid], // Creator is the first moderator
                 createdAt: serverTimestamp(),
                 participants: [{
                     uid: user.uid,

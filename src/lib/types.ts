@@ -92,6 +92,7 @@ export interface Room {
         photoURL?: string | null;
         role?: 'admin' | 'user';
     };
+    moderators: string[]; // List of moderator UIDs
     createdAt: Timestamp;
     expiresAt?: Timestamp; // Only for rooms
     participants: { uid: string, username: string, photoURL?: string | null }[];
