@@ -89,7 +89,7 @@ export default function VoiceUserIcon({
           <User className="mr-2 h-4 w-4" />
           <span>Profili Görüntüle</span>
       </DropdownMenuItem>
-      {isHost && (
+      {isHost && !isSelf && (
         <DropdownMenuItem
           className="text-red-400 focus:text-red-400 focus:bg-red-900/50"
           onClick={() => handleAction(kickFromVoice)}
@@ -103,45 +103,50 @@ export default function VoiceUserIcon({
   
   const nameSize = size === 'lg' ? "text-sm" : "text-xs";
   const iconSize = size === 'lg' ? "h-5 w-5" : "h-4 w-4";
-  const iconBadgePos = size === 'lg' ? "bottom-1 right-1 p-2" : "bottom-1 right-1 p-1.5";
+  const avatarSize = size === 'lg' ? "h-20 w-20" : "w-full aspect-square";
+  const iconBadgePos = size === 'lg' ? "bottom-1 right-1 p-2" : "bottom-0 right-0 p-1.5";
   const speakingRing = participant.isSpeaker && !participant.isMuted;
 
   const avatar = (
     <div className="relative flex flex-col items-center gap-1.5">
-      <div className="avatar-frame-wrapper">
-        <div className="relative w-full">
+       <div className={cn(
+          "relative", 
+          avatarSize
+        )}>
           {participant.selectedBubble && (
             <div className={`bubble-wrapper ${participant.selectedBubble}`}>
                 {Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}
             </div>
           )}
           <Avatar
-            className="relative z-[1] border-2 transition-all duration-300 w-full h-full"
+            className={cn(
+              "border-2 transition-all duration-300 w-full h-full",
+              speakingRing
+                ? "border-green-500 shadow-lg shadow-green-500/50 ring-4 ring-green-500/30"
+                : "border-transparent",
+            )}
           >
             <AvatarImage src={participant.photoURL || undefined} />
             <AvatarFallback className="bg-gray-700 text-gray-300">
               {participant.username?.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <div className="absolute bg-gray-900/70 backdrop-blur-sm rounded-full shadow-md bottom-1 right-1 p-1.5">
+          <div className={cn("absolute bg-gray-900/70 backdrop-blur-sm rounded-full shadow-md", iconBadgePos)}>
             {participant.isMuted ? (
-              <MicOff className="h-4 w-4 text-red-500" />
+              <MicOff className={cn(iconSize, "text-red-500")} />
             ) : (
-              <Mic className="h-4 w-4 text-white" />
+              <Mic className={cn(iconSize, "text-white")} />
             )}
           </div>
-        </div>
-       </div>
+      </div>
 
       <div className="flex items-center justify-center gap-1 w-full">
-          <p className="font-semibold text-white truncate text-xs max-w-[60px]">{participant.username}</p>
+          <p className={cn("font-semibold text-white truncate", nameSize, size === 'lg' ? 'max-w-[120px]' : 'max-w-[60px]')}>{participant.username}</p>
           {isParticipantTheHost && (
               <TooltipProvider>
                   <Tooltip>
-                      <TooltipTrigger asChild>
-                          <span className="flex items-center">
-                            <Crown className="text-yellow-400 shrink-0 h-4 w-4" />
-                          </span>
+                      <TooltipTrigger>
+                          <Crown className={cn("text-yellow-400 shrink-0", size === 'lg' ? 'h-5 w-5' : 'h-4 w-4' )} />
                       </TooltipTrigger>
                       <TooltipContent>
                           <p>Oda Sahibi</p>
@@ -161,7 +166,7 @@ export default function VoiceUserIcon({
             className="cursor-pointer rounded-full text-center"
           >
             {isProcessing ? (
-              <div className="flex items-center justify-center rounded-full bg-gray-800/50 aspect-square w-full">
+              <div className={cn("flex items-center justify-center rounded-full bg-gray-800/50 aspect-square", avatarSize)}>
                   <Loader2 className="h-8 w-8 animate-spin" />
               </div>
             ) : (

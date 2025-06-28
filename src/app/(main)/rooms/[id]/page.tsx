@@ -56,6 +56,7 @@ export default function RoomPage() {
     const [messagesLoading, setMessagesLoading] = useState(true);
     const [isParticipantSheetOpen, setIsParticipantSheetOpen] = useState(false);
     const [showExitDialog, setShowExitDialog] = useState(false);
+    const [isVoiceStageCollapsed, setVoiceStageCollapsed] = useState(false);
     const chatScrollRef = useRef<HTMLDivElement>(null);
 
     // --- Game State ---
@@ -238,27 +239,53 @@ export default function RoomPage() {
                             </div>
                         ) : (
                             <div className="space-y-4 animate-in fade-in duration-300">
-                                <div className="flex flex-col items-center justify-center min-h-28">
-                                    {hostParticipant ? (
-                                        <VoiceUserIcon key={hostParticipant.uid} participant={hostParticipant} isHost={isHost} currentUserId={user!.uid} roomId={roomId} isParticipantTheHost={true} size="lg"/>
-                                    ) : (
-                                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                                            <div className="flex items-center justify-center h-20 w-20 rounded-full bg-muted/40 border-2 border-dashed border-border">
-                                                <Crown className="h-8 w-8 text-muted-foreground" />
-                                            </div>
-                                            <p className="text-xs font-semibold">Oda Sahibi</p>
+                                {!isVoiceStageCollapsed ? (
+                                    <div className="space-y-4 animate-in fade-in duration-300">
+                                        <div className="flex flex-col items-center justify-center min-h-28">
+                                            {hostParticipant ? (
+                                                <VoiceUserIcon key={hostParticipant.uid} participant={hostParticipant} isHost={isHost} currentUserId={user!.uid} roomId={roomId} isParticipantTheHost={true} size="lg"/>
+                                            ) : (
+                                                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                                                    <div className="flex items-center justify-center h-20 w-20 rounded-full bg-muted/40 border-2 border-dashed border-border">
+                                                        <Crown className="h-8 w-8 text-muted-foreground" />
+                                                    </div>
+                                                    <p className="text-xs font-semibold">Oda Sahibi</p>
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
-                                <div className="grid grid-cols-4 gap-4 text-center">
-                                    {otherParticipants.map((participant) => (
-                                        <VoiceUserIcon key={participant.uid} participant={participant} isHost={isHost} currentUserId={user!.uid} roomId={roomId} isParticipantTheHost={false} size="sm"/>
-                                    ))}
-                                    {Array.from({ length: Math.max(0, 8 - otherParticipants.length) }).map((_, index) => (
-                                        <div key={`placeholder-${index}`} className="flex flex-col items-center justify-center aspect-square bg-muted/40 rounded-full">
-                                            <Plus className="h-6 w-6 text-muted-foreground" />
+                                        <div className="grid grid-cols-4 gap-4 text-center">
+                                            {otherParticipants.map((participant) => (
+                                                <VoiceUserIcon key={participant.uid} participant={participant} isHost={isHost} currentUserId={user!.uid} roomId={roomId} isParticipantTheHost={false} size="sm"/>
+                                            ))}
+                                            {Array.from({ length: Math.max(0, 8 - otherParticipants.length) }).map((_, index) => (
+                                                <div key={`placeholder-${index}`} className="flex flex-col items-center justify-center aspect-square bg-muted/40 rounded-full">
+                                                    <Plus className="h-6 w-6 text-muted-foreground" />
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
+                                    </div>
+                                ) : (
+                                    <div className="flex h-full min-h-28 items-center justify-center gap-2 py-4 animate-in fade-in duration-300">
+                                        {participants.length > 0 ? participants.map(p => (
+                                            <TooltipProvider key={p.uid}>
+                                                <Tooltip>
+                                                    <TooltipTrigger>
+                                                        <Avatar className="h-10 w-10 border-2 border-transparent data-[speaking=true]:border-green-500" data-speaking={p.isSpeaker && !p.isMuted}>
+                                                            <AvatarImage src={p.photoURL || undefined} />
+                                                            <AvatarFallback>{p.username.charAt(0)}</AvatarFallback>
+                                                        </Avatar>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent className="bg-muted border-border text-foreground"><p>{p.username}</p></TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        )) : ( <p className="text-sm text-muted-foreground">Sesli sohbette kimse yok.</p> )}
+                                    </div>
+                                )}
+                                <div className="flex justify-center">
+                                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setVoiceStageCollapsed(!isVoiceStageCollapsed)}>
+                                        <ChevronsUpDown className="h-4 w-4 mr-2" />
+                                        {isVoiceStageCollapsed ? "Genişlet" : "Küçült"}
+                                    </Button>
                                 </div>
                             </div>
                         )}
@@ -311,7 +338,7 @@ export default function RoomPage() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Odadan Ayrıl</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Ne yapmak istersiniz? Odayı arka plana alabilir veya sesli sohbetten tamamen ayrılabilirsiniz.
+                            Ne yapmak istersiniz? Odayı arka plana alabilir veya sesli sohbetten tamamen çıkabilirsiniz.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
