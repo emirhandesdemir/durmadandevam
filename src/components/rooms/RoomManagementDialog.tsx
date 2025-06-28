@@ -22,9 +22,10 @@ import {
   } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { deleteRoomWithSubcollections } from "@/lib/firestoreUtils";
-import { Trash2, Loader2, ShieldAlert } from "lucide-react";
+import { deleteRoomAsOwner, extendRoomTime } from "@/lib/actions/roomActions";
+import { Trash2, Loader2, ShieldAlert, Clock, Gem } from "lucide-react";
 import type { Room } from "@/lib/types";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface RoomManagementDialogProps {
   isOpen: boolean;
@@ -33,32 +34,54 @@ interface RoomManagementDialogProps {
 }
 
 export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomManagementDialogProps) {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isExtending, setIsExtending] = useState(false);
 
   const handleDeleteRoom = async () => {
-    if (!room) return;
+    if (!room || !user) return;
     setIsDeleting(true);
     try {
-      await deleteRoomWithSubcollections(room.id);
+      await deleteRoomAsOwner(room.id, user.uid);
       toast({
         title: "Oda Silindi",
         description: `"${room.name}" adlı odanız başarıyla silindi.`,
       });
       setShowDeleteConfirm(false);
       setIsOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Oda silinirken hata:", error);
       toast({
         title: "Hata",
-        description: "Oda silinirken bir hata oluştu.",
+        description: error.message || "Oda silinirken bir hata oluştu.",
         variant: "destructive",
       });
     } finally {
       setIsDeleting(false);
     }
   };
+
+  const handleExtendTime = async () => {
+      if (!room || !user) return;
+      setIsExtending(true);
+      try {
+          await extendRoomTime(room.id, user.uid);
+          toast({
+              title: "Süre Uzatıldı!",
+              description: "Odanızın süresi 10 dakika uzatıldı."
+          });
+      } catch (error: any) {
+          toast({
+              title: "Hata",
+              description: error.message || "Süre uzatılırken bir hata oluştu.",
+              variant: "destructive",
+          });
+      } finally {
+          setIsExtending(false);
+      }
+  }
 
   if (!room) return null;
 
@@ -73,20 +96,38 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4">
-            <h3 className="mb-4 text-lg font-semibold">Tehlikeli Alan</h3>
-            <div className="flex items-center justify-between rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+          <div className="py-4 space-y-4">
+            <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
               <div>
-                <h4 className="font-bold text-destructive">Odayı Kalıcı Olarak Sil</h4>
-                <p className="text-sm text-destructive/80">Bu işlem geri alınamaz. Odadaki tüm mesajlar ve veriler silinecektir.</p>
+                <h4 className="font-bold text-foreground">Süreyi Uzat</h4>
+                <p className="text-sm text-muted-foreground">Odanın kapanma süresini 10 dakika ertele.</p>
+                <p className="text-xs text-primary/80 mt-1 flex items-center gap-1">(Ücretsiz)</p>
               </div>
               <Button
-                variant="destructive"
-                onClick={() => setShowDeleteConfirm(true)}
+                variant="secondary"
+                onClick={handleExtendTime}
+                disabled={isExtending}
               >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Sil
+                {isExtending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Clock className="mr-2 h-4 w-4" />}
+                Uzat
               </Button>
+            </div>
+
+            <div>
+                 <h3 className="mb-2 text-lg font-semibold text-destructive">Tehlikeli Alan</h3>
+                <div className="flex items-center justify-between rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+                <div>
+                    <h4 className="font-bold text-destructive">Odayı Kalıcı Olarak Sil</h4>
+                    <p className="text-sm text-destructive/80">Bu işlem geri alınamaz. Odadaki tüm veriler silinecektir.</p>
+                </div>
+                <Button
+                    variant="destructive"
+                    onClick={() => setShowDeleteConfirm(true)}
+                >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Sil
+                </Button>
+                </div>
             </div>
           </div>
           <DialogFooter>

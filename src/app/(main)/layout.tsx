@@ -40,22 +40,23 @@ export default function MainAppLayout({
   return (
     <VoiceChatProvider>
       <div className="relative flex h-dvh w-full flex-col bg-background overflow-hidden">
-        <main ref={scrollRef} className={cn("flex-1 overflow-y-auto", !isFullPageLayout && "pb-24")}>
+        <main ref={scrollRef} className="flex-1 overflow-y-auto">
            <motion.header
               variants={{
-                visible: { y: 0 },
-                hidden: { y: "-100%" },
+                visible: { y: 0, height: 'auto' },
+                hidden: { y: "-100%", height: 0, transition: { duration: 0.2 } },
               }}
               animate={hidden || isHeaderlessPage ? "hidden" : "visible"}
               transition={{ duration: 0.35, ease: "easeInOut" }}
-              className="sticky top-0 z-40"
+              className="sticky top-0 z-40 overflow-hidden"
             >
               <Header />
             </motion.header>
           
            <div className={cn(!isHomePage && !isFullPageLayout && "p-4")}>
             {children}
-          </div>
+           </div>
+           {isHomePage && children}
         </main>
         
         <VoiceAudioPlayer />

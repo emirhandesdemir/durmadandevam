@@ -3,7 +3,7 @@
 
 import { db } from '@/lib/firebase';
 import { deleteRoomWithSubcollections } from '@/lib/firestoreUtils';
-import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch, arrayUnion } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch, arrayUnion, updateDoc, increment } from 'firebase/firestore';
 import { createNotification } from './notificationActions';
 
 export async function addSystemMessage(roomId: string, text: string) {
@@ -140,4 +140,41 @@ export async function sendRoomInvite(
     roomName: roomName,
   });
   return { success: true };
+}
+
+export async function extendRoomTime(roomId: string, userId: string) {
+    const roomRef = doc(db, 'rooms', roomId);
+
+    const roomDoc = await getDoc(roomRef);
+
+    if (!roomDoc.exists()) {
+        throw new Error("Oda bulunamadı.");
+    }
+
+    const roomData = roomDoc.data();
+    if (roomData.createdBy.uid !== userId) {
+        throw new Error("Bu işlemi yapma yetkiniz yok.");
+    }
+    
+    // TODO: Elmas kontrolü eklenecek
+    // const userRef = doc(db, 'users', userId);
+    // const userDoc = await getDoc(userRef);
+    // if (!userDoc.exists() || (userDoc.data().diamonds || 0) < 5) {
+    //     throw new Error("Yeterli elmasınız yok.");
+    // }
+
+    const currentExpiresAt = roomData.expiresAt ? (roomData.expiresAt as Timestamp).toMillis() : Date.now();
+    const tenMinutesInMs = 10 * 60 * 1000;
+    const newExpiresAt = Timestamp.fromMillis(currentExpiresAt + tenMinutesInMs);
+    
+    await updateDoc(roomRef, {
+        expiresAt: newExpiresAt
+    });
+
+    // TODO: Elmas düşme işlemi
+    // await updateDoc(userRef, { diamonds: increment(-5) });
+    
+    await addSystemMessage(roomId, "⏰ Oda sahibi, oda süresini 10 dakika uzattı!");
+
+    return { success: true, newExpiresAt };
 }
