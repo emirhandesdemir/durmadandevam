@@ -88,7 +88,7 @@ export default function ProfilePosts({ userId, profileUser }: ProfilePostsProps)
         <div className="grid grid-cols-3 gap-0.5 mt-1">
             {posts.map((post) => (
                 post.imageUrl && (
-                    <Link href="#" key={post.id} className="group relative aspect-square block">
+                    <Link href="#" key={post.id} className="group relative aspect-[4/5] block">
                        <Image
                             src={post.imageUrl}
                             alt="Kullanıcı gönderisi"
