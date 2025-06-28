@@ -29,10 +29,9 @@ import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import { doc, updateDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import ProfileViewerList from "./ProfileViewerList";
 import { Textarea } from "../ui/textarea";
-import { compressImage } from "@/lib/imageUtils";
 import { useRouter } from 'next/navigation';
 
 const bubbleOptions = [
@@ -63,8 +62,7 @@ export default function ProfilePageClient() {
     const [bio, setBio] = useState("");
     const [privateProfile, setPrivateProfile] = useState(false);
     const [acceptsFollowRequests, setAcceptsFollowRequests] = useState(true);
-    const [newAvatarBlob, setNewAvatarBlob] = useState<Blob | null>(null);
-    const [newAvatarPreview, setNewAvatarPreview] = useState<string | null>(null);
+    const [newAvatar, setNewAvatar] = useState<string | null>(null);
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
     const [selectedBubble, setSelectedBubble] = useState("");
     const [selectedAvatarFrame, setSelectedAvatarFrame] = useState("");
@@ -80,7 +78,6 @@ export default function ProfilePageClient() {
             setAcceptsFollowRequests(userData.acceptsFollowRequests ?? true);
             setSelectedBubble(userData.selectedBubble || "");
             setSelectedAvatarFrame(userData.selectedAvatarFrame || "");
-            setNewAvatarPreview(userData.photoURL || null);
         }
     }, [userData]);
     
@@ -90,7 +87,7 @@ export default function ProfilePageClient() {
         bio !== (userData?.bio || "") ||
         privateProfile !== (userData?.privateProfile || false) || 
         acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true) ||
-        newAvatarBlob !== null || 
+        newAvatar !== null || 
         selectedBubble !== (userData?.selectedBubble || "") || 
         selectedAvatarFrame !== (userData?.selectedAvatarFrame || "");
     
@@ -109,16 +106,9 @@ export default function ProfilePageClient() {
         }
     };
     
-    const handleCropComplete = async (croppedDataUrl: string) => {
+    const handleCropComplete = (croppedDataUrl: string) => {
         setImageToCrop(null); 
-        try {
-            const blob = await compressImage(croppedDataUrl, 512, 0.9);
-            setNewAvatarBlob(blob);
-            if (newAvatarPreview) URL.revokeObjectURL(newAvatarPreview);
-            setNewAvatarPreview(URL.createObjectURL(blob));
-        } catch (error) {
-            toast({ variant: "destructive", description: "Resim işlenirken hata oluştu." });
-        }
+        setNewAvatar(croppedDataUrl);
     };
 
     const handleSaveChanges = async () => {
@@ -129,9 +119,9 @@ export default function ProfilePageClient() {
             const updates: { [key: string]: any } = {};
             let authProfileUpdates: { displayName?: string, photoURL?: string } = {};
     
-            if (newAvatarBlob) {
+            if (newAvatar) {
                 const storageRef = ref(storage, `avatars/${user.uid}`);
-                const snapshot = await uploadBytes(storageRef, newAvatarBlob);
+                const snapshot = await uploadString(storageRef, newAvatar, 'data_url');
                 const finalPhotoURL = await getDownloadURL(snapshot.ref);
                 updates.photoURL = finalPhotoURL;
                 authProfileUpdates.photoURL = finalPhotoURL;
@@ -160,7 +150,7 @@ export default function ProfilePageClient() {
                 title: "Başarılı!",
                 description: "Profiliniz başarıyla güncellendi.",
             });
-            setNewAvatarBlob(null); 
+            setNewAvatar(null); 
             router.push(`/profile/${user.uid}`);
     
         } catch (error: any) {
@@ -188,7 +178,7 @@ export default function ProfilePageClient() {
                     <div className="relative">
                         <div className={cn("avatar-frame-wrapper p-2", selectedAvatarFrame)}>
                             <Avatar className="relative z-[1] h-32 w-32 border-4 border-white shadow-lg">
-                                <AvatarImage src={newAvatarPreview || undefined} />
+                                <AvatarImage src={newAvatar || userData.photoURL || undefined} />
                                 <AvatarFallback className="text-5xl bg-primary/20">{username?.charAt(0).toUpperCase()}</AvatarFallback>
                             </Avatar>
                         </div>
