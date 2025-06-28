@@ -32,6 +32,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Server, MessageSquare } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { cn } from "@/lib/utils";
+import { Label } from "@/components/ui/label";
 
 const formSchema = z.object({
   name: z.string().min(3, { message: "Ad en az 3 karakter olmalıdır." }).max(50, {message: "Ad en fazla 50 karakter olabilir."}),
