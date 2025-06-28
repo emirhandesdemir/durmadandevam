@@ -6,7 +6,7 @@ import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
 import PersistentVoiceBar from "@/components/voice/PersistentVoiceBar";
 import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
 import { motion, useScroll, useMotionValueEvent } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
@@ -15,17 +15,19 @@ export default function MainAppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { scrollY } = useScroll();
+  const scrollRef = useRef<HTMLElement>(null);
+  const { scrollY } = useScroll({ container: scrollRef });
   const [hidden, setHidden] = useState(false);
   const pathname = usePathname();
 
   useMotionValueEvent(scrollY, "change", (latest) => {
     const previous = scrollY.getPrevious() ?? 0;
-    // Don't hide on DM page as it has its own scrolling
+    // DM sayfasında kendi kaydırma çubuğu olduğu için gizleme
     if (pathname.startsWith('/dm')) {
       setHidden(false);
       return;
     }
+    // Aşağı kaydırınca gizle, yukarı kaydırınca göster
     if (latest > previous && latest > 150) {
       setHidden(true);
     } else {
@@ -33,33 +35,32 @@ export default function MainAppLayout({
     }
   });
   
-  // Ev sayfası dışındaki sayfalara padding uygula
   const isHomePage = pathname === '/home';
-
 
   return (
     <VoiceChatProvider>
       <div className="relative flex h-dvh w-full flex-col bg-background overflow-hidden">
-        <motion.div
-          variants={{
-            visible: { y: 0 },
-            hidden: { y: "-100%" },
-          }}
-          animate={hidden ? "hidden" : "visible"}
-          transition={{ duration: 0.35, ease: "easeInOut" }}
-          className="fixed top-0 left-0 right-0 z-40"
-        >
-          <Header />
-        </motion.div>
-
-        {/* Main content area, padding bottom for the nav bar and top for the header */}
-        <main className="flex-1 overflow-y-auto pb-24 pt-14">
+        {/* Ana içerik alanı artık kaydırma kabı olarak davranıyor */}
+        <main ref={scrollRef} className="flex-1 overflow-y-auto pb-24">
+           {/* Header artık kaydırılabilir alanın İÇİNDE ve STICKY */}
+           <motion.header
+              variants={{
+                visible: { y: 0 },
+                hidden: { y: "-100%" },
+              }}
+              animate={hidden ? "hidden" : "visible"}
+              transition={{ duration: 0.35, ease: "easeInOut" }}
+              className="sticky top-0 z-40"
+            >
+              <Header />
+            </motion.header>
+          
            <div className={cn(!isHomePage && "p-4")}>
             {children}
           </div>
         </main>
         
-        {/* Persistent UI elements */}
+        {/* Kalıcı UI elemanları görünüm alanına sabitlenir */}
         <VoiceAudioPlayer />
         <PersistentVoiceBar />
         <BottomNav />
