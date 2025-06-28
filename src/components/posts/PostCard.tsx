@@ -137,12 +137,12 @@ export default function PostCard({ post }: PostCardProps) {
 
     return (
         <>
-            <div className="w-full animate-in fade-in-50 duration-500 bg-card rounded-xl overflow-hidden">
+            <div className="w-full animate-in fade-in-50 duration-500 bg-card border-b">
                 <div className="p-4">
                     <div className="flex items-center justify-between">
                         <Link href={`/profile/${post.uid}`} className="flex items-center gap-3 group">
-                            <div className={cn("avatar-frame-wrapper p-1", post.userAvatarFrame)}>
-                                <Avatar className="h-10 w-10 border">
+                             <div className={cn("avatar-frame-wrapper p-1", post.userAvatarFrame)}>
+                                <Avatar className="relative z-[1] h-10 w-10 border">
                                     <AvatarImage src={post.userAvatar} />
                                     <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
                                 </Avatar>
@@ -225,7 +225,7 @@ export default function PostCard({ post }: PostCardProps) {
                     </div>
                 )}
                 
-                 <div className="border-t px-4 py-2 flex items-center justify-start gap-1">
+                 <div className="px-4 py-2 flex items-center justify-start gap-1">
                     <Button
                         variant="ghost"
                         className={cn(

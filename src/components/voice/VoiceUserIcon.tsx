@@ -120,7 +120,7 @@ export default function VoiceUserIcon({
           )}
           <Avatar
             className={cn(
-              "border-2 transition-all duration-300 w-full h-full",
+              "relative z-[1] border-2 transition-all duration-300 w-full h-full",
               speakingRing
                 ? "border-green-500 shadow-lg shadow-green-500/50 ring-4 ring-green-500/30 animate-pulse"
                 : "border-transparent",

@@ -70,7 +70,7 @@ export default function TextChat({ messages, loading }: TextChatProps) {
                         </div>
                     )}
                     <div className={cn("avatar-frame-wrapper", msg.selectedAvatarFrame)}>
-                        <Avatar className="h-8 w-8">
+                        <Avatar className="relative z-[1] h-8 w-8">
                             <AvatarImage src={msg.photoURL || undefined} />
                             <AvatarFallback>{msg.username?.charAt(0).toUpperCase()}</AvatarFallback>
                         </Avatar>

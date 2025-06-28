@@ -187,7 +187,7 @@ export default function ProfilePageClient() {
                      <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
                     <div className="relative">
                         <div className={cn("avatar-frame-wrapper p-2", selectedAvatarFrame)}>
-                            <Avatar className="h-32 w-32 border-4 border-white shadow-lg">
+                            <Avatar className="relative z-[1] h-32 w-32 border-4 border-white shadow-lg">
                                 <AvatarImage src={newAvatarPreview || undefined} />
                                 <AvatarFallback className="text-5xl bg-primary/20">{username?.charAt(0).toUpperCase()}</AvatarFallback>
                             </Avatar>
@@ -293,7 +293,7 @@ export default function ProfilePageClient() {
                                      <div className="grid grid-cols-3 gap-2 pt-2">
                                         {avatarFrameOptions.map(option => (
                                             <div key={option.id} onClick={() => setSelectedAvatarFrame(option.id)} className={cn("flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer p-2 aspect-square hover:bg-accent", selectedAvatarFrame === option.id ? "border-primary" : "")}>
-                                                <div className={cn("avatar-frame-wrapper h-12 w-12", option.id)}><Avatar className="h-full w-full bg-muted" /></div>
+                                                <div className={cn("avatar-frame-wrapper h-12 w-12", option.id)}><Avatar className="relative z-[1] h-full w-full bg-muted" /></div>
                                                 <span className="text-xs font-bold text-center">{option.name}</span>
                                             </div>
                                         ))}

@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, MessageSquare } from "lucide-react";
+import { Home, MessageSquare, PlusSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -17,6 +17,7 @@ export default function BottomNav() {
     // Define nav items
     const navItems = [
         { href: "/home", label: "Anasayfa", icon: Home, featureFlag: postFeedEnabled },
+        { href: "/create-post", label: "Ekle", icon: PlusSquare, featureFlag: postFeedEnabled},
         { href: "/rooms", label: "Odalar", icon: MessageSquare, featureFlag: true },
         { href: `/profile/${user?.uid}`, label: "Profil", icon: UserIcon, featureFlag: true },
     ];
@@ -33,39 +34,47 @@ export default function BottomNav() {
     const enabledNavItems = navItems.filter(item => item.featureFlag);
 
     return (
-        <div className="fixed bottom-4 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
-             <nav className="flex items-center justify-around gap-2 rounded-full bg-background/80 p-2 shadow-lg backdrop-blur-md border border-border/20 pointer-events-auto">
-                {enabledNavItems.map((item) => {
-                    const isProfile = item.href.startsWith('/profile/');
-                    const isActive = isProfile ? pathname.startsWith('/profile/') : pathname === item.href;
-                    
-                    if (item.href.endsWith('/undefined')) return null;
+        <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
+            <div className="bg-background/80 backdrop-blur-md p-2 rounded-t-2xl sm:rounded-full border-t border-x sm:border shadow-lg pointer-events-auto">
+                <nav className="flex items-center justify-around gap-2">
+                    {enabledNavItems.map((item) => {
+                        const isProfile = item.href.startsWith('/profile/');
+                        const isActive = isProfile ? pathname.startsWith('/profile/') : pathname === item.href;
+                        
+                        if (item.href.endsWith('/undefined')) return null;
 
-                    return (
-                        <Link 
-                            href={item.href} 
-                            key={item.label}
-                            className={cn(
-                                "flex h-12 w-12 items-center justify-center rounded-full text-muted-foreground transition-all duration-300",
-                                isActive 
-                                    ? "bg-primary text-primary-foreground scale-110 shadow-md" 
-                                    : "hover:bg-muted"
-                            )}>
-                            {isProfile ? (
-                                <Avatar className="h-8 w-8">
-                                    <AvatarImage src={user.photoURL || undefined} />
-                                    <AvatarFallback className="text-xs bg-muted">{user.displayName?.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                            ) : (
-                                <item.icon className="h-6 w-6"/>
-                            )}
-                        </Link>
-                    )
-                })}
-            </nav>
+                        return (
+                            <Link 
+                                href={item.href} 
+                                key={item.label}
+                                className={cn(
+                                    "flex flex-col h-14 w-16 items-center justify-center rounded-xl text-muted-foreground transition-all duration-300",
+                                    isActive 
+                                        ? "text-primary" 
+                                        : "hover:text-foreground"
+                                )}>
+                                {isProfile ? (
+                                    <div className="relative">
+                                         <div className={cn("avatar-frame-wrapper", user.photoURL && 'p-1', userData?.selectedAvatarFrame)}>
+                                            <Avatar className="relative z-[1] h-7 w-7">
+                                                <AvatarImage src={user.photoURL || undefined} />
+                                                <AvatarFallback className="text-xs bg-muted">{user.displayName?.charAt(0)}</AvatarFallback>
+                                            </Avatar>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <item.icon className="h-6 w-6"/>
+                                )}
+                                <span className="text-xs font-medium">{item.label}</span>
+                            </Link>
+                        )
+                    })}
+                </nav>
+            </div>
         </div>
     )
 }
 
 // Dummy icon to satisfy type checker for profile item
 const UserIcon = () => null;
+const { userData } = useAuth();
