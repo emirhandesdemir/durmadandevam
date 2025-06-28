@@ -38,10 +38,10 @@ export default function TextChat({ messages, loading }: TextChatProps) {
       {messages.map((msg) => {
         if (msg.type === 'system' || msg.type === 'game') {
           return (
-            <div key={msg.id} className="text-center text-xs text-gray-400 italic my-4 animate-in fade-in">
+            <div key={msg.id} className="text-center text-xs text-muted-foreground italic my-4 animate-in fade-in">
               <p className={cn(
                   "inline-block p-2 rounded-full",
-                  msg.type === 'game' ? 'bg-primary/10 text-primary font-semibold' : 'bg-gray-800'
+                  msg.type === 'game' ? 'bg-primary/10 text-primary font-semibold' : 'bg-muted'
               )}>
                 {msg.text}
               </p>
@@ -67,8 +67,8 @@ export default function TextChat({ messages, loading }: TextChatProps) {
 
             <div className={cn("flex flex-col gap-1 max-w-[70%]", isCurrentUser && "items-end")}>
                 <div className={cn("flex items-center gap-2", isCurrentUser && "flex-row-reverse")}>
-                   <p className="font-bold text-sm text-white">{isCurrentUser ? "Siz" : msg.username}</p>
-                   <p className="text-xs text-gray-400">
+                   <p className="font-bold text-sm text-foreground">{isCurrentUser ? "Siz" : msg.username}</p>
+                   <p className="text-xs text-muted-foreground">
                      {msg.createdAt ? format((msg.createdAt as Timestamp).toDate(), 'p', { locale: tr }) : ''}
                    </p>
                 </div>
@@ -79,7 +79,7 @@ export default function TextChat({ messages, loading }: TextChatProps) {
                             {Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}
                         </div>
                     )}
-                    <div className={cn("p-3 rounded-2xl relative", isCurrentUser ? "bg-primary text-primary-foreground rounded-br-lg" : "bg-gray-800 text-gray-200 rounded-bl-lg")}>
+                    <div className={cn("p-3 rounded-2xl relative", isCurrentUser ? "bg-primary text-primary-foreground rounded-br-none" : "bg-muted text-foreground rounded-bl-none")}>
                         <p className="text-sm break-words whitespace-pre-wrap">{msg.text}</p>
                     </div>
                 </div>

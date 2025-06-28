@@ -163,6 +163,7 @@ export async function updateLastActive(roomId: string, userId: string) {
 
 /**
  * Oda yöneticisinin bir katılımcıyı sesli sohbetten atması.
+ * Bu işlem artık kullanıcıyı odanın ana katılımcı listesinden ÇIKARMAZ.
  */
 export async function kickFromVoice(roomId: string, currentUserId: string, targetUserId: string) {
     if (!currentUserId || currentUserId === targetUserId) return { success: false, error: "Geçersiz işlem." };
@@ -173,61 +174,25 @@ export async function kickFromVoice(roomId: string, currentUserId: string, targe
     try {
         await runTransaction(db, async (transaction) => {
             const roomDoc = await transaction.get(roomRef);
-            if (!roomDoc.exists() || roomDoc.data()?.createdBy.uid !== currentUserId) {
-                throw new Error("Bu işlemi yapma yetkiniz yok.");
+            if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
+            const roomData = roomDoc.data() as Room;
+
+            const isHost = roomData.createdBy.uid === currentUserId;
+            const isModerator = roomData.moderators?.includes(currentUserId);
+
+            if (!isHost && !isModerator) {
+                 throw new Error("Bu işlemi yapma yetkiniz yok.");
             }
             
             const targetUserDoc = await transaction.get(targetUserVoiceRef);
             if (!targetUserDoc.exists()) return;
             
             transaction.delete(targetUserVoiceRef);
-            transaction.update(roomRef, { 
-                voiceParticipantsCount: increment(-1),
-                participants: arrayRemove((roomDoc.data() as Room).participants.find(p => p.uid === targetUserId))
-            });
+            transaction.update(roomRef, { voiceParticipantsCount: increment(-1) });
             transaction.set(voiceStatsRef, { totalUsers: increment(-1) }, { merge: true });
         });
         return { success: true };
     } catch (error: any) {
         return { success: false, error: error.message };
-    }
-}
-
-/**
- * Odadaki aktif olmayan kullanıcıları kontrol eder ve atar.
- */
-export async function kickInactiveUsers(roomId: string) {
-    const settings = await getGameSettings();
-    const timeoutMinutes = settings.afkTimeoutMinutes || 8;
-    const timeoutMs = timeoutMinutes * 60 * 1000;
-    const inactiveThreshold = Timestamp.fromMillis(Date.now() - timeoutMs);
-
-    const voiceParticipantsRef = collection(db, 'rooms', roomId, 'voiceParticipants');
-    const q = query(voiceParticipantsRef, where('lastActiveAt', '<', inactiveThreshold));
-    
-    try {
-        const querySnapshot = await getDocs(q);
-        if (querySnapshot.empty) {
-            return { success: true, kickedCount: 0 };
-        }
-
-        const batch = writeBatch(db);
-        let kickedCount = 0;
-
-        querySnapshot.forEach(doc => {
-            batch.delete(doc.ref);
-            kickedCount++;
-        });
-
-        if (kickedCount > 0) {
-            const roomRef = doc(db, 'rooms', roomId);
-            batch.update(roomRef, { voiceParticipantsCount: increment(-kickedCount) });
-            batch.set(voiceStatsRef, { totalUsers: increment(-kickedCount) }, { merge: true });
-            await batch.commit();
-        }
-        return { success: true, kickedCount };
-    } catch (error: any) {
-        console.error("AFK kullanıcıları atılırken hata:", error);
-        return { success: false, error: "AFK kullanıcıları sorgulanırken hata. Gerekli veritabanı indeksi eksik olabilir." };
     }
 }

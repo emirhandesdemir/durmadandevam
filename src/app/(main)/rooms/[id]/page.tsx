@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog"
 
 // --- Game Imports ---
-import type { Room, ActiveGame, GameSettings } from '@/lib/types';
+import type { Room, ActiveGame, GameSettings, Message } from '@/lib/types';
 import GameCountdownCard from '@/components/game/GameCountdownCard';
 import RoomGameCard from '@/components/game/RoomGameCard';
 import { startGameInRoom, submitAnswer, endGameWithoutWinner, getGameSettings } from '@/lib/actions/gameActions';
@@ -53,7 +53,7 @@ export default function RoomPage() {
 
     // --- Component State ---
     const [room, setRoom] = useState<Room | null>(null);
-    const [messages, setMessages] = useState<any[]>([]);
+    const [messages, setMessages] = useState<Message[]>([]);
     const [messagesLoading, setMessagesLoading] = useState(true);
     const [isParticipantSheetOpen, setIsParticipantSheetOpen] = useState(false);
     const [showExitDialog, setShowExitDialog] = useState(false);
@@ -104,7 +104,7 @@ export default function RoomPage() {
 
         const messagesQuery = query(collection(db, "rooms", roomId, "messages"), orderBy("createdAt", "asc"), limit(100));
         const messagesUnsub = onSnapshot(messagesQuery, (snapshot) => {
-            setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
+            setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message)));
             setMessagesLoading(false);
         }, (error) => {
             console.error("Mesajlar alınırken hata:", error);
@@ -183,10 +183,10 @@ export default function RoomPage() {
         await joinRoom();
     }, [user, joinRoom]);
 
-    const handleLeaveAndNavigate = useCallback(async () => {
+    const handleExitVoiceChat = useCallback(async () => {
         await leaveRoom();
-        router.push('/rooms');
-    }, [leaveRoom, router]);
+        setShowExitDialog(false);
+    }, [leaveRoom]);
 
     const handleToggleMute = useCallback(async () => {
         if (!self || !user) return;
@@ -235,7 +235,7 @@ export default function RoomPage() {
                 
                 <div className="flex-1 flex flex-col overflow-hidden">
                     {/* Voice & Game Area */}
-                    <div className="p-4 shrink-0 space-y-4">
+                    <div className="p-4 shrink-0 space-y-4 border-b">
                         {screenSharer ? (
                             <div className='animate-in fade-in duration-300'>
                                 {isSharingScreen && localScreenStream && <ScreenShareView stream={localScreenStream} />}
@@ -313,11 +313,11 @@ export default function RoomPage() {
 
                 {/* Footer Input Area */}
                 <footer className="p-3 border-t bg-background shrink-0 flex items-center gap-2">
+                     <Button onClick={() => setIsPortalDialogOpen(true)} variant="ghost" size="icon" className="rounded-full bg-muted hover:bg-muted/80">
+                        <Gift className="h-5 w-5 text-yellow-500"/>
+                    </Button>
                     {isConnected && user ? (
                         <>
-                            <Button onClick={() => setIsPortalDialogOpen(true)} variant="ghost" size="icon" className="rounded-full bg-muted hover:bg-muted/80">
-                                <Gift className="h-5 w-5 text-yellow-500"/>
-                            </Button>
                             <Button onClick={handleToggleMute} variant="ghost" size="icon" className="rounded-full bg-muted hover:bg-muted/80">
                                 {self?.isMuted ? <MicOff className="h-5 w-5 text-destructive"/> : <Mic className="h-5 w-5"/>}
                             </Button>
@@ -343,7 +343,7 @@ export default function RoomPage() {
              <ParticipantListSheet
                 isOpen={isParticipantSheetOpen}
                 onOpenChange={setIsParticipantSheetOpen}
-                participants={room?.participants || []}
+                room={room}
             />
              <OpenPortalDialog 
                 isOpen={isPortalDialogOpen} 
@@ -356,14 +356,14 @@ export default function RoomPage() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Odadan Ayrıl</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Ne yapmak istersiniz? Odayı arka plana alabilir veya sesli sohbetten tamamen çıkabilirsiniz.
+                            Ne yapmak istersiniz? Odayı arka plana alabilir veya sadece sesli sohbetten çıkabilirsiniz.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                          <Button variant="outline" onClick={() => { router.push('/rooms'); setShowExitDialog(false); }}>
                             Arka Plana Al
                         </Button>
-                        <Button onClick={() => { handleLeaveAndNavigate(); setShowExitDialog(false); }}>
+                        <Button onClick={handleExitVoiceChat}>
                             Sesli sohbetten çık
                         </Button>
                     </AlertDialogFooter>

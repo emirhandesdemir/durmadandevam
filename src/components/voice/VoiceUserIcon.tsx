@@ -12,10 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import {
-  kickFromVoice,
-} from "@/lib/actions/voiceActions";
-import type { VoiceParticipant } from "@/lib/types";
+import { kickFromVoice, muteUserInRoom, unmuteUserInRoom } from "@/lib/actions/voiceActions";
+import type { VoiceParticipant, Room } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   Crown,
@@ -24,6 +22,8 @@ import {
   LogOut,
   Loader2,
   User,
+  Shield,
+  VolumeX,
 } from "lucide-react";
 import { useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -32,41 +32,36 @@ import { useRouter } from "next/navigation";
 
 interface VoiceUserIconProps {
   participant: VoiceParticipant;
+  room: Room;
   isHost: boolean;
+  isModerator: boolean;
   currentUserId: string;
-  roomId: string;
   size?: 'sm' | 'lg';
-  isParticipantTheHost: boolean;
 }
 
-/**
- * Sesli sohbetteki tek bir kullanıcıyı temsil eden ikon.
- * Avatar, konuşma durumu ve yönetici yetkilerini içerir.
- */
 export default function VoiceUserIcon({
   participant,
+  room,
   isHost,
+  isModerator,
   currentUserId,
-  roomId,
   size = 'sm',
-  isParticipantTheHost,
 }: VoiceUserIconProps) {
   const { toast } = useToast();
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
 
   const isSelf = participant.uid === currentUserId;
+  const isParticipantHost = participant.uid === room.createdBy.uid;
+  const isParticipantModerator = room.moderators?.includes(participant.uid);
 
-  const handleAction = async (
-    action: (
-      roomId: string,
-      currentUserId: string,
-      targetUserId: string
-    ) => Promise<{ success: boolean; error?: string }>
-  ) => {
+  const canModerate = isHost || isModerator;
+
+  const handleKick = async () => {
+    if (!canModerate) return;
     setIsProcessing(true);
     try {
-      const result = await action(roomId, currentUserId, participant.uid);
+      const result = await kickFromVoice(room.id, currentUserId, participant.uid);
       if (!result.success) {
         toast({ variant: "destructive", description: result.error });
       }
@@ -76,27 +71,29 @@ export default function VoiceUserIcon({
       setIsProcessing(false);
     }
   };
-  
+
   const handleViewProfile = () => {
       router.push(`/profile/${participant.uid}`);
   }
 
   const menuContent = (
-    <DropdownMenuContent align="center" className="bg-gray-800 border-gray-700 text-white">
+    <DropdownMenuContent align="center" className="bg-card border">
       <DropdownMenuLabel>{participant.username}</DropdownMenuLabel>
-      <DropdownMenuSeparator className="bg-gray-700"/>
+      <DropdownMenuSeparator/>
        <DropdownMenuItem onClick={handleViewProfile}>
           <User className="mr-2 h-4 w-4" />
           <span>Profili Görüntüle</span>
       </DropdownMenuItem>
-      {isHost && !isSelf && (
-        <DropdownMenuItem
-          className="text-red-400 focus:text-red-400 focus:bg-red-900/50"
-          onClick={() => handleAction(kickFromVoice)}
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Sesten At</span>
-        </DropdownMenuItem>
+      {canModerate && !isSelf && !isParticipantHost && (
+        <>
+            <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={handleKick}
+            >
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Sesten At</span>
+            </DropdownMenuItem>
+        </>
       )}
     </DropdownMenuContent>
   );
@@ -125,32 +122,30 @@ export default function VoiceUserIcon({
                 )}
               >
                 <AvatarImage src={participant.photoURL || undefined} />
-                <AvatarFallback className="bg-gray-700 text-gray-300">
+                <AvatarFallback className="bg-muted text-muted-foreground">
                   {participant.username?.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
           </div>
-          <div className={cn("absolute bg-gray-900/70 backdrop-blur-sm rounded-full shadow-md", iconBadgePos)}>
+          <div className={cn("absolute bg-card/70 backdrop-blur-sm rounded-full shadow-md", iconBadgePos)}>
             {participant.isMuted ? (
-              <MicOff className={cn(iconSize, "text-red-500")} />
+              <MicOff className={cn(iconSize, "text-destructive")} />
             ) : (
-              <Mic className={cn(iconSize, "text-white")} />
+              <Mic className={cn(iconSize, "text-foreground")} />
             )}
           </div>
       </div>
 
       <div className="flex items-center justify-center gap-1 w-full">
-          <p className={cn("font-semibold text-white truncate", nameSize, size === 'lg' ? 'max-w-[120px]' : 'max-w-[60px]')}>{participant.username}</p>
-          {isParticipantTheHost && (
+          <p className={cn("font-semibold text-foreground truncate", nameSize, size === 'lg' ? 'max-w-[120px]' : 'max-w-[60px]')}>{participant.username}</p>
+          {isParticipantHost && (
               <TooltipProvider>
-                  <Tooltip>
-                      <TooltipTrigger>
-                          <Crown className={cn("text-yellow-400 shrink-0", size === 'lg' ? 'h-5 w-5' : 'h-4 w-4' )} />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                          <p>Oda Sahibi</p>
-                      </TooltipContent>
-                  </Tooltip>
+                  <Tooltip><TooltipTrigger><Crown className={cn("text-yellow-400 shrink-0", size === 'lg' ? 'h-5 w-5' : 'h-4 w-4' )} /></TooltipTrigger><TooltipContent><p>Oda Sahibi</p></TooltipContent></Tooltip>
+              </TooltipProvider>
+          )}
+          {isParticipantModerator && !isParticipantHost && (
+              <TooltipProvider>
+                  <Tooltip><TooltipTrigger><Shield className={cn("text-blue-400 shrink-0", size === 'lg' ? 'h-5 w-5' : 'h-4 w-4' )} /></TooltipTrigger><TooltipContent><p>Moderatör</p></TooltipContent></Tooltip>
               </TooltipProvider>
           )}
       </div>
@@ -165,7 +160,7 @@ export default function VoiceUserIcon({
             className="cursor-pointer rounded-full text-center"
           >
             {isProcessing ? (
-              <div className={cn("flex items-center justify-center rounded-full bg-gray-800/50 aspect-square", avatarSize)}>
+              <div className={cn("flex items-center justify-center rounded-full bg-muted/50 aspect-square", avatarSize)}>
                   <Loader2 className="h-8 w-8 animate-spin" />
               </div>
             ) : (

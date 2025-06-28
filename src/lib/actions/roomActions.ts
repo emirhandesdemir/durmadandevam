@@ -3,7 +3,7 @@
 
 import { db } from '@/lib/firebase';
 import { deleteRoomWithSubcollections } from '@/lib/firestoreUtils';
-import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch, arrayUnion, updateDoc, increment, runTransaction, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch, arrayUnion, arrayRemove, updateDoc, increment, runTransaction, getDocs } from 'firebase/firestore';
 import { createNotification } from './notificationActions';
 
 export async function addSystemMessage(roomId: string, text: string) {
@@ -112,7 +112,7 @@ export async function joinRoom(roomId: string, userInfo: UserInfo) {
     const messagesRef = collection(db, "rooms", roomId, "messages");
     batch.set(doc(messagesRef), {
         type: 'system',
-        text: `${userInfo.username || 'Bir kullanıcı'} odaya katıldı.`,
+        text: `👋 ${userInfo.username || 'Bir kullanıcı'} odaya katıldı.`,
         createdAt: serverTimestamp(), 
         uid: 'system', 
         username: 'System',
@@ -171,12 +171,11 @@ export async function extendRoomTime(roomId: string, userId: string) {
 }
 
 export async function openPortalForRoom(roomId: string, userId: string) {
-    const cost = 100; // ileride bu değer dinamik olabilir
+    const cost = 100;
 
     const userRef = doc(db, 'users', userId);
     const roomRef = doc(db, 'rooms', roomId);
 
-    // 1. Transaction: Kullanıcı elmasını kontrol et, düşür ve odanın portal süresini güncelle.
     try {
         await runTransaction(db, async (transaction) => {
             const userDoc = await transaction.get(userRef);
@@ -185,9 +184,8 @@ export async function openPortalForRoom(roomId: string, userId: string) {
             if (!userDoc.exists()) throw new Error("Kullanıcı bulunamadı.");
             if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
             
-            const userData = userDoc.data();
-            
-            // TODO: Elmas sistemi aktif olduğunda bu yorum satırını kaldırın.
+            // TODO: Enable diamond cost later
+            // const userData = userDoc.data();
             // if ((userData.diamonds || 0) < cost) {
             //     throw new Error(`Yeterli elmasınız yok. Gerekli: ${cost}`);
             // }
@@ -196,13 +194,23 @@ export async function openPortalForRoom(roomId: string, userId: string) {
             const fiveMinutesInMs = 5 * 60 * 1000;
             const newPortalExpiresAt = Timestamp.fromMillis(Date.now() + fiveMinutesInMs);
             transaction.update(roomRef, { portalExpiresAt: newPortalExpiresAt });
+
+            // Add system message to the source room
+            const messagesRef = collection(db, 'rooms', roomId, 'messages');
+            const portalMessage = {
+                type: 'system',
+                text: `🚀 ${userDoc.data()?.username || 'Biri'} bu odaya bir portal açtı! Yeni misafirler bekleniyor.`,
+                createdAt: serverTimestamp(),
+                uid: 'system',
+                username: 'System',
+            };
+            transaction.set(doc(messagesRef), portalMessage);
         });
     } catch (error: any) {
         console.error("Portal açma transaction hatası:", error);
         return { success: false, error: error.message };
     }
     
-    // 2. Diğer tüm odalara sistem mesajı gönder.
     try {
         const [userDoc, roomDoc] = await Promise.all([getDoc(userRef), getDoc(roomRef)]);
         const openerUsername = userDoc.data()?.username || 'Biri';
@@ -214,10 +222,8 @@ export async function openPortalForRoom(roomId: string, userId: string) {
         const batch = writeBatch(db);
 
         allRoomsSnap.forEach(otherRoomDoc => {
-            // Portalın açıldığı odaya mesaj gönderme
             if (otherRoomDoc.id === roomId) return;
 
-            // Süresi dolmuş odalara mesaj gönderme
             const otherRoomData = otherRoomDoc.data();
             if (otherRoomData.expiresAt && (otherRoomData.expiresAt as Timestamp).toMillis() < Date.now()) return;
 
@@ -239,7 +245,18 @@ export async function openPortalForRoom(roomId: string, userId: string) {
         return { success: true };
     } catch (error: any) {
         console.error("Portal duyuru hatası:", error);
-        // Bu hata kullanıcıya gösterilmemeli, işlem zaten başarılı oldu.
         return { success: true, warning: "Duyuru gönderilirken bir hata oluştu." };
+    }
+}
+
+export async function updateModerators(roomId: string, targetUserId: string, action: 'add' | 'remove') {
+    const roomRef = doc(db, 'rooms', roomId);
+    try {
+        await updateDoc(roomRef, {
+            moderators: action === 'add' ? arrayUnion(targetUserId) : arrayRemove(targetUserId)
+        });
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
     }
 }
