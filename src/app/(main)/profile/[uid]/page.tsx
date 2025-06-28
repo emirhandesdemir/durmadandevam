@@ -1,13 +1,12 @@
 // src/app/(main)/profile/[uid]/page.tsx
-import { doc, getDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { notFound } from 'next/navigation';
-import type { UserProfile } from '@/lib/types';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import ProfilePosts from '@/components/profile/ProfilePosts';
 import ProfileViewLogger from '@/components/profile/ProfileViewLogger';
+import { deepSerialize } from '@/lib/server-utils'; // YENİ: Yardımcı fonksiyonu içe aktar
 
-// Define the props type directly here for clarity
 interface UserProfilePageProps {
   params: { uid: string };
 }
@@ -24,12 +23,9 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
   
   const profileUserData = profileUserSnap.data();
 
-  // IMPORTANT: To pass data from a Server Component to a Client Component,
-  // it must be a "plain" serializable object. Firestore Timestamps are not plain.
-  // We use JSON.stringify and JSON.parse to perform a deep conversion, ensuring
-  // all Timestamps become ISO date strings, which are serializable.
-  // This is the standard and safest way to fix this specific Next.js error.
-  const serializableProfileUser = JSON.parse(JSON.stringify(profileUserData));
+  // YENİ: Veriyi istemciye göndermeden önce tüm Timestamp'leri güvenli bir formata dönüştür.
+  // Bu, "Only plain objects can be passed" hatasını önler.
+  const serializableProfileUser = deepSerialize(profileUserData);
 
 
   return (
