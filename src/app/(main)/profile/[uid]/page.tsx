@@ -7,32 +7,27 @@ import ProfileHeader from '@/components/profile/ProfileHeader';
 import ProfilePosts from '@/components/profile/ProfilePosts';
 import ProfileViewLogger from '@/components/profile/ProfileViewLogger';
 
-type ProfilePageProps = {
-    params: { uid: string };
-};
-
 /**
- * Recursively converts Firestore Timestamps within an object or array to ISO strings.
- * This is the robust way to ensure data is serializable before passing from
- * Server Components to Client Components.
+ * Recursively converts Firestore Timestamps or Timestamp-like objects within any data structure to ISO strings.
+ * This is the definitive solution to prevent "Only plain objects can be passed to Client Components" errors.
  * @param data The object, array, or primitive to serialize.
- * @returns The serialized data.
+ * @returns The serialized data, safe to pass to Client Components.
  */
 function deepSerialize(data: any): any {
-  if (data === null || data === undefined || typeof data !== 'object') {
+  if (data === null || typeof data !== 'object') {
     return data;
   }
 
-  // Handle Firestore Timestamps
-  if (data instanceof Timestamp) {
-    return data.toDate().toISOString();
-  }
-  
-  // Handle plain objects that look like Timestamps (a common case)
-  if (typeof data.seconds === 'number' && typeof data.nanoseconds === 'number' && Object.keys(data).length === 2) {
-    return new Date(data.seconds * 1000 + data.nanoseconds / 1000000).toISOString();
+  // Handle Date objects
+  if (data instanceof Date) {
+    return data.toISOString();
   }
 
+  // Handle Firestore Timestamps (both class instances and plain objects)
+  if ((data instanceof Timestamp || (typeof data.toDate === 'function')) || (typeof data.seconds === 'number' && typeof data.nanoseconds === 'number')) {
+    return new Date(data.seconds * 1000 + (data.nanoseconds || 0) / 1000000).toISOString();
+  }
+  
   // Handle arrays by recursively serializing each item
   if (Array.isArray(data)) {
     return data.map(item => deepSerialize(item));
@@ -62,7 +57,7 @@ export default async function UserProfilePage({ params }: ProfilePageProps) {
   
   const profileUserData = profileUserSnap.data();
 
-  // Recursively serialize the entire object to ensure no Timestamps are passed.
+  // Recursively serialize the entire object to ensure no non-plain objects are passed.
   const serializableProfileUser = deepSerialize(profileUserData) as UserProfile;
 
   return (
