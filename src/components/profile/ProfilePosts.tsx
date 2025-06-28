@@ -9,8 +9,8 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, CameraOff, FileText } from 'lucide-react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { Heart, MessageCircle } from 'lucide-react';
+import PostViewerDialog from '@/components/posts/PostViewerDialog';
 
 interface ProfilePostsProps {
   userId: string;
@@ -21,6 +21,7 @@ export default function ProfilePosts({ userId, profileUser }: ProfilePostsProps)
     const { userData: currentUser, loading: authLoading } = useAuth();
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
     const isOwnProfile = currentUser?.uid === userId;
     const isFollower = (profileUser.followers || []).includes(currentUser?.uid || '');
@@ -60,7 +61,7 @@ export default function ProfilePosts({ userId, profileUser }: ProfilePostsProps)
 
         fetchPosts();
     }, [userId, canViewContent, authLoading]);
-
+    
     if (authLoading || loading) {
         return <div className="flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin" /></div>;
     }
@@ -86,36 +87,51 @@ export default function ProfilePosts({ userId, profileUser }: ProfilePostsProps)
     }
 
     return (
-        <div className="grid grid-cols-3 gap-1 mt-1">
-            {posts.map((post) => (
-                <Link href="#" key={post.id} className="group relative aspect-[4/5] block bg-muted/50">
-                    {post.imageUrl ? (
-                        <Image
-                            src={post.imageUrl}
-                            alt="Kullanıcı gönderisi"
-                            fill
-                            className="object-cover"
-                        />
-                    ) : (
-                       <div className="flex flex-col items-center justify-center h-full p-2 text-center">
-                           <FileText className="h-6 w-6 text-muted-foreground mb-2"/>
-                           <p className="text-muted-foreground text-xs line-clamp-5">{post.text}</p>
-                       </div>
-                    )}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center text-white opacity-0 group-hover:opacity-100">
-                       <div className="flex items-center gap-4">
-                           <div className="flex items-center gap-1">
+        <>
+            <div className="grid grid-cols-3 gap-1 mt-1">
+                {posts.map((post) => (
+                    <button 
+                        key={post.id} 
+                        className="group relative aspect-square block bg-muted/50 focus:outline-none"
+                        onClick={() => setSelectedPost(post)}
+                    >
+                        {post.imageUrl ? (
+                            <Image
+                                src={post.imageUrl}
+                                alt="Kullanıcı gönderisi"
+                                fill
+                                className="object-cover"
+                            />
+                        ) : (
+                        <div className="flex flex-col items-center justify-center h-full p-2 text-center">
+                            <FileText className="h-6 w-6 text-muted-foreground mb-2"/>
+                            <p className="text-muted-foreground text-xs line-clamp-5">{post.text}</p>
+                        </div>
+                        )}
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center text-white opacity-0 group-hover:opacity-100">
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-1">
                                 <Heart className="h-5 w-5 fill-white"/>
                                 <span className="font-bold text-sm">{post.likeCount}</span>
-                           </div>
-                           <div className="flex items-center gap-1">
+                            </div>
+                            <div className="flex items-center gap-1">
                                 <MessageCircle className="h-5 w-5 fill-white"/>
                                 <span className="font-bold text-sm">{post.commentCount}</span>
-                           </div>
-                       </div>
-                    </div>
-                </Link>
-            ))}
-        </div>
+                            </div>
+                        </div>
+                        </div>
+                    </button>
+                ))}
+            </div>
+            {selectedPost && (
+                <PostViewerDialog 
+                    post={selectedPost} 
+                    open={!!selectedPost} 
+                    onOpenChange={(open) => {
+                        if (!open) setSelectedPost(null)
+                    }}
+                />
+            )}
+        </>
     );
 }

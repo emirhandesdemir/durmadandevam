@@ -5,10 +5,9 @@ import { notFound } from 'next/navigation';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import ProfilePosts from '@/components/profile/ProfilePosts';
 import ProfileViewLogger from '@/components/profile/ProfileViewLogger';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Grid3x3, Clapperboard, Contact } from 'lucide-react';
-import { deepSerialize } from '@/lib/server-utils';
 import { Separator } from '@/components/ui/separator';
+import { deepSerialize } from '@/lib/server-utils';
+import { Grid3x3 } from 'lucide-react';
 
 interface UserProfilePageProps {
   params: { uid: string };
@@ -42,25 +41,17 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
         
         <Separator className="my-4" />
 
-        <Tabs defaultValue="posts" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-transparent border-b rounded-none">
-            <TabsTrigger value="posts" className="rounded-none"><Grid3x3 /></TabsTrigger>
-            <TabsTrigger value="reels" disabled className="rounded-none"><Clapperboard /></TabsTrigger>
-            <TabsTrigger value="tagged" disabled className="rounded-none"><Contact /></TabsTrigger>
-          </TabsList>
-          <TabsContent value="posts">
-             <ProfilePosts 
+        {/* Simplified Posts Section */}
+        <div className="w-full border-t">
+            <div className="flex justify-center items-center p-3 text-sm font-semibold text-primary border-b-2 border-primary">
+                <Grid3x3 className="h-5 w-5 mr-2" />
+                <span>GÖNDERİLER</span>
+            </div>
+            <ProfilePosts 
                 userId={uid} 
                 profileUser={serializableProfileUser} 
             />
-          </TabsContent>
-          <TabsContent value="reels">
-            <p className="text-center text-muted-foreground p-8">Reels içeriği yakında.</p>
-          </TabsContent>
-          <TabsContent value="tagged">
-             <p className="text-center text-muted-foreground p-8">Etiketlenen gönderiler yakında.</p>
-          </TabsContent>
-        </Tabs>
+        </div>
       </div>
     </>
   );

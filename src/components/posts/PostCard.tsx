@@ -125,31 +125,9 @@ export default function PostCard({ post }: PostCardProps) {
         }
     };
 
-    const renderTextWithLinks = (text: string) => {
-        if (!text) return null;
-        const parts = text.split(/(#\w+|@\w+)/g);
-        return parts.map((part, i) => {
-            if (part.startsWith('@')) {
-                return (
-                    <span key={i} className="font-semibold text-primary hover:underline cursor-pointer">
-                        {part}
-                    </span>
-                );
-            }
-            if (part.startsWith('#')) {
-                return (
-                    <span key={i} className="font-semibold text-accent hover:underline cursor-pointer">
-                        {part}
-                    </span>
-                );
-            }
-            return part;
-        });
-    };
-
     return (
         <>
-            <div className="w-full animate-in fade-in-50 duration-500 border-b">
+            <div className="w-full animate-in fade-in-50 duration-500 bg-card rounded-xl overflow-hidden">
                 {/* Header and text have padding */}
                 <div className="p-4">
                     <div className="flex items-center justify-between">
@@ -222,7 +200,7 @@ export default function PostCard({ post }: PostCardProps) {
                                 </div>
                             </div>
                         ) : (
-                            post.text && <p className="text-sm leading-relaxed whitespace-pre-wrap mt-3">{renderTextWithLinks(post.text)}</p>
+                            post.text && <p className="text-sm leading-relaxed whitespace-pre-wrap mt-3">{post.text}</p>
                         )}
                 </div>
 
@@ -240,7 +218,7 @@ export default function PostCard({ post }: PostCardProps) {
                 )}
                 
                 {/* Footer has padding */}
-                <div className="px-4 py-2 flex items-center justify-start gap-1">
+                 <div className="border-t px-4 py-2 flex items-center justify-start gap-1">
                     <Button
                         variant="ghost"
                         className={cn(
