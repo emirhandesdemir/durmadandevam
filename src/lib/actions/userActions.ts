@@ -15,7 +15,9 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     const userRef = doc(db, 'users', uid);
     const userSnap = await getDoc(userRef);
     if (userSnap.exists()) {
-        return userSnap.data() as UserProfile;
+        const userData = userSnap.data();
+        // İstemciye göndermeden önce veriyi serileştirerek "düz" bir nesneye dönüştür.
+        return JSON.parse(JSON.stringify(userData)) as UserProfile;
     }
     return null;
 }

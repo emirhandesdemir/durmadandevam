@@ -38,11 +38,14 @@ export async function getProfileViewers(userId: string): Promise<ProfileViewer[]
       const userMap = new Map<string, UserProfile>();
       userSnap.forEach(doc => userMap.set(doc.id, doc.data() as UserProfile));
 
-      return viewers.map(viewer => ({
+      const serializableViewers = viewers.map(viewer => ({
           ...viewer,
           username: userMap.get(viewer.uid)?.username || 'Bilinmeyen Kullanıcı',
           photoURL: userMap.get(viewer.uid)?.photoURL || null
       }));
+
+      // İstemciye göndermeden önce veriyi serileştirerek "düz" bir nesneye dönüştür.
+      return JSON.parse(JSON.stringify(serializableViewers));
   }
 
   return [];
