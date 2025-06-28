@@ -27,7 +27,7 @@ export default function ChatListItem({ chat, currentUserId, isSelected }: ChatLi
   if (!partnerInfo) return null;
   
   const lastMessage = chat.lastMessage;
-  const unreadCount = chat.unreadCounts[currentUserId] || 0;
+  const unreadCount = chat.unreadCounts?.[currentUserId] || 0;
 
   const timeAgo = lastMessage
     ? formatDistanceToNow(lastMessage.timestamp.toDate(), { addSuffix: true, locale: tr })
