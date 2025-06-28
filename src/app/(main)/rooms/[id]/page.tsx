@@ -65,6 +65,12 @@ export default function RoomPage() {
     const [gameLoading, setGameLoading] = useState(true);
     const [countdown, setCountdown] = useState<number | null>(null);
 
+    // Ref to hold the latest activeGame state to prevent stale closures in listeners
+    const activeGameRef = useRef(activeGame);
+    useEffect(() => {
+        activeGameRef.current = activeGame;
+    }, [activeGame]);
+
     const isHost = user?.uid === room?.createdBy.uid;
 
     const screenSharer = useMemo(() => participants.find(p => p.isSharingScreen), [participants]);
@@ -90,7 +96,8 @@ export default function RoomPage() {
         
         const roomUnsub = onSnapshot(doc(db, 'rooms', roomId), (docSnap) => {
             if (docSnap.exists()) {
-                 setRoom({ id: docSnap.id, ...docSnap.data() } as Room);
+                 const roomData = { id: docSnap.id, ...docSnap.data() } as Room;
+                 setRoom(roomData);
             } else {
                  toast({ variant: 'destructive', title: 'Oda Bulunamadı', description: 'Bu oda artık mevcut değil veya süresi dolmuş.' });
                  router.push('/rooms');
@@ -123,15 +130,17 @@ export default function RoomPage() {
             if (!snapshot.empty) {
                 const gameData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ActiveGame;
                 setActiveGame(gameData);
-                setCountdown(null);
-                setGameLoading(false);
+                setCountdown(null); // Active game starts, so no countdown.
             } else {
-                setActiveGame(null);
+                setActiveGame(null); // No active game.
             }
+            setGameLoading(false);
         });
-        
+
+        // This listener now ONLY handles the countdown logic.
         const roomTimestampUnsub = onSnapshot(doc(db, 'rooms', roomId), (docSnap) => {
-             if (docSnap.exists() && !activeGame) {
+             // Use the ref here to get the LATEST value of activeGame inside the callback.
+             if (docSnap.exists() && !activeGameRef.current) {
                 const roomData = docSnap.data() as Room;
                 const nextGameTime = roomData.nextGameTimestamp?.toDate().getTime();
                 if (nextGameTime) {
@@ -139,14 +148,13 @@ export default function RoomPage() {
                     setCountdown(remaining > 0 ? remaining : 0);
                 }
             }
-            setGameLoading(false);
         });
 
         return () => {
             gameUnsub();
             roomTimestampUnsub();
         };
-    }, [roomId, featureFlags, gameSettings, activeGame]);
+    }, [roomId, featureFlags, gameSettings]); // REMOVED activeGame from dependency array to fix loop
 
     // Handle countdown ticker and game start
     useEffect(() => {
