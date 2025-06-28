@@ -19,7 +19,7 @@ export default function Header() {
 
     return (
         <header className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="container flex h-16 items-center justify-between">
+            <div className="container flex h-14 items-center justify-between">
                 <Link href="/home" className="flex items-center gap-3">
                     <Users className="h-7 w-7 text-primary" />
                     <span className="text-xl font-bold tracking-tight">HiweWalk</span>

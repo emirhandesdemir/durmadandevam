@@ -53,7 +53,7 @@ export default function MainAppLayout({
         </motion.div>
 
         {/* Main content area, padding bottom for the nav bar and top for the header */}
-        <main className="flex-1 overflow-y-auto pb-24 pt-16">
+        <main className="flex-1 overflow-y-auto pb-24 pt-14">
            <div className={cn(!isHomePage && "p-4")}>
             {children}
           </div>
