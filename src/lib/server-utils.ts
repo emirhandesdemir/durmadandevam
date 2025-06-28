@@ -14,14 +14,13 @@ export function deepSerialize(obj: any): any {
     return obj;
   }
 
-  // 2. Timestamp Kontrolü: Firestore Timestamp nesnesi ise, ISO string'e çevir.
-  // Bu kontrol hem gerçek `Timestamp` örneklerini hem de `toDate` metoduna sahip
-  // benzer yapıları (duck typing) yakalar.
+  // 2. Timestamp Kontrolü: Firestore Timestamp nesnesi ise veya `toDate` metodu varsa, ISO string'e çevir.
+  // Bu kontrol, farklı ortamlarda gelebilecek tüm tarih formatlarını yakalar.
   if (obj instanceof Timestamp || typeof obj.toDate === 'function') {
     return obj.toDate().toISOString();
   }
 
-  // 3. Dizi Kontrolü: Eğer bir dizi ise, her elemanı için fonksiyonu tekrar çağır.
+  // 3. Dizi Kontrolü: Eğer bir dizi ise, her elemanı için fonksiyonu tekrar çağır (rekürsif).
   if (Array.isArray(obj)) {
     return obj.map(item => deepSerialize(item));
   }
