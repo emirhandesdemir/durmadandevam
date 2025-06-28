@@ -1,22 +1,21 @@
 // src/components/posts/NewPostForm.tsx
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { db, storage } from "@/lib/firebase";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { FirebaseError } from "firebase/app";
 
-import { compressImage } from "@/lib/imageUtils";
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Image as ImageIcon, Send, Loader2, X, Cog } from "lucide-react";
+import { Image as ImageIcon, Send, Loader2, X } from "lucide-react";
 
 export default function NewPostForm() {
   const router = useRouter();
@@ -25,22 +24,10 @@ export default function NewPostForm() {
   
   const [text, setText] = useState("");
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
-  const [imageBlob, setImageBlob] = useState<Blob | null>(null);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
-  
-  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [croppedImage, setCroppedImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Bellek sızıntılarını önlemek için önizleme URL'sini temizle
-  useEffect(() => {
-    return () => {
-      if (imagePreviewUrl) {
-        URL.revokeObjectURL(imagePreviewUrl);
-      }
-    };
-  }, [imagePreviewUrl]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -57,20 +44,9 @@ export default function NewPostForm() {
     }
   };
 
-  const handleCropComplete = async (croppedDataUrl: string) => {
-    setImageToCrop(null); // Kırpıcıyı hemen kapat
-    setIsProcessingImage(true);
-    try {
-        const blob = await compressImage(croppedDataUrl);
-        setImageBlob(blob);
-        setImagePreviewUrl(URL.createObjectURL(blob));
-    } catch(error: any) {
-        console.error("Resim işlenirken hata:", error);
-        toast({ variant: "destructive", title: "Hata", description: `Resim işlenemedi: ${error.message}` });
-        removeImage();
-    } finally {
-        setIsProcessingImage(false);
-    }
+  const handleCropComplete = (croppedDataUrl: string) => {
+    setCroppedImage(croppedDataUrl);
+    setImageToCrop(null); // Close the dialog
   }
 
   const handleImageClick = () => {
@@ -79,11 +55,7 @@ export default function NewPostForm() {
 
   const removeImage = () => {
       setImageToCrop(null);
-      setImageBlob(null);
-      if (imagePreviewUrl) {
-        URL.revokeObjectURL(imagePreviewUrl);
-      }
-      setImagePreviewUrl(null);
+      setCroppedImage(null);
       if(fileInputRef.current) {
           fileInputRef.current.value = "";
       }
@@ -94,7 +66,7 @@ export default function NewPostForm() {
       toast({ variant: 'destructive', description: 'Bu işlemi yapmak için giriş yapmalısınız veya verilerinizin yüklenmesini beklemelisiniz.' });
       return;
     }
-    if (!text.trim() && !imageBlob) {
+    if (!text.trim() && !croppedImage) {
       toast({ variant: 'destructive', description: 'Paylaşmak için bir metin yazın veya resim seçin.' });
       return;
     }
@@ -103,9 +75,9 @@ export default function NewPostForm() {
     
     try {
         let imageUrl = "";
-        if (imageBlob) {
+        if (croppedImage) {
             const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}_post.jpg`);
-            const snapshot = await uploadBytes(imageRef, imageBlob);
+            const snapshot = await uploadString(imageRef, croppedImage, 'data_url');
             imageUrl = await getDownloadURL(snapshot.ref);
         }
 
@@ -144,7 +116,7 @@ export default function NewPostForm() {
     }
   };
 
-  const isLoading = isProcessingImage || isSubmitting;
+  const isLoading = isSubmitting;
 
   return (
     <>
@@ -164,10 +136,10 @@ export default function NewPostForm() {
               disabled={isLoading}
             />
           </div>
-          {imagePreviewUrl && (
+          {croppedImage && (
             <div className="relative ml-16">
               <div className="overflow-hidden rounded-xl border">
-                <img src={imagePreviewUrl} alt="Önizleme" className="max-h-80 w-auto object-contain" />
+                <img src={croppedImage} alt="Önizleme" className="max-h-80 w-auto object-contain" />
               </div>
               <Button 
                 size="icon" 
@@ -180,12 +152,6 @@ export default function NewPostForm() {
               </Button>
             </div>
           )}
-          {isProcessingImage && (
-             <div className="ml-16 flex items-center gap-2 text-muted-foreground">
-                <Cog className="h-5 w-5 animate-spin" />
-                <span>Resim işleniyor, lütfen bekleyin...</span>
-            </div>
-          )}
         </div>
         
         <div className="flex items-center justify-between border-t border-border/50 bg-muted/20 px-4 py-2">
@@ -195,7 +161,7 @@ export default function NewPostForm() {
             size="icon"
             className="rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
             onClick={handleImageClick}
-            disabled={isLoading || !!imageBlob}
+            disabled={isLoading || !!croppedImage}
           >
             <ImageIcon className="h-5 w-5" />
             <span className="sr-only">Resim Ekle</span>
@@ -204,7 +170,7 @@ export default function NewPostForm() {
           <Button 
             className="rounded-full font-semibold px-4"
             onClick={handleShare}
-            disabled={isLoading || (!text.trim() && !imageBlob)}
+            disabled={isLoading || (!text.trim() && !croppedImage)}
           >
             {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
             <span className="ml-2 hidden sm:inline">Paylaş</span>
