@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect, useRef } from 'react';
 import BottomNav from "@/components/layout/bottom-nav";
 import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
 import PersistentVoiceBar from "@/components/voice/PersistentVoiceBar";
@@ -14,23 +15,65 @@ export default function MainAppLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const [isHeaderVisible, setHeaderVisible] = useState(true);
+  const mainRef = useRef<HTMLElement>(null);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const mainEl = mainRef.current;
+    
+    const handleScroll = () => {
+        if (!mainEl) return;
+        const currentScrollY = mainEl.scrollTop;
+
+        // Hide header
+        if (currentScrollY > lastScrollY.current && currentScrollY > 70) {
+            setHeaderVisible(false);
+        } 
+        // Show header
+        else if (currentScrollY < lastScrollY.current) {
+            setHeaderVisible(true);
+        }
+        lastScrollY.current = currentScrollY;
+    };
+
+    if (mainEl) {
+        mainEl.addEventListener('scroll', handleScroll, { passive: true });
+        return () => mainEl.removeEventListener('scroll', handleScroll);
+    }
+  }, []);
 
   return (
     <VoiceChatProvider>
-      <div className="flex h-dvh w-full flex-col bg-background">
-        <Header />
-        <AnimatePresence mode="wait">
-          <motion.main
+      <div className="flex h-dvh w-full flex-col bg-background overflow-hidden">
+        <AnimatePresence>
+          {isHeaderVisible && (
+            <motion.div
+              initial={{ y: '-100%' }}
+              animate={{ y: '0%' }}
+              exit={{ y: '-100%' }}
+              transition={{ type: 'tween', duration: 0.3, ease: 'easeInOut' }}
+              className="w-full shrink-0 z-40"
+            >
+              <Header />
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
+        <main
+          ref={mainRef}
+          className="flex-1 overflow-y-auto"
+        >
+          <motion.div
             key={pathname}
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 15 }}
-            transition={{ duration: 0.3 }}
-            className="flex-1 overflow-y-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
           >
             {children}
-          </motion.main>
-        </AnimatePresence>
+          </motion.div>
+        </main>
         
         <VoiceAudioPlayer />
         <PersistentVoiceBar />

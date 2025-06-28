@@ -21,7 +21,7 @@ export default function Header() {
 
 
     return (
-        <header className="sticky top-0 z-40 w-full border-b bg-background">
+        <header className="w-full border-b bg-background">
             <div className="container flex h-14 items-center justify-between">
                 <Link href="/home" className="flex items-center gap-2 ml-2">
                     <span className={cn(

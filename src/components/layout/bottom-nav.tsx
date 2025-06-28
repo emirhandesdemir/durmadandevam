@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, MessageSquare, User, Bell } from "lucide-react";
+import { Home, MessageSquare, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -36,20 +36,24 @@ export default function BottomNav() {
     });
 
     return (
-        <footer className="sticky bottom-0 z-30 border-t bg-background/95 backdrop-blur-sm shrink-0">
-            <nav className={cn("grid h-14", `grid-cols-${enabledNavItems.length}`)}>
+        <div className="fixed bottom-4 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
+             <nav className="flex items-center justify-around gap-4 rounded-full bg-background/80 p-2 shadow-lg backdrop-blur-md border border-border/20 pointer-events-auto">
                 {enabledNavItems.map((item) => {
                     const isProfile = item.href.startsWith('/profile/');
                     const isActive = isProfile ? pathname.startsWith('/profile/') : pathname === item.href;
                     
                     return (
-                        <Link href={item.href} key={item.label}
+                        <Link 
+                            href={item.href} 
+                            key={item.label}
                             className={cn(
-                                "flex flex-col items-center justify-center gap-1 text-xs font-medium text-muted-foreground transition-colors duration-200",
-                                isActive ? "text-primary" : "hover:text-primary"
+                                "flex h-12 w-12 items-center justify-center rounded-full text-muted-foreground transition-all duration-300",
+                                isActive 
+                                    ? "bg-primary text-primary-foreground scale-110 shadow-md" 
+                                    : "hover:bg-muted"
                             )}>
                             {isProfile ? (
-                                <Avatar className={cn("h-6 w-6 transition-all", isActive && "ring-2 ring-primary ring-offset-2 ring-offset-background")}>
+                                <Avatar className="h-8 w-8">
                                     <AvatarImage src={user.photoURL || undefined} />
                                     <AvatarFallback className="text-xs bg-muted">{user.displayName?.charAt(0)}</AvatarFallback>
                                 </Avatar>
@@ -60,6 +64,6 @@ export default function BottomNav() {
                     )
                 })}
             </nav>
-        </footer>
+        </div>
     )
 }
