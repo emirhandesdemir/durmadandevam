@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, MessageSquare } from "lucide-react";
+import { Home, MessageSquare, PlusSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -13,10 +13,11 @@ export default function BottomNav() {
     
     const postFeedEnabled = featureFlags?.postFeedEnabled ?? true;
 
-    // Define nav items
+    // Define nav items, adding the new post button
     const navItems = [
         { href: "/home", label: "Anasayfa", icon: Home, featureFlag: postFeedEnabled },
         { href: "/rooms", label: "Odalar", icon: MessageSquare, featureFlag: true },
+        { href: "/create-post", label: "Ekle", icon: PlusSquare, featureFlag: postFeedEnabled },
         { href: `/profile/${user?.uid}`, label: "Profil", icon: UserIcon, featureFlag: true }, // Placeholder for avatar
     ];
     
@@ -36,7 +37,7 @@ export default function BottomNav() {
              <nav className="flex items-center justify-around gap-2 rounded-full bg-background/80 p-2 shadow-lg backdrop-blur-md border border-border/20 pointer-events-auto">
                 {enabledNavItems.map((item) => {
                     const isProfile = item.href.startsWith('/profile/');
-                    // A more robust check for active profile link
+                    // A more robust check for active link
                     const isActive = isProfile ? pathname.startsWith('/profile/') : pathname === item.href;
                     
                     if (item.href.endsWith('/undefined')) return null;

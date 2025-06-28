@@ -36,7 +36,8 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
   return (
     <>
       <ProfileViewLogger targetUserId={uid} />
-      <div className="container mx-auto max-w-4xl px-0 sm:px-4 py-4">
+      {/* Changed container classes to remove horizontal padding for a full-bleed grid */}
+      <div className="w-full mx-auto max-w-4xl py-4">
         <ProfileHeader profileUser={serializableProfileUser} />
 
         <Tabs defaultValue="posts" className="w-full mt-4">
