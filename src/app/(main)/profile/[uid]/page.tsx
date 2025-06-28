@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import ProfilePosts from '@/components/profile/ProfilePosts';
 import ProfileViewLogger from '@/components/profile/ProfileViewLogger';
+import { deepSerialize } from '@/lib/server-utils';
 
 interface UserProfilePageProps {
   params: { uid: string };
@@ -23,8 +24,8 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
   const profileUserData = profileUserSnap.data();
 
   // KESİN ÇÖZÜM: Firestore'dan gelen karmaşık nesneyi, istemciye göndermeden önce
-  // JSON formatına çevirerek "düz" ve güvenli bir hale getiriyoruz.
-  const serializableProfileUser = JSON.parse(JSON.stringify(profileUserData));
+  // `deepSerialize` fonksiyonu ile "düz" ve güvenli bir hale getiriyoruz.
+  const serializableProfileUser = deepSerialize(profileUserData);
 
   return (
     <>

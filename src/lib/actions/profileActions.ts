@@ -3,6 +3,7 @@
 import { db } from '@/lib/firebase';
 import { doc, setDoc, serverTimestamp, collection, query, orderBy, getDocs, limit, where } from 'firebase/firestore';
 import type { ProfileViewer, UserProfile } from '../types';
+import { deepSerialize } from '../server-utils';
 
 export async function logProfileView(targetUserId: string, viewerId: string) {
   if (!viewerId || !targetUserId || viewerId === targetUserId) return;
@@ -38,14 +39,14 @@ export async function getProfileViewers(userId: string): Promise<ProfileViewer[]
       const userMap = new Map<string, UserProfile>();
       userSnap.forEach(doc => userMap.set(doc.id, doc.data() as UserProfile));
 
-      const serializableViewers = viewers.map(viewer => ({
+      const populatedViewers = viewers.map(viewer => ({
           ...viewer,
           username: userMap.get(viewer.uid)?.username || 'Bilinmeyen Kullanıcı',
           photoURL: userMap.get(viewer.uid)?.photoURL || null
       }));
 
-      // İstemciye göndermeden önce veriyi serileştirerek "düz" bir nesneye dönüştür.
-      return JSON.parse(JSON.stringify(serializableViewers));
+      // İstemciye göndermeden önce `viewedAt` Timestamp'lerini güvenli hale getir.
+      return deepSerialize(populatedViewers);
   }
 
   return [];

@@ -4,6 +4,7 @@
 import { db } from '@/lib/firebase';
 import type { UserProfile } from '@/lib/types';
 import { doc, getDoc } from 'firebase/firestore';
+import { deepSerialize } from '../server-utils';
 
 /**
  * Belirli bir kullanıcının profil bilgilerini getirir.
@@ -16,8 +17,8 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     const userSnap = await getDoc(userRef);
     if (userSnap.exists()) {
         const userData = userSnap.data();
-        // İstemciye göndermeden önce veriyi serileştirerek "düz" bir nesneye dönüştür.
-        return JSON.parse(JSON.stringify(userData)) as UserProfile;
+        // İstemciye göndermeden önce veriyi `deepSerialize` ile güvenli hale getir.
+        return deepSerialize(userData) as UserProfile;
     }
     return null;
 }
