@@ -10,30 +10,28 @@ import { Timestamp } from 'firebase/firestore';
  * @returns JSON uyumlu, serileştirilebilir yeni bir nesne.
  */
 export function deepSerialize(obj: any): any {
-  // Eğer değer null veya primitive bir tür ise (nesne değilse), doğrudan döndür.
+  // 1. Temel Durum: Değer bir nesne değilse (null dahil), olduğu gibi döndür.
   if (obj === null || typeof obj !== 'object') {
     return obj;
   }
 
-  // Firestore Timestamp nesnesini kontrol et ve ISO string'e çevir.
-  // Bu, hem `instanceof Timestamp` olanları hem de `{seconds, nanoseconds}`
-  // yapısındaki düz objeleri yakalar.
-  if (obj instanceof Timestamp) {
-    return obj.toDate().toISOString();
-  }
+  // 2. Timestamp Kontrolü: Firestore Timestamp nesnesi ise, ISO string'e çevir.
+  // Bu kontrol hem gerçek `Timestamp` örneklerini hem de `toDate` metoduna sahip
+  // benzer yapıları (duck typing) yakalar.
   if (typeof obj.toDate === 'function') {
     return obj.toDate().toISOString();
   }
 
-  // Dizi ise, her elemanını özyineli olarak işle.
+  // 3. Dizi Kontrolü: Eğer bir dizi ise, her elemanı için fonksiyonu tekrar çağır.
   if (Array.isArray(obj)) {
     return obj.map(item => deepSerialize(item));
   }
 
-  // Nesne ise, her bir anahtar-değer çiftini özyineli olarak işle.
+  // 4. Nesne Kontrolü: Kalan durum bir nesne olmalıdır. Her bir anahtar-değer
+  //    çifti için fonksiyonu tekrar çağırarak yeni bir nesne oluştur.
   const newObj: { [key: string]: any } = {};
   for (const key in obj) {
-    // Nesnenin kendi özelliğiyse devam et.
+    // Nesnenin prototip zincirinden gelen özellikleri atlamak için kontrol.
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
       newObj[key] = deepSerialize(obj[key]);
     }
