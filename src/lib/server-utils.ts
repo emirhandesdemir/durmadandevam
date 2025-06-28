@@ -4,7 +4,7 @@ import { Timestamp } from 'firebase/firestore';
 /**
  * Veritabanından gelen ve Firestore Timestamp gibi özel nesneler içeren
  * bir objeyi, Next.js'in sunucudan istemciye güvenle aktarabileceği
- * "düz" bir objeye dönüştürür.
+ * "düz" bir objeye dönüştürür. cleanFirestoreData olarak da adlandırılabilir.
  * @param obj - Dönüştürülecek nesne veya dizi.
  * @returns JSON uyumlu, serileştirilebilir yeni bir nesne.
  */
