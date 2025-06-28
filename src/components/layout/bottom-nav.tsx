@@ -8,9 +8,12 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
+// Dummy icon to satisfy type checker for profile item
+const UserIcon = () => null;
+
 export default function BottomNav() {
     const pathname = usePathname();
-    const { user, featureFlags } = useAuth();
+    const { user, featureFlags, userData } = useAuth(); // Hata düzeltildi: Hook çağrısı bileşen içine alındı.
     
     const postFeedEnabled = featureFlags?.postFeedEnabled ?? true;
 
@@ -74,7 +77,3 @@ export default function BottomNav() {
         </div>
     )
 }
-
-// Dummy icon to satisfy type checker for profile item
-const UserIcon = () => null;
-const { userData } = useAuth();
