@@ -60,7 +60,8 @@ export default function InviteDialog({ isOpen, onOpenChange, roomId, roomName }:
             await sendRoomInvite(roomId, roomName, {
                 uid: userData.uid,
                 username: userData.username,
-                photoURL: userData.photoURL
+                photoURL: userData.photoURL,
+                selectedAvatarFrame: userData.selectedAvatarFrame,
             }, inviteeId);
             toast({ description: "Davet gönderildi." });
         } catch (error: any) {

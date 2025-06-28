@@ -1,4 +1,3 @@
-
 // src/components/posts/PostCard.tsx
 "use client";
 
@@ -43,7 +42,7 @@ interface PostCardProps {
 }
 
 export default function PostCard({ post }: PostCardProps) {
-    const { user: currentUser } = useAuth();
+    const { user: currentUser, userData: currentUserData } = useAuth();
     const { toast } = useToast();
 
     // State'ler
@@ -95,6 +94,7 @@ export default function PostCard({ post }: PostCardProps) {
                     uid: currentUser.uid,
                     displayName: currentUser.displayName,
                     photoURL: currentUser.photoURL,
+                    selectedAvatarFrame: currentUserData?.selectedAvatarFrame || ''
                 }
             );
         } catch (error) {

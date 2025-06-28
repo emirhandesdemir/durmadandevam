@@ -72,7 +72,8 @@ export default function CreateRoomForm() {
                   uid: user.uid,
                   username: user.displayName || "Bilinmeyen Kullanıcı",
                   photoURL: user.photoURL,
-                  role: userData.role || 'user'
+                  role: userData.role || 'user',
+                  selectedAvatarFrame: userData.selectedAvatarFrame || ''
                 },
                 moderators: [user.uid], // Creator is the first moderator
                 createdAt: serverTimestamp(),

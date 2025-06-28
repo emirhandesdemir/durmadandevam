@@ -13,6 +13,7 @@ import { ChevronLeft, Loader2 } from 'lucide-react';
 import NewMessageInput from './NewMessageInput';
 import MessageBubble from './MessageBubble';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 interface DMChatProps {
   chatId: string;
@@ -71,10 +72,12 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
             <Link href="/dm"><ChevronLeft /></Link>
         </Button>
         <Link href={`/profile/${partner.uid}`} className="flex items-center gap-3">
-            <Avatar>
-                <AvatarImage src={partner.photoURL || undefined} />
-                <AvatarFallback>{partner.username.charAt(0)}</AvatarFallback>
-            </Avatar>
+            <div className={cn("avatar-frame-wrapper", partner.selectedAvatarFrame)}>
+                <Avatar className="relative z-[1]">
+                    <AvatarImage src={partner.photoURL || undefined} />
+                    <AvatarFallback>{partner.username.charAt(0)}</AvatarFallback>
+                </Avatar>
+            </div>
             <h2 className="font-bold text-lg">{partner.username}</h2>
         </Link>
       </header>

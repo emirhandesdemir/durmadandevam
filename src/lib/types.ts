@@ -26,6 +26,7 @@ export interface ProfileViewer {
     viewedAt: Timestamp;
     username?: string;
     photoURL?: string | null;
+    selectedAvatarFrame?: string;
 }
 
 export interface FollowRequest {
@@ -41,8 +42,8 @@ export interface Notification {
     recipientId: string;
     senderId: string;
     senderUsername: string;
-
     senderAvatar: string | null;
+    senderAvatarFrame?: string;
     type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'portal_opened';
     postId?: string | null;
     postImage?: string | null;
@@ -91,6 +92,7 @@ export interface Room {
         username: string;
         photoURL?: string | null;
         role?: 'admin' | 'user';
+        selectedAvatarFrame?: string;
     };
     moderators: string[]; // List of moderator UIDs
     createdAt: Timestamp;

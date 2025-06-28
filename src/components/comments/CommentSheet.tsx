@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Send } from "lucide-react";
 import { Post } from "../posts/PostsFeed";
 import CommentItem, { type Comment } from "./CommentItem";
+import { cn } from "@/lib/utils";
 
 interface CommentSheetProps {
     open: boolean;
@@ -146,10 +147,12 @@ export default function CommentSheet({ open, onOpenChange, post }: CommentSheetP
                         </div>
                     )}
                     <div className="flex items-start gap-2">
-                        <Avatar className="h-9 w-9">
-                            <AvatarImage src={user?.photoURL || undefined} />
-                            <AvatarFallback>{user?.displayName?.charAt(0)}</AvatarFallback>
-                        </Avatar>
+                         <div className={cn("avatar-frame-wrapper", userData?.selectedAvatarFrame)}>
+                            <Avatar className="relative z-[1] h-9 w-9">
+                                <AvatarImage src={user?.photoURL || undefined} />
+                                <AvatarFallback>{user?.displayName?.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                        </div>
                         <div className="flex-1 relative">
                             <Textarea
                                 ref={textareaRef}

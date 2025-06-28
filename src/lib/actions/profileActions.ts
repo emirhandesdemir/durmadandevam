@@ -42,7 +42,8 @@ export async function getProfileViewers(userId: string): Promise<ProfileViewer[]
       const populatedViewers = viewers.map(viewer => ({
           ...viewer,
           username: userMap.get(viewer.uid)?.username || 'Bilinmeyen Kullanıcı',
-          photoURL: userMap.get(viewer.uid)?.photoURL || null
+          photoURL: userMap.get(viewer.uid)?.photoURL || null,
+          selectedAvatarFrame: userMap.get(viewer.uid)?.selectedAvatarFrame || ''
       }));
 
       // İstemciye göndermeden önce `viewedAt` Timestamp'lerini güvenli hale getir.

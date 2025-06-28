@@ -60,6 +60,7 @@ export async function followUser(currentUserId: string, targetUserId: string, cu
             senderId: currentUserId,
             senderUsername: currentUserInfo.username || 'Biri',
             senderAvatar: currentUserInfo.photoURL,
+            senderAvatarFrame: currentUserInfo.userAvatarFrame,
             type: 'follow',
         });
     }
@@ -119,6 +120,7 @@ export async function handleFollowRequest(currentUserId: string, requesterId: st
             senderId: currentUserId,
             senderUsername: currentUserData.username || 'Biri',
             senderAvatar: currentUserData.photoURL,
+            senderAvatarFrame: currentUserData.selectedAvatarFrame,
             type: 'follow_accept', // A new type for accepted request
         });
     }

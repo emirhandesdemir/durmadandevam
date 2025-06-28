@@ -107,10 +107,12 @@ export default function RoomListItem({ room }: RoomListItemProps) {
             )}
             <div className="relative">
                 <Link href={`/profile/${room.createdBy.uid}`}>
-                    <Avatar className="h-12 w-12 border">
-                        <AvatarImage src={room.createdBy.photoURL || undefined} />
-                        <AvatarFallback>{room.createdBy.username?.charAt(0)}</AvatarFallback>
-                    </Avatar>
+                    <div className={cn("avatar-frame-wrapper", room.createdBy.selectedAvatarFrame)}>
+                        <Avatar className="relative z-[1] h-12 w-12 border">
+                            <AvatarImage src={room.createdBy.photoURL || undefined} />
+                            <AvatarFallback>{room.createdBy.username?.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                    </div>
                 </Link>
                  <div className="absolute -bottom-1 -right-1 p-1 bg-background rounded-full">
                     <Crown className="h-4 w-4 text-yellow-500"/>

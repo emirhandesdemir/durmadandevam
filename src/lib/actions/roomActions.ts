@@ -124,7 +124,7 @@ export async function joinRoom(roomId: string, userInfo: UserInfo) {
 export async function sendRoomInvite(
   roomId: string,
   roomName: string,
-  inviter: { uid: string, username: string | null, photoURL: string | null },
+  inviter: { uid: string, username: string | null, photoURL: string | null, selectedAvatarFrame?: string },
   inviteeId: string
 ) {
   if (!roomId || !inviter || !inviteeId) throw new Error("Eksik bilgi: Davet gönderilemedi.");
@@ -135,6 +135,7 @@ export async function sendRoomInvite(
     senderId: inviter.uid,
     senderUsername: inviter.username || "Biri",
     senderAvatar: inviter.photoURL,
+    senderAvatarFrame: inviter.selectedAvatarFrame,
     type: 'room_invite',
     roomId: roomId,
     roomName: roomName,

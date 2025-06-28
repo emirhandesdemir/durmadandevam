@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { joinRoom } from '@/lib/actions/roomActions';
+import { cn } from '@/lib/utils';
 
 interface NotificationItemProps {
   notification: Notification;
@@ -140,10 +141,12 @@ export default function NotificationItem({ notification }: NotificationItemProps
   return (
     <div className="flex items-start gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors">
        <Link href={`/profile/${notification.senderId}`}>
-            <Avatar>
-                <AvatarImage src={notification.senderAvatar || undefined} />
-                <AvatarFallback>{notification.senderUsername?.charAt(0)}</AvatarFallback>
-            </Avatar>
+            <div className={cn("avatar-frame-wrapper", notification.senderAvatarFrame)}>
+                <Avatar className="relative z-[1]">
+                    <AvatarImage src={notification.senderAvatar || undefined} />
+                    <AvatarFallback>{notification.senderUsername?.charAt(0)}</AvatarFallback>
+                </Avatar>
+            </div>
        </Link>
        {renderContent()}
     </div>

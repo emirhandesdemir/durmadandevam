@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { createPost } from "@/lib/actions/postActions";
+import { cn } from "@/lib/utils";
 
 // Import firebase storage functions
 import { storage } from "@/lib/firebase";
@@ -117,8 +118,8 @@ export default function NewPostForm() {
       <Card className="w-full overflow-hidden rounded-3xl border-0 bg-card/80 shadow-xl shadow-black/5 backdrop-blur-sm">
         <div className="flex flex-col gap-4 p-5">
           <div className="flex items-start gap-4">
-            <div className="avatar-frame-wrapper">
-              <Avatar className="h-11 w-11 flex-shrink-0 border-2 border-white">
+            <div className={cn("avatar-frame-wrapper", userData?.selectedAvatarFrame)}>
+              <Avatar className="relative z-[1] h-11 w-11 flex-shrink-0 border-2 border-white">
                 <AvatarImage src={user?.photoURL || undefined} />
                 <AvatarFallback>{user?.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
               </Avatar>

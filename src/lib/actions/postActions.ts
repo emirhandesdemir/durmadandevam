@@ -18,6 +18,7 @@ import {
 } from "firebase/firestore";
 import { ref, deleteObject } from "firebase/storage";
 import { revalidatePath } from "next/cache";
+import { createNotification } from "./notificationActions";
 
 interface CreatePostArgs {
     uid: string;
@@ -92,7 +93,7 @@ export async function updatePost(postId: string, newText: string) {
 
 export async function likePost(
     postId: string,
-    currentUser: { uid: string, displayName: string | null, photoURL: string | null }
+    currentUser: { uid: string, displayName: string | null, photoURL: string | null, selectedAvatarFrame?: string }
 ) {
     const postRef = doc(db, "posts", postId);
     
@@ -119,23 +120,15 @@ export async function likePost(
             });
             
             if (currentPostData.uid !== currentUser.uid) {
-                const notificationsRef = collection(db, 'notifications');
-                const newNotifRef = doc(notificationsRef);
-                transaction.set(newNotifRef, {
+                await createNotification({
                     recipientId: currentPostData.uid,
                     senderId: currentUser.uid,
                     senderUsername: currentUser.displayName || "Biri",
                     senderAvatar: currentUser.photoURL,
+                    senderAvatarFrame: currentUser.selectedAvatarFrame,
                     type: 'like',
                     postId: postId,
                     postImage: currentPostData.imageUrl || null,
-                    createdAt: serverTimestamp(),
-                    read: false,
-                });
-                
-                const recipientUserRef = doc(db, 'users', currentPostData.uid);
-                transaction.update(recipientUserRef, {
-                    hasUnreadNotifications: true
                 });
             }
         }
