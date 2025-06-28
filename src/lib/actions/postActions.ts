@@ -16,7 +16,7 @@ import {
     addDoc,
     getDoc,
 } from "firebase/firestore";
-import { ref, deleteObject, uploadString, getDownloadURL } from "firebase/storage";
+import { ref, deleteObject } from "firebase/storage";
 import { revalidatePath } from "next/cache";
 
 interface CreatePostArgs {
@@ -26,29 +26,17 @@ interface CreatePostArgs {
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     text: string;
-    croppedImage?: string | null;
+    imageUrl?: string;
 }
 
 export async function createPost(args: CreatePostArgs) {
-    const { uid, username, userAvatar, userAvatarFrame, userRole, text, croppedImage } = args;
+    const { uid, username, userAvatar, userAvatarFrame, userRole, text, imageUrl } = args;
 
     if (!uid) {
         throw new Error("Kullanıcı doğrulanmadı.");
     }
-    if (!text.trim() && !croppedImage) {
+    if (!text.trim() && !imageUrl) {
         throw new Error("Gönderi metin veya resim içermelidir.");
-    }
-
-    let imageUrl = "";
-    if (croppedImage) {
-        try {
-            const imageRef = ref(storage, `posts/${uid}/${Date.now()}_post.jpg`);
-            const snapshot = await uploadString(imageRef, croppedImage, 'data_url');
-            imageUrl = await getDownloadURL(snapshot.ref);
-        } catch (error) {
-            console.error("Resim yükleme hatası:", error);
-            throw new Error("Resim yüklenirken bir hata oluştu. Lütfen dosya boyutunu kontrol edin veya daha sonra tekrar deneyin.");
-        }
     }
 
     try {
@@ -59,7 +47,7 @@ export async function createPost(args: CreatePostArgs) {
             userAvatarFrame: userAvatarFrame || '',
             userRole: userRole || 'user',
             text,
-            imageUrl,
+            imageUrl: imageUrl || "",
             createdAt: serverTimestamp(),
             likes: [],
             likeCount: 0,
@@ -80,9 +68,6 @@ export async function createPost(args: CreatePostArgs) {
 export async function deletePost(postId: string, imageUrl?: string) {
     const postRef = doc(db, "posts", postId);
     
-    // To delete subcollections, you need a recursive function,
-    // which is best handled by a Cloud Function trigger for robustness.
-    // For now, we only delete the post document itself.
     await deleteDoc(postRef);
 
     if (imageUrl) {
@@ -90,7 +75,6 @@ export async function deletePost(postId: string, imageUrl?: string) {
             const imageRef = ref(storage, imageUrl);
             await deleteObject(imageRef);
         } catch (error: any) {
-            // It's okay if the file doesn't exist (e.g., already deleted).
             if (error.code !== 'storage/object-not-found') {
                 console.error("Storage resmi silinirken hata oluştu:", error);
             }
@@ -106,7 +90,6 @@ export async function updatePost(postId: string, newText: string) {
     });
 }
 
-// Refactored to be more robust and use a transaction
 export async function likePost(
     postId: string,
     currentUser: { uid: string, displayName: string | null, photoURL: string | null }
@@ -135,7 +118,6 @@ export async function likePost(
                 likeCount: increment(1)
             });
             
-            // Send notification only when liking, not unliking, and not to self
             if (currentPostData.uid !== currentUser.uid) {
                 const notificationsRef = collection(db, 'notifications');
                 const newNotifRef = doc(notificationsRef);
