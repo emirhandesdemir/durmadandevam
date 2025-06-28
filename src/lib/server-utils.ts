@@ -1,5 +1,4 @@
 // src/lib/server-utils.ts
-
 import { Timestamp } from 'firebase/firestore';
 
 /**
@@ -18,9 +17,10 @@ export function deepSerialize(obj: any): any {
   // 2. Timestamp Kontrolü: Firestore Timestamp nesnesi ise, ISO string'e çevir.
   // Bu kontrol hem gerçek `Timestamp` örneklerini hem de `toDate` metoduna sahip
   // benzer yapıları (duck typing) yakalar.
-  if (typeof obj.toDate === 'function') {
+  if (obj instanceof Timestamp || typeof obj.toDate === 'function') {
     return obj.toDate().toISOString();
   }
+
 
   // 3. Dizi Kontrolü: Eğer bir dizi ise, her elemanı için fonksiyonu tekrar çağır.
   if (Array.isArray(obj)) {
