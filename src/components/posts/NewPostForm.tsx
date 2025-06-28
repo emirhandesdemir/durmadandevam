@@ -5,10 +5,7 @@ import { useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { db, storage } from "@/lib/firebase";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { FirebaseError } from "firebase/app";
+import { createPost } from "@/lib/actions/postActions";
 
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -74,43 +71,27 @@ export default function NewPostForm() {
     setIsSubmitting(true);
     
     try {
-        let imageUrl = "";
-        if (croppedImage) {
-            const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}_post.jpg`);
-            const snapshot = await uploadString(imageRef, croppedImage, 'data_url');
-            imageUrl = await getDownloadURL(snapshot.ref);
-        }
-
-        await addDoc(collection(db, 'posts'), {
+        await createPost({
             uid: user.uid,
             username: userData.username,
             userAvatar: userData.photoURL,
             userAvatarFrame: userData.selectedAvatarFrame || '',
             userRole: userData.role || 'user',
             text,
-            imageUrl,
-            createdAt: serverTimestamp(),
-            likes: [],
-            likeCount: 0,
-            commentCount: 0,
+            croppedImage, // Pass the data URL to the action
         });
 
         toast({ title: "Başarıyla Paylaşıldı!", description: "Gönderiniz ana sayfada görünecektir." });
         router.push('/home');
 
-    } catch (error) {
-        console.error("Gönderi paylaşılırken detaylı hata:", error);
-        let description = "Gönderiniz paylaşılamadı. Lütfen tekrar deneyin.";
-        if (error instanceof FirebaseError) {
-             if (error.code === 'storage/retry-limit-exceeded') {
-                description = 'Resim yüklenemedi, ağ bağlantınız yavaş olabilir. Lütfen daha sonra tekrar deneyin.';
-             } else if (error.code === 'storage/unauthorized') {
-                description = 'Resim yükleme yetkiniz yok. Lütfen Firebase projenizdeki Storage Kurallarını kontrol edin.';
-             } else if (error.code.includes('permission-denied')) {
-                description = 'Veritabanına veya depolamaya yazma izniniz yok. Lütfen Firebase güvenlik kurallarınızı kontrol edin.';
-             }
-        }
-        toast({ variant: 'destructive', title: 'Bir Hata Oluştu', description, duration: 9000 });
+    } catch (error: any) {
+        console.error("Gönderi paylaşılırken hata:", error);
+        toast({ 
+            variant: 'destructive', 
+            title: 'Bir Hata Oluştu', 
+            description: error.message || 'Gönderiniz paylaşılamadı. Lütfen tekrar deneyin.', 
+            duration: 9000 
+        });
     } finally {
         setIsSubmitting(false);
     }
@@ -123,10 +104,12 @@ export default function NewPostForm() {
       <Card className="w-full overflow-hidden rounded-3xl border-0 bg-card/80 shadow-xl shadow-black/5 backdrop-blur-sm">
         <div className="flex flex-col gap-4 p-5">
           <div className="flex items-start gap-4">
-            <Avatar className="h-11 w-11 flex-shrink-0 border-2 border-white">
-              <AvatarImage src={user?.photoURL || undefined} />
-              <AvatarFallback>{user?.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
-            </Avatar>
+            <div className="avatar-frame-wrapper">
+              <Avatar className="h-11 w-11 flex-shrink-0 border-2 border-white">
+                <AvatarImage src={user?.photoURL || undefined} />
+                <AvatarFallback>{user?.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
+              </Avatar>
+            </div>
             <Textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
