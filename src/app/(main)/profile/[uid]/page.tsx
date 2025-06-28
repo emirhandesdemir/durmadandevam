@@ -7,6 +7,9 @@ import ProfileHeader from '@/components/profile/ProfileHeader';
 import ProfilePosts from '@/components/profile/ProfilePosts';
 import ProfileViewLogger from '@/components/profile/ProfileViewLogger';
 
+type ProfilePageProps = {
+    params: { uid: string };
+};
 
 /**
  * Recursively converts Firestore Timestamps within an object or array to ISO strings.
@@ -20,26 +23,29 @@ function deepSerialize(data: any): any {
     return data;
   }
 
-  // Specifically handle Firestore Timestamp objects.
+  // Handle Firestore Timestamps
   if (data instanceof Timestamp) {
     return data.toDate().toISOString();
   }
   
-  // Also handle plain objects that look like Timestamps, as a fallback.
+  // Handle plain objects that look like Timestamps (a common case)
   if (typeof data.seconds === 'number' && typeof data.nanoseconds === 'number' && Object.keys(data).length === 2) {
-     return new Date(data.seconds * 1000 + data.nanoseconds / 1000000).toISOString();
+    return new Date(data.seconds * 1000 + data.nanoseconds / 1000000).toISOString();
   }
 
-  // Handle arrays by serializing each item.
+  // Handle arrays by recursively serializing each item
   if (Array.isArray(data)) {
-    return data.map(deepSerialize);
+    return data.map(item => deepSerialize(item));
   }
   
-  // Handle objects by serializing each value.
+  // Handle general objects by recursively serializing each value
   const newObj: { [key: string]: any } = {};
   for (const key in data) {
-    newObj[key] = deepSerialize(data[key]);
+    if (Object.prototype.hasOwnProperty.call(data, key)) {
+      newObj[key] = deepSerialize(data[key]);
+    }
   }
+
   return newObj;
 }
 
