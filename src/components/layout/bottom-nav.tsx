@@ -54,10 +54,10 @@ export default function BottomNav() {
     {
       id: 'rooms',
       isActive: pathname === '/rooms' || pathname === '/create-room',
-      href: isManagementOpen ? '#' : (userRoom ? '#' : '/create-room'),
+      href: (pathname === '/rooms' && userRoom) ? '#' : (pathname === '/rooms' ? '/create-room' : '/rooms'),
       icon: (pathname === '/rooms' && userRoom) ? Settings : (pathname === '/rooms' ? PlusSquare : MessageSquare),
       label: (pathname === '/rooms' && userRoom) ? 'Yönet' : (pathname === '/rooms' ? 'Oluştur' : 'Odalar'),
-      onClick: (pathname === '/rooms' && userRoom) ? () => setIsManagementOpen(true) : (pathname === '/rooms' ? () => router.push('/create-room') : () => router.push('/rooms'))
+      onClick: (pathname === '/rooms' && userRoom) ? () => setIsManagementOpen(true) : undefined,
     },
     {
       id: 'profile',
@@ -65,7 +65,6 @@ export default function BottomNav() {
       href: `/profile/${user.uid}`,
       icon: pathname.startsWith('/profile') ? Settings : null,
       label: pathname.startsWith('/profile') ? 'Ayarlar' : 'Profil',
-      onClick: () => router.push('/profile'),
     },
   ];
 
