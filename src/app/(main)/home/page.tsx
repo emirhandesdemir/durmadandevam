@@ -35,12 +35,9 @@ export default function HomePage() {
   return (
     // Sayfanın ana sarmalayıcısı, arka plan rengini ve minimum yüksekliği ayarlar.
     <div className="min-h-screen bg-background text-foreground">
-      {/* 'container' sınıfı, içeriği ortalar ve maksimum genişlik belirler. */}
-      <main className="container mx-auto max-w-3xl px-4 py-6 md:py-8">
-        
-        {/* Ana sayfanın dikey düzenini ve bileşenler arası boşluğu yöneten sarmalayıcı */}
-        <div className="flex flex-col gap-8">
-          
+      {/* Container ve paddingler kaldırıldı, PostsFeed artık tam genişlikte */}
+      <main>
+        <div className="flex flex-col">
           {/* 
             Gönderi akışı bileşeni (PostsFeed).
             Bu bileşen, Firestore veritabanından gönderileri çeker ve listeler.
@@ -48,7 +45,6 @@ export default function HomePage() {
             Tüm gönderi akışı mantığı src/components/posts/PostsFeed.tsx dosyasındadır.
           */}
           <PostsFeed />
-          
         </div>
       </main>
     </div>

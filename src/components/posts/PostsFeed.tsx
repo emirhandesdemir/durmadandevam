@@ -73,7 +73,7 @@ export default function PostsFeed() {
   // Hiç gönderi yoksa gösterilecek mesaj
   if (!loading && posts.length === 0) {
     return (
-        <Card className="text-center p-8 border-dashed rounded-3xl">
+        <Card className="text-center p-8 border-dashed rounded-3xl m-4">
           <CardContent className="p-0">
             <h3 className="text-lg font-semibold">Henüz Hiç Gönderi Yok!</h3>
             <p className="text-muted-foreground mt-2">İlk gönderiyi sen paylaşarak etkileşimi başlatabilirsin.</p>
@@ -83,7 +83,7 @@ export default function PostsFeed() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col">
       {/* Gelen gönderi verilerini map ile dönerek her biri için bir PostCard oluştur */}
       {posts.map((post) => (
         <PostCard key={post.id} post={post} />

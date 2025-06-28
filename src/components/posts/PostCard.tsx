@@ -5,7 +5,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Post } from "./PostsFeed";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck } from "lucide-react";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
@@ -150,9 +149,10 @@ export default function PostCard({ post }: PostCardProps) {
 
     return (
         <>
-            <Card className="w-full animate-in fade-in-50 duration-500 overflow-hidden rounded-2xl border bg-card/50 shadow-lg shadow-black/5">
+            <div className="w-full animate-in fade-in-50 duration-500 border-b">
+                {/* Header and text have padding */}
                 <div className="p-4">
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center justify-between">
                         <Link href={`/profile/${post.uid}`} className="flex items-center gap-3 group">
                             <div className={cn("avatar-frame-wrapper p-1", post.userAvatarFrame)}>
                                 <Avatar className="h-10 w-10 border">
@@ -200,9 +200,8 @@ export default function PostCard({ post }: PostCardProps) {
                         )}
                     </div>
 
-                    <div className="space-y-3">
-                        {isEditing ? (
-                            <div className="space-y-2">
+                    {isEditing ? (
+                            <div className="space-y-2 mt-3">
                                 <Textarea
                                     ref={textareaRef}
                                     value={editedText}
@@ -223,24 +222,25 @@ export default function PostCard({ post }: PostCardProps) {
                                 </div>
                             </div>
                         ) : (
-                            post.text && <p className="text-sm leading-relaxed whitespace-pre-wrap">{renderTextWithLinks(post.text)}</p>
+                            post.text && <p className="text-sm leading-relaxed whitespace-pre-wrap mt-3">{renderTextWithLinks(post.text)}</p>
                         )}
-
-                        {post.imageUrl && !isEditing && (
-                            <div className="overflow-hidden rounded-xl border">
-                                <Image
-                                    src={post.imageUrl}
-                                    alt="Gönderi resmi"
-                                    width={800}
-                                    height={400}
-                                    className="aspect-[2/1] w-full object-cover transition-transform duration-300 hover:scale-105"
-                                />
-                            </div>
-                        )}
-                    </div>
                 </div>
 
-                <div className="border-t px-4 py-2 flex items-center justify-start gap-1">
+                {/* Image is full-width, no padding */}
+                {post.imageUrl && !isEditing && (
+                    <div className="w-full mt-2">
+                        <Image
+                            src={post.imageUrl}
+                            alt="Gönderi resmi"
+                            width={800}
+                            height={800}
+                            className="aspect-square w-full object-cover"
+                        />
+                    </div>
+                )}
+                
+                {/* Footer has padding */}
+                <div className="px-4 py-2 flex items-center justify-start gap-1">
                     <Button
                         variant="ghost"
                         className={cn(
@@ -265,9 +265,10 @@ export default function PostCard({ post }: PostCardProps) {
                         <span className="text-xs">{post.commentCount || 0}</span>
                     </Button>
                 </div>
-            </Card>
+            </div>
 
-            <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+            {/* Silme Onay Dialogu */}
+             <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                     <AlertDialogTitle>Emin misiniz?</AlertDialogTitle>
@@ -285,6 +286,7 @@ export default function PostCard({ post }: PostCardProps) {
                 </AlertDialogContent>
             </AlertDialog>
             
+            {/* Yorumlar Paneli */}
             <CommentSheet 
                 open={showComments} 
                 onOpenChange={setShowComments}

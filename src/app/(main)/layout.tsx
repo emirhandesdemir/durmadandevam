@@ -8,6 +8,7 @@ import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
 import { motion, useScroll, useMotionValueEvent } from 'framer-motion';
 import { useState } from 'react';
 import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 export default function MainAppLayout({
   children,
@@ -31,6 +32,10 @@ export default function MainAppLayout({
       setHidden(false);
     }
   });
+  
+  // Ev sayfası dışındaki sayfalara padding uygula
+  const isHomePage = pathname === '/home';
+
 
   return (
     <VoiceChatProvider>
@@ -49,7 +54,7 @@ export default function MainAppLayout({
 
         {/* Main content area, padding bottom for the nav bar and top for the header */}
         <main className="flex-1 overflow-y-auto pb-24 pt-16">
-           <div className="p-4">
+           <div className={cn(!isHomePage && "p-4")}>
             {children}
           </div>
         </main>
