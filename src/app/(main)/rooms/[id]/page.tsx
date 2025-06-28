@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
-import { Loader2, Mic, MicOff, Plus, Crown, PhoneOff, ScreenShare, ScreenShareOff, ChevronsUpDown, Hash } from 'lucide-react';
+import { Loader2, Mic, MicOff, Plus, Crown, PhoneOff, ScreenShare, ScreenShareOff, ChevronsUpDown, Hash, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TextChat, { type Message } from '@/components/chat/text-chat';
 import ChatMessageInput from '@/components/chat/ChatMessageInput';
@@ -95,8 +95,11 @@ export default function RoomPage() {
             if (docSnap.exists()) {
                  const roomData = { id: docSnap.id, ...docSnap.data() } as Room;
                  setRoom(roomData);
-                 if (roomData.type === 'server' && roomData.channels && !selectedChannelId) {
-                     setSelectedChannelId(roomData.channels[0].id);
+                 if (roomData.type === 'server' && roomData.categories && roomData.categories.length > 0 && !selectedChannelId) {
+                    const firstTextChannel = roomData.categories.flatMap(c => c.channels).find(ch => ch.type === 'text');
+                    if (firstTextChannel) {
+                        setSelectedChannelId(firstTextChannel.id);
+                    }
                  }
             } else {
                  toast({ variant: 'destructive', title: 'Oda Bulunamadı', description: 'Bu oda artık mevcut değil veya süresi dolmuş.' });
@@ -125,6 +128,9 @@ export default function RoomPage() {
         const messagesQuery = query(messagePath, orderBy("createdAt", "asc"), limit(100));
         const messagesUnsub = onSnapshot(messagesQuery, (snapshot) => {
             setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message)));
+            setMessagesLoading(false);
+        }, (error) => {
+            console.error("Mesajlar alınırken hata:", error);
             setMessagesLoading(false);
         });
 
@@ -181,8 +187,8 @@ export default function RoomPage() {
                 <TextChat messages={messages} loading={messagesLoading} />
             </div>
 
-            <footer className="fixed bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-gray-900 via-gray-900/80 to-transparent pointer-events-none">
-                <div className="flex items-center gap-2 p-2 bg-gray-800/80 backdrop-blur-sm rounded-full border border-gray-700/50 pointer-events-auto">
+            <footer className="fixed bottom-0 left-0 right-0 p-3 pointer-events-none">
+                <div className="flex items-center gap-2 p-2 bg-gray-800/80 backdrop-blur-sm rounded-full border border-gray-700/50 pointer-events-auto max-w-lg mx-auto">
                     <ChatMessageInput roomId={roomId} canSendMessage={isRoomParticipant || false} />
                 </div>
             </footer>
@@ -197,13 +203,35 @@ export default function RoomPage() {
                     <h1 className="font-bold text-lg truncate">{room?.name}</h1>
                     <p className="text-xs text-muted-foreground truncate">{room?.description}</p>
                 </div>
-                <div className="flex-1 space-y-1">
-                     <p className="px-2 py-1 text-xs font-bold uppercase text-muted-foreground">Metin Kanalları</p>
-                    {room?.channels?.map(channel => (
-                        <button key={channel.id} onClick={() => setSelectedChannelId(channel.id)} className={cn("w-full text-left flex items-center gap-2 p-2 rounded-md transition-colors", selectedChannelId === channel.id ? "bg-primary/20 text-white" : "text-gray-400 hover:bg-gray-700/50 hover:text-white")}>
-                            <Hash className="h-5 w-5"/>
-                            <span className="font-medium truncate">{channel.name}</span>
-                        </button>
+                <div className="flex-1 space-y-1 overflow-y-auto">
+                    {room?.categories?.map(category => (
+                        <div key={category.id} className="pt-2">
+                            <p className="px-2 py-1 text-xs font-bold uppercase text-muted-foreground">{category.name}</p>
+                            <div className="space-y-1 mt-1">
+                                {category.channels.map(channel => {
+                                    const Icon = channel.type === 'voice' ? Volume2 : Hash;
+                                    const isSelected = selectedChannelId === channel.id;
+                                    
+                                    const handleChannelClick = () => {
+                                        if (channel.type === 'text') {
+                                            setSelectedChannelId(channel.id);
+                                        } else {
+                                            toast({ title: 'Yakında...', description: 'Ses kanalları özelliği yakında eklenecektir.' });
+                                        }
+                                    };
+
+                                    return (
+                                        <button key={channel.id} onClick={handleChannelClick} className={cn(
+                                            "w-full text-left flex items-center gap-2 p-2 rounded-md transition-colors",
+                                            isSelected ? "bg-primary/20 text-white" : "text-gray-400 hover:bg-gray-700/50 hover:text-white"
+                                        )}>
+                                            <Icon className="h-5 w-5"/>
+                                            <span className="font-medium truncate">{channel.name}</span>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
                     ))}
                 </div>
                  <div className="p-2 border-t border-gray-700/50 flex items-center gap-2">
@@ -226,8 +254,8 @@ export default function RoomPage() {
                  <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 pb-28">
                     <TextChat messages={messages} loading={messagesLoading} />
                  </div>
-                 <footer className="fixed bottom-0 left-0 md:left-72 right-0 p-3 bg-gradient-to-t from-gray-900 via-gray-900/80 to-transparent pointer-events-none">
-                    <div className="flex items-center gap-2 p-2 bg-gray-800/80 backdrop-blur-sm rounded-full border border-gray-700/50 pointer-events-auto">
+                 <footer className="fixed bottom-0 left-0 md:left-72 right-0 p-3 pointer-events-none">
+                    <div className="flex items-center gap-2 p-2 bg-gray-800/80 backdrop-blur-sm rounded-full border border-gray-700/50 pointer-events-auto max-w-3xl mx-auto">
                         <ChatMessageInput roomId={roomId} channelId={selectedChannelId!} canSendMessage={isRoomParticipant || false} />
                     </div>
                 </footer>

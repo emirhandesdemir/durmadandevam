@@ -95,12 +95,29 @@ export default function CreateRoomForm() {
                 newCommunity.expiresAt = Timestamp.fromMillis(Date.now() + fifteenMinutesInMs);
                 newCommunity.nextGameTimestamp = Timestamp.fromMillis(Date.now() + settings.gameIntervalMinutes * 60 * 1000);
             } else {
-                 newCommunity.channels = [{
-                     id: 'general',
-                     name: 'genel-sohbet',
-                     description: 'Sunucuya hoş geldiniz! Genel sohbet alanı.',
-                     type: 'text'
-                 }];
+                 newCommunity.categories = [
+                     {
+                        id: 'text-channels',
+                        name: 'Metin Kanalları',
+                        channels: [{
+                            id: 'general',
+                            name: 'genel-sohbet',
+                            description: 'Sunucuya hoş geldiniz! Genel sohbet alanı.',
+                            type: 'text'
+                        }]
+                     },
+                     {
+                        id: 'voice-channels',
+                        name: 'Ses Kanalları',
+                        channels: [{
+                            id: 'lobby',
+                            name: 'Lobi',
+                            description: 'Genel sesli sohbet alanı.',
+                            type: 'voice'
+                        }]
+                     }
+                 ];
+                 newCommunity.moderators = [user.uid]; // The creator is the first moderator
             }
             
             const docRef = await addDoc(collection(db, "rooms"), newCommunity);
