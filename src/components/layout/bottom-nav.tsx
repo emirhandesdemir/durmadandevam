@@ -5,10 +5,11 @@ import { usePathname } from "next/navigation";
 import { Home, MessageSquare, User, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 export default function BottomNav() {
     const pathname = usePathname();
-    const { user, featureFlags, userData } = useAuth();
+    const { user, featureFlags } = useAuth();
     
     // Alt navigasyon öğeleri
     const navItems = [
@@ -17,18 +18,17 @@ export default function BottomNav() {
         { href: `/profile/${user?.uid}`, label: "Profil", icon: User },
     ];
     
-    // Oda detay sayfasındaysak alt barı gizle
+    // Belirli sayfalarda alt barı gizle
     if (pathname.startsWith('/rooms/') && pathname.split('/').length > 2) {
         return null;
     }
     
-    // Giriş yapılmamışsa alt barı gösterme
     if (!user) {
         return null;
     }
     
     const enabledNavItems = navItems.filter(item => {
-        if (item.href.endsWith('/undefined')) return false; // UID yüklenmemişse Profil'i gösterme
+        if (item.href.endsWith('/undefined')) return false;
         if (item.featureFlag) {
             return featureFlags?.[item.featureFlag as keyof typeof featureFlags] !== false;
         }
@@ -36,24 +36,26 @@ export default function BottomNav() {
     });
 
     return (
-        <footer className="border-t bg-card/80 backdrop-blur-sm shrink-0">
-            {/* Navigasyon yüksekliği azaltıldı */}
-            <nav className={`grid h-14 grid-cols-${enabledNavItems.length}`}>
+        <footer className="sticky bottom-0 z-30 border-t bg-background/95 backdrop-blur-sm shrink-0">
+            <nav className={cn("grid h-14", `grid-cols-${enabledNavItems.length}`)}>
                 {enabledNavItems.map((item) => {
-                    const isActive = item.href.startsWith('/profile/') ? pathname.startsWith('/profile/') : pathname === item.href;
+                    const isProfile = item.href.startsWith('/profile/');
+                    const isActive = isProfile ? pathname.startsWith('/profile/') : pathname === item.href;
                     
                     return (
                         <Link href={item.href} key={item.label}
                             className={cn(
                                 "flex flex-col items-center justify-center gap-1 text-xs font-medium text-muted-foreground transition-colors duration-200",
-                                // Aktif olduğunda büyütme efekti kaldırıldı
                                 isActive ? "text-primary" : "hover:text-primary"
                             )}>
-                            <div className={cn("p-2 rounded-full transition-colors", isActive ? "bg-primary/10" : "")}>
-                                {/* İkon boyutu küçültüldü */}
-                                <item.icon className="h-5 w-5"/>
-                            </div>
-                            <span className="text-xs">{item.label}</span>
+                            {isProfile ? (
+                                <Avatar className={cn("h-6 w-6 transition-all", isActive && "ring-2 ring-primary ring-offset-2 ring-offset-background")}>
+                                    <AvatarImage src={user.photoURL || undefined} />
+                                    <AvatarFallback className="text-xs bg-muted">{user.displayName?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                            ) : (
+                                <item.icon className="h-6 w-6"/>
+                            )}
                         </Link>
                     )
                 })}

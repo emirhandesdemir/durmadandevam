@@ -80,7 +80,10 @@ export default function NewPostForm() {
   const removeImage = () => {
       setImageToCrop(null);
       setImageBlob(null);
-      setImagePreviewUrl(null); // Revoke'u tetikler
+      if (imagePreviewUrl) {
+        URL.revokeObjectURL(imagePreviewUrl);
+      }
+      setImagePreviewUrl(null);
       if(fileInputRef.current) {
           fileInputRef.current.value = "";
       }

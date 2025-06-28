@@ -29,10 +29,10 @@ import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import { doc, updateDoc } from "firebase/firestore";
-import { ref, uploadString, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import ProfileViewerList from "./ProfileViewerList";
 import { Textarea } from "../ui/textarea";
-
+import { compressImage } from "@/lib/imageUtils";
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -50,7 +50,6 @@ const avatarFrameOptions = [
     { id: "avatar-frame-snake", name: "Yılan" },
 ];
 
-
 export default function ProfilePageClient() {
     const { user, userData, loading, handleLogout } = useAuth();
     const { toast } = useToast();
@@ -61,7 +60,8 @@ export default function ProfilePageClient() {
     const [bio, setBio] = useState("");
     const [privateProfile, setPrivateProfile] = useState(false);
     const [acceptsFollowRequests, setAcceptsFollowRequests] = useState(true);
-    const [newAvatar, setNewAvatar] = useState<string | null>(null);
+    const [newAvatarBlob, setNewAvatarBlob] = useState<Blob | null>(null);
+    const [newAvatarPreview, setNewAvatarPreview] = useState<string | null>(null);
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
     const [selectedBubble, setSelectedBubble] = useState("");
     const [selectedAvatarFrame, setSelectedAvatarFrame] = useState("");
@@ -77,6 +77,7 @@ export default function ProfilePageClient() {
             setAcceptsFollowRequests(userData.acceptsFollowRequests ?? true);
             setSelectedBubble(userData.selectedBubble || "");
             setSelectedAvatarFrame(userData.selectedAvatarFrame || "");
+            setNewAvatarPreview(userData.photoURL || null);
         }
     }, [userData]);
     
@@ -86,7 +87,7 @@ export default function ProfilePageClient() {
         bio !== (userData?.bio || "") ||
         privateProfile !== (userData?.privateProfile || false) || 
         acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true) ||
-        newAvatar !== null || 
+        newAvatarBlob !== null || 
         selectedBubble !== (userData?.selectedBubble || "") || 
         selectedAvatarFrame !== (userData?.selectedAvatarFrame || "");
     
@@ -105,9 +106,16 @@ export default function ProfilePageClient() {
         }
     };
     
-    const handleCropComplete = (croppedDataUrl: string) => {
-        setNewAvatar(croppedDataUrl);
+    const handleCropComplete = async (croppedDataUrl: string) => {
         setImageToCrop(null); 
+        try {
+            const blob = await compressImage(croppedDataUrl, 512, 0.9);
+            setNewAvatarBlob(blob);
+            if (newAvatarPreview) URL.revokeObjectURL(newAvatarPreview);
+            setNewAvatarPreview(URL.createObjectURL(blob));
+        } catch (error) {
+            toast({ variant: "destructive", description: "Resim işlenirken hata oluştu." });
+        }
     };
 
     const handleSaveChanges = async () => {
@@ -116,17 +124,20 @@ export default function ProfilePageClient() {
         setIsSaving(true);
         try {
             const updates: { [key: string]: any } = {};
-            let authUpdates: { displayName?: string, photoURL?: string } = {};
+            let authProfileUpdates: { displayName?: string, photoURL?: string } = {};
     
-            if (newAvatar) {
+            if (newAvatarBlob) {
                 const storageRef = ref(storage, `avatars/${user.uid}`);
-                const snapshot = await uploadString(storageRef, newAvatar, 'data_url');
+                const snapshot = await uploadBytes(storageRef, newAvatarBlob);
                 const finalPhotoURL = await getDownloadURL(snapshot.ref);
                 updates.photoURL = finalPhotoURL;
-                authUpdates.photoURL = finalPhotoURL;
+                authProfileUpdates.photoURL = finalPhotoURL;
             }
     
-            if (username !== userData?.username) updates.username = username;
+            if (username !== userData?.username) {
+                updates.username = username;
+                authProfileUpdates.displayName = username;
+            }
             if (bio !== userData?.bio) updates.bio = bio;
             if (privateProfile !== userData?.privateProfile) updates.privateProfile = privateProfile;
             if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) updates.acceptsFollowRequests = acceptsFollowRequests;
@@ -138,15 +149,15 @@ export default function ProfilePageClient() {
                 await updateDoc(userDocRef, updates);
             }
     
-            if (authUpdates.displayName) { // Only update auth profile if name changed
-                 await updateProfile(auth.currentUser, { displayName: authUpdates.displayName });
+            if (Object.keys(authProfileUpdates).length > 0) {
+                 await updateProfile(auth.currentUser, authProfileUpdates);
             }
 
             toast({
                 title: "Başarılı!",
                 description: "Profiliniz başarıyla güncellendi.",
             });
-            setNewAvatar(null); 
+            setNewAvatarBlob(null); 
     
         } catch (error: any) {
             toast({
@@ -173,8 +184,8 @@ export default function ProfilePageClient() {
                     <div className="relative">
                         <div className={cn("avatar-frame-wrapper p-2", selectedAvatarFrame)}>
                             <Avatar className="h-32 w-32 border-4 border-white shadow-lg">
-                                <AvatarImage src={newAvatar || user.photoURL || undefined} />
-                                <AvatarFallback className="text-5xl bg-primary/20">{user.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
+                                <AvatarImage src={newAvatarPreview || undefined} />
+                                <AvatarFallback className="text-5xl bg-primary/20">{username?.charAt(0).toUpperCase()}</AvatarFallback>
                             </Avatar>
                         </div>
                         <Button size="icon" variant="outline" className="absolute bottom-2 right-2 rounded-full h-10 w-10 border-2 border-background bg-card" onClick={handleAvatarClick}>
@@ -299,7 +310,6 @@ export default function ProfilePageClient() {
                     </Button>
                 </CardFooter>
             </Card>
-
             <ImageCropperDialog isOpen={!!imageToCrop} setIsOpen={(isOpen) => !isOpen && setImageToCrop(null)} imageSrc={imageToCrop} aspectRatio={1} onCropComplete={handleCropComplete} />
         </>
     );
