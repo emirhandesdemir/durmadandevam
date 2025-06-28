@@ -3,7 +3,7 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { LogIn, Check, Loader2, Users, Crown, Clock } from "lucide-react";
+import { LogIn, Check, Loader2, Users, Crown, Clock, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
@@ -14,6 +14,7 @@ import { joinRoom } from "@/lib/actions/roomActions";
 import { Timestamp } from "firebase/firestore";
 import { Badge } from "../ui/badge";
 import Link from 'next/link';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 interface RoomListItemProps {
     room: Room;
@@ -32,6 +33,8 @@ export default function RoomListItem({ room }: RoomListItemProps) {
     const router = useRouter();
     const [isJoining, setIsJoining] = useState(false);
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
+    const hasPortal = room.portalExpiresAt && (room.portalExpiresAt as Timestamp).toDate() > new Date();
 
     useEffect(() => {
         if (!room.expiresAt) return;
@@ -67,7 +70,7 @@ export default function RoomListItem({ room }: RoomListItemProps) {
             await joinRoom(room.id, {
                 uid: currentUser.uid,
                 username: currentUser.displayName,
-                photoURL: currentUser.photoURL
+                photoURL: currentUser.photoURL,
             });
             toast({ title: "Başarılı!", description: `"${room.name}" topluluğuna katıldınız.` });
             router.push(`/rooms/${room.id}`);
@@ -86,9 +89,22 @@ export default function RoomListItem({ room }: RoomListItemProps) {
 
     return (
         <div className={cn(
-            "flex items-center gap-4 p-3 rounded-2xl bg-card hover:bg-muted/50 transition-colors",
-            isExpired && "opacity-50"
+            "relative flex items-center gap-4 p-3 rounded-2xl bg-card hover:bg-muted/50 transition-all duration-300",
+            isExpired && "opacity-50",
+            hasPortal && "ring-2 ring-offset-2 ring-primary ring-offset-background"
         )}>
+            {hasPortal && (
+                <div className="absolute top-1 right-1">
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger>
+                                <Zap className="h-4 w-4 text-primary animate-pulse"/>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Bu odaya bir portal açık!</p></TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                </div>
+            )}
             <div className="relative">
                 <Link href={`/profile/${room.createdBy.uid}`}>
                     <Avatar className="h-12 w-12 border">

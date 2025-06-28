@@ -7,8 +7,9 @@ import { db } from '@/lib/firebase';
 import type { Room } from '@/lib/types';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Award, Users, Crown } from 'lucide-react';
+import { Award, Users, Crown, Zap } from 'lucide-react';
 import Link from 'next/link';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 const medalColors = [
     'border-yellow-400 bg-yellow-400/10 hover:bg-yellow-400/20', // Gold
@@ -58,28 +59,41 @@ export default function LeadershipBoard() {
         <div>
             <h2 className="text-2xl font-bold tracking-tight mb-4">Liderlik Tablosu</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {topRooms.map((room, index) => (
-                    <Link href={`/rooms/${room.id}`} key={room.id}>
-                        <Card className={`p-4 border-2 transition-all ${medalColors[index]}`}>
-                            <div className="flex items-center justify-between">
-                                <div className="flex-1 overflow-hidden">
-                                    <p className="font-bold truncate">{room.name}</p>
-                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                        <Crown className="h-3 w-3" />
-                                        <span className="truncate">{room.createdBy.username}</span>
+                {topRooms.map((room, index) => {
+                    const hasPortal = room.portalExpiresAt && (room.portalExpiresAt as Timestamp).toDate() > new Date();
+                    return (
+                        <Link href={`/rooms/${room.id}`} key={room.id}>
+                            <Card className={`relative p-4 border-2 transition-all ${medalColors[index]}`}>
+                                {hasPortal && (
+                                     <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger className="absolute top-2 right-2">
+                                                 <Zap className="h-5 w-5 text-primary animate-pulse" />
+                                            </TooltipTrigger>
+                                            <TooltipContent><p>Bu odaya bir portal açık!</p></TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                )}
+                                <div className="flex items-center justify-between">
+                                    <div className="flex-1 overflow-hidden">
+                                        <p className="font-bold truncate">{room.name}</p>
+                                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                            <Crown className="h-3 w-3" />
+                                            <span className="truncate">{room.createdBy.username}</span>
+                                        </div>
                                     </div>
+                                    <Award className={`h-8 w-8 ${medalColors[index].split(' ')[0].replace('border-','text-')}`} />
                                 </div>
-                                <Award className={`h-8 w-8 ${medalColors[index].split(' ')[0].replace('border-','text-')}`} />
-                            </div>
-                            <div className="flex items-center gap-2 text-sm mt-3 pt-3 border-t">
-                                <Users className="h-4 w-4" />
-                                <span>{room.participants.length} Katılımcı</span>
-                                <span className="text-muted-foreground mx-1">·</span>
-                                <span className="text-primary font-semibold">{room.voiceParticipantsCount || 0} Sesli</span>
-                            </div>
-                        </Card>
-                    </Link>
-                ))}
+                                <div className="flex items-center gap-2 text-sm mt-3 pt-3 border-t">
+                                    <Users className="h-4 w-4" />
+                                    <span>{room.participants.length} Katılımcı</span>
+                                    <span className="text-muted-foreground mx-1">·</span>
+                                    <span className="text-primary font-semibold">{room.voiceParticipantsCount || 0} Sesli</span>
+                                </div>
+                            </Card>
+                        </Link>
+                    )
+                })}
             </div>
         </div>
     )

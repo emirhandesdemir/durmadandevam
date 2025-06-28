@@ -8,9 +8,9 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
-import { Loader2, Mic, MicOff, Plus, Crown, PhoneOff, ScreenShare, ScreenShareOff, ChevronsUpDown } from 'lucide-react';
+import { Loader2, Mic, MicOff, Plus, Crown, PhoneOff, ScreenShare, ScreenShareOff, ChevronsUpDown, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import TextChat, { type Message } from '@/components/chat/text-chat';
+import TextChat from '@/components/chat/text-chat';
 import ChatMessageInput from '@/components/chat/ChatMessageInput';
 import VoiceUserIcon from '@/components/voice/VoiceUserIcon';
 import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
@@ -34,6 +34,7 @@ import type { Room, ActiveGame, GameSettings } from '@/lib/types';
 import GameCountdownCard from '@/components/game/GameCountdownCard';
 import RoomGameCard from '@/components/game/RoomGameCard';
 import { startGameInRoom, submitAnswer, endGameWithoutWinner, getGameSettings } from '@/lib/actions/gameActions';
+import OpenPortalDialog from '@/components/rooms/OpenPortalDialog';
 
 
 export default function RoomPage() {
@@ -52,10 +53,11 @@ export default function RoomPage() {
 
     // --- Component State ---
     const [room, setRoom] = useState<Room | null>(null);
-    const [messages, setMessages] = useState<Message[]>([]);
+    const [messages, setMessages] = useState<any[]>([]);
     const [messagesLoading, setMessagesLoading] = useState(true);
     const [isParticipantSheetOpen, setIsParticipantSheetOpen] = useState(false);
     const [showExitDialog, setShowExitDialog] = useState(false);
+    const [isPortalDialogOpen, setIsPortalDialogOpen] = useState(false);
     const [isVoiceStageCollapsed, setVoiceStageCollapsed] = useState(false);
     const chatScrollRef = useRef<HTMLDivElement>(null);
 
@@ -102,7 +104,7 @@ export default function RoomPage() {
 
         const messagesQuery = query(collection(db, "rooms", roomId, "messages"), orderBy("createdAt", "asc"), limit(100));
         const messagesUnsub = onSnapshot(messagesQuery, (snapshot) => {
-            setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message)));
+            setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
             setMessagesLoading(false);
         }, (error) => {
             console.error("Mesajlar alınırken hata:", error);
@@ -313,6 +315,9 @@ export default function RoomPage() {
                 <footer className="p-3 border-t bg-background shrink-0 flex items-center gap-2">
                     {isConnected && user ? (
                         <>
+                            <Button onClick={() => setIsPortalDialogOpen(true)} variant="ghost" size="icon" className="rounded-full bg-muted hover:bg-muted/80">
+                                <Gift className="h-5 w-5 text-yellow-500"/>
+                            </Button>
                             <Button onClick={handleToggleMute} variant="ghost" size="icon" className="rounded-full bg-muted hover:bg-muted/80">
                                 {self?.isMuted ? <MicOff className="h-5 w-5 text-destructive"/> : <Mic className="h-5 w-5"/>}
                             </Button>
@@ -336,6 +341,7 @@ export default function RoomPage() {
                 </footer>
             </div>
              <ParticipantListSheet isOpen={isParticipantSheetOpen} onOpenChange={setIsParticipantSheetOpen} room={room} />
+             <OpenPortalDialog isOpen={isPortalDialogOpen} onOpenChange={setIsPortalDialogOpen} roomId={roomId} roomName={room.name} />
             <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
                 <AlertDialogContent>
                     <AlertDialogHeader>

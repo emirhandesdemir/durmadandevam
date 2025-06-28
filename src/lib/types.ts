@@ -43,7 +43,7 @@ export interface Notification {
     senderUsername: string;
 
     senderAvatar: string | null;
-    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite';
+    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'portal_opened';
     postId?: string | null;
     postImage?: string | null;
     commentText?: string;
@@ -95,6 +95,7 @@ export interface Room {
     moderators: string[]; // List of moderator UIDs
     createdAt: Timestamp;
     expiresAt?: Timestamp; // Only for rooms
+    portalExpiresAt?: Timestamp; // For boosted rooms
     participants: { uid: string, username: string, photoURL?: string | null }[];
     maxParticipants: number;
     nextGameTimestamp?: Timestamp;
@@ -182,4 +183,18 @@ export interface DirectMessageMetadata {
     unreadCounts: {
         [uid: string]: number;
     };
+}
+
+export interface Message {
+  id: string;
+  uid: string;
+  username: string;
+  photoURL?: string | null;
+  text: string;
+  type?: 'system' | 'game' | 'portal';
+  createdAt: Timestamp;
+  selectedBubble?: string;
+  selectedAvatarFrame?: string;
+  portalRoomId?: string;
+  portalRoomName?: string;
 }

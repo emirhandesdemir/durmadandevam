@@ -10,18 +10,8 @@ import Link from 'next/link';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Loader2 } from 'lucide-react';
-
-export interface Message {
-  id: string;
-  uid: string;
-  username: string;
-  photoURL?: string | null;
-  text: string;
-  type?: 'system' | 'game';
-  createdAt: Timestamp;
-  selectedBubble?: string;
-  selectedAvatarFrame?: string;
-}
+import type { Message } from '@/lib/types';
+import PortalMessageCard from './PortalMessageCard';
 
 interface TextChatProps {
   messages: Message[];
@@ -59,10 +49,13 @@ export default function TextChat({ messages, loading }: TextChatProps) {
           );
         }
 
+        if (msg.type === 'portal') {
+            return <PortalMessageCard key={msg.id} message={msg} />;
+        }
+
         const isCurrentUser = msg.uid === currentUser.uid;
         return (
           <div key={msg.id} className={cn("flex items-end gap-3 w-full animate-in fade-in slide-in-from-bottom-4 duration-500", isCurrentUser && "flex-row-reverse")}>
-            {/* Avatar with its frame */}
             <Link href={`/profile/${msg.uid}`}>
                 <div className={cn("avatar-frame-wrapper", msg.selectedAvatarFrame)}>
                     <Avatar className="relative z-[1] h-8 w-8">
@@ -73,15 +66,13 @@ export default function TextChat({ messages, loading }: TextChatProps) {
             </Link>
 
             <div className={cn("flex flex-col gap-1 max-w-[70%]", isCurrentUser && "items-end")}>
-                {/* Username and time */}
                 <div className={cn("flex items-center gap-2", isCurrentUser && "flex-row-reverse")}>
                    <p className="font-bold text-sm text-white">{isCurrentUser ? "Siz" : msg.username}</p>
                    <p className="text-xs text-gray-400">
-                     {msg.createdAt ? format(msg.createdAt.toDate(), 'p', { locale: tr }) : ''}
+                     {msg.createdAt ? format((msg.createdAt as Timestamp).toDate(), 'p', { locale: tr }) : ''}
                    </p>
                 </div>
 
-                {/* Message Bubble with its own bubble effect */}
                 <div className="relative">
                     {msg.selectedBubble && (
                         <div className={`bubble-wrapper ${msg.selectedBubble}`}>
