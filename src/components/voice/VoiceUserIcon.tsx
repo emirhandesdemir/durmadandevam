@@ -108,46 +108,40 @@ export default function VoiceUserIcon({
 
   const avatar = (
     <div className="relative flex flex-col items-center gap-1.5">
-      <div className={cn("avatar-frame-wrapper", participant.selectedAvatarFrame)}>
-        <div className={cn(
-          "relative", 
-          size === 'lg' ? "h-24 w-24" : "w-full"
-        )}>
+      <div className="avatar-frame-wrapper">
+        <div className="relative w-full">
           {participant.selectedBubble && (
             <div className={`bubble-wrapper ${participant.selectedBubble}`}>
                 {Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}
             </div>
           )}
           <Avatar
-            className={cn(
-              "relative z-[1] border-2 transition-all duration-300 w-full h-full",
-              speakingRing
-                ? "border-green-500 shadow-lg shadow-green-500/50 ring-4 ring-green-500/30 animate-pulse"
-                : "border-transparent",
-            )}
+            className="relative z-[1] border-2 transition-all duration-300 w-full h-full"
           >
             <AvatarImage src={participant.photoURL || undefined} />
             <AvatarFallback className="bg-gray-700 text-gray-300">
               {participant.username?.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <div className={cn("absolute bg-gray-900/70 backdrop-blur-sm rounded-full shadow-md", iconBadgePos)}>
+          <div className="absolute bg-gray-900/70 backdrop-blur-sm rounded-full shadow-md bottom-1 right-1 p-1.5">
             {participant.isMuted ? (
-              <MicOff className={cn(iconSize, "text-red-500")} />
+              <MicOff className="h-4 w-4 text-red-500" />
             ) : (
-              <Mic className={cn(iconSize, "text-white")} />
+              <Mic className="h-4 w-4 text-white" />
             )}
           </div>
         </div>
        </div>
 
       <div className="flex items-center justify-center gap-1 w-full">
-          <p className={cn("font-semibold text-white truncate", nameSize, size === 'lg' ? 'max-w-[120px]' : 'max-w-[60px]')}>{participant.username}</p>
+          <p className="font-semibold text-white truncate text-xs max-w-[60px]">{participant.username}</p>
           {isParticipantTheHost && (
               <TooltipProvider>
                   <Tooltip>
-                      <TooltipTrigger>
-                          <Crown className={cn("text-yellow-400 shrink-0", size === 'lg' ? 'h-5 w-5' : 'h-4 w-4' )} />
+                      <TooltipTrigger asChild>
+                          <span className="flex items-center">
+                            <Crown className="text-yellow-400 shrink-0 h-4 w-4" />
+                          </span>
                       </TooltipTrigger>
                       <TooltipContent>
                           <p>Oda Sahibi</p>
@@ -167,7 +161,7 @@ export default function VoiceUserIcon({
             className="cursor-pointer rounded-full text-center"
           >
             {isProcessing ? (
-              <div className={cn("flex items-center justify-center rounded-full bg-gray-800/50 aspect-square", size === 'lg' ? "h-24 w-24" : "w-full")}>
+              <div className="flex items-center justify-center rounded-full bg-gray-800/50 aspect-square w-full">
                   <Loader2 className="h-8 w-8 animate-spin" />
               </div>
             ) : (
