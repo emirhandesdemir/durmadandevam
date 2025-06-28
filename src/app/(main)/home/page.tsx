@@ -36,7 +36,7 @@ export default function HomePage() {
     // Sayfanın ana sarmalayıcısı, arka plan rengini ve minimum yüksekliği ayarlar.
     <div className="min-h-screen bg-background text-foreground">
       {/* 'container' sınıfı, içeriği ortalar ve maksimum genişlik belirler. */}
-      <main className="container mx-auto max-w-2xl px-4 py-6 md:py-8">
+      <main className="container mx-auto max-w-3xl px-4 py-6 md:py-8">
         
         {/* Ana sayfanın dikey düzenini ve bileşenler arası boşluğu yöneten sarmalayıcı */}
         <div className="flex flex-col gap-8">

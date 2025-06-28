@@ -57,7 +57,6 @@ export default function PostCard({ post }: PostCardProps) {
     const isOwner = currentUser?.uid === post.uid;
     const isLiked = currentUser ? (post.likes || []).includes(currentUser.uid) : false;
     
-    // Handle both Timestamp objects and serialized ISO strings
     const createdAtDate = typeof post.createdAt === 'string' 
       ? new Date(post.createdAt) 
       : (post.createdAt as Timestamp).toDate();
@@ -151,19 +150,19 @@ export default function PostCard({ post }: PostCardProps) {
 
     return (
         <>
-            <Card className="w-full animate-in fade-in-50 duration-500 overflow-hidden rounded-3xl border-0 bg-card shadow-xl shadow-black/5">
-                <div className="p-5 md:p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <Link href={`/profile/${post.uid}`} className="flex items-center gap-4 group">
+            <Card className="w-full animate-in fade-in-50 duration-500 overflow-hidden rounded-2xl border bg-card/50 shadow-lg shadow-black/5">
+                <div className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                        <Link href={`/profile/${post.uid}`} className="flex items-center gap-3 group">
                             <div className={cn("avatar-frame-wrapper p-1", post.userAvatarFrame)}>
-                                <Avatar className="h-12 w-12 border">
+                                <Avatar className="h-10 w-10 border">
                                     <AvatarImage src={post.userAvatar} />
                                     <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
                                 </Avatar>
                             </div>
                             <div>
                                 <div className="flex items-center gap-1.5">
-                                    <p className="font-bold text-base group-hover:underline">{post.username}</p>
+                                    <p className="font-bold text-sm group-hover:underline">{post.username}</p>
                                     {post.userRole === 'admin' && (
                                         <TooltipProvider>
                                             <Tooltip>
@@ -177,7 +176,7 @@ export default function PostCard({ post }: PostCardProps) {
                                         </TooltipProvider>
                                     )}
                                 </div>
-                                <p className="text-sm text-muted-foreground">{timeAgo}</p>
+                                <p className="text-xs text-muted-foreground">{timeAgo}</p>
                             </div>
                         </Link>
                         {isOwner && !isEditing && (
@@ -201,14 +200,14 @@ export default function PostCard({ post }: PostCardProps) {
                         )}
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         {isEditing ? (
                             <div className="space-y-2">
                                 <Textarea
                                     ref={textareaRef}
                                     value={editedText}
                                     onChange={(e) => setEditedText(e.target.value)}
-                                    className="w-full resize-none bg-muted p-2 rounded-lg text-base"
+                                    className="w-full resize-none bg-muted p-2 rounded-lg text-sm"
                                     onInput={(e) => {
                                         const target = e.currentTarget;
                                         target.style.height = 'inherit';
@@ -224,24 +223,24 @@ export default function PostCard({ post }: PostCardProps) {
                                 </div>
                             </div>
                         ) : (
-                            post.text && <p className="text-base leading-relaxed whitespace-pre-wrap">{renderTextWithLinks(post.text)}</p>
+                            post.text && <p className="text-sm leading-relaxed whitespace-pre-wrap">{renderTextWithLinks(post.text)}</p>
                         )}
 
                         {post.imageUrl && !isEditing && (
-                            <div className="overflow-hidden rounded-2xl border">
+                            <div className="overflow-hidden rounded-xl border">
                                 <Image
                                     src={post.imageUrl}
                                     alt="Gönderi resmi"
                                     width={800}
-                                    height={450}
-                                    className="aspect-[16/9] w-full object-cover transition-transform duration-300 hover:scale-105"
+                                    height={400}
+                                    className="aspect-[2/1] w-full object-cover transition-transform duration-300 hover:scale-105"
                                 />
                             </div>
                         )}
                     </div>
                 </div>
 
-                <div className="border-t px-4 py-1 flex items-center justify-start gap-1">
+                <div className="border-t px-4 py-2 flex items-center justify-start gap-1">
                     <Button
                         variant="ghost"
                         className={cn(
@@ -252,18 +251,18 @@ export default function PostCard({ post }: PostCardProps) {
                         disabled={isLiking || !currentUser}
                     >
                         <Heart className={cn(
-                            "mr-2 h-5 w-5 transition-transform group-hover:scale-110",
+                            "mr-2 h-4 w-4 transition-transform group-hover:scale-110",
                             isLiked ? "fill-current" : "group-hover:fill-destructive/50"
                         )} />
-                        <span className="text-sm">{post.likeCount || 0}</span>
+                        <span className="text-xs">{post.likeCount || 0}</span>
                     </Button>
                     <Button
                         variant="ghost"
                         className="group rounded-full px-3 text-muted-foreground hover:bg-primary/10 hover:text-primary"
                         onClick={() => setShowComments(true)}
                     >
-                        <MessageCircle className="mr-2 h-5 w-5 transition-transform group-hover:scale-110" />
-                        <span className="text-sm">{post.commentCount || 0}</span>
+                        <MessageCircle className="mr-2 h-4 w-4 transition-transform group-hover:scale-110" />
+                        <span className="text-xs">{post.commentCount || 0}</span>
                     </Button>
                 </div>
             </Card>

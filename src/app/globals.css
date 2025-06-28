@@ -10,7 +10,7 @@
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-    --primary: 262.1 83.3% 57.8%; /* New Vibrant Purple */
+    --primary: 262.1 83.3% 57.8%;
     --primary-foreground: 0 0% 100%;
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
@@ -23,28 +23,28 @@
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
     --ring: 262.1 83.3% 57.8%;
-    --radius: 1.5rem; /* More rounded corners */
+    --radius: 1rem;
   }
  
   .dark {
-    --background: 240 10% 10%; /* Slightly lighter dark */
-    --foreground: 240 50% 98%;
-    --card: 240 5% 15%; /* Darker card */
-    --card-foreground: 240 50% 98%;
-    --popover: 240 10% 10%;
-    --popover-foreground: 240 50% 98%;
+    --background: 240 10% 3.9%;
+    --foreground: 210 40% 98%;
+    --card: 240 4.8% 11.0%;
+    --card-foreground: 210 40% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 210 40% 98%;
     --primary: 262.1 83.3% 57.8%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 5% 20%;
-    --secondary-foreground: 240 50% 98%;
-    --muted: 240 5% 20%;
-    --muted-foreground: 240 5% 65%;
-    --accent: 330 85% 65%; /* Bright Pink accent */
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 72.2% 50.6%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 240 5% 25%;
-    --input: 240 5% 25%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
     --ring: 262.1 83.3% 57.8%;
   }
 }
@@ -56,11 +56,6 @@
   body {
     @apply bg-background text-foreground;
   }
-}
-
-/* Default Avatar Gradient */
-.default-avatar-bg {
-    @apply bg-gradient-to-br from-purple-500 via-fuchsia-500 to-pink-500 text-white font-bold;
 }
 
 /* Chat Bubble Styles */
@@ -151,7 +146,7 @@
   .avatar-frame-angel::before {
     content: '';
     @apply absolute -inset-[25%] bg-no-repeat bg-center z-[-1] pointer-events-none;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cfilter id='glow'%3E%3CfeGaussianBlur stdDeviation='3.5' result='coloredBlur'/%3E%3CfeMerge%3E%3CfeMergeNode in='coloredBlur'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3C/defs%3E%3Cg transform='translate(100 100)' style='filter: url(%23glow);'%3E%3Cpath d='M-10,-50 C -60,-30 -70,20 -30,45 C -5,65 5,65 30,45 C 70,20 60,-30 10,-50 C 0,-65 -0,-65 -10,-50 Z' fill='rgba(255,255,255,0.7)'/%3E%3Cpath d='M-15,-40 C -50,-20 -60,10 -25,35 C 0,55 0,55 25,35 C 60,10 50,-20 15,-40 C 0,-55 0,-55 -15,-40 Z' fill='rgba(255,255,255,0.9)'/%3E%3C/g%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cfilter id='glow'%3E%3CfeGaussianBlur stdDeviation='3.5' result='coloredBlur'/%3E%3CfeMerge%3E%3CfeMergeNode in='coloredBlur'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/defs%3E%3Cg transform='translate(100 100)' style='filter: url(%23glow);'%3E%3Cpath d='M-10,-50 C -60,-30 -70,20 -30,45 C -5,65 5,65 30,45 C 70,20 60,-30 10,-50 C 0,-65 -0,-65 -10,-50 Z' fill='rgba(255,255,255,0.7)'/%3E%3Cpath d='M-15,-40 C -50,-20 -60,10 -25,35 C 0,55 0,55 25,35 C 60,10 50,-20 15,-40 C 0,-55 0,-55 -15,-40 Z' fill='rgba(255,255,255,0.9)'/%3E%3C/g%3E%3C/svg%3E");
     background-size: contain;
     transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     transform-origin: bottom center;

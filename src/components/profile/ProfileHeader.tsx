@@ -47,13 +47,13 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
       <div className="flex flex-col items-center gap-6 p-4">
         <div className="flex flex-col sm:flex-row items-center gap-6">
           <div className={cn("avatar-frame-wrapper p-1", profileUser.selectedAvatarFrame)}>
-            <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
+            <Avatar className="h-28 w-28 border-4 border-background shadow-lg">
               <AvatarImage src={profileUser.photoURL || undefined} />
-              <AvatarFallback className="text-5xl">{profileUser.username?.charAt(0).toUpperCase()}</AvatarFallback>
+              <AvatarFallback className="text-4xl">{profileUser.username?.charAt(0).toUpperCase()}</AvatarFallback>
             </Avatar>
           </div>
           <div className="flex flex-col items-center sm:items-start gap-4">
-            <h1 className="text-3xl font-bold">{profileUser.username}</h1>
+            <h1 className="text-2xl font-bold">{profileUser.username}</h1>
             <div className="flex gap-2">
               {isOwnProfile ? (
                  <Button asChild variant="outline" size="sm">
@@ -80,7 +80,7 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
               disabled={!canViewStats}
               className={cn("p-4 rounded-xl border bg-card text-center hover:bg-muted/50 transition-colors", !canViewStats && "cursor-not-allowed opacity-60")}
             >
-              <p className="text-2xl font-bold">{(profileUser.followers || []).length}</p>
+              <p className="text-xl font-bold">{(profileUser.followers || []).length}</p>
               <p className="text-sm text-muted-foreground">takipçi</p>
             </button>
             <button
@@ -88,7 +88,7 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
               disabled={!canViewStats}
               className={cn("p-4 rounded-xl border bg-card text-center hover:bg-muted/50 transition-colors", !canViewStats && "cursor-not-allowed opacity-60")}
             >
-              <p className="text-2xl font-bold">{(profileUser.following || []).length}</p>
+              <p className="text-xl font-bold">{(profileUser.following || []).length}</p>
               <p className="text-sm text-muted-foreground">takip</p>
             </button>
         </div>
