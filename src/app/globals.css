@@ -103,7 +103,7 @@
   .bubble-style-4 .bubble:nth-child(4) { @apply bg-teal-400 w-3 h-3 top-[5%] left-[80%]; animation-delay: 3.6s; }
   .bubble-style-4 .bubble:nth-child(5) { @apply bg-green-300 w-2 h-2 top-[50%] left-[40%]; animation-delay: 4.8s; }
 
-  /* NEW: Style 5: Fiery */
+  /* Style 5: Fiery */
   .bubble-style-fire {
       filter: blur(0.5px);
   }
@@ -132,33 +132,28 @@
 /* Avatar Frame Styles */
 @layer components {
   .avatar-frame-wrapper {
-    @apply relative; /* Removed z-0, not necessary */
+    position: relative;
+  }
+  .avatar-frame-angel::before, .avatar-frame-angel::after,
+  .avatar-frame-devil::before, .avatar-frame-devil::after,
+  .avatar-frame-snake::before,
+  .avatar-frame-tech::before {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    z-index: 2;
   }
 
-  /* Keyframes for animations */
-  @keyframes wing-flap {
-    0%, 100% {
-      transform: rotateZ(-5deg) scale(1.0);
-    }
-    50% {
-      transform: rotateZ(5deg) scale(1.05);
-    }
-  }
-
-  @keyframes tech-orbit {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-
-  /* Generic styles for wing frames */
   .avatar-frame-angel::before, .avatar-frame-angel::after,
   .avatar-frame-devil::before, .avatar-frame-devil::after {
-    content: '';
-    @apply absolute top-1/2 w-1/2 h-1/2 bg-contain bg-no-repeat pointer-events-none;
+    top: 50%;
+    width: 50%;
+    height: 50%;
+    background-size: contain;
+    background-repeat: no-repeat;
     transform: translateY(-50%);
     transition: transform 0.3s ease-in-out;
   }
-  
   .avatar-frame-wrapper:hover .avatar-frame-angel::before,
   .avatar-frame-wrapper:hover .avatar-frame-angel::after,
   .avatar-frame-wrapper:hover .avatar-frame-devil::before,
@@ -166,52 +161,72 @@
      transform: translateY(-50%) scale(1.1);
   }
 
-  /* Angel Wings Frame */
-  .avatar-frame-angel::before { /* Left Wing */
-    left: -20%;
-    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3cfilter id='angel-glow' x='-50%25' y='-50%25' width='200%25' height='200%25'%3e%3cfeGaussianBlur stdDeviation='3' result='coloredBlur'/%3e%3cfeMerge%3e%3cfeMergeNode in='coloredBlur'/%3e%3cfeMergeNode in='SourceGraphic'/%3e%3c/feMerge%3e%3c/filter%3e%3c/defs%3e%3cpath d='M95,50 C70,20 50,30 20,0 C40,50 40,70 95,50 Z' fill='rgba(255,255,255,0.9)' filter='url(%23angel-glow)'/%3e%3c/svg%3e");
-    animation: wing-flap 2.5s ease-in-out infinite;
+  @keyframes wing-flap {
+    0%, 100% { transform: translateY(-50%) rotateZ(-5deg) scale(1.0); }
+    50% { transform: translateY(-50%) rotateZ(5deg) scale(1.05); }
+  }
+
+  /* Angel Wings */
+  .avatar-frame-angel::before {
+    left: 0;
     transform-origin: bottom right;
-  }
-  .avatar-frame-angel::after { /* Right Wing */
-    right: -20%;
+    animation: wing-flap 2.5s ease-in-out infinite;
     background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3cfilter id='angel-glow' x='-50%25' y='-50%25' width='200%25' height='200%25'%3e%3cfeGaussianBlur stdDeviation='3' result='coloredBlur'/%3e%3cfeMerge%3e%3cfeMergeNode in='coloredBlur'/%3e%3cfeMergeNode in='SourceGraphic'/%3e%3c/feMerge%3e%3c/filter%3e%3c/defs%3e%3cpath d='M95,50 C70,20 50,30 20,0 C40,50 40,70 95,50 Z' fill='rgba(255,255,255,0.9)' filter='url(%23angel-glow)'/%3e%3c/svg%3e");
-    transform: translateY(-50%) scaleX(-1); /* Flip horizontally */
-    animation: wing-flap 2.5s ease-in-out infinite reverse; /* Reverse animation for symmetry */
-    transform-origin: bottom left;
   }
-
-  /* Devil Wings Frame */
-  .avatar-frame-devil::before { /* Left Wing */
-    left: -15%;
-    top: 40%;
-    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3clinearGradient id='devil-grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3e%3cstop offset='0%25' style='stop-color:%23dc2626;stop-opacity:1' /%3e%3cstop offset='100%25' style='stop-color:%234c1d95;stop-opacity:1' /%3e%3c/linearGradient%3e%3cfilter id='devil-glow'%3e%3cfeGaussianBlur stdDeviation='2'/%3e%3c/filter%3e%3c/defs%3e%3cpath d='M5,50 C30,80 50,70 80,100 C60,50 60,30 5,50 Z' fill='url(%23devil-grad)' filter='url(%23devil-glow)'/%3e%3c/svg%3e");
-    animation: wing-flap 3s ease-in-out infinite;
-    transform-origin: top right;
-  }
-  .avatar-frame-devil::after { /* Right Wing */
-    right: -15%;
-    top: 40%;
-    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3clinearGradient id='devil-grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3e%3cstop offset='0%25' style='stop-color:%23dc2626;stop-opacity:1' /%3e%3cstop offset='100%25' style='stop-color:%234c1d95;stop-opacity:1' /%3e%3c/linearGradient%3e%3cfilter id='devil-glow'%3e%3cfeGaussianBlur stdDeviation='2'/%3e%3c/filter%3e%3c/defs%3e%3cpath d='M5,50 C30,80 50,70 80,100 C60,50 60,30 5,50 Z' fill='url(%23devil-grad)' filter='url(%23devil-glow)'/%3e%3c/svg%3e");
+  .avatar-frame-angel::after {
+    right: 0;
     transform: translateY(-50%) scaleX(-1);
-    animation: wing-flap 3s ease-in-out infinite reverse;
-    transform-origin: top left;
+    transform-origin: bottom left;
+    animation: wing-flap 2.5s ease-in-out infinite reverse;
+    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3cfilter id='angel-glow' x='-50%25' y='-50%25' width='200%25' height='200%25'%3e%3cfeGaussianBlur stdDeviation='3' result='coloredBlur'/%3e%3cfeMerge%3e%3cfeMergeNode in='coloredBlur'/%3e%3cfeMergeNode in='SourceGraphic'/%3e%3c/feMerge%3e%3c/filter%3e%3c/defs%3e%3cpath d='M95,50 C70,20 50,30 20,0 C40,50 40,70 95,50 Z' fill='rgba(255,255,255,0.9)' filter='url(%23angel-glow)'/%3e%3c/svg%3e");
   }
 
-  /* Snake Frame */
-  .avatar-frame-snake::before {
-    content: '';
-    @apply absolute -inset-1 bg-no-repeat bg-center pointer-events-none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-10 -10 120 120'%3E%3Cpath d='M50,0 A50,50 0 1,1 49.9,0' stroke='%234ade80' stroke-width='6' stroke-dasharray='150 164' fill='none'/%3E%3C/svg%3E");
-    background-size: 110% 110%;
-    animation: tech-orbit 8s linear infinite;
+  /* Devil Wings */
+  .avatar-frame-devil::before {
+    left: 0;
+    top: 45%;
+    transform-origin: top right;
+    animation: wing-flap 3s ease-in-out infinite;
+    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3clinearGradient id='devil-grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3e%3cstop offset='0%25' style='stop-color:%23dc2626;stop-opacity:1' /%3e%3cstop offset='100%25' style='stop-color:%234c1d95;stop-opacity:1' /%3e%3c/linearGradient%3e%3cfilter id='devil-glow'%3e%3cfeGaussianBlur stdDeviation='2'/%3e%3c/filter%3e%3c/defs%3e%3cpath d='M5,50 C30,80 50,70 80,100 C60,50 60,30 5,50 Z' fill='url(%23devil-grad)' filter='url(%23devil-glow)'/%3e%3c/svg%3e");
   }
-  
-  /* NEW: Tech Aura Frame */
-  .avatar-frame-tech::before {
-    content: '';
-    @apply absolute -inset-2 bg-no-repeat bg-center pointer-events-none;
-    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3cfilter id='tech-glow'%3e%3cfeGaussianBlur in='SourceGraphic' stdDeviation='2' /%3e%3c/filter%3e%3c/defs%3e%3ccircle cx='60' cy='60' r='55' stroke='%230ea5e9' stroke-width='4' stroke-dasharray='15 25' fill='none' filter='url(%23tech-glow)'%3e%3canimateTransform attributeName='transform' type='rotate' from='0 60 60' to='360 60 60' dur='10s' repeatCount='indefinite' /%3e%3c/circle%3e%3ccircle cx='60' cy='60' r='50' stroke='%2334d399' stroke-width='2' stroke-dasharray='5 15' fill='none'%3e%3canimateTransform attributeName='transform' type='rotate' from='360 60 60' to='0 60 60' dur='15s' repeatCount='indefinite' /%3e%3c/circle%3e%3c/svg%3e");
+  .avatar-frame-devil::after {
+    right: 0;
+    top: 45%;
+    transform: translateY(-50%) scaleX(-1);
+    transform-origin: top left;
+    animation: wing-flap 3s ease-in-out infinite reverse;
+    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3clinearGradient id='devil-grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3e%3cstop offset='0%25' style='stop-color:%23dc2626;stop-opacity:1' /%3e%3cstop offset='100%25' style='stop-color:%234c1d95;stop-opacity:1' /%3e%3c/linearGradient%3e%3cfilter id='devil-glow'%3e%3cfeGaussianBlur stdDeviation='2'/%3e%3c/filter%3e%3c/defs%3e%3cpath d='M5,50 C30,80 50,70 80,100 C60,50 60,30 5,50 Z' fill='url(%23devil-grad)' filter='url(%23devil-glow)'/%3e%3c/svg%3e");
+  }
+
+  /* Snake & Tech Frames */
+  @keyframes tech-orbit { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  .avatar-frame-snake::before {
+    inset: -4px;
     background-size: 100% 100%;
+    animation: tech-orbit 8s linear infinite;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-10 -10 120 120'%3E%3Cpath d='M50,0 A50,50 0 1,1 49.9,0' stroke='%234ade80' stroke-width='6' stroke-dasharray='150 164' fill='none'/%3E%3C/svg%3E");
+  }
+  .avatar-frame-tech::before {
+    inset: -6px;
+    background-size: 100% 100%;
+    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3cfilter id='tech-glow'%3e%3cfeGaussianBlur in='SourceGraphic' stdDeviation='2' /%3e%3c/filter%3e%3c/defs%3e%3ccircle cx='60' cy='60' r='55' stroke='%230ea5e9' stroke-width='4' stroke-dasharray='15 25' fill='none' filter='url(%23tech-glow)'%3e%3canimateTransform attributeName='transform' type='rotate' from='0 60 60' to='360 60 60' dur='10s' repeatCount='indefinite' /%3e%3c/circle%3e%3ccircle cx='60' cy='60' r='50' stroke='%2334d399' stroke-width='2' stroke-dasharray='5 15' fill='none'%3e%3canimateTransform attributeName='transform' type='rotate' from='360 60 60' to='0 60 60' dur='15s' repeatCount='indefinite' /%3e%3c/circle%3e%3c/svg%3e");
+  }
+}
+
+/* NEW: Animated DM Input Border */
+@layer components {
+  .dm-input-glow {
+    position: relative;
+    padding: 2px; /* Border width */
+    border-radius: 9999px; /* rounded-full */
+    background: linear-gradient(90deg, #10b981, #8b5cf6, #ec4899);
+    animation: dm-glow-anim 4s linear infinite;
+    background-size: 200% 200%;
+  }
+
+  @keyframes dm-glow-anim {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
   }
 }

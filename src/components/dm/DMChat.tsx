@@ -88,12 +88,14 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
       </div>
 
       {/* Mesaj Giriş Alanı */}
-      <footer className="p-3 border-t">
-        <NewMessageInput
-          chatId={chatId}
-          sender={{ uid: user.uid, username: userData.username, photoURL: userData.photoURL, selectedAvatarFrame: userData.selectedAvatarFrame }}
-          receiver={{ uid: partner.uid, username: partner.username, photoURL: partner.photoURL, selectedAvatarFrame: partner.selectedAvatarFrame }}
-        />
+      <footer className="p-3 border-t bg-background">
+         <div className="dm-input-glow">
+            <NewMessageInput
+              chatId={chatId}
+              sender={{ uid: user.uid, username: userData.username, photoURL: userData.photoURL, selectedAvatarFrame: userData.selectedAvatarFrame }}
+              receiver={{ uid: partner.uid, username: partner.username, photoURL: partner.photoURL, selectedAvatarFrame: partner.selectedAvatarFrame }}
+            />
+        </div>
       </footer>
     </div>
   );

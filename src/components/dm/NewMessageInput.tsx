@@ -10,6 +10,7 @@ import { sendMessage } from '@/lib/actions/dmActions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Send, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface UserInfo {
   uid: string;
@@ -52,15 +53,18 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex w-full items-center space-x-2">
+    <form 
+      onSubmit={handleSubmit(onSubmit)} 
+      className={cn("flex w-full items-center space-x-2 bg-background rounded-full p-1")}
+    >
       <Input
         {...register('text')}
         placeholder="Bir mesaj yaz..."
         autoComplete="off"
-        className="rounded-full flex-1 py-5"
+        className="flex-1 bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0"
         disabled={isSubmitting}
       />
-      <Button type="submit" size="icon" disabled={isSubmitting} className="rounded-full flex-shrink-0">
+      <Button type="submit" size="icon" disabled={isSubmitting} className="rounded-full flex-shrink-0 h-10 w-10">
         {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         <span className="sr-only">Gönder</span>
       </Button>

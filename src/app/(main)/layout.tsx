@@ -20,36 +20,33 @@ export default function MainAppLayout({
   const [hidden, setHidden] = useState(false);
   const pathname = usePathname();
 
-  const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/');
+  const isHeaderlessPage = (pathname.startsWith('/rooms/') && pathname !== '/rooms') || (pathname.startsWith('/dm/') && pathname !== '/dm');
+  const isFullPageLayout = isHeaderlessPage;
+  const isHomePage = pathname === '/home';
 
   useMotionValueEvent(scrollY, "change", (latest) => {
     const previous = scrollY.getPrevious() ?? 0;
-    // Don't hide header on full-page layouts that have their own internal scroll
-    if (isFullPageLayout) {
-      setHidden(false);
+    if (isHeaderlessPage) {
+      setHidden(true);
       return;
     }
-    // Hide header on scroll down, show on scroll up
     if (latest > previous && latest > 150) {
       setHidden(true);
     } else {
       setHidden(false);
     }
   });
-  
-  const isHomePage = pathname === '/home';
 
   return (
     <VoiceChatProvider>
       <div className="relative flex h-dvh w-full flex-col bg-background overflow-hidden">
-        {/* On full page layouts, the child itself handles scrolling. Otherwise, this main tag does. */}
         <main ref={scrollRef} className={cn("flex-1 overflow-y-auto", !isFullPageLayout && "pb-24")}>
            <motion.header
               variants={{
                 visible: { y: 0 },
                 hidden: { y: "-100%" },
               }}
-              animate={hidden ? "hidden" : "visible"}
+              animate={hidden || isHeaderlessPage ? "hidden" : "visible"}
               transition={{ duration: 0.35, ease: "easeInOut" }}
               className="sticky top-0 z-40"
             >
@@ -61,7 +58,6 @@ export default function MainAppLayout({
           </div>
         </main>
         
-        {/* Persistent UI elements are fixed to the viewport */}
         <VoiceAudioPlayer />
         <PersistentVoiceBar />
         <BottomNav />
