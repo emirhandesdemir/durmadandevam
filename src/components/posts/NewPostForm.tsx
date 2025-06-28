@@ -215,7 +215,7 @@ export default function NewPostForm() {
         isOpen={!!imageToCrop}
         setIsOpen={(isOpen) => !isOpen && setImageToCrop(null)}
         imageSrc={imageToCrop}
-        aspectRatio={16 / 9}
+        aspectRatio={1}
         onCropComplete={handleCropComplete}
       />
     </>
