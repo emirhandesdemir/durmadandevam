@@ -26,11 +26,11 @@ export default function MainAppLayout({
         if (!mainEl) return;
         const currentScrollY = mainEl.scrollTop;
 
-        // Hide header
+        // Hide header if scrolling down and past the header height
         if (currentScrollY > lastScrollY.current && currentScrollY > 70) {
             setHeaderVisible(false);
         } 
-        // Show header
+        // Show header if scrolling up
         else if (currentScrollY < lastScrollY.current) {
             setHeaderVisible(true);
         }
@@ -45,7 +45,7 @@ export default function MainAppLayout({
 
   return (
     <VoiceChatProvider>
-      <div className="flex h-dvh w-full flex-col bg-background overflow-hidden">
+      <div className="relative flex h-dvh w-full flex-col bg-background overflow-hidden">
         <AnimatePresence>
           {isHeaderVisible && (
             <motion.div
@@ -53,7 +53,7 @@ export default function MainAppLayout({
               animate={{ y: '0%' }}
               exit={{ y: '-100%' }}
               transition={{ type: 'tween', duration: 0.3, ease: 'easeInOut' }}
-              className="w-full shrink-0 z-40"
+              className="absolute top-0 left-0 right-0 z-40"
             >
               <Header />
             </motion.div>
@@ -62,7 +62,7 @@ export default function MainAppLayout({
         
         <main
           ref={mainRef}
-          className="flex-1 overflow-y-auto pb-24"
+          className="flex-1 overflow-y-auto pt-14 pb-24"
         >
           <motion.div
             key={pathname}
