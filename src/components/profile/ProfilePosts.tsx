@@ -1,7 +1,7 @@
 // src/components/profile/ProfilePosts.tsx
 "use client";
 
-import { collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Post } from '@/components/posts/PostsFeed';
 import { Card, CardContent } from '../ui/card';
@@ -36,10 +36,19 @@ export default function ProfilePosts({ userId, profileUser }: ProfilePostsProps)
             setLoading(true);
             try {
                 const postsRef = collection(db, 'posts');
-                const q = query(postsRef, where('uid', '==', userId), orderBy('createdAt', 'desc'));
+                // orderBy removed to prevent index error. Sorting is now done client-side.
+                const q = query(postsRef, where('uid', '==', userId));
                 const querySnapshot = await getDocs(q);
                 
                 const fetchedPosts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post));
+                
+                // Sort posts by creation date client-side
+                fetchedPosts.sort((a, b) => {
+                    const timeA = a.createdAt ? (a.createdAt as Timestamp).toMillis() : 0;
+                    const timeB = b.createdAt ? (b.createdAt as Timestamp).toMillis() : 0;
+                    return timeB - timeA;
+                });
+
                 setPosts(fetchedPosts);
             } catch (error) {
                 console.error("Gönderiler çekilirken hata:", error);
