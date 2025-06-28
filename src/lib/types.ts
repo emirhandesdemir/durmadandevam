@@ -82,11 +82,19 @@ export interface Comment {
     } | null;
 }
 
+export interface Channel {
+    id: string;
+    name: string;
+    description?: string;
+    type: 'text' | 'voice';
+}
 
 export interface Room {
     id: string;
     name: string;
     description: string;
+    type?: 'room' | 'server'; // 'room' for temporary, 'server' for persistent
+    channels?: Channel[]; // Only for servers
     createdBy: {
         uid: string;
         username: string;
@@ -94,7 +102,7 @@ export interface Room {
         role?: 'admin' | 'user';
     };
     createdAt: Timestamp;
-    expiresAt?: Timestamp;
+    expiresAt?: Timestamp; // Only for rooms
     participants: { uid: string, username: string, photoURL?: string | null }[];
     maxParticipants: number;
     nextGameTimestamp?: Timestamp;

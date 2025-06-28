@@ -11,7 +11,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { getGameSettings } from "@/lib/actions/gameActions";
 
-
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -30,21 +29,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Server, MessageSquare } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
+import { cn } from "@/lib/utils";
 
-/**
- * Yeni Oda Oluşturma Formu
- * 
- * Kullanıcıların yeni bir oda oluşturmak için gerekli bilgileri
- * (oda adı, açıklama) girdiği formdur.
- * - Zod ile form validasyonu yapılır.
- * - Form gönderildiğinde Firestore'a yeni bir oda dokümanı ekler.
- * - Litmatch tarzı yuvarlak ve renkli bir tasarıma sahiptir.
- */
-
-// Form validasyon şeması
 const formSchema = z.object({
-  name: z.string().min(3, { message: "Oda adı en az 3 karakter olmalıdır." }).max(50, {message: "Oda adı en fazla 50 karakter olabilir."}),
+  name: z.string().min(3, { message: "Ad en az 3 karakter olmalıdır." }).max(50, {message: "Ad en fazla 50 karakter olabilir."}),
   description: z.string().min(3, { message: "Açıklama en az 3 karakter olmalıdır." }).max(100, {message: "Açıklama en fazla 100 karakter olabilir."}),
 });
 
@@ -53,54 +43,37 @@ export default function CreateRoomForm() {
     const router = useRouter();
     const { user, userData } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
+    const [communityType, setCommunityType] = useState<'room' | 'server'>('room');
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
-        defaultValues: {
-            name: "",
-            description: "",
-        },
+        defaultValues: { name: "", description: "" },
     });
 
-    // Form gönderme fonksiyonu
     async function onSubmit(values: z.infer<typeof formSchema>) {
         if (!user || !userData) {
-            toast({
-                title: "Hata",
-                description: "Oda oluşturmak için giriş yapmalısınız.",
-                variant: "destructive",
-            });
+            toast({ title: "Hata", description: "Oda oluşturmak için giriş yapmalısınız.", variant: "destructive" });
             return;
         }
 
         setIsLoading(true);
 
         try {
-            // Kullanıcının zaten bir odası var mı diye kontrol et
-            const userRoomsQuery = query(collection(db, "rooms"), where("createdBy.uid", "==", user.uid), limit(1));
-            const userRoomsSnapshot = await getDocs(userRoomsQuery);
-
-            if (!userRoomsSnapshot.empty) {
-                 toast({
-                    title: "Oda Oluşturulamadı",
-                    description: "Zaten size ait bir oda var. Sadece bir oda oluşturabilirsiniz.",
-                    variant: "destructive",
-                });
-                setIsLoading(false);
-                router.push('/rooms');
-                return;
+            if (communityType === 'server') {
+                const userRoomsQuery = query(collection(db, "rooms"), where("createdBy.uid", "==", user.uid), where("type", "==", "server"), limit(1));
+                const userRoomsSnapshot = await getDocs(userRoomsQuery);
+                if (!userRoomsSnapshot.empty) {
+                    toast({ title: "Sunucu Oluşturulamadı", description: "Zaten size ait bir sunucu var. Şimdilik sadece bir sunucu oluşturabilirsiniz.", variant: "destructive" });
+                    setIsLoading(false);
+                    return;
+                }
             }
-
-            // Oyun ve oda zamanlayıcılarını ayarla
+            
             const settings = await getGameSettings();
-            const nextGameTimestamp = Timestamp.fromMillis(Date.now() + settings.gameIntervalMinutes * 60 * 1000);
-            const fifteenMinutesInMs = 15 * 60 * 1000;
-            const expiresAt = Timestamp.fromMillis(Date.now() + fifteenMinutesInMs);
-
-            // Firestore için yeni oda nesnesi
-            const newRoom = {
+            const newCommunity: any = {
                 name: values.name,
                 description: values.description,
+                type: communityType,
                 createdBy: {
                   uid: user.uid,
                   username: user.displayName || "Bilinmeyen Kullanıcı",
@@ -108,33 +81,38 @@ export default function CreateRoomForm() {
                   role: userData.role || 'user'
                 },
                 createdAt: serverTimestamp(),
-                expiresAt, // Oda kapanma zamanı
                 participants: [{
                     uid: user.uid,
                     username: user.displayName || "Anonim",
                     photoURL: user.photoURL || null
-                }], // Başlangıçta kurucuyu katılımcı olarak ekle
-                maxParticipants: 9, // Maksimum katılımcı sayısı (1 kurucu + 8 kişi)
-                voiceParticipantsCount: 0, // Sesli sohbet katılımcı sayısı
-                nextGameTimestamp, // İlk oyun zamanı
+                }],
+                maxParticipants: communityType === 'room' ? 9 : 50,
+                voiceParticipantsCount: 0,
             };
+
+            if (communityType === 'room') {
+                const fifteenMinutesInMs = 15 * 60 * 1000;
+                newCommunity.expiresAt = Timestamp.fromMillis(Date.now() + fifteenMinutesInMs);
+                newCommunity.nextGameTimestamp = Timestamp.fromMillis(Date.now() + settings.gameIntervalMinutes * 60 * 1000);
+            } else {
+                 newCommunity.channels = [{
+                     id: 'general',
+                     name: 'genel-sohbet',
+                     description: 'Sunucuya hoş geldiniz! Genel sohbet alanı.',
+                     type: 'text'
+                 }];
+            }
             
-            // Firestore'a yeni odayı ekle ve referansını al
-            const docRef = await addDoc(collection(db, "rooms"), newRoom);
+            const docRef = await addDoc(collection(db, "rooms"), newCommunity);
 
             toast({
-                title: "Oda Oluşturuldu!",
-                description: `"${values.name}" odasına yönlendiriliyorsunuz...`,
+                title: `${communityType === 'room' ? 'Oda' : 'Sunucu'} Oluşturuldu!`,
+                description: `"${values.name}" topluluğuna yönlendiriliyorsunuz...`,
             });
-            // Kullanıcıyı yeni oluşturulan odaya yönlendir
             router.push(`/rooms/${docRef.id}`); 
         } catch (error) {
-            console.error("Error creating room: ", error);
-            toast({
-                title: "Hata",
-                description: "Oda oluşturulurken bir hata oluştu.",
-                variant: "destructive",
-            });
+            console.error("Error creating community: ", error);
+            toast({ title: "Hata", description: `Oluşturulurken bir hata oluştu.`, variant: "destructive" });
         } finally {
             setIsLoading(false);
         }
@@ -143,48 +121,46 @@ export default function CreateRoomForm() {
     return (
         <Card className="w-full max-w-lg shadow-xl rounded-3xl border-0 bg-card/80 backdrop-blur-sm">
             <CardHeader className="text-center">
-                <CardTitle className="text-3xl font-bold">Yeni Oda Oluştur</CardTitle>
+                <CardTitle className="text-3xl font-bold">Yeni Bir Topluluk Oluştur</CardTitle>
                 <CardDescription className="text-base text-muted-foreground">
-                    Yeni bir sohbet odası başlatmak için ayrıntıları doldurun.
+                    Geçici bir oda mı yoksa kalıcı bir sunucu mu? Seçimini yap.
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                        <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="ml-4">Oda Adı</FormLabel>
-                                    <FormControl>
-                                        <Input className="rounded-full px-5 py-6" placeholder="ör., Bilim Kurgu Kitap Kulübü" {...field} />
-                                    </FormControl>
-                                    <FormMessage className="ml-4" />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="description"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="ml-4">Konu</FormLabel>
-                                    <FormControl>
-                                        <Input className="rounded-full px-5 py-6" placeholder="ör., Haftanın kitabı: Dune" {...field} />
-                                    </FormControl>
-                                    <FormMessage className="ml-4" />
-                                </FormItem>
-                            )}
-                        />
-                        <Button 
-                            type="submit" 
-                            size="lg" 
-                            className="w-full rounded-full py-6 text-lg font-semibold bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg transition-transform hover:scale-105 disabled:opacity-75"
-                            disabled={isLoading}
-                        >
+                        <RadioGroup defaultValue="room" onValueChange={(value: 'room' | 'server') => setCommunityType(value)} className="grid grid-cols-2 gap-4">
+                            <Label htmlFor="type-room" className={cn("flex flex-col items-center justify-center rounded-lg border-2 p-4 cursor-pointer hover:bg-accent hover:text-accent-foreground", communityType === 'room' && 'border-primary bg-accent')}>
+                                <RadioGroupItem value="room" id="type-room" className="sr-only" />
+                                <MessageSquare className="mb-2 h-8 w-8 text-primary" />
+                                <span className="font-bold">Hızlı Oda</span>
+                                <span className="text-xs text-center text-muted-foreground mt-1">15 dakikalık geçici sohbet ve oyun odası.</span>
+                            </Label>
+                             <Label htmlFor="type-server" className={cn("flex flex-col items-center justify-center rounded-lg border-2 p-4 cursor-pointer hover:bg-accent hover:text-accent-foreground", communityType === 'server' && 'border-primary bg-accent')}>
+                                <RadioGroupItem value="server" id="type-server" className="sr-only" />
+                                <Server className="mb-2 h-8 w-8 text-indigo-500" />
+                                <span className="font-bold">Sunucu</span>
+                                <span className="text-xs text-center text-muted-foreground mt-1">Kanalları olan, kalıcı bir topluluk.</span>
+                            </Label>
+                        </RadioGroup>
+
+                        <FormField control={form.control} name="name" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="ml-4">{communityType === 'room' ? 'Oda Adı' : 'Sunucu Adı'}</FormLabel>
+                                <FormControl><Input className="rounded-full px-5 py-6" placeholder="ör., Bilim Kurgu Kitap Kulübü" {...field} /></FormControl>
+                                <FormMessage className="ml-4" />
+                            </FormItem>
+                        )} />
+                        <FormField control={form.control} name="description" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="ml-4">Açıklama</FormLabel>
+                                <FormControl><Input className="rounded-full px-5 py-6" placeholder="ör., Haftanın kitabı: Dune" {...field} /></FormControl>
+                                <FormMessage className="ml-4" />
+                            </FormItem>
+                        )} />
+                        <Button type="submit" size="lg" className="w-full rounded-full py-6 text-lg font-semibold bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg transition-transform hover:scale-105 disabled:opacity-75" disabled={isLoading}>
                              {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-                             Odayı Oluştur
+                             Oluştur
                         </Button>
                     </form>
                 </Form>

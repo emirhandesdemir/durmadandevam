@@ -3,7 +3,7 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { LogIn, Check, Loader2, Users, Crown, Clock } from "lucide-react";
+import { LogIn, Check, Loader2, Users, Crown, Clock, Server } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
@@ -33,6 +33,8 @@ export default function RoomListItem({ room }: RoomListItemProps) {
     const [isJoining, setIsJoining] = useState(false);
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
+    const isServer = room.type === 'server';
+
     useEffect(() => {
         if (!room.expiresAt) return;
 
@@ -52,11 +54,11 @@ export default function RoomListItem({ room }: RoomListItemProps) {
     const participants = room.participants || [];
     const isFull = participants.length >= room.maxParticipants;
     const isParticipant = participants.some(p => p.uid === currentUser?.uid);
-    const isExpired = timeLeft === 0;
+    const isExpired = !isServer && timeLeft === 0;
 
     const handleJoinClick = async () => {
         if (!currentUser) {
-            toast({ title: "Giriş Gerekli", description: "Odaya katılmak için giriş yapmalısınız.", variant: "destructive" });
+            toast({ title: "Giriş Gerekli", description: "Katılmak için giriş yapmalısınız.", variant: "destructive" });
             router.push('/login');
             return;
         }
@@ -69,7 +71,7 @@ export default function RoomListItem({ room }: RoomListItemProps) {
                 username: currentUser.displayName,
                 photoURL: currentUser.photoURL
             });
-            toast({ title: "Başarılı!", description: `"${room.name}" odasına katıldınız.` });
+            toast({ title: "Başarılı!", description: `"${room.name}" topluluğuna katıldınız.` });
             router.push(`/rooms/${room.id}`);
         } catch (error: any) {
             toast({ title: "Hata", description: error.message, variant: "destructive" });
@@ -104,7 +106,9 @@ export default function RoomListItem({ room }: RoomListItemProps) {
                 <p className="font-bold truncate">{room.name}</p>
                 <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm text-muted-foreground truncate">{room.description}</p>
-                    {timeLeft !== null && !isExpired && (
+                    {isServer ? (
+                        <Badge variant="secondary" className="flex items-center gap-1 shrink-0"><Server className="h-3 w-3" />Sunucu</Badge>
+                    ) : timeLeft !== null && !isExpired && (
                         <Badge variant="outline" className="flex items-center gap-1 shrink-0">
                             <Clock className="h-3 w-3" />
                             {formatTime(timeLeft)}

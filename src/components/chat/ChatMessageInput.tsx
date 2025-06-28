@@ -12,11 +12,11 @@ import { useToast } from '@/hooks/use-toast';
 
 interface ChatMessageInputProps {
   roomId: string;
+  channelId?: string; // Optional channelId for servers
   canSendMessage: boolean;
 }
 
-export default function ChatMessageInput({ roomId, canSendMessage }: ChatMessageInputProps) {
-  // userData'yı da AuthContext'ten alıyoruz.
+export default function ChatMessageInput({ roomId, channelId, canSendMessage }: ChatMessageInputProps) {
   const { user: currentUser, userData } = useAuth();
   const { toast } = useToast();
   const [message, setMessage] = useState('');
@@ -31,7 +31,11 @@ export default function ChatMessageInput({ roomId, canSendMessage }: ChatMessage
     setMessage('');
 
     try {
-        await addDoc(collection(db, "rooms", roomId, "messages"), {
+        const messagePath = channelId 
+            ? collection(db, "rooms", roomId, "channels", channelId, "messages")
+            : collection(db, "rooms", roomId, "messages");
+        
+        await addDoc(messagePath, {
             uid: currentUser.uid,
             username: currentUser.displayName || 'Anonim',
             photoURL: currentUser.photoURL,
@@ -55,7 +59,7 @@ export default function ChatMessageInput({ roomId, canSendMessage }: ChatMessage
   };
 
   if (!canSendMessage) {
-    return <p className="text-center text-sm text-gray-400">Mesaj göndermek için odaya katılmalısınız.</p>;
+    return <p className="text-center text-sm text-gray-400">Mesaj göndermek için topluluğa katılmalısınız.</p>;
   }
   
   return (
