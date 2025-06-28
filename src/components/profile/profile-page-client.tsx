@@ -33,6 +33,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import ProfileViewerList from "./ProfileViewerList";
 import { Textarea } from "../ui/textarea";
 import { compressImage } from "@/lib/imageUtils";
+import { useRouter } from 'next/navigation';
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -52,6 +53,7 @@ const avatarFrameOptions = [
 
 export default function ProfilePageClient() {
     const { user, userData, loading, handleLogout } = useAuth();
+    const router = useRouter();
     const { toast } = useToast();
     const { theme, setTheme } = useTheme();
 
@@ -158,6 +160,7 @@ export default function ProfilePageClient() {
                 description: "Profiliniz başarıyla güncellendi.",
             });
             setNewAvatarBlob(null); 
+            router.push(`/profile/${user.uid}`);
     
         } catch (error: any) {
             toast({
