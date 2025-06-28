@@ -21,7 +21,6 @@ export function deepSerialize(obj: any): any {
     return obj.toDate().toISOString();
   }
 
-
   // 3. Dizi Kontrolü: Eğer bir dizi ise, her elemanı için fonksiyonu tekrar çağır.
   if (Array.isArray(obj)) {
     return obj.map(item => deepSerialize(item));
