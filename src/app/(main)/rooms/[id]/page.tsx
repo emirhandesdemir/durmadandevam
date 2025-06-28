@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
-import { Loader2, Mic, MicOff, Plus, Crown, PhoneOff, ScreenShare, ScreenShareOff, ChevronsUpDown, Hash, Volume2 } from 'lucide-react';
+import { Loader2, Mic, MicOff, Plus, Crown, PhoneOff, ScreenShare, ScreenShareOff, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TextChat, { type Message } from '@/components/chat/text-chat';
 import ChatMessageInput from '@/components/chat/ChatMessageInput';
@@ -30,11 +30,10 @@ import {
 } from "@/components/ui/alert-dialog"
 
 // --- Game Imports ---
-import type { Room, ActiveGame, GameSettings, Channel } from '@/lib/types';
+import type { Room, ActiveGame, GameSettings } from '@/lib/types';
 import GameCountdownCard from '@/components/game/GameCountdownCard';
 import RoomGameCard from '@/components/game/RoomGameCard';
 import { startGameInRoom, submitAnswer, endGameWithoutWinner, getGameSettings } from '@/lib/actions/gameActions';
-import { cn } from '@/lib/utils';
 
 
 export default function RoomPage() {
@@ -58,7 +57,6 @@ export default function RoomPage() {
     const [isParticipantSheetOpen, setIsParticipantSheetOpen] = useState(false);
     const [showExitDialog, setShowExitDialog] = useState(false);
     const chatScrollRef = useRef<HTMLDivElement>(null);
-    const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
 
     // --- Game State ---
     const [activeGame, setActiveGame] = useState<ActiveGame | null>(null);
@@ -86,7 +84,7 @@ export default function RoomPage() {
         getGameSettings().then(setGameSettings);
     }, []);
 
-    // Oda verisini dinle
+    // Oda verisi ve mesajları dinle
     useEffect(() => {
         if (!roomId) return;
         
@@ -94,37 +92,13 @@ export default function RoomPage() {
             if (docSnap.exists()) {
                  const roomData = { id: docSnap.id, ...docSnap.data() } as Room;
                  setRoom(roomData);
-                 if (roomData.type === 'server' && roomData.categories && roomData.categories.length > 0 && !selectedChannelId) {
-                    const firstTextChannel = roomData.categories.flatMap(c => c.channels).find(ch => ch.type === 'text');
-                    if (firstTextChannel) {
-                        setSelectedChannelId(firstTextChannel.id);
-                    }
-                 }
             } else {
                  toast({ variant: 'destructive', title: 'Oda Bulunamadı', description: 'Bu oda artık mevcut değil veya süresi dolmuş.' });
                  router.push('/rooms');
             }
         });
 
-        return () => { roomUnsub(); };
-    }, [roomId, router, toast, selectedChannelId]);
-    
-    // Mesajları dinle
-    useEffect(() => {
-        if (!roomId) return;
-        // Sunucu ise ve kanal seçilmemişse dinlemeyi başlatma
-        if (room?.type === 'server' && !selectedChannelId) {
-            setMessagesLoading(false);
-            return;
-        }
-
-        setMessagesLoading(true);
-
-        const messagePath = room?.type === 'server'
-            ? collection(db, "rooms", roomId, "channels", selectedChannelId!, "messages")
-            : collection(db, "rooms", roomId, "messages");
-            
-        const messagesQuery = query(messagePath, orderBy("createdAt", "asc"), limit(100));
+        const messagesQuery = query(collection(db, "rooms", roomId, "messages"), orderBy("createdAt", "asc"), limit(100));
         const messagesUnsub = onSnapshot(messagesQuery, (snapshot) => {
             setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message)));
             setMessagesLoading(false);
@@ -133,9 +107,62 @@ export default function RoomPage() {
             setMessagesLoading(false);
         });
 
-        return () => { messagesUnsub(); };
-    }, [roomId, room?.type, selectedChannelId]);
+        return () => { roomUnsub(); messagesUnsub(); };
+    }, [roomId, router, toast]);
+    
+    // Listen for games and countdowns
+    useEffect(() => {
+        if (!roomId || !featureFlags?.quizGameEnabled || !gameSettings) {
+            setGameLoading(false);
+            return;
+        }
 
+        setGameLoading(true);
+
+        const gamesQuery = query(collection(db, `rooms/${roomId}/games`), where("status", "==", "active"), limit(1));
+        const gameUnsub = onSnapshot(gamesQuery, (snapshot) => {
+            if (!snapshot.empty) {
+                setActiveGame({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ActiveGame);
+                setCountdown(null);
+            } else {
+                setActiveGame(null);
+            }
+            setGameLoading(false);
+        });
+        
+        const roomTimestampUnsub = onSnapshot(doc(db, 'rooms', roomId), (docSnap) => {
+             if (docSnap.exists() && !activeGameRef.current) {
+                const roomData = docSnap.data() as Room;
+                const nextGameTime = roomData.nextGameTimestamp?.toDate().getTime();
+                if (nextGameTime) {
+                    const remaining = Math.round((nextGameTime - Date.now()) / 1000);
+                    setCountdown(remaining > 0 ? remaining : 0);
+                }
+            }
+             if(!activeGameRef.current) {
+                setGameLoading(false);
+             }
+        });
+
+        return () => {
+            gameUnsub();
+            roomTimestampUnsub();
+        };
+    }, [roomId, featureFlags, gameSettings]);
+
+    // Handle countdown ticker and game start
+    useEffect(() => {
+        if (countdown === null || countdown < 0) return;
+        if (countdown === 0 && isHost && !activeGameRef.current) {
+             startGameInRoom(roomId).catch(err => console.error("Failed to start game:", err));
+        }
+
+        const timerId = setTimeout(() => {
+            setCountdown(prev => (prev !== null ? prev - 1 : null));
+        }, 1000);
+
+        return () => clearTimeout(timerId);
+    }, [countdown, isHost, roomId]);
 
     // Scroll chat to bottom on new message
     useEffect(() => {
@@ -160,108 +187,125 @@ export default function RoomPage() {
         await toggleSelfMute();
     }, [self, user, toggleSelfMute]);
 
+    const handleAnswerSubmit = useCallback(async (answerIndex: number) => {
+        if (!user || !activeGame) return;
+        try {
+            await submitAnswer(roomId, activeGame.id, user.uid, answerIndex);
+        } catch (error: any) {
+            toast({ variant: "destructive", description: error.message || "Cevap gönderilemedi." });
+        }
+    }, [user, activeGame, roomId, toast]);
+
+    const handleGameTimerEnd = useCallback(() => {
+        if (!activeGame || !isHost) return;
+        endGameWithoutWinner(roomId, activeGame.id);
+    }, [activeGame, isHost, roomId]);
+
+    // --- Memoized Values ---
+    
+    const { hostParticipant, otherParticipants } = useMemo(() => {
+        if (!participants || !room) return { hostParticipant: null, otherParticipants: [] };
+        const host = participants.find(p => p.uid === room.createdBy.uid);
+        const others = participants.filter(p => p.uid !== room.createdBy.uid);
+        return { hostParticipant: host, otherParticipants: others };
+    }, [participants, room]);
+
+    const isLoading = authLoading || !room;
     const isRoomParticipant = room?.participants?.some(p => p.uid === user?.uid);
 
-    if (authLoading || !room) {
+    if (isLoading) {
         return <div className="flex h-full items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
     }
     
     return (
         <>
-            {room.type === 'server' ? (
-                // --- SERVER UI ---
-                <div className="flex h-full bg-gray-900 text-gray-200">
-                    {/* Channel Sidebar */}
-                    <div className="w-72 bg-gray-800/50 flex-col p-2 hidden md:flex">
-                        <div className="p-2 mb-2">
-                            <h1 className="font-bold text-lg truncate">{room?.name}</h1>
-                            <p className="text-xs text-muted-foreground truncate">{room?.description}</p>
-                        </div>
-                        <div className="flex-1 space-y-1 overflow-y-auto">
-                            {room?.categories?.map(category => (
-                                <div key={category.id} className="pt-2">
-                                    <p className="px-2 py-1 text-xs font-bold uppercase text-muted-foreground">{category.name}</p>
-                                    <div className="space-y-1 mt-1">
-                                        {category.channels.map(channel => {
-                                            const Icon = channel.type === 'voice' ? Volume2 : Hash;
-                                            const isSelected = selectedChannelId === channel.id;
-                                            
-                                            const handleChannelClick = () => {
-                                                if (channel.type === 'text') {
-                                                    setSelectedChannelId(channel.id);
-                                                } else {
-                                                    toast({ title: 'Yakında...', description: 'Ses kanalları özelliği yakında eklenecektir.' });
-                                                }
-                                            };
-
-                                            return (
-                                                <button key={channel.id} onClick={handleChannelClick} className={cn(
-                                                    "w-full text-left flex items-center gap-2 p-2 rounded-md transition-colors",
-                                                    isSelected ? "bg-primary/20 text-white" : "text-gray-400 hover:bg-gray-700/50 hover:text-white"
-                                                )}>
-                                                    <Icon className="h-5 w-5"/>
-                                                    <span className="font-medium truncate">{channel.name}</span>
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="p-2 border-t border-gray-700/50 flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
-                                <AvatarImage src={user?.photoURL || undefined} />
-                                <AvatarFallback>{user?.displayName?.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <p className="text-sm font-semibold truncate">{user?.displayName}</p>
-                        </div>
-                    </div>
-
-                    {/* Main Content */}
-                    <div className="flex-1 flex flex-col">
-                        <RoomHeader 
-                            room={room!} 
-                            isHost={isHost} 
-                            onParticipantListToggle={() => setIsParticipantSheetOpen(true)}
-                            onBackClick={() => router.push('/rooms')}
-                        />
-                        <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 pb-28">
-                            <TextChat messages={messages} loading={messagesLoading} />
-                        </div>
-                        <footer className="fixed bottom-4 left-4 md:left-72 right-4 z-10 flex justify-center pointer-events-none">
-                             <div className="bg-background/80 backdrop-blur-md p-1.5 rounded-full border shadow-lg pointer-events-auto w-full max-w-3xl mx-auto">
-                                <ChatMessageInput roomId={roomId} channelId={selectedChannelId!} canSendMessage={isRoomParticipant || false} />
+            <div className="flex flex-col h-full bg-background text-foreground">
+                <RoomHeader 
+                    room={room} 
+                    isHost={isHost} 
+                    onParticipantListToggle={() => setIsParticipantSheetOpen(true)}
+                    onBackClick={() => setShowExitDialog(true)}
+                />
+                
+                <div className="flex-1 flex flex-col overflow-hidden">
+                    {/* Voice & Game Area */}
+                    <div className="p-4 shrink-0 space-y-4">
+                        {screenSharer ? (
+                            <div className='animate-in fade-in duration-300'>
+                                {isSharingScreen && localScreenStream && <ScreenShareView stream={localScreenStream} />}
+                                {remoteScreenStream && <ScreenShareView stream={remoteScreenStream} />}
+                                <p className="text-center text-xs text-muted-foreground mt-2">{screenSharer.username} ekranını paylaşıyor...</p>
                             </div>
-                        </footer>
+                        ) : (
+                            <div className="space-y-4 animate-in fade-in duration-300">
+                                <div className="flex flex-col items-center justify-center min-h-28">
+                                    {hostParticipant ? (
+                                        <VoiceUserIcon key={hostParticipant.uid} participant={hostParticipant} isHost={isHost} currentUserId={user!.uid} roomId={roomId} isParticipantTheHost={true} size="lg"/>
+                                    ) : (
+                                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                                            <div className="flex items-center justify-center h-20 w-20 rounded-full bg-muted/40 border-2 border-dashed border-border">
+                                                <Crown className="h-8 w-8 text-muted-foreground" />
+                                            </div>
+                                            <p className="text-xs font-semibold">Oda Sahibi</p>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="grid grid-cols-4 gap-4 text-center">
+                                    {otherParticipants.map((participant) => (
+                                        <VoiceUserIcon key={participant.uid} participant={participant} isHost={isHost} currentUserId={user!.uid} roomId={roomId} isParticipantTheHost={false} size="sm"/>
+                                    ))}
+                                    {Array.from({ length: Math.max(0, 8 - otherParticipants.length) }).map((_, index) => (
+                                        <div key={`placeholder-${index}`} className="flex flex-col items-center justify-center aspect-square bg-muted/40 rounded-full">
+                                            <Plus className="h-6 w-6 text-muted-foreground" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        {featureFlags?.quizGameEnabled && (
+                            <div className="pt-2">
+                                {gameLoading ? null : activeGame && gameSettings && user ? (
+                                    <RoomGameCard game={activeGame} settings={gameSettings} onAnswerSubmit={handleAnswerSubmit} onTimerEnd={handleGameTimerEnd} currentUserId={user.uid} />
+                                ) : countdown !== null && countdown > 0 && countdown <= 20 ? (
+                                    <GameCountdownCard timeLeft={countdown} />
+                                ) : null}
+                            </div>
+                        )}
                     </div>
-                </div>
-            ) : (
-                // --- QUICK ROOM UI ---
-                <div className="flex flex-col h-full bg-background text-gray-200">
-                    <RoomHeader 
-                        room={room!} 
-                        isHost={isHost} 
-                        onParticipantListToggle={() => setIsParticipantSheetOpen(true)}
-                        onBackClick={() => setShowExitDialog(true)}
-                    />
                     
-                    <div className="p-4 shrink-0">
-                        <p className="text-center text-xs text-muted-foreground">Bu bir Hızlı Oda. Sesli sohbet ve oyun odaklıdır.</p>
-                    </div>
-
-                    <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 pb-24">
+                    {/* Chat Area */}
+                    <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
                         <TextChat messages={messages} loading={messagesLoading} />
                     </div>
-
-                    <footer className="fixed bottom-4 inset-x-0 z-10 flex justify-center pointer-events-none">
-                        <div className="bg-background/80 backdrop-blur-md p-1.5 rounded-full border shadow-lg pointer-events-auto w-full max-w-lg mx-4">
-                            <ChatMessageInput roomId={roomId} canSendMessage={isRoomParticipant || false} />
-                        </div>
-                    </footer>
                 </div>
-            )}
-            
-            <ParticipantListSheet isOpen={isParticipantSheetOpen} onOpenChange={setIsParticipantSheetOpen} participants={room?.participants || []} />
+
+                {/* Footer Input Area */}
+                <footer className="p-3 border-t bg-background shrink-0 flex items-center gap-2">
+                    {isConnected && user ? (
+                        <>
+                            <Button onClick={handleToggleMute} variant="ghost" size="icon" className="rounded-full bg-muted hover:bg-muted/80">
+                                {self?.isMuted ? <MicOff className="h-5 w-5 text-destructive"/> : <Mic className="h-5 w-5"/>}
+                            </Button>
+                            <Button onClick={isSharingScreen ? stopScreenShare : startScreenShare} variant="ghost" size="icon" className="rounded-full bg-muted hover:bg-muted/80">
+                                {isSharingScreen ? <ScreenShareOff className="h-5 w-5 text-destructive"/> : <ScreenShare className="h-5 w-5"/>}
+                            </Button>
+                            <Button onClick={() => setShowExitDialog(true)} variant="destructive" size="icon" className="rounded-full">
+                                <PhoneOff className="h-5 w-5" />
+                                <span className="sr-only">Ayrıl</span>
+                            </Button>
+                        </>
+                    ) : (
+                        <Button onClick={handleJoinVoice} disabled={isConnecting || isConnected} className="rounded-full bg-primary text-primary-foreground h-10 px-4">
+                            {isConnecting ? <Loader2 className="h-5 w-5 animate-spin"/> : <Mic className="h-5 w-5"/>}
+                            <span className="ml-2">Katıl</span>
+                        </Button>
+                    )}
+                    <div className="flex-1 bg-muted rounded-full p-1.5">
+                        <ChatMessageInput roomId={roomId} canSendMessage={isRoomParticipant || false} />
+                    </div>
+                </footer>
+            </div>
+             <ParticipantListSheet isOpen={isParticipantSheetOpen} onOpenChange={setIsParticipantSheetOpen} participants={room?.participants || []} />
             <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
                 <AlertDialogContent>
                     <AlertDialogHeader>

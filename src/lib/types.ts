@@ -82,26 +82,10 @@ export interface Comment {
     } | null;
 }
 
-export interface Channel {
-    id: string;
-    name: string;
-    description?: string;
-    type: 'text' | 'voice';
-}
-
-export interface Category {
-    id: string;
-    name: string;
-    channels: Channel[];
-}
-
 export interface Room {
     id: string;
     name: string;
     description: string;
-    type?: 'room' | 'server'; // 'room' for temporary, 'server' for persistent
-    categories?: Category[]; // Only for servers
-    moderators?: string[]; // Array of UIDs
     createdBy: {
         uid: string;
         username: string;
