@@ -53,8 +53,8 @@ export async function sendMessage(chatId: string, sender: UserInfo, receiver: Us
   const metadataUpdate = {
     participantUids: [sender.uid, receiver.uid],
     participantInfo: {
-      [sender.uid]: { username: sender.username, photoURL: sender.photoURL },
-      [receiver.uid]: { username: receiver.username, photoURL: receiver.photoURL },
+      [sender.uid]: { username: sender.username, photoURL: sender.photoURL || null },
+      [receiver.uid]: { username: receiver.username, photoURL: receiver.photoURL || null },
     },
     lastMessage: {
       text: text,
