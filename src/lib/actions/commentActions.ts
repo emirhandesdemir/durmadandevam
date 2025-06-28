@@ -20,6 +20,7 @@ interface AddCommentArgs {
         uid: string;
         displayName: string | null;
         photoURL: string | null;
+        userAvatarFrame?: string;
     };
     replyTo?: {
         commentId: string;
@@ -42,6 +43,7 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
         uid: user.uid,
         username: user.displayName || "Anonim Kullanıcı",
         userAvatar: user.photoURL,
+        userAvatarFrame: user.userAvatarFrame || '',
         text: text,
         createdAt: serverTimestamp(),
         replyTo: replyTo || null,

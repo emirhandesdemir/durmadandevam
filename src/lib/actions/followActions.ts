@@ -13,7 +13,7 @@ import {
 import { revalidatePath } from 'next/cache';
 import { createNotification } from './notificationActions';
 
-export async function followUser(currentUserId: string, targetUserId: string, currentUserInfo: { username: string, photoURL: string | null}) {
+export async function followUser(currentUserId: string, targetUserId: string, currentUserInfo: { username: string, photoURL: string | null, userAvatarFrame?: string }) {
   if (currentUserId === targetUserId) {
     throw new Error('Kendinizi takip edemezsiniz.');
   }
@@ -36,6 +36,7 @@ export async function followUser(currentUserId: string, targetUserId: string, cu
         uid: currentUserId,
         username: currentUserInfo.username,
         photoURL: currentUserInfo.photoURL,
+        userAvatarFrame: currentUserInfo.userAvatarFrame || '',
         requestedAt: serverTimestamp(),
       };
       const requestExists = targetUserData.followRequests?.some((req: any) => req.uid === currentUserId);

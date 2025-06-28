@@ -15,6 +15,7 @@ interface UserInfo {
   uid: string;
   username: string;
   photoURL: string | null;
+  selectedAvatarFrame?: string;
 }
 
 interface NewMessageInputProps {

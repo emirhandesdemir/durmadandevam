@@ -78,6 +78,8 @@ export default function SignUpForm() {
                 privateProfile: false,
                 acceptsFollowRequests: true,
                 followRequests: [],
+                selectedBubble: '',
+                selectedAvatarFrame: '',
             });
 
             toast({

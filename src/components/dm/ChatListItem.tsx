@@ -28,6 +28,7 @@ export default function ChatListItem({ chat, currentUserId, isSelected }: ChatLi
   
   const lastMessage = chat.lastMessage;
   const unreadCount = chat.unreadCounts?.[currentUserId] || 0;
+  const partnerFrame = partnerInfo.selectedAvatarFrame || '';
 
   const timeAgo = lastMessage
     ? formatDistanceToNow(lastMessage.timestamp.toDate(), { addSuffix: true, locale: tr })
@@ -39,10 +40,12 @@ export default function ChatListItem({ chat, currentUserId, isSelected }: ChatLi
         "flex items-center gap-4 p-3 border-b hover:bg-muted/50 transition-colors",
         isSelected && "bg-muted"
       )}>
-        <Avatar className="h-12 w-12">
-          <AvatarImage src={partnerInfo.photoURL || undefined} />
-          <AvatarFallback>{partnerInfo.username.charAt(0)}</AvatarFallback>
-        </Avatar>
+        <div className={cn("avatar-frame-wrapper", partnerFrame)}>
+          <Avatar className="relative z-[1] h-12 w-12">
+            <AvatarImage src={partnerInfo.photoURL || undefined} />
+            <AvatarFallback>{partnerInfo.username.charAt(0)}</AvatarFallback>
+          </Avatar>
+        </div>
         <div className="flex-1 overflow-hidden">
           <div className="flex justify-between items-center">
             <h3 className="font-bold truncate">{partnerInfo.username}</h3>

@@ -3,15 +3,15 @@
 
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { MessageCircle } from 'lucide-react';
 import FollowButton from './FollowButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 import FollowListDialog from './FollowListDialog';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getChatId } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+
 
 interface ProfileHeaderProps {
   profileUser: any;
@@ -35,10 +35,12 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
     <>
       <div className="flex flex-col items-center text-center p-4">
         {/* Avatar */}
-        <Avatar className="h-24 w-24 md:h-28 md:w-28 border-4 border-background shadow-lg">
-          <AvatarImage src={profileUser.photoURL || undefined} />
-          <AvatarFallback className="text-5xl">{profileUser.username?.charAt(0).toUpperCase()}</AvatarFallback>
-        </Avatar>
+         <div className={cn("avatar-frame-wrapper p-2", profileUser.selectedAvatarFrame)}>
+            <Avatar className="relative z-[1] h-24 w-24 md:h-28 md:w-28 border-4 border-background shadow-lg">
+                <AvatarImage src={profileUser.photoURL || undefined} />
+                <AvatarFallback className="text-5xl">{profileUser.username?.charAt(0).toUpperCase()}</AvatarFallback>
+            </Avatar>
+        </div>
 
         {/* User Info */}
         <div className="mt-4">

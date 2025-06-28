@@ -91,8 +91,8 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
       <footer className="p-3 border-t">
         <NewMessageInput
           chatId={chatId}
-          sender={{ uid: user.uid, username: userData.username, photoURL: userData.photoURL }}
-          receiver={{ uid: partner.uid, username: partner.username, photoURL: partner.photoURL }}
+          sender={{ uid: user.uid, username: userData.username, photoURL: userData.photoURL, selectedAvatarFrame: userData.selectedAvatarFrame }}
+          receiver={{ uid: partner.uid, username: partner.username, photoURL: partner.photoURL, selectedAvatarFrame: partner.selectedAvatarFrame }}
         />
       </footer>
     </div>

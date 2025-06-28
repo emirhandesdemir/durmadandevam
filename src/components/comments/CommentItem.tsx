@@ -12,6 +12,8 @@ import { Timestamp } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { deleteComment } from "@/lib/actions/commentActions";
 import Link from 'next/link';
+import type { Comment } from '@/lib/types';
+
 
 import {
   DropdownMenu,
@@ -31,19 +33,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
-export interface Comment {
-    id: string;
-    uid: string;
-    username: string;
-    userAvatar?: string;
-    text: string;
-    createdAt: Timestamp;
-    replyTo?: {
-        commentId: string;
-        username: string;
-    } | null;
-}
-
 interface CommentItemProps {
     comment: Comment;
     postId: string;
@@ -61,7 +50,7 @@ export default function CommentItem({ comment, postId, onReply }: CommentItemPro
 
     const isOwner = currentUser?.uid === comment.uid;
     const timeAgo = comment.createdAt
-        ? formatDistanceToNow(comment.createdAt.toDate(), { addSuffix: true, locale: tr })
+        ? formatDistanceToNow((comment.createdAt as Timestamp).toDate(), { addSuffix: true, locale: tr })
         : "şimdi";
     
     // Yorumu silme fonksiyonu
@@ -83,11 +72,13 @@ export default function CommentItem({ comment, postId, onReply }: CommentItemPro
 
     return (
         <div className="flex items-start gap-3">
-            <Link href={`/profile/${comment.uid}`}>
-                <Avatar className="h-9 w-9">
-                    <AvatarImage src={comment.userAvatar} />
-                    <AvatarFallback>{comment.username?.charAt(0)}</AvatarFallback>
-                </Avatar>
+             <Link href={`/profile/${comment.uid}`}>
+                <div className={cn("avatar-frame-wrapper", comment.userAvatarFrame)}>
+                    <Avatar className="relative z-[1] h-9 w-9">
+                        <AvatarImage src={comment.userAvatar} />
+                        <AvatarFallback>{comment.username?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                </div>
             </Link>
             <div className="flex-1">
                 <div className="flex items-center justify-between">

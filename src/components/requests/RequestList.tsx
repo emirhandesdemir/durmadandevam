@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { handleFollowRequest } from "@/lib/actions/followActions";
 import { useState } from "react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 /**
  * Gelen takip isteklerini listeleyen ve yönetme eylemlerini (kabul/reddet) içeren bileşen.
@@ -64,10 +65,12 @@ export default function RequestList() {
                 <Card key={req.uid} className="p-4">
                     <div className="flex items-center justify-between">
                         <Link href={`/profile/${req.uid}`} className="flex items-center gap-3 group">
-                            <Avatar className="h-12 w-12">
-                                <AvatarImage src={req.photoURL} />
-                                <AvatarFallback>{req.username?.charAt(0)}</AvatarFallback>
-                            </Avatar>
+                             <div className={cn("avatar-frame-wrapper", req.userAvatarFrame)}>
+                                <Avatar className="relative z-[1] h-12 w-12">
+                                    <AvatarImage src={req.photoURL} />
+                                    <AvatarFallback>{req.username?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                            </div>
                             <span className="font-semibold group-hover:underline">{req.username}</span>
                         </Link>
                         <div className="flex gap-2">

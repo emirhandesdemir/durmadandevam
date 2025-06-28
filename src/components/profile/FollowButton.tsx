@@ -31,7 +31,11 @@ export default function FollowButton({ currentUser, targetUser }: FollowButtonPr
     }
     setIsLoading(true);
     try {
-      await followUser(currentUser.uid, targetUser.uid, { username: currentUser.username, photoURL: currentUser.photoURL || null });
+      await followUser(currentUser.uid, targetUser.uid, { 
+          username: currentUser.username, 
+          photoURL: currentUser.photoURL || null,
+          userAvatarFrame: currentUser.selectedAvatarFrame || '',
+      });
       if (targetUser.privateProfile) {
           toast({ description: "Takip isteği gönderildi."});
       }

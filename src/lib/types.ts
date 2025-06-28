@@ -32,6 +32,7 @@ export interface FollowRequest {
     uid: string;
     username:string;
     photoURL: string | null;
+    userAvatarFrame?: string;
     requestedAt: Timestamp;
 }
 
@@ -66,6 +67,21 @@ export interface Post {
     likeCount: number;
     commentCount: number;
 }
+
+export interface Comment {
+    id: string;
+    uid: string;
+    username: string;
+    userAvatar?: string;
+    userAvatarFrame?: string;
+    text: string;
+    createdAt: Timestamp;
+    replyTo?: {
+        commentId: string;
+        username: string;
+    } | null;
+}
+
 
 export interface Room {
     id: string;
@@ -155,6 +171,7 @@ export interface DirectMessageMetadata {
         [uid: string]: {
             username: string;
             photoURL: string | null;
+            selectedAvatarFrame?: string;
         }
     };
     lastMessage: {

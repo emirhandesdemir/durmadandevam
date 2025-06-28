@@ -34,7 +34,7 @@ interface CommentSheetProps {
  * Yorumları göstermek, eklemek ve yönetmek için kullanılan alttan açılır panel.
  */
 export default function CommentSheet({ open, onOpenChange, post }: CommentSheetProps) {
-    const { user } = useAuth();
+    const { user, userData } = useAuth();
     const { toast } = useToast();
 
     // State'ler
@@ -71,7 +71,7 @@ export default function CommentSheet({ open, onOpenChange, post }: CommentSheetP
 
     // Yeni yorum gönderme fonksiyonu
     const handleAddComment = async () => {
-        if (!user || !newCommentText.trim()) return;
+        if (!user || !newCommentText.trim() || !userData) return;
         setIsSubmitting(true);
         try {
             await addComment({
@@ -81,6 +81,7 @@ export default function CommentSheet({ open, onOpenChange, post }: CommentSheetP
                     uid: user.uid,
                     displayName: user.displayName,
                     photoURL: user.photoURL,
+                    userAvatarFrame: userData.selectedAvatarFrame || '',
                 },
                 replyTo: replyingTo || undefined
             });
