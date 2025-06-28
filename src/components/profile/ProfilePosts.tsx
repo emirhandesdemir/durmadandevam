@@ -7,7 +7,7 @@ import type { Post } from '@/components/posts/PostsFeed';
 import { Card, CardContent } from '../ui/card';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, CameraOff } from 'lucide-react';
+import { Loader2, CameraOff, FileText } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Heart, MessageCircle } from 'lucide-react';
@@ -27,7 +27,10 @@ export default function ProfilePosts({ userId, profileUser }: ProfilePostsProps)
     const canViewContent = !profileUser.privateProfile || isFollower || isOwnProfile;
 
     useEffect(() => {
-        if (authLoading || !canViewContent) {
+        if (authLoading) {
+            return;
+        }
+        if (!canViewContent) {
             setLoading(false);
             return;
         }
@@ -36,13 +39,11 @@ export default function ProfilePosts({ userId, profileUser }: ProfilePostsProps)
             setLoading(true);
             try {
                 const postsRef = collection(db, 'posts');
-                // orderBy removed to prevent index error. Sorting is now done client-side.
                 const q = query(postsRef, where('uid', '==', userId));
                 const querySnapshot = await getDocs(q);
                 
                 const fetchedPosts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post));
                 
-                // Sort posts by creation date client-side
                 fetchedPosts.sort((a, b) => {
                     const timeA = a.createdAt ? (a.createdAt as Timestamp).toMillis() : 0;
                     const timeB = b.createdAt ? (b.createdAt as Timestamp).toMillis() : 0;
@@ -85,30 +86,35 @@ export default function ProfilePosts({ userId, profileUser }: ProfilePostsProps)
     }
 
     return (
-        <div className="grid grid-cols-3 gap-0.5 mt-1">
+        <div className="grid grid-cols-3 gap-1 mt-1">
             {posts.map((post) => (
-                post.imageUrl && (
-                    <Link href="#" key={post.id} className="group relative aspect-[4/5] block">
-                       <Image
+                <Link href="#" key={post.id} className="group relative aspect-[4/5] block bg-muted/50">
+                    {post.imageUrl ? (
+                        <Image
                             src={post.imageUrl}
                             alt="Kullanıcı gönderisi"
                             fill
                             className="object-cover"
                         />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center text-white opacity-0 group-hover:opacity-100">
-                           <div className="flex items-center gap-4">
-                               <div className="flex items-center gap-1">
-                                    <Heart className="h-5 w-5 fill-white"/>
-                                    <span className="font-bold text-sm">{post.likeCount}</span>
-                               </div>
-                               <div className="flex items-center gap-1">
-                                    <MessageCircle className="h-5 w-5 fill-white"/>
-                                    <span className="font-bold text-sm">{post.commentCount}</span>
-                               </div>
+                    ) : (
+                       <div className="flex flex-col items-center justify-center h-full p-2 text-center">
+                           <FileText className="h-6 w-6 text-muted-foreground mb-2"/>
+                           <p className="text-muted-foreground text-xs line-clamp-5">{post.text}</p>
+                       </div>
+                    )}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center text-white opacity-0 group-hover:opacity-100">
+                       <div className="flex items-center gap-4">
+                           <div className="flex items-center gap-1">
+                                <Heart className="h-5 w-5 fill-white"/>
+                                <span className="font-bold text-sm">{post.likeCount}</span>
                            </div>
-                        </div>
-                    </Link>
-                )
+                           <div className="flex items-center gap-1">
+                                <MessageCircle className="h-5 w-5 fill-white"/>
+                                <span className="font-bold text-sm">{post.commentCount}</span>
+                           </div>
+                       </div>
+                    </div>
+                </Link>
             ))}
         </div>
     );

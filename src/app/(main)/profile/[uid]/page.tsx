@@ -8,6 +8,7 @@ import ProfileViewLogger from '@/components/profile/ProfileViewLogger';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Grid3x3, Clapperboard, Contact } from 'lucide-react';
 import { deepSerialize } from '@/lib/server-utils';
+import { Separator } from '@/components/ui/separator';
 
 interface UserProfilePageProps {
   params: { uid: string };
@@ -36,11 +37,12 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
   return (
     <>
       <ProfileViewLogger targetUserId={uid} />
-      {/* Changed container classes to remove horizontal padding for a full-bleed grid */}
       <div className="w-full mx-auto max-w-4xl py-4">
         <ProfileHeader profileUser={serializableProfileUser} />
+        
+        <Separator className="my-4" />
 
-        <Tabs defaultValue="posts" className="w-full mt-4">
+        <Tabs defaultValue="posts" className="w-full">
           <TabsList className="grid w-full grid-cols-3 bg-transparent border-b rounded-none">
             <TabsTrigger value="posts" className="rounded-none"><Grid3x3 /></TabsTrigger>
             <TabsTrigger value="reels" disabled className="rounded-none"><Clapperboard /></TabsTrigger>
