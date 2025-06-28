@@ -24,10 +24,12 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
   
   const profileUserData = profileUserSnap.data();
 
-  // The JSON.parse(JSON.stringify()) is a robust way to ensure that any non-plain objects
-  // (like Firestore Timestamps) are converted to a serializable format (like an ISO string)
-  // before being passed from a Server Component to a Client Component. This resolves the error.
-  const serializableProfileUser = JSON.parse(JSON.stringify(profileUserData)) as UserProfile;
+  // IMPORTANT: To pass data from a Server Component to a Client Component,
+  // it must be a "plain" serializable object. Firestore Timestamps are not plain.
+  // We use JSON.stringify and JSON.parse to perform a deep conversion, ensuring
+  // all Timestamps become ISO date strings, which are serializable.
+  // This is the standard and safest way to fix this specific Next.js error.
+  const serializableProfileUser = JSON.parse(JSON.stringify(profileUserData));
 
 
   return (
