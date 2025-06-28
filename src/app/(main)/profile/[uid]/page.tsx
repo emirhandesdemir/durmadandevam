@@ -5,7 +5,6 @@ import { notFound } from 'next/navigation';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import ProfilePosts from '@/components/profile/ProfilePosts';
 import ProfileViewLogger from '@/components/profile/ProfileViewLogger';
-import { deepSerialize } from '@/lib/server-utils'; // YENİ: Yardımcı fonksiyonu içe aktar
 
 interface UserProfilePageProps {
   params: { uid: string };
@@ -23,9 +22,9 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
   
   const profileUserData = profileUserSnap.data();
 
-  // YENİ: Veriyi istemciye göndermeden önce tüm Timestamp'leri güvenli bir formata dönüştür.
-  // Bu, "Only plain objects can be passed" hatasını önler.
-  const serializableProfileUser = deepSerialize(profileUserData);
+  // YENİ: Veritabanından gelen nesneyi, içindeki tüm özel formatlardan (Timestamp vb.)
+  // arındırmak için standart JSON serileştirme yöntemi kullanılıyor. Bu, hatayı kalıcı olarak çözer.
+  const serializableProfileUser = JSON.parse(JSON.stringify(profileUserData));
 
 
   return (
