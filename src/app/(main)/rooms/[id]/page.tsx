@@ -340,8 +340,17 @@ export default function RoomPage() {
                     </div>
                 </footer>
             </div>
-             <ParticipantListSheet isOpen={isParticipantSheetOpen} onOpenChange={setIsParticipantSheetOpen} room={room} />
-             <OpenPortalDialog isOpen={isPortalDialogOpen} onOpenChange={setIsPortalDialogOpen} roomId={roomId} roomName={room.name} />
+             <ParticipantListSheet
+                isOpen={isParticipantSheetOpen}
+                onOpenChange={setIsParticipantSheetOpen}
+                participants={room?.participants || []}
+            />
+             <OpenPortalDialog 
+                isOpen={isPortalDialogOpen} 
+                onOpenChange={setIsPortalDialogOpen} 
+                roomId={roomId} 
+                roomName={room?.name || ''}
+             />
             <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
