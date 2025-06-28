@@ -176,7 +176,7 @@ export default function ProfilePageClient() {
                 <CardHeader className="items-center text-center pt-8">
                      <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
                     <div className="relative">
-                        <div className={cn("avatar-frame-wrapper p-2", selectedAvatarFrame)}>
+                        <div className={cn("avatar-frame-wrapper", selectedAvatarFrame)}>
                             <Avatar className="relative z-[1] h-32 w-32 border-4 border-white shadow-lg">
                                 <AvatarImage src={newAvatar || userData.photoURL || undefined} />
                                 <AvatarFallback className="text-5xl bg-primary/20">{username?.charAt(0).toUpperCase()}</AvatarFallback>

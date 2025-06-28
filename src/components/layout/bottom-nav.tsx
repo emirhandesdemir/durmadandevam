@@ -58,7 +58,7 @@ export default function BottomNav() {
                                 )}>
                                 {isProfile ? (
                                     <div className="relative">
-                                         <div className={cn("avatar-frame-wrapper", user.photoURL && 'p-1', userData?.selectedAvatarFrame)}>
+                                         <div className={cn("avatar-frame-wrapper", userData?.selectedAvatarFrame)}>
                                             <Avatar className="relative z-[1] h-7 w-7">
                                                 <AvatarImage src={user.photoURL || undefined} />
                                                 <AvatarFallback className="text-xs bg-muted">{user.displayName?.charAt(0)}</AvatarFallback>

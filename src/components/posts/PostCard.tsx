@@ -141,7 +141,7 @@ export default function PostCard({ post }: PostCardProps) {
                 <div className="p-4">
                     <div className="flex items-center justify-between">
                         <Link href={`/profile/${post.uid}`} className="flex items-center gap-3 group">
-                             <div className={cn("avatar-frame-wrapper p-1", post.userAvatarFrame)}>
+                             <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
                                 <Avatar className="relative z-[1] h-10 w-10 border">
                                     <AvatarImage src={post.userAvatar} />
                                     <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
