@@ -59,20 +59,20 @@ export default function ChatMessageInput({ roomId, channelId, canSendMessage }: 
   };
 
   if (!canSendMessage) {
-    return <p className="text-center text-sm text-gray-400">Mesaj göndermek için topluluğa katılmalısınız.</p>;
+    return <p className="w-full text-center text-sm text-muted-foreground px-4">Mesaj göndermek için topluluğa katılmalısınız.</p>;
   }
   
   return (
-    <form onSubmit={handleSendMessage} className="flex w-full items-center space-x-3">
+    <form onSubmit={handleSendMessage} className="flex w-full items-center space-x-2">
       <Input
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         placeholder="Bir mesaj yaz..."
         autoComplete="off"
-        className="rounded-full flex-1 py-5 bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus-visible:ring-primary"
+        className="flex-1 bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground"
         disabled={isSending}
       />
-      <Button type="submit" size="icon" disabled={!message.trim() || isSending} className="rounded-full flex-shrink-0 h-10 w-10 bg-primary shadow-lg transition-transform hover:scale-110">
+      <Button type="submit" size="icon" disabled={!message.trim() || isSending} className="rounded-full flex-shrink-0 h-9 w-9 bg-primary shadow-lg transition-transform hover:scale-110">
         {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         <span className="sr-only">Gönder</span>
       </Button>
