@@ -319,7 +319,7 @@ export default function RoomPage() {
                             Arka Plana Al
                         </Button>
                         <Button onClick={() => { handleLeaveAndNavigate(); setShowExitDialog(false); }}>
-                            Ayrıl ve Kapat
+                            Sesli sohbetten çık
                         </Button>
                     </AlertDialogFooter>
                 </AlertDialogContent>
