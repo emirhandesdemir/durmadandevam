@@ -49,6 +49,7 @@ const avatarFrameOptions = [
     { id: "avatar-frame-angel", name: "Melek Kanadı" },
     { id: "avatar-frame-devil", name: "Şeytan Kanadı" },
     { id: "avatar-frame-snake", name: "Yılan" },
+    { id: "avatar-frame-tech", name: "Tekno Aura" },
 ];
 
 export default function ProfilePageClient() {

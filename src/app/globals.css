@@ -135,32 +135,67 @@
     @apply relative z-0; /* Ensure avatar frame is on a stacking context */
   }
 
-  /* NEW: SVG Angel Wings Frame */
-  .avatar-frame-angel::before {
-    content: '';
-    @apply absolute -inset-[25%] bg-no-repeat bg-center z-[-1] pointer-events-none;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cfilter id='glow'%3E%3CfeGaussianBlur stdDeviation='3.5' result='coloredBlur'/%3E%3CfeMerge%3E%3CfeMergeNode in='coloredBlur'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/defs%3E%3Cg transform='translate(100 100)' style='filter: url(%23glow);'%3E%3Cpath d='M-10,-50 C -60,-30 -70,20 -30,45 C -5,65 5,65 30,45 C 70,20 60,-30 10,-50 C 0,-65 -0,-65 -10,-50 Z' fill='rgba(255,255,255,0.7)'/%3E%3Cpath d='M-15,-40 C -50,-20 -60,10 -25,35 C 0,55 0,55 25,35 C 60,10 50,-20 15,-40 C 0,-55 0,-55 -15,-40 Z' fill='rgba(255,255,255,0.9)'/%3E%3C/g%3E%3C/svg%3E");
-    background-size: contain;
-    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    transform-origin: bottom center;
-    transform: translateY(5px);
-  }
-  .avatar-frame-wrapper:hover .avatar-frame-angel::before {
-    transform: translateY(0) scale(1.05);
+  /* Keyframes for animations */
+  @keyframes wing-flap {
+    0%, 100% {
+      transform: rotateZ(-5deg) scale(1.0);
+    }
+    50% {
+      transform: rotateZ(5deg) scale(1.05);
+    }
   }
 
-  /* NEW: SVG Devil Wings Frame */
-  .avatar-frame-devil::before {
-    content: '';
-    @apply absolute -inset-[25%] bg-no-repeat bg-center z-[-1] pointer-events-none;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cfilter id='glow-devil'%3E%3CfeGaussianBlur stdDeviation='2' result='coloredBlur'/%3E%3CfeMerge%3E%3CfeMergeNode in='coloredBlur'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3C/defs%3E%3Cg transform='translate(100 100) rotate(180)' style='filter: url(%23glow-devil);'%3E%3Cpath d='M-30,-30 C -80,-20 -50,50 0,20 C 50,50 80,-20 30,-30 C 0,-70 0,-70 -30,-30 Z' fill='%237c3aed'/%3E%3Cpath d='M-25,-25 C -70,-15 -45,40 0,15 C 45,40 70,-15 25,-25 C 0,-60 0,-60 -25,-25 Z' fill='%23a78bfa'/%3E%3C/g%3E%3C/svg%3E");
-    background-size: contain;
-    transition: transform 0.3s ease-out;
-    transform-origin: top center;
-    transform: translateY(-5px);
+  @keyframes tech-orbit {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
-  .avatar-frame-wrapper:hover .avatar-frame-devil::before {
-    transform: translateY(0) scale(1.05);
+
+  /* Generic styles for wing frames */
+  .avatar-frame-angel::before, .avatar-frame-angel::after,
+  .avatar-frame-devil::before, .avatar-frame-devil::after {
+    content: '';
+    @apply absolute top-1/2 w-1/2 h-1/2 bg-contain bg-no-repeat z-[-1] pointer-events-none;
+    transform: translateY(-50%);
+    transition: transform 0.3s ease-in-out;
+  }
+  
+  .avatar-frame-wrapper:hover .avatar-frame-angel::before,
+  .avatar-frame-wrapper:hover .avatar-frame-angel::after,
+  .avatar-frame-wrapper:hover .avatar-frame-devil::before,
+  .avatar-frame-wrapper:hover .avatar-frame-devil::after {
+     transform: translateY(-50%) scale(1.1);
+  }
+
+  /* Angel Wings Frame */
+  .avatar-frame-angel::before { /* Left Wing */
+    left: -20%;
+    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3cfilter id='angel-glow' x='-50%25' y='-50%25' width='200%25' height='200%25'%3e%3cfeGaussianBlur stdDeviation='3' result='coloredBlur'/%3e%3cfeMerge%3e%3cfeMergeNode in='coloredBlur'/%3e%3cfeMergeNode in='SourceGraphic'/%3e%3c/feMerge%3e%3c/filter%3e%3c/defs%3e%3cpath d='M95,50 C70,20 50,30 20,0 C40,50 40,70 95,50 Z' fill='rgba(255,255,255,0.9)' filter='url(%23angel-glow)'/%3e%3c/svg%3e");
+    animation: wing-flap 2.5s ease-in-out infinite;
+    transform-origin: bottom right;
+  }
+  .avatar-frame-angel::after { /* Right Wing */
+    right: -20%;
+    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3cfilter id='angel-glow' x='-50%25' y='-50%25' width='200%25' height='200%25'%3e%3cfeGaussianBlur stdDeviation='3' result='coloredBlur'/%3e%3cfeMerge%3e%3cfeMergeNode in='coloredBlur'/%3e%3cfeMergeNode in='SourceGraphic'/%3e%3c/feMerge%3e%3c/filter%3e%3c/defs%3e%3cpath d='M95,50 C70,20 50,30 20,0 C40,50 40,70 95,50 Z' fill='rgba(255,255,255,0.9)' filter='url(%23angel-glow)'/%3e%3c/svg%3e");
+    transform: translateY(-50%) scaleX(-1); /* Flip horizontally */
+    animation: wing-flap 2.5s ease-in-out infinite reverse; /* Reverse animation for symmetry */
+    transform-origin: bottom left;
+  }
+
+  /* Devil Wings Frame */
+  .avatar-frame-devil::before { /* Left Wing */
+    left: -15%;
+    top: 40%;
+    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3clinearGradient id='devil-grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3e%3cstop offset='0%25' style='stop-color:%23dc2626;stop-opacity:1' /%3e%3cstop offset='100%25' style='stop-color:%234c1d95;stop-opacity:1' /%3e%3c/linearGradient%3e%3cfilter id='devil-glow'%3e%3cfeGaussianBlur stdDeviation='2'/%3e%3c/filter%3e%3c/defs%3e%3cpath d='M5,50 C30,80 50,70 80,100 C60,50 60,30 5,50 Z' fill='url(%23devil-grad)' filter='url(%23devil-glow)'/%3e%3c/svg%3e");
+    animation: wing-flap 3s ease-in-out infinite;
+    transform-origin: top right;
+  }
+  .avatar-frame-devil::after { /* Right Wing */
+    right: -15%;
+    top: 40%;
+    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3clinearGradient id='devil-grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3e%3cstop offset='0%25' style='stop-color:%23dc2626;stop-opacity:1' /%3e%3cstop offset='100%25' style='stop-color:%234c1d95;stop-opacity:1' /%3e%3c/linearGradient%3e%3cfilter id='devil-glow'%3e%3cfeGaussianBlur stdDeviation='2'/%3e%3c/filter%3e%3c/defs%3e%3cpath d='M5,50 C30,80 50,70 80,100 C60,50 60,30 5,50 Z' fill='url(%23devil-grad)' filter='url(%23devil-glow)'/%3e%3c/svg%3e");
+    transform: translateY(-50%) scaleX(-1);
+    animation: wing-flap 3s ease-in-out infinite reverse;
+    transform-origin: top left;
   }
 
   /* Snake Frame */
@@ -169,10 +204,14 @@
     @apply absolute -inset-1 bg-no-repeat bg-center z-[-1] pointer-events-none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-10 -10 120 120'%3E%3Cpath d='M50,0 A50,50 0 1,1 49.9,0' stroke='%234ade80' stroke-width='6' stroke-dasharray='150 164' fill='none'/%3E%3C/svg%3E");
     background-size: 110% 110%;
-    animation: snake-orbit 8s linear infinite;
+    animation: tech-orbit 8s linear infinite;
   }
-  @keyframes snake-orbit {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+  
+  /* NEW: Tech Aura Frame */
+  .avatar-frame-tech::before {
+    content: '';
+    @apply absolute -inset-2 bg-no-repeat bg-center z-[-1] pointer-events-none;
+    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3cfilter id='tech-glow'%3e%3cfeGaussianBlur in='SourceGraphic' stdDeviation='2' /%3e%3c/filter%3e%3c/defs%3e%3ccircle cx='60' cy='60' r='55' stroke='%230ea5e9' stroke-width='4' stroke-dasharray='15 25' fill='none' filter='url(%23tech-glow)'%3e%3canimateTransform attributeName='transform' type='rotate' from='0 60 60' to='360 60 60' dur='10s' repeatCount='indefinite' /%3e%3c/circle%3e%3ccircle cx='60' cy='60' r='50' stroke='%2334d399' stroke-width='2' stroke-dasharray='5 15' fill='none'%3e%3canimateTransform attributeName='transform' type='rotate' from='360 60 60' to='0 60 60' dur='15s' repeatCount='indefinite' /%3e%3c/circle%3e%3c/svg%3e");
+    background-size: 100% 100%;
   }
 }
