@@ -10,7 +10,7 @@
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-    --primary: 260 85% 65%; /* Vibrant Lilac */
+    --primary: 262.1 83.3% 57.8%; /* New Vibrant Purple */
     --primary-foreground: 0 0% 100%;
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
@@ -22,30 +22,30 @@
     --destructive-foreground: 0 0% 100%;
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
-    --ring: 240 10% 3.9%;
-    --radius: 1rem; /* More rounded corners */
+    --ring: 262.1 83.3% 57.8%;
+    --radius: 1.5rem; /* More rounded corners */
   }
  
   .dark {
-    --background: 250 30% 12%; /* Deep Purple */
+    --background: 240 10% 10%; /* Slightly lighter dark */
     --foreground: 240 50% 98%;
-    --card: 250 30% 17%;
+    --card: 240 5% 15%; /* Darker card */
     --card-foreground: 240 50% 98%;
-    --popover: 250 30% 12%;
+    --popover: 240 10% 10%;
     --popover-foreground: 240 50% 98%;
-    --primary: 260 85% 65%; /* Vibrant Lilac */
+    --primary: 262.1 83.3% 57.8%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 340 40% 25%; /* Muted Dark Pink */
-    --secondary-foreground: 340 80% 96%;
-    --muted: 250 30% 20%;
-    --muted-foreground: 240 10% 65%;
-    --accent: 340 90% 70%; /* Bright Pink */
+    --secondary: 240 5% 20%;
+    --secondary-foreground: 240 50% 98%;
+    --muted: 240 5% 20%;
+    --muted-foreground: 240 5% 65%;
+    --accent: 330 85% 65%; /* Bright Pink accent */
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 72.2% 50.6%;
     --destructive-foreground: 0 0% 100%;
-    --border: 250 30% 25%;
-    --input: 250 30% 25%;
-    --ring: 260 85% 70%;
+    --border: 240 5% 25%;
+    --input: 240 5% 25%;
+    --ring: 262.1 83.3% 57.8%;
   }
 }
  
@@ -56,6 +56,11 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Default Avatar Gradient */
+.default-avatar-bg {
+    @apply bg-gradient-to-br from-purple-500 via-fuchsia-500 to-pink-500 text-white font-bold;
 }
 
 /* Chat Bubble Styles */

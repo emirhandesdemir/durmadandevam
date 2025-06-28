@@ -44,56 +44,57 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
 
   return (
     <>
-      <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start p-4 rounded-xl">
-        <div className={cn("avatar-frame-wrapper p-1", profileUser.selectedAvatarFrame)}>
-          <Avatar className="h-24 w-24 sm:h-32 sm:w-32 border-4 border-background">
-            <AvatarImage src={profileUser.photoURL || undefined} />
-            <AvatarFallback className="text-4xl">{profileUser.username?.charAt(0).toUpperCase()}</AvatarFallback>
-          </Avatar>
+      <div className="flex flex-col items-center gap-6 p-4">
+        <div className="flex flex-col sm:flex-row items-center gap-6">
+          <div className={cn("avatar-frame-wrapper p-1", profileUser.selectedAvatarFrame)}>
+            <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
+              <AvatarImage src={profileUser.photoURL || undefined} />
+              <AvatarFallback className="text-5xl">{profileUser.username?.charAt(0).toUpperCase()}</AvatarFallback>
+            </Avatar>
+          </div>
+          <div className="flex flex-col items-center sm:items-start gap-4">
+            <h1 className="text-3xl font-bold">{profileUser.username}</h1>
+            <div className="flex gap-2">
+              {isOwnProfile ? (
+                 <Button asChild variant="outline" size="sm">
+                      <Link href="/profile">
+                          <Settings className="mr-2 h-4 w-4" /> Profili Düzenle
+                      </Link>
+                  </Button>
+              ) : (
+                <>
+                  <FollowButton currentUser={currentUser} targetUser={profileUser} />
+                  <Button variant="secondary" onClick={handleMessageClick}>
+                      <MessageSquare className="h-4 w-4" />
+                      <span className="ml-2 hidden sm:inline">Mesaj</span>
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className="flex flex-col items-center sm:items-start flex-1 gap-4">
-          <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-bold">{profileUser.username}</h1>
-              <div className="flex gap-2">
-                {isOwnProfile ? (
-                   <Button asChild variant="outline" size="sm">
-                        <Link href="/profile">
-                            <Settings className="mr-2 h-4 w-4" /> Profili Düzenle
-                        </Link>
-                    </Button>
-                ) : (
-                  <>
-                    <FollowButton currentUser={currentUser} targetUser={profileUser} />
-                    <Button variant="secondary" onClick={handleMessageClick}>
-                        <MessageSquare className="h-4 w-4" />
-                        <span className="ml-2 hidden sm:inline">Mesaj</span>
-                    </Button>
-                  </>
-                )}
-              </div>
-          </div>
-          
-          <div className="flex gap-6 text-center">
+        <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
             <button
               onClick={() => handleStatClick('followers')}
               disabled={!canViewStats}
-              className={cn("cursor-pointer", !canViewStats && "cursor-not-allowed")}
+              className={cn("p-4 rounded-xl border bg-card text-center hover:bg-muted/50 transition-colors", !canViewStats && "cursor-not-allowed opacity-60")}
             >
-              <p className="font-bold">{(profileUser.followers || []).length}</p>
+              <p className="text-2xl font-bold">{(profileUser.followers || []).length}</p>
               <p className="text-sm text-muted-foreground">takipçi</p>
             </button>
             <button
               onClick={() => handleStatClick('following')}
               disabled={!canViewStats}
-              className={cn("cursor-pointer", !canViewStats && "cursor-not-allowed")}
+              className={cn("p-4 rounded-xl border bg-card text-center hover:bg-muted/50 transition-colors", !canViewStats && "cursor-not-allowed opacity-60")}
             >
-              <p className="font-bold">{(profileUser.following || []).length}</p>
+              <p className="text-2xl font-bold">{(profileUser.following || []).length}</p>
               <p className="text-sm text-muted-foreground">takip</p>
             </button>
-          </div>
-          {!canViewStats && <p className="text-sm text-muted-foreground">Bu hesap gizli</p>}
         </div>
+
+        {!canViewStats && <p className="text-sm text-muted-foreground mt-2">Bu hesap gizli olduğu için istatistikleri görüntülenemiyor.</p>}
+
       </div>
       <FollowListDialog
         isOpen={dialogOpen}

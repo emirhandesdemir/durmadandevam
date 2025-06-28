@@ -37,7 +37,7 @@ export default function BottomNav() {
 
     return (
         <footer className="border-t bg-card/80 backdrop-blur-sm shrink-0">
-            <nav className={`grid h-14 grid-cols-${enabledNavItems.length}`}>
+            <nav className={`grid h-16 grid-cols-${enabledNavItems.length}`}>
                 {enabledNavItems.map((item) => {
                     // /profile/[uid] rotası için özel kontrol
                     const isActive = item.href.startsWith('/profile/') ? pathname.startsWith('/profile/') : pathname === item.href;
@@ -45,13 +45,13 @@ export default function BottomNav() {
                     return (
                         <Link href={item.href} key={item.label}
                             className={cn(
-                                "flex flex-col items-center justify-center gap-1 text-xs font-medium text-muted-foreground transition-all duration-200",
+                                "flex flex-col items-center justify-center gap-1 text-sm font-medium text-muted-foreground transition-all duration-200",
                                 isActive ? "text-primary scale-105" : "hover:text-primary"
                             )}>
-                            <div className={cn("p-2 rounded-full transition-colors", isActive ? "bg-primary/10" : "")}>
-                                <item.icon className="h-5 w-5"/>
+                            <div className={cn("p-3 rounded-full transition-colors", isActive ? "bg-primary/10" : "")}>
+                                <item.icon className="h-6 w-6"/>
                             </div>
-                            <span>{item.label}</span>
+                            <span className="text-xs">{item.label}</span>
                         </Link>
                     )
                 })}
