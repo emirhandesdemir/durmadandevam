@@ -1,3 +1,4 @@
+
 // src/components/posts/PostCard.tsx
 "use client";
 
@@ -45,6 +46,7 @@ export default function PostCard({ post }: PostCardProps) {
     const { user: currentUser } = useAuth();
     const { toast } = useToast();
 
+    // State'ler
     const [isLiking, setIsLiking] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -53,12 +55,14 @@ export default function PostCard({ post }: PostCardProps) {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showComments, setShowComments] = useState(false);
 
+    // Kontroller
     const isOwner = currentUser?.uid === post.uid;
     const isLiked = currentUser ? (post.likes || []).includes(currentUser.uid) : false;
     
-    const createdAtDate = typeof post.createdAt === 'string' 
-      ? new Date(post.createdAt) 
-      : (post.createdAt as Timestamp).toDate();
+    // Güvenli tarih dönüşümü
+    const createdAtDate = post.createdAt && 'seconds' in post.createdAt 
+        ? new Timestamp(post.createdAt.seconds, post.createdAt.nanoseconds).toDate()
+        : new Date();
 
     const timeAgo = post.createdAt
         ? formatDistanceToNow(createdAtDate, { addSuffix: true, locale: tr })
@@ -66,11 +70,12 @@ export default function PostCard({ post }: PostCardProps) {
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    // This effect syncs the local text state with the prop from the parent.
+    // Bu etki, yerel metin durumunu ebeveynden gelen prop ile senkronize eder.
     useEffect(() => {
         setEditedText(post.text || '');
     }, [post.text]);
 
+    // Düzenleme moduna girildiğinde textarea'yı odakla ve boyutlandır
     useEffect(() => {
         if (isEditing && textareaRef.current) {
             textareaRef.current.focus();
@@ -134,66 +139,68 @@ export default function PostCard({ post }: PostCardProps) {
         setEditedText(post.text || '');
         setIsEditing(false);
     };
-
+    
     return (
         <>
-            <div className="w-full animate-in fade-in-50 duration-500 bg-card border-b">
-                <div className="p-4">
-                    <div className="flex items-center justify-between">
-                        <Link href={`/profile/${post.uid}`} className="flex items-center gap-3 group">
-                             <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
-                                <Avatar className="relative z-[1] h-10 w-10 border">
-                                    <AvatarImage src={post.userAvatar} />
-                                    <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                            </div>
-                            <div>
-                                <div className="flex items-center gap-1.5">
-                                    <p className="font-bold text-sm group-hover:underline">{post.username}</p>
-                                    {post.userRole === 'admin' && (
-                                        <TooltipProvider>
-                                            <Tooltip>
-                                                <TooltipTrigger>
-                                                    <BadgeCheck className="h-4 w-4 text-primary fill-primary/20" />
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                    <p>Yönetici</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
-                                    )}
-                                </div>
-                                <p className="text-xs text-muted-foreground">{timeAgo}</p>
-                            </div>
-                        </Link>
-                        {isOwner && !isEditing && (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="rounded-full h-8 w-8">
-                                        <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                                        <Edit className="mr-2 h-4 w-4" />
-                                        <span>Düzenle</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-destructive focus:text-destructive">
-                                        <Trash2 className="mr-2 h-4 w-4" />
-                                        <span>Sil</span>
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        )}
-                    </div>
+           <div className="flex gap-3 border-b p-4 transition-colors hover:bg-muted/50">
+                {/* Avatar Column */}
+                <div>
+                    <Link href={`/profile/${post.uid}`}>
+                         <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
+                            <Avatar className="relative z-[1] h-10 w-10">
+                                <AvatarImage src={post.userAvatar} />
+                                <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                        </div>
+                    </Link>
+                </div>
 
-                    {isEditing ? (
-                            <div className="space-y-2 mt-3">
+                {/* Content Column */}
+                <div className="flex-1">
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                            <Link href={`/profile/${post.uid}`}>
+                                <p className="font-bold text-sm hover:underline">{post.username}</p>
+                            </Link>
+                            {post.userRole === 'admin' && (
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger>
+                                            <BadgeCheck className="h-4 w-4 text-primary fill-primary/20" />
+                                        </TooltipTrigger>
+                                        <TooltipContent><p>Yönetici</p></TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>{timeAgo}</span>
+                            {isOwner && !isEditing && (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full -mr-2">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => setIsEditing(true)}><Edit className="mr-2 h-4 w-4" /><span>Düzenle</span></DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Sil</span></DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            )}
+                        </div>
+                    </div>
+                    
+                    {/* Post Text/Editing */}
+                    <div className="mt-1 text-sm text-foreground/90">
+                        {isEditing ? (
+                            <div className="space-y-2">
                                 <Textarea
                                     ref={textareaRef}
                                     value={editedText}
                                     onChange={(e) => setEditedText(e.target.value)}
-                                    className="w-full resize-none bg-muted p-2 rounded-lg text-sm"
+                                    className="w-full resize-none bg-muted p-2 rounded-lg"
                                     onInput={(e) => {
                                         const target = e.currentTarget;
                                         target.style.height = 'inherit';
@@ -209,72 +216,52 @@ export default function PostCard({ post }: PostCardProps) {
                                 </div>
                             </div>
                         ) : (
-                            editedText && <p className="text-sm leading-relaxed whitespace-pre-wrap mt-3">{editedText}</p>
+                            post.text && <p className="whitespace-pre-wrap">{post.text}</p>
                         )}
-                </div>
-
-                {post.imageUrl && !isEditing && (
-                    <div className="w-full mt-2">
-                        <Image
-                            src={post.imageUrl}
-                            alt="Gönderi resmi"
-                            width={800}
-                            height={800}
-                            className="aspect-square w-full object-cover"
-                        />
                     </div>
-                )}
-                
-                 <div className="px-4 py-2 flex items-center justify-start gap-1">
-                    <Button
-                        variant="ghost"
-                        className={cn(
-                            "group rounded-full px-3 text-muted-foreground hover:bg-destructive/10 hover:text-destructive",
-                            isLiked && "text-destructive"
-                        )}
-                        onClick={handleLike}
-                        disabled={isLiking || !currentUser}
-                    >
-                        <Heart className={cn(
-                            "mr-2 h-4 w-4 transition-transform group-hover:scale-110",
-                            isLiked ? "fill-current" : "group-hover:fill-destructive/50"
-                        )} />
-                        <span className="text-xs">{post.likeCount || 0}</span>
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        className="group rounded-full px-3 text-muted-foreground hover:bg-primary/10 hover:text-primary"
-                        onClick={() => setShowComments(true)}
-                    >
-                        <MessageCircle className="mr-2 h-4 w-4 transition-transform group-hover:scale-110" />
-                        <span className="text-xs">{post.commentCount || 0}</span>
-                    </Button>
+
+                    {/* Image */}
+                    {post.imageUrl && !isEditing && (
+                        <div className="relative mt-3 h-auto w-full overflow-hidden rounded-xl border">
+                             <Image
+                                src={post.imageUrl}
+                                alt="Gönderi resmi"
+                                width={800}
+                                height={800}
+                                className="h-auto w-full max-h-[600px] object-cover"
+                            />
+                        </div>
+                    )}
+                    
+                    {/* Action Buttons */}
+                    <div className="mt-3 flex items-center gap-1 -ml-2">
+                        <Button variant="ghost" size="icon" className={cn("rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive", isLiked && "text-destructive")} onClick={handleLike} disabled={isLiking || !currentUser}>
+                           <Heart className={cn("h-5 w-5", isLiked && "fill-current")} />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary" onClick={() => setShowComments(true)}>
+                            <MessageCircle className="h-5 w-5" />
+                        </Button>
+                    </div>
+
+                    {/* Stats */}
+                    {(post.likeCount > 0 || post.commentCount > 0) && (
+                        <div className="mt-1 text-xs text-muted-foreground">
+                            <span>{post.commentCount || 0} yanıt</span>
+                            <span className="mx-1">·</span>
+                            <span>{post.likeCount || 0} beğeni</span>
+                        </div>
+                    )}
                 </div>
             </div>
             
             <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
                 <AlertDialogContent>
-                    <AlertDialogHeader>
-                    <AlertDialogTitle>Emin misiniz?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Bu gönderiyi kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
-                    </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                    <AlertDialogCancel disabled={isDeleting}>İptal</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
-                        {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Sil
-                    </AlertDialogAction>
-                    </AlertDialogFooter>
+                    <AlertDialogHeader><AlertDialogTitle>Emin misiniz?</AlertDialogTitle><AlertDialogDescription>Bu gönderiyi kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.</AlertDialogDescription></AlertDialogHeader>
+                    <AlertDialogFooter><AlertDialogCancel disabled={isDeleting}>İptal</AlertDialogCancel><AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">{isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Sil</AlertDialogAction></AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
             
-            <CommentSheet 
-                open={showComments} 
-                onOpenChange={setShowComments}
-                post={post}
-            />
+            <CommentSheet open={showComments} onOpenChange={setShowComments} post={post} />
         </>
     );
 }
