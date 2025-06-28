@@ -7,50 +7,6 @@ import ProfileHeader from '@/components/profile/ProfileHeader';
 import ProfilePosts from '@/components/profile/ProfilePosts';
 import ProfileViewLogger from '@/components/profile/ProfileViewLogger';
 
-/**
- * Recursively converts non-plain objects like Firestore Timestamps or Dates into a serializable format (ISO strings).
- * This function is crucial for passing data from Server Components to Client Components in Next.js.
- * It robustly handles various ways date/time information might be represented.
- * @param data The object, array, or primitive to serialize.
- * @returns The fully serialized data, safe to pass as props.
- */
-function deepSerialize(data: any): any {
-  if (data === null || typeof data !== 'object') {
-    return data;
-  }
-
-  // Handle Date objects
-  if (data instanceof Date) {
-    return data.toISOString();
-  }
-
-  // Handle Firestore Timestamps, which have a toDate method
-  if (typeof data.toDate === 'function') {
-    return data.toDate().toISOString();
-  }
-  
-  // Handle plain objects that mimic Timestamps (e.g., { seconds: ..., nanoseconds: ... })
-  // This can occur in certain server environments or when data is double-serialized.
-  if (typeof data.seconds === 'number' && typeof data.nanoseconds === 'number') {
-    return new Date(data.seconds * 1000 + data.nanoseconds / 1000000).toISOString();
-  }
-
-  // Handle arrays by recursively serializing each item
-  if (Array.isArray(data)) {
-    return data.map(item => deepSerialize(item));
-  }
-  
-  // Handle general objects by recursively serializing each property
-  const newObj: { [key: string]: any } = {};
-  for (const key in data) {
-    if (Object.prototype.hasOwnProperty.call(data, key)) {
-      newObj[key] = deepSerialize(data[key]);
-    }
-  }
-
-  return newObj;
-}
-
 // Define the props type directly here for clarity
 interface UserProfilePageProps {
   params: { uid: string };
@@ -68,8 +24,11 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
   
   const profileUserData = profileUserSnap.data();
 
-  // Recursively serialize the entire object to ensure no non-plain objects are passed.
-  const serializableProfileUser = deepSerialize(profileUserData) as UserProfile;
+  // The JSON.parse(JSON.stringify()) is a robust way to ensure that any non-plain objects
+  // (like Firestore Timestamps) are converted to a serializable format (like an ISO string)
+  // before being passed from a Server Component to a Client Component. This resolves the error.
+  const serializableProfileUser = JSON.parse(JSON.stringify(profileUserData)) as UserProfile;
+
 
   return (
     <>
