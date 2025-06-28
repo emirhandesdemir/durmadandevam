@@ -31,6 +31,7 @@ import { cn } from "@/lib/utils";
 import { doc, updateDoc } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import ProfileViewerList from "./ProfileViewerList";
+import { Textarea } from "../ui/textarea";
 
 
 const bubbleOptions = [
@@ -57,6 +58,7 @@ export default function ProfilePageClient() {
 
     // State'ler
     const [username, setUsername] = useState("");
+    const [bio, setBio] = useState("");
     const [privateProfile, setPrivateProfile] = useState(false);
     const [acceptsFollowRequests, setAcceptsFollowRequests] = useState(true);
     const [newAvatar, setNewAvatar] = useState<string | null>(null);
@@ -70,8 +72,9 @@ export default function ProfilePageClient() {
     useEffect(() => {
         if (userData) {
             setUsername(userData.username || "");
+            setBio(userData.bio || "");
             setPrivateProfile(userData.privateProfile || false);
-            setAcceptsFollowRequests(userData.acceptsFollowRequests ?? true); // Yeni eklendi
+            setAcceptsFollowRequests(userData.acceptsFollowRequests ?? true);
             setSelectedBubble(userData.selectedBubble || "");
             setSelectedAvatarFrame(userData.selectedAvatarFrame || "");
         }
@@ -80,8 +83,9 @@ export default function ProfilePageClient() {
     // Değişiklik olup olmadığını kontrol et
     const hasChanges = 
         username !== (userData?.username || "") || 
+        bio !== (userData?.bio || "") ||
         privateProfile !== (userData?.privateProfile || false) || 
-        acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true) || // Yeni eklendi
+        acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true) ||
         newAvatar !== null || 
         selectedBubble !== (userData?.selectedBubble || "") || 
         selectedAvatarFrame !== (userData?.selectedAvatarFrame || "");
@@ -122,32 +126,22 @@ export default function ProfilePageClient() {
                 authUpdates.photoURL = finalPhotoURL;
             }
     
-            if (username !== userData?.username) {
-                updates.username = username;
-                authUpdates.displayName = username;
-            }
-             if (privateProfile !== userData?.privateProfile) {
-                updates.privateProfile = privateProfile;
-            }
-            if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) {
-                updates.acceptsFollowRequests = acceptsFollowRequests;
-            }
-            if (selectedBubble !== (userData?.selectedBubble || "")) {
-                updates.selectedBubble = selectedBubble;
-            }
-            if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || "")) {
-                updates.selectedAvatarFrame = selectedAvatarFrame;
-            }
+            if (username !== userData?.username) updates.username = username;
+            if (bio !== userData?.bio) updates.bio = bio;
+            if (privateProfile !== userData?.privateProfile) updates.privateProfile = privateProfile;
+            if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) updates.acceptsFollowRequests = acceptsFollowRequests;
+            if (selectedBubble !== (userData?.selectedBubble || "")) updates.selectedBubble = selectedBubble;
+            if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || "")) updates.selectedAvatarFrame = selectedAvatarFrame;
     
             if (Object.keys(updates).length > 0) {
                 const userDocRef = doc(db, 'users', user.uid);
                 await updateDoc(userDocRef, updates);
             }
     
-            if (Object.keys(authUpdates).length > 0) {
-                await updateProfile(auth.currentUser, authUpdates);
+            if (authUpdates.displayName) { // Only update auth profile if name changed
+                 await updateProfile(auth.currentUser, { displayName: authUpdates.displayName });
             }
-    
+
             toast({
                 title: "Başarılı!",
                 description: "Profiliniz başarıyla güncellendi.",
@@ -204,6 +198,10 @@ export default function ProfilePageClient() {
                     <div className="space-y-2">
                         <Label htmlFor="username">Kullanıcı Adı</Label>
                         <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} className="rounded-full" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="bio">Biyografi</Label>
+                        <Textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Kendini anlat..." className="rounded-xl" />
                     </div>
                     <Separator />
                     
@@ -284,30 +282,6 @@ export default function ProfilePageClient() {
                                                 <span className="text-xs font-bold text-center">{option.name}</span>
                                             </div>
                                         ))}
-                                    </div>
-                                </div>
-                                <div className="mt-6 space-y-3">
-                                    <h4 className="text-sm font-semibold text-muted-foreground">Canlı Önizleme</h4>
-                                    <div className="rounded-xl border bg-gradient-to-tr from-card to-muted/20 p-4 shadow-inner min-h-[100px] flex items-center justify-center">
-                                        <div className="flex items-end gap-3 w-full max-w-xs mx-auto">
-                                            <div className={cn("avatar-frame-wrapper", selectedAvatarFrame)}>
-                                                <Avatar className="h-10 w-10">
-                                                    <AvatarImage src={newAvatar || user?.photoURL || undefined} />
-                                                    <AvatarFallback>{(userData?.username || user.displayName)?.charAt(0).toUpperCase()}</AvatarFallback>
-                                                </Avatar>
-                                            </div>
-                                            <div className="flex flex-col flex-1 gap-1">
-                                                <p className="font-bold text-sm truncate">{userData?.username || user.displayName}</p>
-                                                <div className="relative p-3 rounded-xl bg-primary text-primary-foreground rounded-bl-lg w-fit">
-                                                    {selectedBubble && (
-                                                        <div className={`bubble-wrapper ${selectedBubble}`}>
-                                                            {Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}
-                                                        </div>
-                                                    )}
-                                                    <p className="relative z-10">Bu bir önizleme!</p>
-                                                </div>
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
                             </AccordionContent>

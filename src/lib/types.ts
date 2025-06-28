@@ -6,6 +6,8 @@ export interface UserProfile {
     username: string;
     email: string;
     photoURL?: string | null;
+    bio?: string;
+    postCount?: number;
     role: 'admin' | 'user';
     createdAt: Timestamp;
     privateProfile: boolean;
@@ -28,7 +30,7 @@ export interface ProfileViewer {
 
 export interface FollowRequest {
     uid: string;
-    username: string;
+    username:string;
     photoURL: string | null;
     requestedAt: Timestamp;
 }
@@ -60,7 +62,7 @@ export interface Post {
     text: string;
     imageUrl?: string;
     createdAt: Timestamp | { seconds: number; nanoseconds: number };
-    likes: string[];
+    likes: string[]; // Beğenen kullanıcıların UID'lerini tutan dizi
     likeCount: number;
     commentCount: number;
 }

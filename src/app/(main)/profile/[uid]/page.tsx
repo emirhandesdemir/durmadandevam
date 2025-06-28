@@ -1,10 +1,13 @@
 // src/app/(main)/profile/[uid]/page.tsx
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getCountFromServer } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { notFound } from 'next/navigation';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import ProfilePosts from '@/components/profile/ProfilePosts';
 import ProfileViewLogger from '@/components/profile/ProfileViewLogger';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Grid3x3, Clapperboard, Contact } from 'lucide-react';
+import { deepSerialize } from '@/lib/server-utils';
 
 interface UserProfilePageProps {
   params: { uid: string };
@@ -12,30 +15,49 @@ interface UserProfilePageProps {
 
 export default async function UserProfilePage({ params }: UserProfilePageProps) {
   const { uid } = params;
-  
+
   const profileUserRef = doc(db, 'users', uid);
-  const profileUserSnap = await getDoc(profileUserRef);
-  
+  const postsQuery = query(collection(db, 'posts'), where('uid', '==', uid));
+
+  const [profileUserSnap, postsCountSnap] = await Promise.all([
+    getDoc(profileUserRef),
+    getCountFromServer(postsQuery)
+  ]);
+
   if (!profileUserSnap.exists()) {
     notFound();
   }
-  
-  // Directly serialize Firestore data before passing to client components
-  const serializableProfileUser = JSON.parse(JSON.stringify(profileUserSnap.data()));
+
+  const profileUserData = profileUserSnap.data();
+  profileUserData.postCount = postsCountSnap.data().count;
+
+  const serializableProfileUser = deepSerialize(profileUserData);
 
   return (
     <>
       <ProfileViewLogger targetUserId={uid} />
-      <div className="container mx-auto max-w-2xl px-4 py-6 md:py-8">
-        <div className="flex flex-col gap-8">
-          <ProfileHeader 
-            profileUser={serializableProfileUser} 
-          />
-          <ProfilePosts 
-              userId={uid} 
-              profileUser={serializableProfileUser} 
-          />
-        </div>
+      <div className="container mx-auto max-w-4xl px-0 sm:px-4 py-4">
+        <ProfileHeader profileUser={serializableProfileUser} />
+
+        <Tabs defaultValue="posts" className="w-full mt-4">
+          <TabsList className="grid w-full grid-cols-3 bg-transparent border-b rounded-none">
+            <TabsTrigger value="posts" className="rounded-none"><Grid3x3 /></TabsTrigger>
+            <TabsTrigger value="reels" disabled className="rounded-none"><Clapperboard /></TabsTrigger>
+            <TabsTrigger value="tagged" disabled className="rounded-none"><Contact /></TabsTrigger>
+          </TabsList>
+          <TabsContent value="posts">
+             <ProfilePosts 
+                userId={uid} 
+                profileUser={serializableProfileUser} 
+            />
+          </TabsContent>
+          <TabsContent value="reels">
+            <p className="text-center text-muted-foreground p-8">Reels içeriği yakında.</p>
+          </TabsContent>
+          <TabsContent value="tagged">
+             <p className="text-center text-muted-foreground p-8">Etiketlenen gönderiler yakında.</p>
+          </TabsContent>
+        </Tabs>
       </div>
     </>
   );

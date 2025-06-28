@@ -1,3 +1,4 @@
+// src/components/auth/signup-form.tsx
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,7 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc, serverTimestamp, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
@@ -63,20 +64,19 @@ export default function SignUpForm() {
             const isAdminEmail = values.email === 'admin@example.com';
             const userRole = isAdminEmail ? 'admin' : 'user';
 
-            // Firestore'a yeni kullanıcı belgesini oluştur
             await setDoc(doc(db, "users", user.uid), {
                 uid: user.uid,
                 username: values.username,
                 email: values.email,
                 photoURL: user.photoURL,
+                bio: "", // Add default empty bio
                 role: userRole,
                 createdAt: serverTimestamp(),
                 diamonds: 0,
-                // Takip sistemi için yeni alanlar
                 followers: [],
                 following: [],
-                privateProfile: false, // Varsayılan olarak herkese açık profil
-                acceptsFollowRequests: true, // Varsayılan olarak istekleri kabul et
+                privateProfile: false,
+                acceptsFollowRequests: true,
                 followRequests: [],
             });
 

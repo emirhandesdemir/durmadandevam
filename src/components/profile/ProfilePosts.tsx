@@ -1,36 +1,32 @@
 // src/components/profile/ProfilePosts.tsx
 "use client";
 
-import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Post } from '@/components/posts/PostsFeed';
-import PostCard from '@/components/posts/PostCard';
 import { Card, CardContent } from '../ui/card';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CameraOff } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { Heart, MessageCircle } from 'lucide-react';
 
 interface ProfilePostsProps {
   userId: string;
   profileUser: any;
 }
 
-/**
- * Belirli bir kullanıcının gönderilerini çeken ve listeleyen istemci bileşeni.
- * Gizlilik durumuna göre içeriği gösterir veya gizler.
- */
 export default function ProfilePosts({ userId, profileUser }: ProfilePostsProps) {
     const { userData: currentUser, loading: authLoading } = useAuth();
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Auth durumu yüklendikten sonra yetki kontrolü yap
     const isOwnProfile = currentUser?.uid === userId;
     const isFollower = (profileUser.followers || []).includes(currentUser?.uid || '');
     const canViewContent = !profileUser.privateProfile || isFollower || isOwnProfile;
 
     useEffect(() => {
-        // Auth durumu yüklenene kadar veya içeriği görüntüleme yetkisi yoksa beklet.
         if (authLoading || !canViewContent) {
             setLoading(false);
             return;
@@ -40,19 +36,10 @@ export default function ProfilePosts({ userId, profileUser }: ProfilePostsProps)
             setLoading(true);
             try {
                 const postsRef = collection(db, 'posts');
-                // The query now only filters by user ID, removing the orderBy clause that requires an index.
-                const q = query(postsRef, where('uid', '==', userId));
+                const q = query(postsRef, where('uid', '==', userId), orderBy('createdAt', 'desc'));
                 const querySnapshot = await getDocs(q);
                 
                 const fetchedPosts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post));
-
-                // Sorting is now done on the client-side after fetching, newest first.
-                fetchedPosts.sort((a, b) => {
-                    const timeA = (a.createdAt as Timestamp).toMillis();
-                    const timeB = (b.createdAt as Timestamp).toMillis();
-                    return timeB - timeA;
-                });
-
                 setPosts(fetchedPosts);
             } catch (error) {
                 console.error("Gönderiler çekilirken hata:", error);
@@ -70,7 +57,7 @@ export default function ProfilePosts({ userId, profileUser }: ProfilePostsProps)
 
     if (!canViewContent) {
         return (
-          <div className="text-center py-10 border-t">
+          <div className="text-center py-10 mt-4">
             <h2 className="text-lg font-semibold">Bu Hesap Gizli</h2>
             <p className="text-muted-foreground">Gönderilerini görmek için bu hesabı takip et.</p>
           </div>
@@ -79,19 +66,40 @@ export default function ProfilePosts({ userId, profileUser }: ProfilePostsProps)
   
     if (posts.length === 0) {
       return (
-          <Card className="text-center p-8 border-dashed rounded-xl mt-4">
-              <CardContent className="p-0">
+          <Card className="text-center p-8 border-none shadow-none mt-4">
+              <CardContent className="p-0 flex flex-col items-center">
+                  <CameraOff className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <h3 className="text-lg font-semibold">Henüz Gönderi Yok</h3>
-                  <p className="text-muted-foreground mt-2">Bu kullanıcı henüz bir şey paylaşmadı.</p>
               </CardContent>
           </Card>
       );
     }
 
     return (
-        <div className="flex flex-col gap-8 border-t pt-8">
-            {posts.map((post: Post) => (
-                <PostCard key={post.id} post={post} />
+        <div className="grid grid-cols-3 gap-0.5 mt-1">
+            {posts.map((post) => (
+                post.imageUrl && (
+                    <Link href="#" key={post.id} className="group relative aspect-square block">
+                       <Image
+                            src={post.imageUrl}
+                            alt="Kullanıcı gönderisi"
+                            fill
+                            className="object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center text-white opacity-0 group-hover:opacity-100">
+                           <div className="flex items-center gap-4">
+                               <div className="flex items-center gap-1">
+                                    <Heart className="h-5 w-5 fill-white"/>
+                                    <span className="font-bold text-sm">{post.likeCount}</span>
+                               </div>
+                               <div className="flex items-center gap-1">
+                                    <MessageCircle className="h-5 w-5 fill-white"/>
+                                    <span className="font-bold text-sm">{post.commentCount}</span>
+                               </div>
+                           </div>
+                        </div>
+                    </Link>
+                )
             ))}
         </div>
     );
