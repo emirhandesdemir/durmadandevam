@@ -22,10 +22,9 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
   
   const profileUserData = profileUserSnap.data();
 
-  // YENİ: Veritabanından gelen nesneyi, içindeki tüm özel formatlardan (Timestamp vb.)
-  // arındırmak için standart JSON serileştirme yöntemi kullanılıyor. Bu, hatayı kalıcı olarak çözer.
+  // KESİN ÇÖZÜM: Firestore'dan gelen karmaşık nesneyi, istemciye göndermeden önce
+  // JSON formatına çevirerek "düz" ve güvenli bir hale getiriyoruz.
   const serializableProfileUser = JSON.parse(JSON.stringify(profileUserData));
-
 
   return (
     <>
