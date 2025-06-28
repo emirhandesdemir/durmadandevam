@@ -1,5 +1,4 @@
 // src/lib/server-utils.ts
-'use server'; // Bu fonksiyonun sunucuda çalışması gerektiğini belirtir.
 
 import { Timestamp } from 'firebase/firestore';
 
