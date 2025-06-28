@@ -66,6 +66,11 @@ export default function PostCard({ post }: PostCardProps) {
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+    // This effect syncs the local text state with the prop from the parent.
+    useEffect(() => {
+        setEditedText(post.text || '');
+    }, [post.text]);
+
     useEffect(() => {
         if (isEditing && textareaRef.current) {
             textareaRef.current.focus();
@@ -124,11 +129,15 @@ export default function PostCard({ post }: PostCardProps) {
             setIsSaving(false);
         }
     };
+    
+    const handleCancelEdit = () => {
+        setEditedText(post.text || '');
+        setIsEditing(false);
+    };
 
     return (
         <>
             <div className="w-full animate-in fade-in-50 duration-500 bg-card rounded-xl overflow-hidden">
-                {/* Header and text have padding */}
                 <div className="p-4">
                     <div className="flex items-center justify-between">
                         <Link href={`/profile/${post.uid}`} className="flex items-center gap-3 group">
@@ -192,7 +201,7 @@ export default function PostCard({ post }: PostCardProps) {
                                     }}
                                 />
                                 <div className="flex justify-end gap-2">
-                                    <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>İptal</Button>
+                                    <Button variant="ghost" size="sm" onClick={handleCancelEdit}>İptal</Button>
                                     <Button size="sm" onClick={handleSaveEdit} disabled={isSaving}>
                                         {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                         Kaydet
@@ -200,11 +209,10 @@ export default function PostCard({ post }: PostCardProps) {
                                 </div>
                             </div>
                         ) : (
-                            post.text && <p className="text-sm leading-relaxed whitespace-pre-wrap mt-3">{post.text}</p>
+                            editedText && <p className="text-sm leading-relaxed whitespace-pre-wrap mt-3">{editedText}</p>
                         )}
                 </div>
 
-                {/* Image is full-width, no padding */}
                 {post.imageUrl && !isEditing && (
                     <div className="w-full mt-2">
                         <Image
@@ -217,7 +225,6 @@ export default function PostCard({ post }: PostCardProps) {
                     </div>
                 )}
                 
-                {/* Footer has padding */}
                  <div className="border-t px-4 py-2 flex items-center justify-start gap-1">
                     <Button
                         variant="ghost"
@@ -244,9 +251,8 @@ export default function PostCard({ post }: PostCardProps) {
                     </Button>
                 </div>
             </div>
-
-            {/* Silme Onay Dialogu */}
-             <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+            
+            <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                     <AlertDialogTitle>Emin misiniz?</AlertDialogTitle>
@@ -264,7 +270,6 @@ export default function PostCard({ post }: PostCardProps) {
                 </AlertDialogContent>
             </AlertDialog>
             
-            {/* Yorumlar Paneli */}
             <CommentSheet 
                 open={showComments} 
                 onOpenChange={setShowComments}
