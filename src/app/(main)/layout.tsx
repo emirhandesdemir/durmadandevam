@@ -20,14 +20,16 @@ export default function MainAppLayout({
   const [hidden, setHidden] = useState(false);
   const pathname = usePathname();
 
+  const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/');
+
   useMotionValueEvent(scrollY, "change", (latest) => {
     const previous = scrollY.getPrevious() ?? 0;
-    // DM sayfasında kendi kaydırma çubuğu olduğu için gizleme
-    if (pathname.startsWith('/dm')) {
+    // Don't hide header on full-page layouts that have their own internal scroll
+    if (isFullPageLayout) {
       setHidden(false);
       return;
     }
-    // Aşağı kaydırınca gizle, yukarı kaydırınca göster
+    // Hide header on scroll down, show on scroll up
     if (latest > previous && latest > 150) {
       setHidden(true);
     } else {
@@ -40,9 +42,8 @@ export default function MainAppLayout({
   return (
     <VoiceChatProvider>
       <div className="relative flex h-dvh w-full flex-col bg-background overflow-hidden">
-        {/* Ana içerik alanı artık kaydırma kabı olarak davranıyor */}
-        <main ref={scrollRef} className="flex-1 overflow-y-auto pb-24">
-           {/* Header artık kaydırılabilir alanın İÇİNDE ve STICKY */}
+        {/* On full page layouts, the child itself handles scrolling. Otherwise, this main tag does. */}
+        <main ref={scrollRef} className={cn("flex-1 overflow-y-auto", !isFullPageLayout && "pb-24")}>
            <motion.header
               variants={{
                 visible: { y: 0 },
@@ -55,12 +56,12 @@ export default function MainAppLayout({
               <Header />
             </motion.header>
           
-           <div className={cn(!isHomePage && "p-4")}>
+           <div className={cn(!isHomePage && !isFullPageLayout && "p-4")}>
             {children}
           </div>
         </main>
         
-        {/* Kalıcı UI elemanları görünüm alanına sabitlenir */}
+        {/* Persistent UI elements are fixed to the viewport */}
         <VoiceAudioPlayer />
         <PersistentVoiceBar />
         <BottomNav />

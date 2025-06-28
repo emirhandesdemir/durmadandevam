@@ -21,6 +21,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import {
   AlertDialog,
   AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -291,7 +292,7 @@ export default function RoomPage() {
                     )}
                 </div>
 
-                <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 pb-28">
                      {featureFlags?.quizGameEnabled && (
                         <div className="mb-4">
                             {gameLoading ? (
@@ -314,27 +315,25 @@ export default function RoomPage() {
                     <TextChat messages={messages} loading={messagesLoading} />
                 </div>
 
-                <footer className="flex items-center gap-3 p-3 border-t border-gray-700/50 bg-gray-900 shrink-0">
-                    {isConnected && user ? (
-                         <>
-                            <Button onClick={handleToggleMute} variant="ghost" size="icon" className="rounded-full bg-gray-700/50 hover:bg-gray-600/50">
-                                {self?.isMuted ? <MicOff className="h-5 w-5 text-red-500"/> : <Mic className="h-5 w-5 text-white"/>}
+                <footer className="fixed bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-gray-900 via-gray-900/80 to-transparent pointer-events-none">
+                    <div className="flex items-center gap-2 p-2 bg-gray-800/80 backdrop-blur-sm rounded-full border border-gray-700/50 pointer-events-auto">
+                        {isConnected && user ? (
+                            <>
+                                <Button onClick={handleToggleMute} variant="ghost" size="icon" className="rounded-full bg-gray-700/50 hover:bg-gray-600/50">
+                                    {self?.isMuted ? <MicOff className="h-5 w-5 text-red-500"/> : <Mic className="h-5 w-5 text-white"/>}
+                                </Button>
+                                <Button onClick={isSharingScreen ? stopScreenShare : startScreenShare} variant="ghost" size="icon" className="rounded-full bg-gray-700/50 hover:bg-gray-600/50">
+                                    {isSharingScreen ? <ScreenShareOff className="h-5 w-5 text-red-500"/> : <ScreenShare className="h-5 w-5 text-white"/>}
+                                </Button>
+                            </>
+                        ) : (
+                            <Button onClick={handleJoinVoice} disabled={isConnecting || isConnected} className="rounded-full bg-primary text-primary-foreground h-10 px-4">
+                                {isConnecting ? <Loader2 className="h-5 w-5 animate-spin"/> : <Mic className="h-5 w-5"/>}
+                                <span className="ml-2">Katıl</span>
                             </Button>
-                             <Button onClick={isSharingScreen ? stopScreenShare : startScreenShare} variant="ghost" size="icon" className="rounded-full bg-gray-700/50 hover:bg-gray-600/50">
-                                {isSharingScreen ? <ScreenShareOff className="h-5 w-5 text-red-500"/> : <ScreenShare className="h-5 w-5 text-white"/>}
-                             </Button>
-                             <Button onClick={handleLeaveAndNavigate} variant="destructive" size="icon" className="rounded-full">
-                                <PhoneOff className="h-5 w-5" />
-                                <span className="sr-only">Ayrıl</span>
-                            </Button>
-                        </>
-                    ) : (
-                         <Button onClick={handleJoinVoice} disabled={isConnecting || isConnected} className="rounded-full bg-primary text-primary-foreground h-10 px-4">
-                            {isConnecting ? <Loader2 className="h-5 w-5 animate-spin"/> : <Mic className="h-5 w-5"/>}
-                            <span className="ml-2">Katıl</span>
-                         </Button>
-                    )}
-                    <ChatMessageInput roomId={roomId} canSendMessage={isRoomParticipant || false} />
+                        )}
+                        <ChatMessageInput roomId={roomId} canSendMessage={isRoomParticipant || false} />
+                    </div>
                 </footer>
             </div>
              <ParticipantListSheet
