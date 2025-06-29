@@ -16,6 +16,7 @@ import VoiceUserIcon from '@/components/voice/VoiceUserIcon';
 import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
 import RoomHeader from '@/components/rooms/RoomHeader';
 import ScreenShareView from '@/components/voice/ScreenShareView';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -187,66 +188,79 @@ export default function RoomPage() {
                     </footer>
                 </div>
                 
-                <aside className="w-full lg:w-80 lg:border-l shrink-0 bg-card">
-                     <div className="h-full flex flex-col p-4">
-                        <h3 className="font-bold mb-4 text-foreground">SESLİ SOHBET</h3>
-                        {screenSharer ? (
-                            <div className='animate-in fade-in duration-300'>
-                                {isSharingScreen && localScreenStream && <ScreenShareView stream={localScreenStream} />}
-                                {remoteScreenStream && <ScreenShareView stream={remoteScreenStream} />}
-                                <p className="text-center text-xs text-muted-foreground mt-2">{screenSharer.username} ekranını paylaşıyor...</p>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-4">
-                                {participants.length > 0 ? (
-                                    participants.map((p) => (
-                                        <VoiceUserIcon key={p.uid} room={room} participant={p} isHost={isHost} isModerator={isModerator} currentUserId={user!.uid} />
-                                    ))
-                                ) : (
-                                    <div className="col-span-full flex flex-col items-center justify-center text-muted-foreground h-full py-8">
-                                        <p>Sesli sohbette kimse yok.</p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                        
-                        <div className="mt-auto pt-4">
+                <aside className="w-full lg:w-80 lg:border-l shrink-0 bg-card flex flex-col">
+                    {/* Header */}
+                    <div className="p-4 border-b shrink-0">
+                        <h3 className="font-bold text-foreground">SESLİ SOHBET</h3>
+                    </div>
+
+                    {/* Scrollable Content */}
+                    <ScrollArea className="flex-1">
+                        <div className="p-4 space-y-4">
+                            {/* Game Card Section */}
                             {featureFlags?.quizGameEnabled && (
-                                <div className="mb-4">
-                                    {gameLoading ? null : activeGame && gameSettings && user ? (
-                                        <RoomGameCard game={activeGame} settings={gameSettings} onAnswerSubmit={handleAnswerSubmit} onTimerEnd={handleGameTimerEnd} currentUserId={user.uid} />
-                                    ) : countdown !== null && countdown > 0 && countdown <= 20 ? (
-                                        <GameCountdownCard timeLeft={countdown} />
-                                    ) : null}
-                                </div>
+                                gameLoading ? (
+                                    <div className="flex justify-center items-center h-24">
+                                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                    </div>
+                                ) : activeGame && gameSettings && user ? (
+                                    <RoomGameCard game={activeGame} settings={gameSettings} onAnswerSubmit={handleAnswerSubmit} onTimerEnd={handleGameTimerEnd} currentUserId={user.uid} />
+                                ) : countdown !== null && countdown > 0 && countdown <= 20 ? (
+                                    <GameCountdownCard timeLeft={countdown} />
+                                ) : null
                             )}
-                             {isConnected && user ? (
-                                <div className="flex items-center justify-center gap-2 p-2 bg-muted rounded-lg">
-                                    {canSpeak ? (
-                                        <Button onClick={handleToggleMute} variant="ghost" size="icon" className="rounded-full">
-                                            {self?.isMuted ? <MicOff className="h-5 w-5 text-destructive"/> : <Mic className="h-5 w-5"/>}
-                                        </Button>
-                                    ) : (
-                                        <Button onClick={handleRequestToSpeak} variant="ghost" size="icon" className="rounded-full" disabled={hasRequestedSpeak || isRequestingSpeak}>
-                                            {isRequestingSpeak ? <Loader2 className="h-5 w-5 animate-spin" /> : <Hand className="h-5 w-5"/>}
-                                        </Button>
-                                    )}
-                                    <Button onClick={isSharingScreen ? stopScreenShare : startScreenShare} variant="ghost" size="icon" className="rounded-full">
-                                        {isSharingScreen ? <ScreenShareOff className="h-5 w-5 text-destructive"/> : <ScreenShare className="h-5 w-5"/>}
-                                    </Button>
-                                    <Button onClick={handleExitVoiceChat} variant="destructive" size="icon" className="rounded-full">
-                                        <PhoneOff className="h-5 w-5" />
-                                        <span className="sr-only">Ayrıl</span>
-                                    </Button>
+
+                            {/* Screen Share or Participants */}
+                            {screenSharer ? (
+                                <div className='animate-in fade-in duration-300'>
+                                    {isSharingScreen && localScreenStream && <ScreenShareView stream={localScreenStream} />}
+                                    {remoteScreenStream && <ScreenShareView stream={remoteScreenStream} />}
+                                    <p className="text-center text-xs text-muted-foreground mt-2">{screenSharer.username} ekranını paylaşıyor...</p>
                                 </div>
                             ) : (
-                                <Button onClick={handleJoinVoice} disabled={isConnecting || isConnected} className="w-full">
-                                    {isConnecting ? <Loader2 className="h-5 w-5 animate-spin"/> : <Mic className="h-5 w-5"/>}
-                                    <span className="ml-2">Sesli Sohbete Katıl</span>
-                                </Button>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-4">
+                                    {participants.length > 0 ? (
+                                        participants.map((p) => (
+                                            <VoiceUserIcon key={p.uid} room={room} participant={p} isHost={isHost} isModerator={isModerator} currentUserId={user!.uid} />
+                                        ))
+                                    ) : (
+                                        <div className="col-span-full flex flex-col items-center justify-center text-muted-foreground h-full py-8">
+                                            <p>Sesli sohbette kimse yok.</p>
+                                        </div>
+                                    )}
+                                </div>
                             )}
                         </div>
-                     </div>
+                    </ScrollArea>
+
+                    {/* Footer with controls */}
+                    <div className="p-4 border-t mt-auto shrink-0 bg-card">
+                        {isConnected && user ? (
+                            <div className="flex items-center justify-center gap-2 p-2 bg-muted rounded-lg">
+                                {canSpeak ? (
+                                    <Button onClick={handleToggleMute} variant="ghost" size="icon" className="rounded-full">
+                                        {self?.isMuted ? <MicOff className="h-5 w-5 text-destructive"/> : <Mic className="h-5 w-5"/>}
+                                    </Button>
+                                ) : (
+                                    <Button onClick={handleRequestToSpeak} variant="ghost" size="icon" className="rounded-full" disabled={hasRequestedSpeak || isRequestingSpeak}>
+                                        {isRequestingSpeak ? <Loader2 className="h-5 w-5 animate-spin" /> : <Hand className="h-5 w-5"/>}
+                                    </Button>
+                                )}
+                                <Button onClick={isSharingScreen ? stopScreenShare : startScreenShare} variant="ghost" size="icon" className="rounded-full">
+                                    {isSharingScreen ? <ScreenShareOff className="h-5 w-5 text-destructive"/> : <ScreenShare className="h-5 w-5"/>}
+                                </Button>
+                                <Button onClick={handleExitVoiceChat} variant="destructive" size="icon" className="rounded-full">
+                                    <PhoneOff className="h-5 w-5" />
+                                    <span className="sr-only">Ayrıl</span>
+                                </Button>
+                            </div>
+                        ) : (
+                            <Button onClick={handleJoinVoice} disabled={isConnecting || isConnected} className="w-full">
+                                {isConnecting ? <Loader2 className="h-5 w-5 animate-spin"/> : <Mic className="h-5 w-5"/>}
+                                <span className="ml-2">Sesli Sohbete Katıl</span>
+                            </Button>
+                        )}
+                    </div>
                 </aside>
             </div>
 
