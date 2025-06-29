@@ -19,8 +19,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
-import { Image as ImageIcon, Send, Loader2, X, Sparkles, ArrowUp, RefreshCcw } from "lucide-react";
+import { Image as ImageIcon, Send, Loader2, X, Sparkles, RefreshCcw } from "lucide-react";
 import { ScrollArea } from "../ui/scroll-area";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
+import { Input } from "../ui/input";
 
 
 export default function NewPostForm() {
@@ -42,6 +44,11 @@ export default function NewPostForm() {
   const [suggestionLoading, setSuggestionLoading] = useState(false);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // AI Edit States
+  const [isAiEditing, setIsAiEditing] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
 
   const fetchSuggestions = useCallback(async () => {
@@ -141,6 +148,7 @@ export default function NewPostForm() {
   const handleCropComplete = (croppedDataUrl: string) => {
     setCroppedImage(croppedDataUrl);
     setOriginalCroppedImage(croppedDataUrl);
+    setWasEditedByAI(false);
     setImageToCrop(null);
   }
 
@@ -152,6 +160,7 @@ export default function NewPostForm() {
       setImageToCrop(null);
       setCroppedImage(null);
       setOriginalCroppedImage(null);
+      setWasEditedByAI(false);
       if(fileInputRef.current) {
           fileInputRef.current.value = "";
       }
@@ -206,7 +215,46 @@ export default function NewPostForm() {
     }
   };
 
-  const isLoading = isSubmitting;
+  const handleAiEdit = async () => {
+    if (!croppedImage || !aiPrompt.trim()) return;
+
+    setIsAiLoading(true);
+    try {
+        const result = await applyImageFilter({
+            photoDataUri: croppedImage,
+            style: aiPrompt,
+        });
+
+        if (result.success && result.data?.styledPhotoDataUri) {
+            setCroppedImage(result.data.styledPhotoDataUri);
+            setWasEditedByAI(true);
+            toast({ description: "Resim başarıyla AI ile düzenlendi." });
+            setIsAiEditing(false);
+            setAiPrompt("");
+        } else {
+            throw new Error(result.error || "AI düzenlemesi başarısız oldu.");
+        }
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "AI Düzenleme Hatası",
+            description: error.message,
+        });
+    } finally {
+        setIsAiLoading(false);
+    }
+  };
+
+  const handleRevertAiEdit = () => {
+      if (originalCroppedImage) {
+          setCroppedImage(originalCroppedImage);
+          setWasEditedByAI(false);
+          toast({ description: "AI düzenlemesi geri alındı." });
+      }
+  };
+
+
+  const isLoading = isSubmitting || isAiLoading;
 
   return (
     <>
@@ -262,21 +310,28 @@ export default function NewPostForm() {
             </Popover>
 
           {croppedImage && (
-            <div className="ml-0 sm:ml-16 space-y-4">
-              <div className="relative">
-                <div className="overflow-hidden rounded-xl border">
-                  <img src={croppedImage} alt="Önizleme" className="max-h-80 w-auto object-contain" />
+            <div className="ml-0 sm:ml-16 space-y-2">
+                <div className="relative group">
+                    <div className="overflow-hidden rounded-xl border">
+                        <img src={croppedImage} alt="Önizleme" className="max-h-80 w-auto object-contain" />
+                    </div>
                 </div>
-                <Button 
-                  size="icon" 
-                  variant="destructive" 
-                  className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/50 hover:bg-black/70 border-0"
-                  onClick={removeImage}
-                  disabled={isLoading}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setIsAiEditing(true)} disabled={isLoading}>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        AI ile Düzenle
+                    </Button>
+                    {wasEditedByAI && (
+                        <Button variant="outline" size="sm" onClick={handleRevertAiEdit} disabled={isLoading}>
+                        <RefreshCcw className="mr-2 h-4 w-4" />
+                        Geri Al
+                        </Button>
+                    )}
+                    <Button variant="destructive" size="sm" onClick={removeImage} disabled={isLoading}>
+                        <X className="mr-2 h-4 w-4" />
+                        Kaldır
+                    </Button>
+                </div>
             </div>
           )}
         </div>
@@ -311,6 +366,29 @@ export default function NewPostForm() {
         aspectRatio={1}
         onCropComplete={handleCropComplete}
       />
+      <AlertDialog open={isAiEditing} onOpenChange={setIsAiEditing}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Resmi AI ile Düzenle</AlertDialogTitle>
+            <AlertDialogDescription>
+                Resme uygulamak istediğiniz stili veya değişikliği yazın. Örneğin: "suluboya tabloya çevir", "8-bit pixel art yap", "arka planı orman yap".
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <Input 
+            value={aiPrompt}
+            onChange={(e) => setAiPrompt(e.target.value)}
+            placeholder="örn: make it a watercolor painting"
+            disabled={isAiLoading}
+            />
+            <AlertDialogFooter>
+            <AlertDialogCancel disabled={isAiLoading}>İptal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleAiEdit} disabled={!aiPrompt || isAiLoading}>
+                {isAiLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Uygula
+            </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }
