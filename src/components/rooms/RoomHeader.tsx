@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft, MoreHorizontal, Users, Timer, AlertTriangle, UserPlus, Gamepad2, Gift } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Users, Timer, AlertTriangle, UserPlus, Gamepad2, Gift, Swords } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Room } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -63,7 +63,7 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, onBa
                                     Davet Et
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={onStartGameClick}>
-                                    <Gamepad2 className="mr-2 h-4 w-4"/>
+                                    <Swords className="mr-2 h-4 w-4"/>
                                     Oyun Başlat
                                 </DropdownMenuItem>
                             </DropdownMenuContent>

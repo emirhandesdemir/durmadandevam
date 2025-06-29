@@ -208,7 +208,20 @@ export interface GameInviteData {
     invitedPlayers: { uid: string; username: string }[];
     acceptedPlayers: { uid: string; username: string }[];
     declinedPlayers: { uid: string; username: string }[];
-    status: 'pending' | 'active' | 'cancelled' | 'finished';
+    status: 'pending' | 'active' | 'accepted' | 'cancelled' | 'finished';
+}
+
+export interface ActiveGameSession {
+    id: string;
+    gameType: 'dice' | 'rps' | 'bottle';
+    gameName: string;
+    players: { uid: string; username: string, photoURL?: string | null }[];
+    status: 'active' | 'finished';
+    moves: { [uid: string]: number | string };
+    winnerId?: string;
+    turn?: string; // For games that have turns
+    createdAt: Timestamp;
+    finishedAt?: Timestamp;
 }
 
 

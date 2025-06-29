@@ -21,7 +21,7 @@ import {
     setDoc,
     arrayUnion
 } from "firebase/firestore";
-import type { GameQuestion, GameSettings, ActiveGame, GameInviteData } from "../types";
+import type { GameQuestion, GameSettings, ActiveGame, GameInviteData, ActiveGameSession, UserProfile } from "../types";
 import { revalidatePath } from "next/cache";
 
 // Ayarları almak için fonksiyon
@@ -144,7 +144,7 @@ export async function respondToGameInvite(
         }
 
         const isAlreadyAccepted = inviteData.acceptedPlayers.some(p => p.uid === respondingUser.uid);
-        const isAlreadyDeclined = inviteData.declinedPlayers.some(p => p.uid === respondingUser.uid);
+        const isAlreadyDeclined = inviteData.declinedPlayers.some(d => d.uid === respondingUser.uid);
         if (isAlreadyAccepted || isAlreadyDeclined) {
             throw new Error("Bu davete zaten yanıt verdin.");
         }
@@ -166,14 +166,162 @@ export async function respondToGameInvite(
         
         // Check if all players have accepted
         if (accepted && newInviteData.acceptedPlayers.length === newInviteData.invitedPlayers.length) {
-            newInviteData.status = 'active';
-            // TODO: Start the actual game logic here
-            // For now, we just update the message.
+            newInviteData.status = 'accepted'; // Update status to show it's starting
+            
+            // Create the actual game document
+            const gameRef = doc(collection(db, 'rooms', roomId, 'games'), messageId); // use messageId as gameId
+            const roomDoc = await transaction.get(doc(db, 'rooms', roomId));
+            const roomData = roomDoc.data() as Room;
+
+            // Fetch full player profiles to get photoURL
+            const playerUids = newInviteData.acceptedPlayers.map(p => p.uid);
+            const usersQuery = query(collection(db, 'users'), where('uid', 'in', playerUids));
+            const usersSnapshot = await getDocs(usersQuery);
+            const playerProfiles = usersSnapshot.docs.map(d => d.data() as UserProfile);
+
+            const playersForGame = newInviteData.acceptedPlayers.map(p => {
+                const profile = playerProfiles.find(prof => prof.uid === p.uid);
+                return { ...p, photoURL: profile?.photoURL || null };
+            });
+            
+            const newGameSession: Omit<ActiveGameSession, 'id'> = {
+                gameType: newInviteData.gameType,
+                gameName: newInviteData.gameName,
+                players: playersForGame,
+                status: 'active',
+                moves: {},
+                turn: newInviteData.gameType === 'bottle' ? newInviteData.host.uid : undefined,
+                createdAt: serverTimestamp() as Timestamp,
+            };
+            transaction.set(gameRef, newGameSession);
         }
         
         transaction.update(messageRef, { gameInviteData: newInviteData });
     });
     
+    revalidatePath(`/rooms/${roomId}`);
+}
+
+async function awardWinner(transaction: any, winnerId: string) {
+    const userRef = doc(db, 'users', winnerId);
+    const userDoc = await transaction.get(userRef);
+    if (!userDoc.exists()) return;
+
+    const userData = userDoc.data();
+    const settings = await getGameSettings();
+    const today = new Date().toISOString().split('T')[0];
+    const dailyEarnings = userData.dailyDiamonds?.[today] || 0;
+
+    if (dailyEarnings < settings.dailyDiamondLimit) {
+        transaction.update(userRef, {
+            diamonds: increment(1),
+            [`dailyDiamonds.${today}`]: increment(1)
+        });
+    }
+}
+
+
+function getRpsWinner(player1Move: string, player2Move: string): 0 | 1 | -1 { // 0 for player1, 1 for player2, -1 for draw
+  if (player1Move === player2Move) return -1;
+  if (
+    (player1Move === 'rock' && player2Move === 'scissors') ||
+    (player1Move === 'scissors' && player2Move === 'paper') ||
+    (player1Move === 'paper' && player2Move === 'rock')
+  ) {
+    return 0;
+  }
+  return 1;
+}
+
+
+export async function playGameMove(roomId: string, gameId: string, userId: string, move: any) {
+    const gameRef = doc(db, 'rooms', roomId, 'games', gameId);
+    const roomRef = doc(db, 'rooms', roomId);
+    const messagesRef = collection(roomRef, 'messages');
+
+    await runTransaction(db, async (transaction) => {
+        const gameDoc = await transaction.get(gameRef);
+        if (!gameDoc.exists()) throw new Error("Oyun bulunamadı.");
+
+        const gameData = gameDoc.data() as ActiveGameSession;
+        if (gameData.status !== 'active') throw new Error("Bu oyun aktif değil.");
+        
+        const isPlayer = gameData.players.some(p => p.uid === userId);
+        if (!isPlayer) throw new Error("Bu oyunun bir parçası değilsiniz.");
+
+        if (gameData.moves[userId]) throw new Error("Zaten bir hamle yaptınız.");
+
+        let newMoves = { ...gameData.moves };
+        let gameFinished = false;
+        let winnerId: string | null = null;
+        let winnerName: string | null = null;
+        let systemMessage = '';
+
+        // --- Game Logic ---
+        switch (gameData.gameType) {
+            case 'dice':
+                newMoves[userId] = Math.floor(Math.random() * 6) + 1;
+                if (Object.keys(newMoves).length === gameData.players.length) {
+                    gameFinished = true;
+                    const [player1, player2] = gameData.players;
+                    const roll1 = newMoves[player1.uid] as number;
+                    const roll2 = newMoves[player2.uid] as number;
+                    if (roll1 > roll2) winnerId = player1.uid;
+                    else if (roll2 > roll1) winnerId = player2.uid;
+                    
+                    winnerName = winnerId ? gameData.players.find(p => p.uid === winnerId)?.username || 'Biri' : null;
+                    systemMessage = winnerId 
+                        ? `🎲 ${winnerName} ${Math.max(roll1, roll2)} atarak kazandı! (${roll1} vs ${roll2})`
+                        : `🎲 Berabere! Herkes ${roll1} attı.`;
+                }
+                break;
+            
+            case 'rps':
+                newMoves[userId] = move; // 'rock', 'paper', 'scissors'
+                if (Object.keys(newMoves).length === gameData.players.length) {
+                    gameFinished = true;
+                    const [player1, player2] = gameData.players;
+                    const move1 = newMoves[player1.uid] as string;
+                    const move2 = newMoves[player2.uid] as string;
+                    const winnerIndex = getRpsWinner(move1, move2);
+
+                    if(winnerIndex !== -1) {
+                        winnerId = gameData.players[winnerIndex].uid;
+                        winnerName = gameData.players[winnerIndex].username;
+                    }
+                    systemMessage = winnerId
+                        ? `✂️ ${winnerName} kazandı! (${move1} vs ${move2})`
+                        : `✂️ Berabere! Herkes ${move1} seçti.`;
+                }
+                break;
+
+            case 'bottle':
+                 if (userId !== gameData.players.find(p => p.uid === gameData.turn)?.uid) throw new Error("Sıra sende değil.");
+                 gameFinished = true;
+                 const targetPlayer = gameData.players.find(p => p.uid !== userId)!;
+                 systemMessage = `🍾 Şişe ${targetPlayer.username} adlı kişiyi gösterdi!`;
+                 // No winner/reward for bottle game
+                break;
+        }
+
+        // Update moves
+        transaction.update(gameRef, { moves: newMoves });
+
+        // If game is finished, update status and announce
+        if (gameFinished) {
+            transaction.update(gameRef, { status: 'finished', winnerId: winnerId, finishedAt: serverTimestamp() });
+            
+            if(winnerId) {
+                await awardWinner(transaction, winnerId);
+            }
+
+            const messageDocRef = doc(messagesRef);
+            transaction.set(messageDocRef, {
+                type: 'game', text: systemMessage, uid: 'system', username: 'Oyun', createdAt: serverTimestamp()
+            });
+        }
+    });
+
     revalidatePath(`/rooms/${roomId}`);
 }
 
