@@ -5,6 +5,9 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === "development",
+  // Service Worker'ı manuel olarak kaydetmek için register'ı false yapabiliriz,
+  // çünkü Firebase Messaging bunu zaten yapıyor. Ancak genellikle bir arada
+  // çalışmaları sorun yaratmaz. Şimdilik olduğu gibi bırakalım.
 });
 
 const nextConfig: NextConfig = {

@@ -1,41 +1,41 @@
 {
   "name": "HiweWalk",
   "short_name": "HiweWalk",
-  "description": "Herkese açık odalar oluşturun ve katılın. Düşüncelerinizi paylaşın ve yeni insanlarla tanışın.",
-  "start_url": "/",
+  "description": "Herkese açık odalar oluşturun ve katılın. Düşüncelerinizi paylaşın, fikirler üzerinde işbirliği yapın ve başkalarıyla gerçek zamanlı olarak bağlantı kurun.",
+  "start_url": "/home",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#09090B",
   "theme_color": "#09090B",
-  "categories": ["social", "entertainment"],
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/icons/icon-512x512.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "maskable"
     }
   ],
   "screenshots": [
     {
-      "src": "https://placehold.co/1080x1920.png",
+      "src": "/screenshots/ana-akis.png",
       "sizes": "1080x1920",
       "type": "image/png",
       "form_factor": "narrow",
       "label": "Ana Akış"
     },
     {
-      "src": "https://placehold.co/1080x1920.png",
+      "src": "/screenshots/oda.png",
       "sizes": "1080x1920",
       "type": "image/png",
       "form_factor": "narrow",
@@ -44,17 +44,15 @@
   ],
   "shortcuts": [
     {
-      "name": "Yeni Gönderi Oluştur",
-      "short_name": "Oluştur",
-      "description": "Yeni bir fikir veya fotoğraf paylaş.",
+      "name": "Yeni Gönderi",
       "url": "/create-post",
+      "description": "Yeni bir gönderi oluşturun.",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Odalara Gözat",
-      "short_name": "Odalar",
-      "description": "Aktif sohbet odalarını keşfet.",
+      "name": "Odalar",
       "url": "/rooms",
+      "description": "Herkese açık odalara göz atın.",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     }
   ]
