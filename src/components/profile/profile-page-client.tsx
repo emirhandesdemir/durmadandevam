@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, Lock, Eye } from "lucide-react";
+import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, Lock, Eye, Camera } from "lucide-react";
 import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { useTheme } from "next-themes";
@@ -183,17 +183,22 @@ export default function ProfilePageClient() {
             <Card className="w-full max-w-2xl shadow-xl rounded-3xl border-0">
                 <CardHeader className="items-center text-center pt-8">
                      <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-                    <div className="relative">
+                    <button
+                        type="button"
+                        onClick={handleAvatarClick}
+                        className="relative group rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        aria-label="Profil fotoğrafını değiştir"
+                    >
                         <div className={cn("avatar-frame-wrapper", selectedAvatarFrame)}>
-                            <Avatar className="relative z-[1] h-32 w-32 border-4 border-white shadow-lg">
+                            <Avatar className="relative z-[1] h-32 w-32 border-4 border-white shadow-lg transition-all group-hover:brightness-90">
                                 <AvatarImage src={newAvatar || userData.photoURL || undefined} />
                                 <AvatarFallback className="text-5xl bg-primary/20">{username?.charAt(0).toUpperCase()}</AvatarFallback>
                             </Avatar>
                         </div>
-                        <Button size="icon" variant="outline" className="absolute bottom-2 right-2 rounded-full h-10 w-10 border-2 border-background bg-card" onClick={handleAvatarClick}>
-                            <Edit className="h-5 w-5" />
-                        </Button>
-                    </div>
+                        <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200">
+                            <Camera className="h-10 w-10" />
+                        </div>
+                    </button>
                     <div className="flex items-center gap-2 mt-4">
                         <CardTitle className="text-3xl font-bold">{userData?.username || user.displayName}</CardTitle>
                         {isAdmin && (
