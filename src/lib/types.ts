@@ -208,3 +208,19 @@ export interface Message {
   portalRoomId?: string;
   portalRoomName?: string;
 }
+
+
+// Admin Analytics Types
+export interface UserGrowthDataPoint {
+    month: string;
+    users: number;
+}
+export interface ContentDataPoint {
+    name: string;
+    posts: number;
+    comments: number;
+}
+export interface RoomActivityDataPoint {
+    hour: string;
+    rooms: number;
+}
