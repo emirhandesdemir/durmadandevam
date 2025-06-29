@@ -18,19 +18,22 @@ export async function requestNotificationPermission(userId: string): Promise<boo
   try {
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
-      // ÖNEMLİ: BU ALANI KENDİ BİLGİLERİNİZLE DOLDURMALISINIZ.
-      // 1. Firebase projenize gidin: https://console.firebase.google.com/
-      // 2. Proje Ayarları > Cloud Messaging sekmesine gidin.
-      // 3. "Web yapılandırması" altında "Web Push sertifikaları" bölümüne gelin.
-      // 4. "Anahtar çifti oluştur" butonuna tıklayın ve oluşturulan anahtarı kopyalayıp aşağıdaki tırnak işaretleri arasına yapıştırın.
-      const vapidKey = "BURAYA_FIREBASE_PROJENIZDEN_ALDIGINIZ_VAPID_ANAHTARINI_YAPISTIRIN";
+      // ÖNEMLİ: Bu alana, Firebase projenizin "Cloud Messaging" ayarlarından aldığınız
+      // "Web Push sertifikaları" bölümündeki VAPID anahtar çiftini yapıştırmalısınız.
+      // 
+      // 1. Firebase Konsolu'na gidin (Proje ID: yenidendeneme-ea9ed)
+      // 2. Proje Ayarları > Cloud Messaging sekmesi
+      // 3. Web Push sertifikaları > "Anahtar çifti oluştur"
+      // 4. Üretilen anahtarı kopyalayıp aşağıdaki tırnak işaretleri arasına yapıştırın.
+      const vapidKey = "YAPISTIRMANIZ_GEREKEN_VAPID_ANAHTARI_BURADA";
       
-      if (vapidKey.startsWith("BURAYA_")) {
+      if (vapidKey.startsWith("YAPISTIRMANIZ_GEREKEN")) {
           console.error("VAPID anahtarı ayarlanmamış. Lütfen `src/lib/notificationUtils.ts` dosyasını güncelleyin.");
            toast({
               variant: 'destructive',
               title: 'Yapılandırma Eksik',
               description: 'Anlık bildirimler için VAPID anahtarı henüz ayarlanmamış.',
+              duration: 5000,
            });
           return false;
       }
