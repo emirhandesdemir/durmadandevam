@@ -10,12 +10,9 @@ import {
     writeBatch,
     increment,
     getDoc,
-    getDocs,
-    query,
-    where,
-    limit,
 } from "firebase/firestore";
 import { createNotification } from "./notificationActions";
+import { findUserByUsername } from "./userActions";
 
 interface AddCommentArgs {
     postId: string;
@@ -32,22 +29,12 @@ interface AddCommentArgs {
     }
 }
 
-async function findUserByUsername(username: string): Promise<{ uid: string } | null> {
-    const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('username', '==', username), limit(1));
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) {
-        return null;
-    }
-    return { uid: snapshot.docs[0].id, ...snapshot.docs[0].data() };
-}
-
 async function handleMentions(text: string, postId: string, sender: { uid: string, displayName: string | null, photoURL: string | null, selectedAvatarFrame?: string }) {
     const mentionRegex = /@(\w+)/g;
     const mentions = text.match(mentionRegex);
 
     if (mentions) {
-        const usernames = mentions.map(m => m.substring(1));
+        const usernames = new Set(mentions.map(m => m.substring(1)));
         for (const username of usernames) {
             const mentionedUser = await findUserByUsername(username);
             if (mentionedUser && mentionedUser.uid !== sender.uid) {

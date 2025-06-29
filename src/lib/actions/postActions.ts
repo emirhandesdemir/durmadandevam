@@ -11,34 +11,27 @@ import {
     serverTimestamp,
     arrayRemove,
     arrayUnion,
-    collection,
-    query,
-    where,
-    getDocs
+    addDoc,
+    collection
 } from "firebase/firestore";
 import { ref, deleteObject } from "firebase/storage";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
+import { findUserByUsername } from "./userActions";
 
-async function findUserByUsername(username: string): Promise<{ uid: string } | null> {
-    const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('username', '==', username), limit(1));
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) {
-        return null;
-    }
-    return { uid: snapshot.docs[0].id, ...snapshot.docs[0].data() };
-}
-
-async function handleMentions(text: string, postId: string, sender: { uid: string, displayName: string | null, photoURL: string | null, selectedAvatarFrame?: string }) {
+async function handlePostMentions(postId: string, text: string, sender: { uid: string; displayName: string | null; photoURL: string | null; selectedAvatarFrame?: string }, postImage: string | null) {
+    if (!text) return;
     const mentionRegex = /@(\w+)/g;
     const mentions = text.match(mentionRegex);
 
     if (mentions) {
-        const usernames = mentions.map(m => m.substring(1));
-        for (const username of usernames) {
+        const mentionedUsernames = new Set(mentions.map(m => m.substring(1)));
+
+        for (const username of mentionedUsernames) {
             const mentionedUser = await findUserByUsername(username);
             if (mentionedUser && mentionedUser.uid !== sender.uid) {
+                const postSnap = await getDoc(doc(db, "posts", postId));
+                const postData = postSnap.data();
                 await createNotification({
                     recipientId: mentionedUser.uid,
                     senderId: sender.uid,
@@ -47,11 +40,49 @@ async function handleMentions(text: string, postId: string, sender: { uid: strin
                     senderAvatarFrame: sender.selectedAvatarFrame,
                     type: 'mention',
                     postId: postId,
+                    postImage: postData?.imageUrl || null,
+                    commentText: text, 
                 });
             }
         }
     }
 }
+
+export async function createPost(postData: {
+    uid: string;
+    username: string;
+    userAvatar: string | null;
+    userAvatarFrame?: string;
+    userRole?: 'admin' | 'user';
+    userGender?: 'male' | 'female';
+    text: string;
+    imageUrl: string;
+    editedWithAI?: boolean;
+}) {
+    const newPostData = {
+        ...postData,
+        createdAt: serverTimestamp(),
+        likes: [],
+        likeCount: 0,
+        commentCount: 0,
+    };
+    const postRef = await addDoc(collection(db, 'posts'), newPostData);
+    
+    await handlePostMentions(postRef.id, postData.text, {
+        uid: postData.uid,
+        displayName: postData.username,
+        photoURL: postData.userAvatar,
+        selectedAvatarFrame: postData.userAvatarFrame
+    }, postData.imageUrl || null);
+
+    revalidatePath('/home');
+    if (postData.uid) {
+        revalidatePath(`/profile/${postData.uid}`);
+    }
+
+    return { success: true, postId: postRef.id };
+}
+
 
 export async function deletePost(postId: string) {
     if (!postId) throw new Error("Gönderi ID'si gerekli.");

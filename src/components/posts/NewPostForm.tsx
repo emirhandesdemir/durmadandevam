@@ -6,10 +6,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { db, storage } from "@/lib/firebase";
+import { storage } from "@/lib/firebase";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { applyImageFilter } from "@/lib/actions/imageActions";
+import { createPost } from "@/lib/actions/postActions";
 
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -169,20 +169,16 @@ export default function NewPostForm() {
             imageUrl = await getDownloadURL(snapshot.ref);
         }
 
-        await addDoc(collection(db, 'posts'), {
+        await createPost({
             uid: user.uid,
             username: userData.username,
             userAvatar: userData.photoURL || null,
             userAvatarFrame: userData.selectedAvatarFrame || '',
             userRole: userData.role || 'user',
+            userGender: userData.gender,
             text: text,
             imageUrl: imageUrl || "",
-            imagePublicId: "", 
             editedWithAI: wasEditedByAI,
-            createdAt: serverTimestamp(),
-            likes: [],
-            likeCount: 0,
-            commentCount: 0,
         });
 
         toast({ title: "Başarıyla Paylaşıldı!", description: "Gönderiniz ana sayfada görünecektir." });

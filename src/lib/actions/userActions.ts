@@ -1,8 +1,9 @@
+// src/lib/actions/userActions.ts
 'use server';
 
 import { db } from '@/lib/firebase';
 import type { UserProfile } from '@/lib/types';
-import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { deepSerialize } from '../server-utils';
 
 /**
@@ -20,6 +21,25 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     }
     return null;
 }
+
+/**
+ * Finds a single user by their exact username.
+ * @param username The username to search for.
+ * @returns A user profile object or null if not found.
+ */
+export async function findUserByUsername(username: string): Promise<UserProfile | null> {
+    if (!username) return null;
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('username', '==', username), limit(1));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) {
+        return null;
+    }
+    const userDoc = snapshot.docs[0];
+    const userData = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
+    return deepSerialize(userData);
+}
+
 
 /**
  * Kullanıcının FCM (Firebase Cloud Messaging) jetonunu veritabanına kaydeder.
