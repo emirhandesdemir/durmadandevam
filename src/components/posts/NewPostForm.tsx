@@ -1,7 +1,7 @@
 // src/components/posts/NewPostForm.tsx
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
@@ -17,7 +17,16 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Image as ImageIcon, Send, Loader2, X, Sparkles, ArrowUp } from "lucide-react";
+import { Image as ImageIcon, Send, Loader2, X, Sparkles, ArrowUp, RefreshCcw } from "lucide-react";
+import { ScrollArea } from "../ui/scroll-area";
+
+interface AiChatMessage {
+  id: number;
+  role: 'user' | 'ai' | 'system';
+  text?: string;
+  imageUrl?: string;
+  isLoading?: boolean;
+}
 
 export default function NewPostForm() {
   const router = useRouter();
@@ -28,14 +37,34 @@ export default function NewPostForm() {
   const [text, setText] = useState("");
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
   const [croppedImage, setCroppedImage] = useState<string | null>(null);
-  const [originalCroppedImage, setOriginalCroppedImage] = useState<string | null>(null); // To reset AI changes
+  const [originalCroppedImage, setOriginalCroppedImage] = useState<string | null>(null); 
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // AI Styling states
   const [stylePrompt, setStylePrompt] = useState('');
   const [isStyling, setIsStyling] = useState(false);
+  const [aiChatHistory, setAiChatHistory] = useState<AiChatMessage[]>([]);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (croppedImage && aiChatHistory.length === 0) {
+        setAiChatHistory([
+            {
+                id: Date.now(),
+                role: 'system',
+                text: 'Resminiz hazır! Ona nasıl bir stil uygulamamı istersiniz? Örneğin, "suluboya resim yap" veya "arka planı uzay yap" gibi komutlar verebilirsiniz.'
+            }
+        ]);
+    }
+  }, [croppedImage, aiChatHistory.length]);
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [aiChatHistory]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -54,8 +83,8 @@ export default function NewPostForm() {
 
   const handleCropComplete = (croppedDataUrl: string) => {
     setCroppedImage(croppedDataUrl);
-    setOriginalCroppedImage(croppedDataUrl); // Save the original cropped version
-    setImageToCrop(null); // Close the dialog
+    setOriginalCroppedImage(croppedDataUrl); 
+    setImageToCrop(null);
   }
 
   const handleImageClick = () => {
@@ -67,28 +96,45 @@ export default function NewPostForm() {
       setCroppedImage(null);
       setOriginalCroppedImage(null);
       setStylePrompt('');
+      setAiChatHistory([]);
       if(fileInputRef.current) {
           fileInputRef.current.value = "";
       }
   }
 
   const handleApplyAiStyle = async () => {
-      if (!originalCroppedImage || !stylePrompt.trim() || isStyling) return;
+      if (!croppedImage || !stylePrompt.trim() || isStyling) return;
       
       setIsStyling(true);
+      const userPrompt = stylePrompt;
+      setStylePrompt('');
+
+      setAiChatHistory(prev => [
+          ...prev,
+          { id: Date.now(), role: 'user', text: userPrompt },
+          { id: Date.now() + 1, role: 'ai', isLoading: true }
+      ]);
+      
       try {
           const result = await applyImageFilter({
-              photoDataUri: originalCroppedImage,
-              style: stylePrompt
+              photoDataUri: croppedImage,
+              style: userPrompt
           });
 
           if (result.success && result.data?.styledPhotoDataUri) {
               setCroppedImage(result.data.styledPhotoDataUri);
-              toast({ title: "Stil Uygulandı!", description: `"${stylePrompt}" stili başarıyla uygulandı.`});
+              setAiChatHistory(prev => [
+                  ...prev.filter(msg => !msg.isLoading),
+                  { id: Date.now(), role: 'ai', imageUrl: result.data.styledPhotoDataUri }
+              ]);
           } else {
               throw new Error(result.error || "Yapay zeka modelinden geçerli bir yanıt alınamadı.");
           }
       } catch (error: any) {
+          setAiChatHistory(prev => [
+              ...prev.filter(msg => !msg.isLoading),
+              { id: Date.now(), role: 'system', text: `Bir hata oluştu: ${error.message}` }
+          ]);
           toast({
               variant: "destructive",
               title: "Stil Uygulanamadı",
@@ -128,7 +174,7 @@ export default function NewPostForm() {
             userRole: userData.role || 'user',
             text: text,
             imageUrl: imageUrl || "",
-            imagePublicId: "", // Legacy field, kept for compatibility if needed
+            imagePublicId: "", 
             createdAt: serverTimestamp(),
             likes: [],
             likeCount: 0,
@@ -174,7 +220,7 @@ export default function NewPostForm() {
             />
           </div>
           {croppedImage && (
-            <div className="ml-16 space-y-4">
+            <div className="ml-0 sm:ml-16 space-y-4">
               <div className="relative">
                 <div className="overflow-hidden rounded-xl border">
                   <img src={croppedImage} alt="Önizleme" className="max-h-80 w-auto object-contain" />
@@ -196,38 +242,64 @@ export default function NewPostForm() {
                 </Button>
               </div>
 
-              {/* AI Styling Section */}
+              {/* AI Styling Chat Section */}
               <div className="space-y-2">
-                <Label htmlFor="ai-style-prompt" className="flex items-center gap-2 font-semibold">
-                    <Sparkles className="h-5 w-5 text-primary" />
-                    AI ile Stil Ver
-                </Label>
-                 <div className="relative">
-                    <Textarea
-                        id="ai-style-prompt"
-                        placeholder="Resme uygulamak istediğiniz stili veya değişikliği açıklayın. Örn: 'anime karakterine dönüştür' veya 'arka planı kaldır'..."
-                        value={stylePrompt}
-                        onChange={(e) => setStylePrompt(e.target.value)}
-                        disabled={isLoading}
-                        className="rounded-xl pr-12 min-h-[50px] resize-none"
-                        rows={2}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                handleApplyAiStyle();
-                            }
-                        }}
-                    />
-                    <Button
-                        type="button"
-                        size="icon"
-                        className="absolute right-2.5 bottom-2.5 h-8 w-8 rounded-full"
-                        onClick={handleApplyAiStyle}
-                        disabled={isLoading || !stylePrompt.trim()}
-                        aria-label="Stili uygula"
-                    >
-                        {isStyling ? <Loader2 className="h-4 w-4 animate-spin"/> : <ArrowUp className="h-4 w-4" />}
+                <div className="flex justify-between items-center">
+                    <Label className="flex items-center gap-2 font-semibold">
+                        <Sparkles className="h-5 w-5 text-primary" />
+                        AI Sohbet Asistanı
+                    </Label>
+                    <Button variant="ghost" size="sm" onClick={() => setCroppedImage(originalCroppedImage)} disabled={isLoading}>
+                        <RefreshCcw className="h-3 w-3 mr-2"/>
+                        Sıfırla
                     </Button>
+                </div>
+                <div className="border rounded-xl h-80 flex flex-col bg-muted/30">
+                    <div ref={chatContainerRef} className="flex-1 space-y-4 overflow-y-auto p-3">
+                        {aiChatHistory.map((msg) => (
+                            <div key={msg.id} className={cn("flex items-end gap-2", msg.role === 'user' && "justify-end")}>
+                                {msg.role === 'ai' && <Avatar className="h-6 w-6 bg-primary/20 text-primary flex items-center justify-center"><Sparkles className="h-4 w-4" /></Avatar>}
+                                 {msg.role === 'system' && <div className="w-6 h-6 shrink-0"/>}
+                                <div className={cn(
+                                    "max-w-[85%] rounded-lg p-2 text-sm",
+                                    msg.role === 'user' && "bg-primary text-primary-foreground",
+                                    msg.role === 'ai' && "bg-card",
+                                    msg.role === 'system' && "w-full text-center text-xs bg-transparent text-muted-foreground p-1"
+                                )}>
+                                    {msg.isLoading && <Loader2 className="h-5 w-5 animate-spin p-1" />}
+                                    {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
+                                    {msg.imageUrl && <img src={msg.imageUrl} className="rounded-md" alt="AI styled" />}
+                                </div>
+                                {msg.role === 'user' && <Avatar className="h-6 w-6"><AvatarImage src={user?.photoURL || undefined}/><AvatarFallback>{user?.displayName?.charAt(0)}</AvatarFallback></Avatar>}
+                            </div>
+                        ))}
+                    </div>
+                    <div className="relative mt-auto p-2 border-t">
+                        <Textarea
+                            placeholder="Resme bir stil uygula..."
+                            value={stylePrompt}
+                            onChange={(e) => setStylePrompt(e.target.value)}
+                            disabled={isLoading}
+                            className="rounded-full px-4 pr-12 min-h-[40px] resize-none"
+                            rows={1}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleApplyAiStyle();
+                                }
+                            }}
+                        />
+                        <Button
+                            type="button"
+                            size="icon"
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full"
+                            onClick={handleApplyAiStyle}
+                            disabled={isLoading || !stylePrompt.trim()}
+                            aria-label="Stili uygula"
+                        >
+                            {isStyling ? <Loader2 className="h-4 w-4 animate-spin"/> : <ArrowUp className="h-4 w-4" />}
+                        </Button>
+                    </div>
                 </div>
               </div>
             </div>
