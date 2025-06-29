@@ -13,7 +13,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -26,7 +25,7 @@ import { cn } from '@/lib/utils';
 type GameType = 'dice' | 'rps' | 'bottle';
 
 const gameOptions: { id: GameType, name: string, icon: React.ElementType, minPlayers: number, maxPlayers: number }[] = [
-  { id: 'dice', name: 'Zar Oyunu', icon: Dice6, minPlayers: 2, maxPlayers: 8 },
+  { id: 'dice', name: 'Zar Oyunu', icon: Dice6, minPlayers: 2, maxPlayers: 2 },
   { id: 'rps', name: 'Taş-Kağıt-Makas', icon: Hand, minPlayers: 2, maxPlayers: 2 },
   { id: 'bottle', name: 'Şişe Çevirmece', icon: Bot, minPlayers: 2, maxPlayers: 2 },
 ];
@@ -54,26 +53,17 @@ export default function GameLobbyDialog({ isOpen, onOpenChange, roomId, particip
     }
   };
 
-  const handlePlayerSelect = (playerId: string, isSingleSelect: boolean) => {
-    if (isSingleSelect) {
-      setSelectedPlayers([playerId]);
-    } else {
-      setSelectedPlayers(prev =>
-        prev.includes(playerId)
-          ? prev.filter(id => id !== playerId)
-          : [...prev, playerId]
-      );
-    }
+  const handlePlayerSelect = (playerId: string) => {
+    setSelectedPlayers([playerId]);
   };
   
   const handleStartGame = async () => {
     if (!user || !userData || !gameConfig || !roomId) return;
     
-    const totalPlayersIncludingHost = selectedPlayers.length + 1;
-    if (totalPlayersIncludingHost < gameConfig.minPlayers || totalPlayersIncludingHost > gameConfig.maxPlayers) {
+    if (selectedPlayers.length !== 1) {
         toast({ 
             variant: 'destructive', 
-            description: `Bu oyun için ${gameConfig.minPlayers} ila ${gameConfig.maxPlayers} arasında oyuncu gerekir. (Siz dahil ${totalPlayersIncludingHost} kişi seçtiniz)` 
+            description: `Bu oyunu oynamak için 1 rakip seçmelisiniz.`
         });
         return;
     }
@@ -112,8 +102,7 @@ export default function GameLobbyDialog({ isOpen, onOpenChange, roomId, particip
   
   const isSelectionInvalid = useMemo(() => {
     if (!gameConfig) return true;
-    const totalPlayers = selectedPlayers.length + 1;
-    return totalPlayers < gameConfig.minPlayers || totalPlayers > gameConfig.maxPlayers;
+    return selectedPlayers.length !== 1;
   }, [selectedPlayers, gameConfig]);
 
   return (
@@ -122,7 +111,7 @@ export default function GameLobbyDialog({ isOpen, onOpenChange, roomId, particip
         <DialogHeader>
           <DialogTitle>Oyun Başlat</DialogTitle>
           <DialogDescription>
-            {step === 1 ? "Oynamak istediğiniz oyunu seçin." : "Oyuna katılacak kişileri seçin."}
+            {step === 1 ? "Oynamak istediğiniz oyunu seçin." : "Oynamak için bir rakip seçin."}
           </DialogDescription>
         </DialogHeader>
 
@@ -135,7 +124,7 @@ export default function GameLobbyDialog({ isOpen, onOpenChange, roomId, particip
                     <game.icon className="h-6 w-6 text-primary" />
                     <div className="flex-1">
                       <p className="font-semibold">{game.name}</p>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1"><Users className="h-3 w-3" /> {game.minPlayers}-{game.maxPlayers} oyuncu</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1"><Users className="h-3 w-3" /> {game.minPlayers} oyuncu</p>
                     </div>
                     <RadioGroupItem value={game.id} id={game.id} />
                   </Label>
@@ -147,52 +136,24 @@ export default function GameLobbyDialog({ isOpen, onOpenChange, roomId, particip
 
         {step === 2 && gameConfig && (
             <div className="py-4 flex flex-col flex-1 overflow-hidden">
-                {gameConfig.id === 'bottle' ? (
-                     <>
-                        <p className="text-sm font-medium mb-2">Oyuncu Seç (1 kişi)</p>
-                        <RadioGroup onValueChange={(playerId) => handlePlayerSelect(playerId, true)} value={selectedPlayers[0] || ''}>
-                            <ScrollArea className="flex-1 border rounded-lg">
-                                <div className="p-2 space-y-1">
-                                    {otherParticipants.length > 0 ? otherParticipants.map(p => (
-                                        <Label key={p.uid} htmlFor={p.uid} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent cursor-pointer has-[:checked]:bg-accent">
-                                            <Avatar className="h-9 w-9">
-                                                <AvatarImage src={p.photoURL || undefined} />
-                                                <AvatarFallback>{p.username.charAt(0)}</AvatarFallback>
-                                            </Avatar>
-                                            <span className="flex-1 font-medium">{p.username}</span>
-                                            <RadioGroupItem value={p.uid} id={p.uid} />
-                                        </Label>
-                                    )) : <p className="text-center text-muted-foreground p-4">Odada başka oyuncu yok.</p>}
-                                </div>
-                            </ScrollArea>
-                        </RadioGroup>
-                        <p className="text-xs text-muted-foreground mt-2">Şişe çevirmece için 1 oyuncu seçin.</p>
-                    </>
-                ) : (
-                    <>
-                        <p className="text-sm font-medium mb-2">Oyuncular ({selectedPlayers.length} / {gameConfig.maxPlayers - 1})</p>
-                        <ScrollArea className="flex-1 border rounded-lg">
-                            <div className="p-2 space-y-1">
-                                {otherParticipants.length > 0 ? otherParticipants.map(p => (
-                                    <div key={p.uid} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent">
-                                        <Avatar className="h-9 w-9">
-                                            <AvatarImage src={p.photoURL || undefined} />
-                                            <AvatarFallback>{p.username.charAt(0)}</AvatarFallback>
-                                        </Avatar>
-                                        <Label htmlFor={p.uid} className="flex-1 font-medium cursor-pointer">{p.username}</Label>
-                                        <Checkbox 
-                                            id={p.uid} 
-                                            checked={selectedPlayers.includes(p.uid)} 
-                                            onCheckedChange={() => handlePlayerSelect(p.uid, false)}
-                                            disabled={selectedPlayers.length >= (gameConfig.maxPlayers - 1) && !selectedPlayers.includes(p.uid)}
-                                        />
-                                    </div>
-                                )) : <p className="text-center text-muted-foreground p-4">Odada başka oyuncu yok.</p>}
-                            </div>
-                        </ScrollArea>
-                        <p className="text-xs text-muted-foreground mt-2">Bu oyun için siz hariç en az {gameConfig.minPlayers - 1}, en fazla {gameConfig.maxPlayers - 1} oyuncu seçebilirsiniz.</p>
-                    </>
-                )}
+                <p className="text-sm font-medium mb-2">Rakip Seç (1 kişi)</p>
+                <RadioGroup onValueChange={handlePlayerSelect} value={selectedPlayers[0] || ''}>
+                    <ScrollArea className="flex-1 border rounded-lg">
+                        <div className="p-2 space-y-1">
+                            {otherParticipants.length > 0 ? otherParticipants.map(p => (
+                                <Label key={p.uid} htmlFor={p.uid} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent cursor-pointer has-[:checked]:bg-accent">
+                                    <Avatar className="h-9 w-9">
+                                        <AvatarImage src={p.photoURL || undefined} />
+                                        <AvatarFallback>{p.username.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <span className="flex-1 font-medium">{p.username}</span>
+                                    <RadioGroupItem value={p.uid} id={p.uid} />
+                                </Label>
+                            )) : <p className="text-center text-muted-foreground p-4">Odada başka oyuncu yok.</p>}
+                        </div>
+                    </ScrollArea>
+                </RadioGroup>
+                <p className="text-xs text-muted-foreground mt-2">Bu oyunu oynamak için 1 rakip seçmelisiniz.</p>
             </div>
         )}
 
