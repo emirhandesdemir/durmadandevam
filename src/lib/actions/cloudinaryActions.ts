@@ -2,17 +2,29 @@
 
 import { v2 as cloudinary } from 'cloudinary';
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-  secure: true,
-});
-
 export interface CloudinaryUploadResult {
   public_id: string;
   secure_url: string;
 }
+
+const configureCloudinary = () => {
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  
+    if (!cloudName || !apiKey || !apiSecret) {
+      console.error("Cloudinary environment variables are not set. Please check your .env file.");
+      throw new Error("Sunucu yapılandırma hatası: Resim hizmeti ayarları eksik.");
+    }
+    
+    cloudinary.config({
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret: apiSecret,
+      secure: true,
+    });
+};
+
 
 /**
  * Uploads an image to Cloudinary.
@@ -21,6 +33,7 @@ export interface CloudinaryUploadResult {
  * @returns An object containing the public_id and secure_url of the uploaded image.
  */
 export async function uploadImage(imageDataUri: string, folder: string): Promise<CloudinaryUploadResult> {
+  configureCloudinary();
   try {
     const result = await cloudinary.uploader.upload(imageDataUri, {
       folder: `hiwewalk/${folder}`,
@@ -30,9 +43,10 @@ export async function uploadImage(imageDataUri: string, folder: string): Promise
       ]
     });
     return { public_id: result.public_id, secure_url: result.secure_url };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Cloudinary upload error:', error);
-    throw new Error('Resim yüklenirken bir hata oluştu.');
+    const message = error.message || 'Bilinmeyen bir yükleme hatası oluştu.';
+    throw new Error(`Resim yüklenemedi: ${message}`);
   }
 }
 
@@ -42,6 +56,7 @@ export async function uploadImage(imageDataUri: string, folder: string): Promise
  */
 export async function deleteImage(publicId: string): Promise<void> {
     if (!publicId) return;
+    configureCloudinary();
     try {
         await cloudinary.uploader.destroy(publicId);
     } catch (error) {
