@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,7 +29,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Geçersiz e-posta adresi." }),
@@ -39,8 +40,8 @@ export default function LoginForm() {
     const { toast } = useToast();
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
-    // Şifre sıfırlama için yeni bir yükleme durumu
     const [isResetting, setIsResetting] = useState(false); 
+    const [showPassword, setShowPassword] = useState(false);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -71,9 +72,8 @@ export default function LoginForm() {
         }
     }
 
-    // Şifre sıfırlama fonksiyonu
     async function handlePasswordReset() {
-        const email = form.getValues("email"); // Formdaki e-posta değerini al
+        const email = form.getValues("email"); 
         if (!email) {
             toast({
                 title: "E-posta Gerekli",
@@ -136,9 +136,20 @@ export default function LoginForm() {
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel className="ml-4">Şifre</FormLabel>
-                                    <FormControl>
-                                        <Input className="rounded-full px-5 py-6" type="password" placeholder="••••••••" {...field} />
-                                    </FormControl>
+                                    <div className="relative">
+                                        <FormControl>
+                                            <Input className="rounded-full px-5 py-6 pr-12" type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...field} />
+                                        </FormControl>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="absolute inset-y-0 right-0 h-full w-12 rounded-full text-muted-foreground"
+                                            onClick={() => setShowPassword((prev) => !prev)}
+                                        >
+                                            {showPassword ? <EyeOff /> : <Eye />}
+                                        </Button>
+                                    </div>
                                     <FormMessage className="ml-4" />
                                 </FormItem>
                             )}
