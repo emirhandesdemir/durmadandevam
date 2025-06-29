@@ -1,7 +1,7 @@
 // src/components/posts/NewPostForm.tsx
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
@@ -10,62 +10,118 @@ import { storage } from "@/lib/firebase";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { applyImageFilter } from "@/lib/actions/imageActions";
 import { createPost } from "@/lib/actions/postActions";
+import { getFollowingForSuggestions } from "@/lib/actions/userActions";
+import type { UserProfile } from "@/lib/types";
 
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
 import { Image as ImageIcon, Send, Loader2, X, Sparkles, ArrowUp, RefreshCcw } from "lucide-react";
 import { ScrollArea } from "../ui/scroll-area";
 
-interface AiChatMessage {
-  id: number;
-  role: 'user' | 'ai' | 'system';
-  text?: string;
-  imageUrl?: string;
-  isLoading?: boolean;
-}
 
 export default function NewPostForm() {
   const router = useRouter();
   const { user, userData } = useAuth();
   const { toast } = useToast();
   
-  // Component states
   const [text, setText] = useState("");
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
   const [croppedImage, setCroppedImage] = useState<string | null>(null);
   const [originalCroppedImage, setOriginalCroppedImage] = useState<string | null>(null); 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [wasEditedByAI, setWasEditedByAI] = useState(false);
-  
-  // AI Styling states
-  const [stylePrompt, setStylePrompt] = useState('');
-  const [isStyling, setIsStyling] = useState(false);
-  const [aiChatHistory, setAiChatHistory] = useState<AiChatMessage[]>([]);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
-  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (croppedImage && aiChatHistory.length === 0) {
-        setAiChatHistory([
-            {
-                id: Date.now(),
-                role: 'system',
-                text: 'Resminiz hazır! Ona nasıl bir stil uygulamamı istersiniz? Örneğin, "suluboya resim yap" veya "arka planı uzay yap" gibi komutlar verebilirsiniz.'
-            }
-        ]);
-    }
-  }, [croppedImage, aiChatHistory.length]);
+  // Mention States
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<Pick<UserProfile, 'uid' | 'username' | 'photoURL'>[]>([]);
+  const [suggestionLoading, setSuggestionLoading] = useState(false);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
-    if (chatContainerRef.current) {
-        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+
+  const fetchSuggestions = useCallback(async () => {
+    if (!userData || suggestions.length > 0) return;
+    setSuggestionLoading(true);
+    try {
+        const followingList = await getFollowingForSuggestions(userData.uid);
+        setSuggestions(followingList);
+    } catch (error) {
+        console.error("Error fetching suggestions:", error);
+    } finally {
+        setSuggestionLoading(false);
     }
-  }, [aiChatHistory]);
+  }, [userData, suggestions.length]);
+
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setText(value);
+
+    const cursorPos = e.target.selectionStart;
+    const textUpToCursor = value.substring(0, cursorPos);
+    const mentionMatch = textUpToCursor.match(/@(\w*)$/);
+
+    if (mentionMatch) {
+        setMentionQuery(mentionMatch[1]);
+        fetchSuggestions();
+    } else {
+        setMentionQuery(null);
+    }
+    setActiveSuggestionIndex(0);
+  };
+
+  const handleMentionSelect = (username: string) => {
+    if (!textareaRef.current) return;
+    const value = textareaRef.current.value;
+    const cursorPos = textareaRef.current.selectionStart;
+    const textUpToCursor = value.substring(0, cursorPos);
+
+    const startIndex = textUpToCursor.lastIndexOf('@');
+    if (startIndex === -1) return;
+
+    const prefix = value.substring(0, startIndex);
+    const suffix = value.substring(cursorPos);
+    const newText = `${prefix}@${username} ${suffix}`;
+    
+    setText(newText);
+    setMentionQuery(null);
+
+    const newCursorPos = prefix.length + username.length + 2;
+    setTimeout(() => {
+        textareaRef.current?.focus();
+        textareaRef.current?.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  };
+
+  const filteredSuggestions = mentionQuery !== null
+    ? suggestions.filter(s => s.username.toLowerCase().includes(mentionQuery.toLowerCase()))
+    : [];
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (mentionQuery !== null && filteredSuggestions.length > 0) {
+          if (e.key === 'ArrowDown') {
+              e.preventDefault();
+              setActiveSuggestionIndex(prev => (prev + 1) % filteredSuggestions.length);
+          } else if (e.key === 'ArrowUp') {
+              e.preventDefault();
+              setActiveSuggestionIndex(prev => (prev - 1 + filteredSuggestions.length) % filteredSuggestions.length);
+          } else if (e.key === 'Enter' || e.key === 'Tab') {
+              e.preventDefault();
+              handleMentionSelect(filteredSuggestions[activeSuggestionIndex].username);
+          } else if (e.key === 'Escape') {
+              e.preventDefault();
+              setMentionQuery(null);
+          }
+      } else if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleShare();
+      }
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -84,7 +140,7 @@ export default function NewPostForm() {
 
   const handleCropComplete = (croppedDataUrl: string) => {
     setCroppedImage(croppedDataUrl);
-    setOriginalCroppedImage(croppedDataUrl); 
+    setOriginalCroppedImage(croppedDataUrl);
     setImageToCrop(null);
   }
 
@@ -96,55 +152,8 @@ export default function NewPostForm() {
       setImageToCrop(null);
       setCroppedImage(null);
       setOriginalCroppedImage(null);
-      setStylePrompt('');
-      setAiChatHistory([]);
-      setWasEditedByAI(false);
       if(fileInputRef.current) {
           fileInputRef.current.value = "";
-      }
-  }
-
-  const handleApplyAiStyle = async () => {
-      if (!croppedImage || !stylePrompt.trim() || isStyling) return;
-      
-      setIsStyling(true);
-      const userPrompt = stylePrompt;
-      setStylePrompt('');
-
-      setAiChatHistory(prev => [
-          ...prev,
-          { id: Date.now(), role: 'user', text: userPrompt },
-          { id: Date.now() + 1, role: 'ai', isLoading: true }
-      ]);
-      
-      try {
-          const result = await applyImageFilter({
-              photoDataUri: croppedImage,
-              style: userPrompt
-          });
-
-          if (result.success && result.data?.styledPhotoDataUri) {
-              setCroppedImage(result.data.styledPhotoDataUri);
-              setWasEditedByAI(true);
-              setAiChatHistory(prev => [
-                  ...prev.filter(msg => !msg.isLoading),
-                  { id: Date.now(), role: 'ai', imageUrl: result.data.styledPhotoDataUri }
-              ]);
-          } else {
-              throw new Error(result.error || "Yapay zeka modelinden geçerli bir yanıt alınamadı.");
-          }
-      } catch (error: any) {
-          setAiChatHistory(prev => [
-              ...prev.filter(msg => !msg.isLoading),
-              { id: Date.now(), role: 'system', text: `Bir hata oluştu: ${error.message}` }
-          ]);
-          toast({
-              variant: "destructive",
-              title: "Stil Uygulanamadı",
-              description: error.message
-          });
-      } finally {
-          setIsStyling(false);
       }
   }
 
@@ -175,6 +184,7 @@ export default function NewPostForm() {
             userAvatar: userData.photoURL || null,
             userAvatarFrame: userData.selectedAvatarFrame || '',
             userRole: userData.role || 'user',
+            userGender: userData.gender,
             text: text,
             imageUrl: imageUrl || "",
             editedWithAI: wasEditedByAI,
@@ -196,39 +206,66 @@ export default function NewPostForm() {
     }
   };
 
-  const isLoading = isSubmitting || isStyling;
+  const isLoading = isSubmitting;
 
   return (
     <>
       <Card className="w-full overflow-hidden rounded-3xl border-0 bg-card/80 shadow-xl shadow-black/5 backdrop-blur-sm">
         <div className="flex flex-col gap-4 p-5">
-          <div className="flex items-start gap-4">
-            <div className={cn("avatar-frame-wrapper", userData?.selectedAvatarFrame)}>
-              <Avatar className="relative z-[1] h-11 w-11 flex-shrink-0 border-2 border-white">
-                <AvatarImage src={user?.photoURL || undefined} />
-                <AvatarFallback>{user?.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
-              </Avatar>
-            </div>
-            <Textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Aklında ne var? (#etiket) veya (@kullanıcı) bahset..."
-              className="min-h-[60px] flex-1 resize-none border-0 bg-transparent p-0 text-base placeholder:text-muted-foreground/80 focus-visible:ring-0"
-              rows={2}
-              disabled={isLoading}
-            />
-          </div>
+            <Popover open={mentionQuery !== null}>
+                <PopoverAnchor asChild>
+                    <div className="flex items-start gap-4">
+                        <div className={cn("avatar-frame-wrapper", userData?.selectedAvatarFrame)}>
+                        <Avatar className="relative z-[1] h-11 w-11 flex-shrink-0 border-2 border-white">
+                            <AvatarImage src={user?.photoURL || undefined} />
+                            <AvatarFallback>{user?.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        </div>
+                        <Textarea
+                            ref={textareaRef}
+                            value={text}
+                            onChange={handleTextChange}
+                            onKeyDown={handleKeyDown}
+                            placeholder="Aklında ne var? (#etiket) veya (@kullanıcı) bahset..."
+                            className="min-h-[60px] flex-1 resize-none border-0 bg-transparent p-0 text-base placeholder:text-muted-foreground/80 focus-visible:ring-0"
+                            rows={2}
+                            disabled={isLoading}
+                        />
+                    </div>
+                </PopoverAnchor>
+                <PopoverContent className="w-64 p-1">
+                     {suggestionLoading ? (
+                        <div className="flex items-center justify-center p-2"><Loader2 className="h-4 w-4 animate-spin" /></div>
+                    ) : filteredSuggestions.length > 0 ? (
+                        <ScrollArea className="max-h-48">
+                            <div className="p-1">
+                            {filteredSuggestions.map((user, index) => (
+                                <button
+                                    key={user.uid}
+                                    onClick={() => handleMentionSelect(user.username)}
+                                    onMouseMove={() => setActiveSuggestionIndex(index)}
+                                    className={cn(
+                                        "w-full text-left flex items-center gap-2 p-2 rounded-md hover:bg-accent",
+                                        index === activeSuggestionIndex && "bg-accent"
+                                    )}
+                                >
+                                    <Avatar className="h-7 w-7"><AvatarImage src={user.photoURL || undefined} /><AvatarFallback>{user.username.charAt(0)}</AvatarFallback></Avatar>
+                                    <span className="font-medium text-sm">{user.username}</span>
+                                </button>
+                            ))}
+                            </div>
+                        </ScrollArea>
+                    ) : (
+                        <p className="text-center text-sm text-muted-foreground p-2">Kullanıcı bulunamadı.</p>
+                    )}
+                </PopoverContent>
+            </Popover>
+
           {croppedImage && (
             <div className="ml-0 sm:ml-16 space-y-4">
               <div className="relative">
                 <div className="overflow-hidden rounded-xl border">
                   <img src={croppedImage} alt="Önizleme" className="max-h-80 w-auto object-contain" />
-                  {isStyling && (
-                    <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-2 text-white">
-                        <Loader2 className="h-8 w-8 animate-spin"/>
-                        <p>Stil uygulanıyor...</p>
-                    </div>
-                  )}
                 </div>
                 <Button 
                   size="icon" 
@@ -239,69 +276,6 @@ export default function NewPostForm() {
                 >
                   <X className="h-4 w-4" />
                 </Button>
-              </div>
-
-              {/* AI Styling Chat Section */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                    <Label className="flex items-center gap-2 font-semibold">
-                        <Sparkles className="h-5 w-5 text-primary" />
-                        AI Sohbet Asistanı
-                    </Label>
-                    <Button variant="ghost" size="sm" onClick={() => { setCroppedImage(originalCroppedImage); setWasEditedByAI(false); }} disabled={isLoading}>
-                        <RefreshCcw className="h-3 w-3 mr-2"/>
-                        Sıfırla
-                    </Button>
-                </div>
-                <div className="border rounded-xl h-80 flex flex-col bg-muted/30">
-                    <ScrollArea className="flex-1" ref={chatContainerRef}>
-                        <div className="p-3 space-y-4">
-                            {aiChatHistory.map((msg) => (
-                                <div key={msg.id} className={cn("flex items-end gap-2", msg.role === 'user' && "justify-end")}>
-                                    {msg.role === 'ai' && <Avatar className="h-6 w-6 bg-primary/20 text-primary flex items-center justify-center"><Sparkles className="h-4 w-4" /></Avatar>}
-                                    {msg.role === 'system' && <div className="w-6 h-6 shrink-0"/>}
-                                    <div className={cn(
-                                        "max-w-[85%] rounded-lg p-2 text-sm",
-                                        msg.role === 'user' && "bg-primary text-primary-foreground",
-                                        msg.role === 'ai' && "bg-card",
-                                        msg.role === 'system' && "w-full text-center text-xs bg-transparent text-muted-foreground p-1"
-                                    )}>
-                                        {msg.isLoading && <Loader2 className="h-5 w-5 animate-spin p-1" />}
-                                        {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
-                                        {msg.imageUrl && <img src={msg.imageUrl} className="rounded-md" alt="AI styled" />}
-                                    </div>
-                                    {msg.role === 'user' && <Avatar className="h-6 w-6"><AvatarImage src={user?.photoURL || undefined}/><AvatarFallback>{user?.displayName?.charAt(0)}</AvatarFallback></Avatar>}
-                                </div>
-                            ))}
-                        </div>
-                    </ScrollArea>
-                    <div className="relative mt-auto p-2 border-t">
-                        <Textarea
-                            placeholder="Resme bir stil uygula..."
-                            value={stylePrompt}
-                            onChange={(e) => setStylePrompt(e.target.value)}
-                            disabled={isLoading}
-                            className="rounded-full px-4 pr-12 min-h-[40px] resize-none"
-                            rows={1}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    handleApplyAiStyle();
-                                }
-                            }}
-                        />
-                        <Button
-                            type="button"
-                            size="icon"
-                            className="absolute right-3.5 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full"
-                            onClick={handleApplyAiStyle}
-                            disabled={isLoading || !stylePrompt.trim()}
-                            aria-label="Stili uygula"
-                        >
-                            {isStyling ? <Loader2 className="h-4 w-4 animate-spin"/> : <ArrowUp className="h-4 w-4" />}
-                        </Button>
-                    </div>
-                </div>
               </div>
             </div>
           )}

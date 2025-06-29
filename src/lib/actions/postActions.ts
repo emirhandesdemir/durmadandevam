@@ -19,7 +19,7 @@ import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
 import { findUserByUsername } from "./userActions";
 
-async function handlePostMentions(postId: string, text: string, sender: { uid: string; displayName: string | null; photoURL: string | null; selectedAvatarFrame?: string }, postImage: string | null) {
+async function handlePostMentions(postId: string, text: string, sender: { uid: string; displayName: string | null; photoURL: string | null; selectedAvatarFrame?: string }) {
     if (!text) return;
     const mentionRegex = /@(\w+)/g;
     const mentions = text.match(mentionRegex);
@@ -73,7 +73,7 @@ export async function createPost(postData: {
         displayName: postData.username,
         photoURL: postData.userAvatar,
         selectedAvatarFrame: postData.userAvatarFrame
-    }, postData.imageUrl || null);
+    });
 
     revalidatePath('/home');
     if (postData.uid) {
