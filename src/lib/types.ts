@@ -109,6 +109,9 @@ export interface Room {
     voiceParticipantsCount?: number;
     requestToSpeakEnabled?: boolean;
     speakRequests?: string[]; // Array of UIDs who requested to speak
+    rules: string | null;
+    welcomeMessage: string | null;
+    pinnedMessageId: string | null;
 }
 
 export interface VoiceParticipant {

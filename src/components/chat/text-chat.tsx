@@ -10,19 +10,36 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2 } from 'lucide-react';
-import type { Message } from '@/lib/types';
+import { Loader2, Pin } from 'lucide-react';
+import type { Message, Room } from '@/lib/types';
 import PortalMessageCard from './PortalMessageCard';
 import GameInviteMessage from '../game/GameInviteMessage';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { Button } from '../ui/button';
+import { MoreHorizontal } from 'lucide-react';
+import { pinMessage } from '@/lib/actions/roomActions';
+import { useToast } from '@/hooks/use-toast';
 
 interface TextChatProps {
   messages: Message[];
   loading: boolean;
-  roomId: string;
+  room: Room;
 }
 
-export default function TextChat({ messages, loading, roomId }: TextChatProps) {
+export default function TextChat({ messages, loading, room }: TextChatProps) {
   const { user: currentUser } = useAuth();
+  const { toast } = useToast();
+  const isHost = currentUser?.uid === room.createdBy.uid;
+
+  const handlePinMessage = async (messageId: string) => {
+    if (!isHost) return;
+    try {
+        await pinMessage(room.id, messageId, currentUser!.uid);
+        toast({ description: "Mesaj sabitlendi." });
+    } catch (e: any) {
+        toast({ variant: 'destructive', description: e.message });
+    }
+  }
 
   if (!currentUser) return null;
 
@@ -57,12 +74,27 @@ export default function TextChat({ messages, loading, roomId }: TextChatProps) {
         }
         
         if (msg.type === 'game_invite' && msg.gameInviteData) {
-            return <GameInviteMessage key={msg.id} message={msg} roomId={roomId} />;
+            return <GameInviteMessage key={msg.id} message={msg} roomId={room.id} />;
         }
 
         const isCurrentUser = msg.uid === currentUser.uid;
         return (
-          <div key={msg.id} className={cn("flex items-end gap-3 w-full animate-in fade-in slide-in-from-bottom-4 duration-500", isCurrentUser && "flex-row-reverse")}>
+          <div key={msg.id} className={cn("flex items-end gap-3 w-full animate-in fade-in slide-in-from-bottom-4 duration-500 group", isCurrentUser && "flex-row-reverse")}>
+             {isHost && !isCurrentUser && (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                            <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => handlePinMessage(msg.id)}>
+                            <Pin className="mr-2 h-4 w-4" />
+                            <span>Sabitle</span>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+             )}
             <Link href={`/profile/${msg.uid}`}>
                 <div className={cn("avatar-frame-wrapper", msg.selectedAvatarFrame)}>
                     <Avatar className="relative z-[1] h-8 w-8">
@@ -86,7 +118,7 @@ export default function TextChat({ messages, loading, roomId }: TextChatProps) {
                             {Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}
                         </div>
                     )}
-                    <div className={cn("p-2 rounded-2xl relative", isCurrentUser ? "bg-primary text-primary-foreground rounded-br-none" : "bg-muted text-foreground rounded-bl-none")}>
+                    <div className={cn("p-2 rounded-2xl relative", isCurrentUser ? "bg-primary text-primary-foreground rounded-br-none" : "bg-card rounded-bl-none text-foreground")}>
                         {msg.imageUrl && (
                             <Image 
                                 src={msg.imageUrl} 
@@ -105,6 +137,21 @@ export default function TextChat({ messages, loading, roomId }: TextChatProps) {
                     </div>
                 </div>
             </div>
+             {isHost && isCurrentUser && (
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                            <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => handlePinMessage(msg.id)}>
+                            <Pin className="mr-2 h-4 w-4" />
+                            <span>Sabitle</span>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+             )}
           </div>
         );
       })}

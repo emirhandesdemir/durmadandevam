@@ -228,6 +228,27 @@ export async function updateModerators(roomId: string, targetUserId: string, act
     }
 }
 
+export async function updateRoomDetails(roomId: string, userId: string, details: { rules?: string, welcomeMessage?: string }) {
+    const roomRef = doc(db, 'rooms', roomId);
+    const roomDoc = await getDoc(roomRef);
+    if (!roomDoc.exists() || roomDoc.data().createdBy.uid !== userId) {
+        throw new Error("Bu işlemi yapma yetkiniz yok.");
+    }
+    await updateDoc(roomRef, details);
+    return { success: true };
+}
+
+export async function pinMessage(roomId: string, messageId: string, userId: string) {
+    const roomRef = doc(db, 'rooms', roomId);
+    const roomDoc = await getDoc(roomRef);
+    if (!roomDoc.exists() || roomDoc.data().createdBy.uid !== userId) {
+        throw new Error("Bu işlemi yapma yetkiniz yok.");
+    }
+    await updateDoc(roomRef, { pinnedMessageId: messageId });
+    return { success: true };
+}
+
+
 export async function updateRoomSettings(roomId: string, settings: { requestToSpeakEnabled: boolean }) {
     if (!roomId) throw new Error("Oda ID'si gerekli.");
     const roomRef = doc(db, 'rooms', roomId);

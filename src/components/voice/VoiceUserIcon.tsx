@@ -126,15 +126,16 @@ export default function VoiceUserIcon({
     </DropdownMenuContent>
   );
   
-  const nameSize = size === 'lg' ? "text-sm" : "text-xs";
-  const iconSize = size === 'lg' ? "h-5 w-5" : "h-4 w-4";
-  const avatarSize = size === 'lg' ? "h-20 w-20" : "w-full aspect-square";
+  const nameSize = size === 'lg' ? "text-base" : "text-xs";
+  const avatarSize = size === 'lg' ? "h-24 w-24" : "w-full aspect-square";
   const iconBadgePos = size === 'lg' ? "bottom-1 right-1 p-2" : "bottom-0 right-0 p-1.5";
+  const iconSize = size === 'lg' ? "h-5 w-5" : "h-4 w-4";
+  
   const speakingRing = participant.isSpeaker && !participant.isMuted;
   const canActuallySpeak = !room.requestToSpeakEnabled || participant.canSpeak || isHost || isModerator;
 
   const avatar = (
-    <div className="relative flex flex-col items-center gap-1.5">
+    <div className="relative flex flex-col items-center gap-2">
        <div className={cn("relative", avatarSize)}>
           {participant.selectedBubble && (
             <div className={`bubble-wrapper ${participant.selectedBubble}`}>
@@ -151,7 +152,7 @@ export default function VoiceUserIcon({
                 )}
               >
                 <AvatarImage src={participant.photoURL || undefined} />
-                <AvatarFallback className="bg-muted text-muted-foreground">
+                <AvatarFallback className={cn("bg-muted text-muted-foreground", size === 'lg' && "text-3xl")}>
                   {participant.username?.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
@@ -167,23 +168,23 @@ export default function VoiceUserIcon({
           </div>
       </div>
 
-      <div className="flex items-center justify-center gap-1 w-full">
-          <p className={cn("font-semibold text-foreground truncate", nameSize, size === 'lg' ? 'max-w-[120px]' : 'max-w-[60px]')}>{participant.username}</p>
-          {isParticipantHost && (
+      <div className="flex items-center justify-center gap-1.5 w-full">
+          <p className={cn("font-bold text-foreground truncate", nameSize, size === 'lg' ? 'max-w-[120px]' : 'max-w-[60px]')}>{participant.username}</p>
+          {isParticipantHost && size === 'sm' && (
               <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                        <Crown className={cn("text-yellow-400 shrink-0", size === 'lg' ? 'h-5 w-5' : 'h-4 w-4' )} />
+                        <Crown className={cn("text-yellow-400 shrink-0", iconSize)} />
                     </TooltipTrigger>
                     <TooltipContent><p>Oda Sahibi</p></TooltipContent>
                   </Tooltip>
               </TooltipProvider>
           )}
-          {isParticipantModerator && !isParticipantHost && (
+          {isParticipantModerator && !isParticipantHost && size === 'sm' && (
               <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                        <Shield className={cn("text-blue-400 shrink-0", size === 'lg' ? 'h-5 w-5' : 'h-4 w-4' )} />
+                        <Shield className={cn("text-blue-400 shrink-0", iconSize)} />
                     </TooltipTrigger>
                     <TooltipContent><p>Moderatör</p></TooltipContent>
                   </Tooltip>
@@ -201,7 +202,7 @@ export default function VoiceUserIcon({
             className="cursor-pointer rounded-full text-center"
           >
             {isProcessing ? (
-              <div className={cn("flex items-center justify-center rounded-full bg-muted/50 aspect-square", avatarSize)}>
+              <div className={cn("flex items-center justify-center rounded-full bg-muted/50", avatarSize)}>
                   <Loader2 className="h-8 w-8 animate-spin" />
               </div>
             ) : (
