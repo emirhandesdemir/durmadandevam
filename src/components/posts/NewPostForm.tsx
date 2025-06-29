@@ -7,10 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { createPost } from "@/lib/actions/postActions";
 import { cn } from "@/lib/utils";
-
-// Import firebase storage functions
-import { storage } from "@/lib/firebase";
-import { ref, uploadString, getDownloadURL } from "firebase/storage";
+import { uploadImage } from "@/lib/actions/cloudinaryActions";
 
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -77,11 +74,13 @@ export default function NewPostForm() {
     
     try {
         let imageUrl = "";
+        let imagePublicId = "";
+
         // 1. Upload image on the client if it exists
         if (croppedImage) {
-            const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}_post.jpg`);
-            const snapshot = await uploadString(imageRef, croppedImage, 'data_url');
-            imageUrl = await getDownloadURL(snapshot.ref);
+            const uploadResult = await uploadImage(croppedImage, 'posts');
+            imageUrl = uploadResult.secure_url;
+            imagePublicId = uploadResult.public_id;
         }
 
         // 2. Call the server action with the image URL
@@ -93,6 +92,7 @@ export default function NewPostForm() {
             userRole: userData.role || 'user',
             text,
             imageUrl,
+            imagePublicId,
         });
 
         toast({ title: "Başarıyla Paylaşıldı!", description: "Gönderiniz ana sayfada görünecektir." });

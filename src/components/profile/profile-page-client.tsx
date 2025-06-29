@@ -23,13 +23,13 @@ import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
 import { useState, useRef, useEffect } from "react";
-import { auth, db, storage } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { updateProfile } from "firebase/auth";
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import { doc, updateDoc } from "firebase/firestore";
-import { ref, uploadString, getDownloadURL } from "firebase/storage";
+import { uploadImage, deleteImage } from "@/lib/actions/cloudinaryActions";
 import ProfileViewerList from "./ProfileViewerList";
 import { Textarea } from "../ui/textarea";
 import { useRouter } from 'next/navigation';
@@ -117,14 +117,17 @@ export default function ProfilePageClient() {
         setIsSaving(true);
         try {
             const updates: { [key: string]: any } = {};
-            let authProfileUpdates: { displayName?: string, photoURL?: string } = {};
+            const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
     
             if (newAvatar) {
-                const storageRef = ref(storage, `avatars/${user.uid}`);
-                const snapshot = await uploadString(storageRef, newAvatar, 'data_url');
-                const finalPhotoURL = await getDownloadURL(snapshot.ref);
-                updates.photoURL = finalPhotoURL;
-                authProfileUpdates.photoURL = finalPhotoURL;
+                // Delete old avatar from Cloudinary if it exists
+                if (userData?.avatarPublicId) {
+                    await deleteImage(userData.avatarPublicId);
+                }
+                const uploadResult = await uploadImage(newAvatar, 'avatars');
+                updates.photoURL = uploadResult.secure_url;
+                updates.avatarPublicId = uploadResult.public_id;
+                authProfileUpdates.photoURL = uploadResult.secure_url;
             }
     
             if (username !== userData?.username) {

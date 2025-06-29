@@ -1,7 +1,7 @@
 // src/lib/actions/postActions.ts
 'use server';
 
-import { db, storage } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { 
     doc, 
     writeBatch, 
@@ -16,9 +16,9 @@ import {
     addDoc,
     getDoc,
 } from "firebase/firestore";
-import { ref, deleteObject } from "firebase/storage";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
+import { deleteImage } from './cloudinaryActions';
 
 interface CreatePostArgs {
     uid: string;
@@ -28,10 +28,11 @@ interface CreatePostArgs {
     userRole?: 'admin' | 'user';
     text: string;
     imageUrl?: string;
+    imagePublicId?: string;
 }
 
 export async function createPost(args: CreatePostArgs) {
-    const { uid, username, userAvatar, userAvatarFrame, userRole, text, imageUrl } = args;
+    const { uid, username, userAvatar, userAvatarFrame, userRole, text, imageUrl, imagePublicId } = args;
 
     if (!uid) {
         throw new Error("Kullanıcı doğrulanmadı.");
@@ -49,6 +50,7 @@ export async function createPost(args: CreatePostArgs) {
             userRole: userRole || 'user',
             text,
             imageUrl: imageUrl || "",
+            imagePublicId: imagePublicId || "",
             createdAt: serverTimestamp(),
             likes: [],
             likeCount: 0,
@@ -66,20 +68,13 @@ export async function createPost(args: CreatePostArgs) {
 }
 
 
-export async function deletePost(postId: string, imageUrl?: string) {
+export async function deletePost(postId: string, imagePublicId?: string) {
     const postRef = doc(db, "posts", postId);
     
     await deleteDoc(postRef);
 
-    if (imageUrl) {
-        try {
-            const imageRef = ref(storage, imageUrl);
-            await deleteObject(imageRef);
-        } catch (error: any) {
-            if (error.code !== 'storage/object-not-found') {
-                console.error("Storage resmi silinirken hata oluştu:", error);
-            }
-        }
+    if (imagePublicId) {
+        await deleteImage(imagePublicId);
     }
 }
 

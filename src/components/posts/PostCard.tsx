@@ -109,7 +109,7 @@ export default function PostCard({ post }: PostCardProps) {
         if (!isOwner) return;
         setIsDeleting(true);
         try {
-            await deletePost(post.id, post.imageUrl);
+            await deletePost(post.id, post.imagePublicId);
             toast({ description: "Gönderi başarıyla silindi." });
         } catch (error) {
             console.error("Error deleting post:", error);
