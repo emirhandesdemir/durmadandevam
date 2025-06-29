@@ -25,11 +25,11 @@ Firestore, bir sorgu için indeks gerektiğinde genellikle konsol çıktısında
 - **Amaç:** Kullanıcının dahil olduğu sohbetleri son mesaja göre sıralamak.
 - **Koleksiyon:** `directMessagesMetadata`
 - **Alanlar:**
-    1. `participantUids` (Dizi İçerir)
-    2. `lastMessage.timestamp` (Azalan)
+    1. `participantUids` (Dizi İçerir / Array-Contains)
+    2. `lastMessage.timestamp` (Azalan / Descending)
 - **Oluşturma Linki:**
   ```
-  https://console.firebase.google.com/v1/r/project/yenidendeneme-ea9ed/firestore/indexes?create_composite=Cnxwcm9qZWN0cy95ZW5pZGVuZGVuZW1lLWVhOWVkL2RhdGFiYXNlcy8oZGVmYXVsdCkvY29sbGVjdGlvbkdyb3Vwcy9kaXJlY3RNZXNzYWdlc01ldGFkYXRhL2luZGV4ZXMvXxABChEKDXBhcnRpY2lwYW50VWlkcxACGhoKFmxhc3RNZXNzYWdlLnRpbWVzdGFtcBADGgwKCF9fbmFtZV9fEAI
+  https://console.firebase.google.com/v1/r/project/yenidendeneme-ea9ed/firestore/indexes?create_composite=CmJwcm9qZWN0cy95ZW5pZGVuZGVuZW1lLWVhOWVkL2RhdGFiYXNlcy8oZGVmYXVsdCkvY29sbGVjdGlvbkdyb3Vwcy9kaXJlY3RNZXNzYWdlc01ldGFkYXRhL2luZGV4ZXMvXxABGhMKD3BhcnRpY2lwYW50VWlkcxgBGhkKFWxhc3RNZXNzYWdlLnRpbWVzdGFtcBACGgwKCF9fbmFtZV9fEAI
   ```
   
 ### 3. AFK Kullanıcı Sorgusu İndeksi
