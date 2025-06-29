@@ -12,6 +12,9 @@ const configureCloudinary = () => {
     const apiKey = process.env.CLOUDINARY_API_KEY;
     const apiSecret = process.env.CLOUDINARY_API_SECRET;
   
+    // Add logging to check if the env var is being read
+    console.log('Configuring Cloudinary with cloud name:', cloudName ? 'found' : 'NOT FOUND');
+
     if (!cloudName || !apiKey || !apiSecret) {
       console.error("Cloudinary environment variables are not set. Please check your .env file.");
       throw new Error("Sunucu yapılandırma hatası: Resim hizmeti ayarları eksik.");
