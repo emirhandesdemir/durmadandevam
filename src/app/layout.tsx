@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import './globals.css';
@@ -19,8 +19,25 @@ export const metadata: Metadata = {
   icons: {
     apple: '/icons/icon.svg',
   },
-  themeColor: '#111827',
+  themeColor: '#09090B',
+  applicationName: "HiweWalk",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "HiweWalk",
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
+
+export const viewport: Viewport = {
+  themeColor: '#09090B',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+}
 
 export default function RootLayout({
   children,
