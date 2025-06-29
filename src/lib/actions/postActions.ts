@@ -27,7 +27,6 @@ export async function deletePost(postId: string, imageUrl?: string) {
             const imageRef = ref(storage, imageUrl);
             await deleteObject(imageRef);
         } catch (error: any) {
-            // It's okay if the image doesn't exist, log other errors
             if (error.code !== 'storage/object-not-found') {
                 console.error("Firebase Storage resmi silinirken hata oluştu:", error);
             }

@@ -77,14 +77,12 @@ export default function NewPostForm() {
     try {
         let imageUrl = "";
 
-        // 1. Upload image to Firebase Storage if it exists
         if (croppedImage) {
             const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}_post`);
             const snapshot = await uploadString(imageRef, croppedImage, 'data_url');
             imageUrl = await getDownloadURL(snapshot.ref);
         }
 
-        // 2. Add post document to Firestore
         await addDoc(collection(db, 'posts'), {
             uid: user.uid,
             username: userData.username,
