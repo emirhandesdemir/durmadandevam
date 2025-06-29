@@ -5,6 +5,8 @@ import { db } from '@/lib/firebase';
 import { collection, collectionGroup, getDocs, query, where, Timestamp } from 'firebase/firestore';
 import { format, sub, startOfDay, endOfDay, getDay, getMonth, getYear } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import type { Post } from '../types';
+
 
 /**
  * Son 6 aydaki kullanıcı artışını hesaplar.
@@ -51,27 +53,23 @@ export async function getContentCreationData() {
 
     const sevenDaysAgo = sub(new Date(), { days: 7 });
 
-    // Gönderileri çek
+    // Son 7 güne ait gönderileri çek
     const postsRef = collection(db, 'posts');
     const postsQuery = query(postsRef, where('createdAt', '>=', Timestamp.fromDate(sevenDaysAgo)));
     const postsSnapshot = await getDocs(postsQuery);
-    postsSnapshot.forEach(doc => {
-        const post = doc.data();
-        if (post.createdAt) {
-            const dayIndex = getDay((post.createdAt as Timestamp).toDate());
-            dailyData[dayIndex].posts++;
-        }
-    });
     
-    // Yorumları çek (collectionGroup sorgusu)
-    const commentsRef = collectionGroup(db, 'comments');
-    const commentsQuery = query(commentsRef, where('createdAt', '>=', Timestamp.fromDate(sevenDaysAgo)));
-    const commentsSnapshot = await getDocs(commentsQuery);
-    commentsSnapshot.forEach(doc => {
-        const comment = doc.data();
-         if (comment.createdAt) {
-            const dayIndex = getDay((comment.createdAt as Timestamp).toDate());
-            dailyData[dayIndex].comments++;
+    // Gönderileri ve yorum sayılarını işle
+    postsSnapshot.forEach(doc => {
+        const post = doc.data() as Post;
+        if (post.createdAt) {
+            // Timestamp'i Date objesine çevir
+            const createdAtDate = (post.createdAt instanceof Timestamp)
+                ? post.createdAt.toDate()
+                : new Date(post.createdAt.seconds * 1000);
+
+            const dayIndex = getDay(createdAtDate);
+            dailyData[dayIndex].posts++;
+            dailyData[dayIndex].comments += (post.commentCount || 0); // Yorum sayısını ekle
         }
     });
 

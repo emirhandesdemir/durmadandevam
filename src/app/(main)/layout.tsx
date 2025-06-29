@@ -10,6 +10,7 @@ import { useState, useRef } from 'react';
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import NotificationPermissionManager from "@/components/common/NotificationPermissionManager";
+import PwaInstallBar from "@/components/common/PwaInstallBar";
 
 export default function MainAppLayout({
   children,
@@ -42,6 +43,7 @@ export default function MainAppLayout({
     <VoiceChatProvider>
       <NotificationPermissionManager />
       <div className="relative flex h-dvh w-full flex-col bg-background overflow-hidden">
+        <PwaInstallBar />
         <main 
           ref={scrollRef} 
           className={cn(
@@ -49,14 +51,17 @@ export default function MainAppLayout({
             isFullPageLayout ? "overflow-hidden" : "overflow-y-auto" // Conditional scrolling
           )}
         >
-           <header
-              className={cn(
-                "sticky top-0 z-40",
-                 isHeaderlessPage && "hidden"
-              )}
+           <motion.header
+              variants={{
+                visible: { y: 0 },
+                hidden: { y: "-100%" },
+              }}
+              animate={hidden || isHeaderlessPage ? "hidden" : "visible"}
+              transition={{ duration: 0.35, ease: "easeInOut" }}
+              className="sticky top-0 z-40"
             >
               <Header />
-            </header>
+            </motion.header>
           
            <div className={cn(
              isFullPageLayout ? "flex-1 flex flex-col overflow-hidden" : "",

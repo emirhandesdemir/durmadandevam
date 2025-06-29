@@ -255,25 +255,27 @@ export default function NewPostForm() {
                     </Button>
                 </div>
                 <div className="border rounded-xl h-80 flex flex-col bg-muted/30">
-                    <div ref={chatContainerRef} className="flex-1 space-y-4 overflow-y-auto p-3">
-                        {aiChatHistory.map((msg) => (
-                            <div key={msg.id} className={cn("flex items-end gap-2", msg.role === 'user' && "justify-end")}>
-                                {msg.role === 'ai' && <Avatar className="h-6 w-6 bg-primary/20 text-primary flex items-center justify-center"><Sparkles className="h-4 w-4" /></Avatar>}
-                                 {msg.role === 'system' && <div className="w-6 h-6 shrink-0"/>}
-                                <div className={cn(
-                                    "max-w-[85%] rounded-lg p-2 text-sm",
-                                    msg.role === 'user' && "bg-primary text-primary-foreground",
-                                    msg.role === 'ai' && "bg-card",
-                                    msg.role === 'system' && "w-full text-center text-xs bg-transparent text-muted-foreground p-1"
-                                )}>
-                                    {msg.isLoading && <Loader2 className="h-5 w-5 animate-spin p-1" />}
-                                    {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
-                                    {msg.imageUrl && <img src={msg.imageUrl} className="rounded-md" alt="AI styled" />}
+                    <ScrollArea className="flex-1" ref={chatContainerRef}>
+                        <div className="p-3 space-y-4">
+                            {aiChatHistory.map((msg) => (
+                                <div key={msg.id} className={cn("flex items-end gap-2", msg.role === 'user' && "justify-end")}>
+                                    {msg.role === 'ai' && <Avatar className="h-6 w-6 bg-primary/20 text-primary flex items-center justify-center"><Sparkles className="h-4 w-4" /></Avatar>}
+                                    {msg.role === 'system' && <div className="w-6 h-6 shrink-0"/>}
+                                    <div className={cn(
+                                        "max-w-[85%] rounded-lg p-2 text-sm",
+                                        msg.role === 'user' && "bg-primary text-primary-foreground",
+                                        msg.role === 'ai' && "bg-card",
+                                        msg.role === 'system' && "w-full text-center text-xs bg-transparent text-muted-foreground p-1"
+                                    )}>
+                                        {msg.isLoading && <Loader2 className="h-5 w-5 animate-spin p-1" />}
+                                        {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
+                                        {msg.imageUrl && <img src={msg.imageUrl} className="rounded-md" alt="AI styled" />}
+                                    </div>
+                                    {msg.role === 'user' && <Avatar className="h-6 w-6"><AvatarImage src={user?.photoURL || undefined}/><AvatarFallback>{user?.displayName?.charAt(0)}</AvatarFallback></Avatar>}
                                 </div>
-                                {msg.role === 'user' && <Avatar className="h-6 w-6"><AvatarImage src={user?.photoURL || undefined}/><AvatarFallback>{user?.displayName?.charAt(0)}</AvatarFallback></Avatar>}
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    </ScrollArea>
                     <div className="relative mt-auto p-2 border-t">
                         <Textarea
                             placeholder="Resme bir stil uygula..."
