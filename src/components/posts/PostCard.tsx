@@ -39,9 +39,10 @@ import Link from "next/link";
 
 interface PostCardProps {
     post: Post;
+    isStandalone?: boolean;
 }
 
-export default function PostCard({ post }: PostCardProps) {
+export default function PostCard({ post, isStandalone = false }: PostCardProps) {
     const { user: currentUser, userData: currentUserData } = useAuth();
     const { toast } = useToast();
 
@@ -142,7 +143,7 @@ export default function PostCard({ post }: PostCardProps) {
     
     return (
         <>
-           <div className="flex gap-3 border-b p-4 transition-colors hover:bg-muted/50">
+           <div className={cn("flex gap-3 p-4 transition-colors hover:bg-muted/50", !isStandalone && "border-b")}>
                 {/* Avatar Column */}
                 <div>
                     <Link href={`/profile/${post.uid}`}>

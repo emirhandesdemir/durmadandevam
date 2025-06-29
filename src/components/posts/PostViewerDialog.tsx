@@ -18,11 +18,11 @@ export default function PostViewerDialog({
 }: PostViewerDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="p-0 border-0 max-w-lg w-full bg-transparent shadow-none">
+      <DialogContent className="p-0 max-w-lg w-full bg-card/95 backdrop-blur-lg border-border/50 rounded-2xl shadow-lg overflow-hidden">
         <DialogHeader className="sr-only">
           <DialogTitle>{post.username} adlı kullanıcının gönderisi</DialogTitle>
         </DialogHeader>
-        <PostCard post={post} />
+        <PostCard post={post} isStandalone={true} />
       </DialogContent>
     </Dialog>
   );
