@@ -47,8 +47,8 @@ export default function MainAppLayout({
         <main 
           ref={scrollRef} 
           className={cn(
-            "flex-1 flex flex-col pb-24", // Add padding for the bottom nav
-            isFullPageLayout ? "overflow-hidden" : "overflow-y-auto" // Conditional scrolling
+            "flex-1 flex flex-col",
+            isFullPageLayout ? "overflow-hidden" : "overflow-y-auto pb-24"
           )}
         >
            <motion.header

@@ -26,7 +26,7 @@ export default function RoomFooter({ room }: RoomFooterProps) {
                     {self?.isMuted ? <MicOff className="text-destructive"/> : <Mic />}
                 </Button>
                 <Button onClick={() => isConnected ? leaveRoom() : joinRoom()} variant="secondary" className="rounded-full px-6" disabled={isConnecting}>
-                     {isConnecting ? <Loader2 className="h-4 w-4 animate-spin"/> : isConnected ? 'Ayrıl' : 'Enter'}
+                     {isConnecting ? <Loader2 className="h-4 w-4 animate-spin"/> : isConnected ? 'Ayrıl' : 'Katıl'}
                 </Button>
                 <Button variant="ghost" size="icon" className="rounded-full"><Smile /></Button>
                 <Button variant="ghost" size="icon" className="rounded-full"><Gift /></Button>
