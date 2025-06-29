@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, query, where, orderBy, onSnapshot, limit, Query, writeBatch, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, limit, getDocs, doc, updateDoc, writeBatch, Query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Notification } from '@/lib/types';
 import NotificationItem from './NotificationItem';
@@ -61,21 +61,23 @@ export default function NotificationList({ filter }: NotificationListProps) {
     }
 
     setLoading(true);
+    // This query no longer needs a composite index. It just sorts all notifications by date.
+    // Filtering will be done on the client.
     const notifsRef = collection(db, 'users', user.uid, 'notifications');
-    let q: Query;
-
-    if (filter === 'all') {
-      q = query(notifsRef, orderBy('createdAt', 'desc'), limit(50));
-    } else {
-      q = query(notifsRef, where('type', '==', filter), orderBy('createdAt', 'desc'), limit(50));
-    }
+    const q = query(notifsRef, orderBy('createdAt', 'desc'), limit(50));
 
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const notifsData = snapshot.docs.map(
+        let notifsData = snapshot.docs.map(
           (doc) => ({ id: doc.id, ...doc.data() } as Notification)
         );
+
+        // Apply filtering on the client-side
+        if (filter !== 'all') {
+          notifsData = notifsData.filter(n => n.type === filter);
+        }
+
         setNotifications(notifsData);
         setLoading(false);
       },
@@ -86,7 +88,7 @@ export default function NotificationList({ filter }: NotificationListProps) {
     );
 
     return () => unsubscribe();
-  }, [user, filter]);
+  }, [user, filter]); // Rerun when filter changes
 
   if (loading) {
     return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>;
