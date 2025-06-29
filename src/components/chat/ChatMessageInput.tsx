@@ -72,18 +72,25 @@ export default function ChatMessageInput({ roomId, channelId, canSendMessage }: 
             ? collection(db, "rooms", roomId, "channels", channelId, "messages")
             : collection(db, "rooms", roomId, "messages");
         
-        await addDoc(messagePath, {
+        const messageData: { [key: string]: any } = {
             uid: currentUser.uid,
             username: currentUser.displayName || 'Anonim',
             photoURL: currentUser.photoURL,
             text: message || '',
-            imageUrl,
-            videoUrl,
             createdAt: serverTimestamp(),
             type: 'user',
             selectedBubble: userData?.selectedBubble || '',
             selectedAvatarFrame: userData?.selectedAvatarFrame || '',
-        });
+        };
+
+        if (imageUrl) {
+            messageData.imageUrl = imageUrl;
+        }
+        if (videoUrl) {
+            messageData.videoUrl = videoUrl;
+        }
+        
+        await addDoc(messagePath, messageData);
         
         setMessage('');
         setFile(null);
