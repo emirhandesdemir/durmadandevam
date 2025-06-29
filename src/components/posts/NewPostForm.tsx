@@ -9,24 +9,32 @@ import { cn } from "@/lib/utils";
 import { db, storage } from "@/lib/firebase";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-
+import { applyImageFilter } from "@/lib/actions/imageActions";
 
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Image as ImageIcon, Send, Loader2, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Image as ImageIcon, Send, Loader2, X, Sparkles } from "lucide-react";
 
 export default function NewPostForm() {
   const router = useRouter();
   const { user, userData } = useAuth();
   const { toast } = useToast();
   
+  // Component states
   const [text, setText] = useState("");
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
   const [croppedImage, setCroppedImage] = useState<string | null>(null);
+  const [originalCroppedImage, setOriginalCroppedImage] = useState<string | null>(null); // To reset AI changes
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // AI Styling states
+  const [stylePrompt, setStylePrompt] = useState('');
+  const [isStyling, setIsStyling] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -47,6 +55,7 @@ export default function NewPostForm() {
 
   const handleCropComplete = (croppedDataUrl: string) => {
     setCroppedImage(croppedDataUrl);
+    setOriginalCroppedImage(croppedDataUrl); // Save the original cropped version
     setImageToCrop(null); // Close the dialog
   }
 
@@ -57,8 +66,37 @@ export default function NewPostForm() {
   const removeImage = () => {
       setImageToCrop(null);
       setCroppedImage(null);
+      setOriginalCroppedImage(null);
+      setStylePrompt('');
       if(fileInputRef.current) {
           fileInputRef.current.value = "";
+      }
+  }
+
+  const handleApplyAiStyle = async () => {
+      if (!originalCroppedImage || !stylePrompt.trim() || isStyling) return;
+      
+      setIsStyling(true);
+      try {
+          const result = await applyImageFilter({
+              photoDataUri: originalCroppedImage,
+              style: stylePrompt
+          });
+
+          if (result.success && result.data?.styledPhotoDataUri) {
+              setCroppedImage(result.data.styledPhotoDataUri);
+              toast({ title: "Stil Uygulandı!", description: `"${stylePrompt}" stili başarıyla uygulandı.`});
+          } else {
+              throw new Error(result.error || "Yapay zeka modelinden geçerli bir yanıt alınamadı.");
+          }
+      } catch (error: any) {
+          toast({
+              variant: "destructive",
+              title: "Stil Uygulanamadı",
+              description: error.message
+          });
+      } finally {
+          setIsStyling(false);
       }
   }
 
@@ -76,9 +114,10 @@ export default function NewPostForm() {
     
     try {
         let imageUrl = "";
+        let imagePublicId = ""; // Keep this for potential future use with other services
 
         if (croppedImage) {
-            const imageRef = ref(storage, `upload/posts/${user.uid}/${Date.now()}_post`);
+            const imageRef = ref(storage, `upload/posts/${user.uid}/${Date.now()}_post.jpg`);
             const snapshot = await uploadString(imageRef, croppedImage, 'data_url');
             imageUrl = await getDownloadURL(snapshot.ref);
         }
@@ -91,6 +130,7 @@ export default function NewPostForm() {
             userRole: userData.role || 'user',
             text: text,
             imageUrl: imageUrl || "",
+            imagePublicId: imagePublicId,
             createdAt: serverTimestamp(),
             likes: [],
             likeCount: 0,
@@ -113,7 +153,7 @@ export default function NewPostForm() {
     }
   };
 
-  const isLoading = isSubmitting;
+  const isLoading = isSubmitting || isStyling;
 
   return (
     <>
@@ -136,19 +176,47 @@ export default function NewPostForm() {
             />
           </div>
           {croppedImage && (
-            <div className="relative ml-16">
-              <div className="overflow-hidden rounded-xl border">
-                <img src={croppedImage} alt="Önizleme" className="max-h-80 w-auto object-contain" />
+            <div className="ml-16 space-y-4">
+              <div className="relative">
+                <div className="overflow-hidden rounded-xl border">
+                  <img src={croppedImage} alt="Önizleme" className="max-h-80 w-auto object-contain" />
+                  {isStyling && (
+                    <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-2 text-white">
+                        <Loader2 className="h-8 w-8 animate-spin"/>
+                        <p>Stil uygulanıyor...</p>
+                    </div>
+                  )}
+                </div>
+                <Button 
+                  size="icon" 
+                  variant="destructive" 
+                  className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/50 hover:bg-black/70 border-0"
+                  onClick={removeImage}
+                  disabled={isLoading}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
-              <Button 
-                size="icon" 
-                variant="destructive" 
-                className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/50 hover:bg-black/70 border-0"
-                onClick={removeImage}
-                disabled={isLoading}
-              >
-                <X className="h-4 w-4" />
-              </Button>
+
+              {/* AI Styling Section */}
+              <div className="space-y-2">
+                <Label htmlFor="ai-style-prompt" className="flex items-center gap-2 font-semibold">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    AI ile Stil Ver
+                </Label>
+                <div className="flex items-center gap-2">
+                    <Input 
+                        id="ai-style-prompt"
+                        placeholder="ör., suluboya resim yap, arka planı kaldır..."
+                        value={stylePrompt}
+                        onChange={(e) => setStylePrompt(e.target.value)}
+                        disabled={isLoading}
+                    />
+                    <Button onClick={handleApplyAiStyle} disabled={isLoading || !stylePrompt.trim()}>
+                        {isStyling ? <Loader2 className="h-4 w-4 animate-spin"/> : "Uygula"}
+                    </Button>
+                </div>
+              </div>
             </div>
           )}
         </div>
