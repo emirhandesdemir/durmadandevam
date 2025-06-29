@@ -3,7 +3,7 @@
 
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Settings } from 'lucide-react';
 import FollowButton from './FollowButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
@@ -65,11 +65,21 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
         </div>
         
         {/* Action Buttons */}
-        <div className="mt-4 w-full max-w-sm grid grid-cols-2 gap-2">
+        <div className={cn(
+            "mt-4 w-full max-w-sm gap-2",
+            isOwnProfile ? "flex justify-center" : "grid grid-cols-2"
+        )}>
            {isOwnProfile ? (
-              <Button asChild variant="secondary" className="col-span-2">
-                  <Link href="/profile">Profili Düzenle</Link>
-              </Button>
+              <>
+                <Button asChild variant="secondary">
+                    <Link href="/profile">Profili Düzenle</Link>
+                </Button>
+                <Button asChild variant="secondary" size="icon">
+                    <Link href="/profile">
+                        <Settings className="h-5 w-5"/>
+                    </Link>
+                </Button>
+              </>
             ) : (
                 <>
                     <FollowButton currentUser={currentUserData} targetUser={profileUser} />
