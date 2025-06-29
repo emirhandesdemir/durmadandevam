@@ -39,6 +39,7 @@ export default function BottomNav() {
     return null;
   }
 
+  // Hide nav on full-screen pages like a specific room or DM chat
   if ((pathname.startsWith('/rooms/') && pathname !== '/rooms') || (pathname.startsWith('/dm/') && pathname !== '/dm')) {
     return null;
   }
@@ -61,10 +62,9 @@ export default function BottomNav() {
     },
     {
       id: 'profile',
-      isActive: pathname.startsWith('/profile'),
-      href: `/profile/${user.uid}`,
-      icon: pathname.startsWith('/profile') ? Settings : null,
-      label: pathname.startsWith('/profile') ? 'Ayarlar' : 'Profil',
+      isActive: pathname.startsWith('/profile'), // Active on both /profile and /profile/[uid]
+      href: `/profile/${user.uid}`, // Always link to the public profile from the main nav
+      label: 'Profil', // The label is always "Profil"
     },
   ];
 
@@ -78,7 +78,7 @@ export default function BottomNav() {
               const Icon = item.icon;
 
               const actionProps = item.onClick
-                ? { onClick: item.onClick, role: 'button' }
+                ? { onClick: item.onClick, role: 'button' as const }
                 : { href: item.href };
               
               const Component = item.href === '#' ? 'button' : Link;
@@ -92,10 +92,13 @@ export default function BottomNav() {
                     item.isActive ? 'text-primary' : 'hover:text-foreground'
                   )}
                 >
-                  {item.id === 'profile' && !item.isActive ? (
+                  {item.id === 'profile' ? (
                     <div className="relative">
                       <div className={cn('avatar-frame-wrapper', userData?.selectedAvatarFrame)}>
-                        <Avatar className="relative z-[1] h-7 w-7">
+                        <Avatar className={cn(
+                          "relative z-[1] h-7 w-7 transition-all",
+                          item.isActive && "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                        )}>
                           <AvatarImage src={user.photoURL || undefined} />
                           <AvatarFallback className="text-xs bg-muted">{user.displayName?.charAt(0)}</AvatarFallback>
                         </Avatar>
