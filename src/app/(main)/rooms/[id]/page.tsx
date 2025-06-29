@@ -344,7 +344,7 @@ export default function RoomPage() {
                             <span className="ml-2">Katıl</span>
                         </Button>
                     )}
-                    <div className="flex-1 bg-muted rounded-full p-1.5">
+                    <div className="flex-1">
                         <ChatMessageInput roomId={roomId} canSendMessage={isRoomParticipant || false} />
                     </div>
                 </footer>

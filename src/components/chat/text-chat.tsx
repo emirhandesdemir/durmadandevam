@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import Link from 'next/link';
+import Image from 'next/image';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Loader2 } from 'lucide-react';
@@ -79,8 +80,22 @@ export default function TextChat({ messages, loading }: TextChatProps) {
                             {Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}
                         </div>
                     )}
-                    <div className={cn("p-3 rounded-2xl relative", isCurrentUser ? "bg-primary text-primary-foreground rounded-br-none" : "bg-muted text-foreground rounded-bl-none")}>
-                        <p className="text-sm break-words whitespace-pre-wrap">{msg.text}</p>
+                    <div className={cn("p-2 rounded-2xl relative", isCurrentUser ? "bg-primary text-primary-foreground rounded-br-none" : "bg-muted text-foreground rounded-bl-none")}>
+                        {msg.imageUrl && (
+                            <Image 
+                                src={msg.imageUrl} 
+                                alt={msg.text || "Gönderilen resim"}
+                                width={300}
+                                height={300}
+                                className="rounded-md object-cover max-w-full h-auto"
+                            />
+                        )}
+                        {msg.videoUrl && (
+                            <video src={msg.videoUrl} controls className="w-full max-w-xs rounded-md" />
+                        )}
+                        {msg.text && (
+                            <p className="text-sm break-words whitespace-pre-wrap mt-1 px-1">{msg.text}</p>
+                        )}
                     </div>
                 </div>
             </div>

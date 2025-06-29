@@ -4,7 +4,36 @@
 'use server';
 
 import { doc, deleteDoc, collection, getDocs, writeBatch, limit, query } from 'firebase/firestore';
-import { db } from './firebase';
+import { db, storage } from './firebase';
+import { ref, listAll, deleteObject } from 'firebase/storage';
+
+/**
+ * Deletes all files within a specified folder in Firebase Storage, including subfolders.
+ * @param folderPath The path to the folder to delete (e.g., 'upload/rooms/roomId123').
+ */
+async function deleteStorageFolder(folderPath: string) {
+    const folderRef = ref(storage, folderPath);
+    try {
+        const res = await listAll(folderRef);
+        
+        // Delete all files in the current folder
+        const deleteFilePromises = res.items.map((itemRef) => deleteObject(itemRef));
+        await Promise.all(deleteFilePromises);
+
+        // Recursively delete all subfolders
+        const deleteFolderPromises = res.prefixes.map((subfolderRef) => deleteStorageFolder(subfolderRef.fullPath));
+        await Promise.all(deleteFolderPromises);
+
+    } catch (error: any) {
+        if (error.code === 'storage/object-not-found') {
+            // It's okay if the folder doesn't exist.
+            return;
+        }
+        console.error(`Error deleting folder ${folderPath}:`, error);
+        // We don't re-throw the error to allow the Firestore deletion to proceed.
+    }
+}
+
 
 /**
  * Deletes a collection in batches to avoid out-of-memory errors.
@@ -31,22 +60,22 @@ async function deleteCollection(collectionRef: any, batchSize: number) {
 }
 
 /**
- * Deletes a room document and all of its subcollections (messages, participants, signals).
+ * Deletes a room document, all of its subcollections, and all associated files in Firebase Storage.
  * @param roomId The ID of the room to delete.
  */
 export async function deleteRoomWithSubcollections(roomId: string) {
     const roomRef = doc(db, 'rooms', roomId);
 
-    // Alt koleksiyonları sil
-    const messagesRef = collection(roomRef, 'messages');
-    await deleteCollection(messagesRef, 50);
+    // Delete Firestore subcollections
+    const subcollections = ['messages', 'voiceParticipants', 'signals', 'games'];
+    for (const sub of subcollections) {
+        await deleteCollection(collection(roomRef, sub), 50);
+    }
 
-    const voiceParticipantsRef = collection(roomRef, 'voiceParticipants');
-    await deleteCollection(voiceParticipantsRef, 50);
-    
-    const signalsRef = collection(roomRef, 'signals');
-    await deleteCollection(signalsRef, 50);
+    // Delete associated files from Storage
+    const roomStoragePath = `upload/rooms/${roomId}`;
+    await deleteStorageFolder(roomStoragePath);
 
-    // Ana oda dökümanını sil
+    // Delete the main room document
     await deleteDoc(roomRef);
 }

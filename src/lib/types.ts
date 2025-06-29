@@ -193,8 +193,10 @@ export interface Message {
   uid: string;
   username: string;
   photoURL?: string | null;
-  text: string;
-  type?: 'system' | 'game' | 'portal';
+  text?: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  type?: 'system' | 'game' | 'portal' | 'user';
   createdAt: Timestamp;
   selectedBubble?: string;
   selectedAvatarFrame?: string;
