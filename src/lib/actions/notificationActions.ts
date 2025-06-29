@@ -8,6 +8,7 @@ import {
   doc,
   updateDoc,
 } from 'firebase/firestore';
+import type { UserProfile } from '../types';
 
 interface CreateNotificationArgs {
   recipientId: string;
@@ -24,28 +25,26 @@ interface CreateNotificationArgs {
 }
 
 export async function createNotification(data: CreateNotificationArgs) {
+  // Don't send notifications for self-actions
   if (data.senderId === data.recipientId) return;
   
   const recipientUserRef = doc(db, 'users', data.recipientId);
   const notificationsColRef = collection(recipientUserRef, "notifications");
 
   try {
+    // This document creation will trigger the `sendPushNotification` Cloud Function.
     await addDoc(notificationsColRef, {
       ...data,
       createdAt: serverTimestamp(),
       read: false,
     });
 
+    // Also update the hasUnreadNotifications flag for immediate UI feedback.
     await updateDoc(recipientUserRef, {
       hasUnreadNotifications: true,
     });
-    
-    // In a production app, this is where you would trigger a backend service
-    // (like a Firebase Cloud Function) to send a push notification.
-    // That function would read the recipient's FCM tokens from their user document
-    // and use the Firebase Admin SDK to send the message.
 
   } catch (error) {
-    console.error("Bildirim oluşturulurken hata:", error);
+    console.error("Error creating notification document:", error);
   }
 }
