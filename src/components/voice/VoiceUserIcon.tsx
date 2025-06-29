@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import { kickFromVoice } from "@/lib/actions/voiceActions";
+import { kickFromVoice, manageSpeakingPermission } from "@/lib/actions/roomActions";
 import type { VoiceParticipant, Room } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -24,6 +24,9 @@ import {
   User,
   Shield,
   VolumeX,
+  UserCheck,
+  UserX,
+  Hand,
 } from "lucide-react";
 import { useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -54,6 +57,7 @@ export default function VoiceUserIcon({
   const isSelf = participant.uid === currentUserId;
   const isParticipantHost = participant.uid === room.createdBy.uid;
   const isParticipantModerator = room.moderators?.includes(participant.uid);
+  const hasRequestedSpeak = room.speakRequests?.includes(participant.uid);
 
   const canModerate = isHost || isModerator;
 
@@ -61,16 +65,27 @@ export default function VoiceUserIcon({
     if (!canModerate) return;
     setIsProcessing(true);
     try {
-      const result = await kickFromVoice(room.id, currentUserId, participant.uid);
-      if (!result.success) {
-        toast({ variant: "destructive", description: result.error });
-      }
+      await kickFromVoice(room.id, currentUserId, participant.uid);
+      toast({ description: `${participant.username} sesten atıldı.`})
     } catch (error: any) {
       toast({ variant: "destructive", description: error.message });
     } finally {
       setIsProcessing(false);
     }
   };
+
+  const handleManageSpeaking = async (allow: boolean) => {
+    if (!canModerate) return;
+    setIsProcessing(true);
+    try {
+      await manageSpeakingPermission(room.id, participant.uid, allow);
+      toast({ description: `${participant.username} kullanıcısının konuşma izni ${allow ? 'verildi' : 'kaldırıldı'}.`})
+    } catch (e: any) {
+      toast({ variant: 'destructive', description: e.message });
+    } finally {
+      setIsProcessing(false);
+    }
+  }
 
   const handleViewProfile = () => {
       router.push(`/profile/${participant.uid}`);
@@ -86,7 +101,19 @@ export default function VoiceUserIcon({
       </DropdownMenuItem>
       {canModerate && !isSelf && !isParticipantHost && (
         <>
-            <DropdownMenuSeparator/>
+            <DropdownMenuSeparator />
+            {participant.canSpeak ? (
+                <DropdownMenuItem onClick={() => handleManageSpeaking(false)}>
+                    <UserX className="mr-2 h-4 w-4" />
+                    <span>Sustur</span>
+                </DropdownMenuItem>
+            ) : (
+                 <DropdownMenuItem onClick={() => handleManageSpeaking(true)}>
+                    <UserCheck className="mr-2 h-4 w-4" />
+                    <span>Konuşma İzni Ver</span>
+                </DropdownMenuItem>
+            )}
+
             <DropdownMenuItem
             className="text-destructive focus:text-destructive"
             onClick={handleKick}
@@ -101,12 +128,13 @@ export default function VoiceUserIcon({
   
   const nameSize = size === 'lg' ? "text-sm" : "text-xs";
   const iconSize = size === 'lg' ? "h-5 w-5" : "h-4 w-4";
-  const avatarSize = size === 'lg' ? "h-20 w-20" : "h-16 w-16";
+  const avatarSize = size === 'lg' ? "h-20 w-20" : "w-full aspect-square";
   const iconBadgePos = size === 'lg' ? "bottom-1 right-1 p-2" : "bottom-0 right-0 p-1.5";
   const speakingRing = participant.isSpeaker && !participant.isMuted;
+  const canActuallySpeak = !room.requestToSpeakEnabled || participant.canSpeak || isHost || isModerator;
 
   const avatar = (
-     <div className={cn("relative flex flex-col items-center gap-1.5", size === 'lg' ? "w-24" : "w-20")}>
+    <div className="relative flex flex-col items-center gap-1.5">
        <div className={cn("relative", avatarSize)}>
           {participant.selectedBubble && (
             <div className={`bubble-wrapper ${participant.selectedBubble}`}>
@@ -128,35 +156,27 @@ export default function VoiceUserIcon({
                 </AvatarFallback>
               </Avatar>
           </div>
-            <div className={cn("absolute bg-card/70 backdrop-blur-sm rounded-full shadow-md", iconBadgePos)}>
-                {participant.isMuted ? (
-                <MicOff className={cn(iconSize, "text-destructive")} />
-                ) : (
-                <Mic className={cn(iconSize, "text-foreground")} />
-                )}
-            </div>
+          <div className={cn("absolute bg-card/70 backdrop-blur-sm rounded-full shadow-md", iconBadgePos)}>
+            {hasRequestedSpeak && !canActuallySpeak ? (
+              <Hand className={cn(iconSize, "text-yellow-400 animate-pulse")} />
+            ) : (participant.isMuted || !canActuallySpeak) ? (
+              <MicOff className={cn(iconSize, "text-destructive")} />
+            ) : (
+              <Mic className={cn(iconSize, "text-foreground")} />
+            )}
+          </div>
       </div>
 
       <div className="flex items-center justify-center gap-1 w-full">
           <p className={cn("font-semibold text-foreground truncate", nameSize, size === 'lg' ? 'max-w-[120px]' : 'max-w-[60px]')}>{participant.username}</p>
           {isParticipantHost && (
               <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                        <button><Crown className={cn("text-yellow-400 shrink-0", size === 'lg' ? 'h-5 w-5' : 'h-4 w-4' )} /></button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Oda Sahibi</p></TooltipContent>
-                  </Tooltip>
+                  <Tooltip><TooltipTrigger><Crown className={cn("text-yellow-400 shrink-0", size === 'lg' ? 'h-5 w-5' : 'h-4 w-4' )} /></TooltipTrigger><TooltipContent><p>Oda Sahibi</p></TooltipContent></Tooltip>
               </TooltipProvider>
           )}
           {isParticipantModerator && !isParticipantHost && (
               <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                         <button><Shield className={cn("text-blue-400 shrink-0", size === 'lg' ? 'h-5 w-5' : 'h-4 w-4' )} /></button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Moderatör</p></TooltipContent>
-                  </Tooltip>
+                  <Tooltip><TooltipTrigger><Shield className={cn("text-blue-400 shrink-0", size === 'lg' ? 'h-5 w-5' : 'h-4 w-4' )} /></TooltipTrigger><TooltipContent><p>Moderatör</p></TooltipContent></Tooltip>
               </TooltipProvider>
           )}
       </div>
@@ -171,7 +191,7 @@ export default function VoiceUserIcon({
             className="cursor-pointer rounded-full text-center"
           >
             {isProcessing ? (
-              <div className={cn("flex items-center justify-center rounded-full bg-muted/50", avatarSize)}>
+              <div className={cn("flex items-center justify-center rounded-full bg-muted/50 aspect-square", avatarSize)}>
                   <Loader2 className="h-8 w-8 animate-spin" />
               </div>
             ) : (

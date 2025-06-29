@@ -106,6 +106,7 @@ export interface Room {
     nextGameTimestamp?: Timestamp;
     voiceParticipantsCount?: number;
     requestToSpeakEnabled?: boolean;
+    speakRequests?: string[]; // Array of UIDs who requested to speak
 }
 
 export interface VoiceParticipant {
@@ -114,6 +115,7 @@ export interface VoiceParticipant {
     photoURL?: string | null;
     isSpeaker: boolean;
     isMuted: boolean;
+    canSpeak: boolean; // Permission to speak in request-to-speak mode
     isSharingScreen: boolean;
     joinedAt: Timestamp;
     lastActiveAt?: Timestamp;

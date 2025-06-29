@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
-import { Loader2, Mic, MicOff, PhoneOff, ScreenShare, ScreenShareOff, Gift, Music, VolumeX } from 'lucide-react';
+import { Loader2, Mic, MicOff, Crown, PhoneOff, ScreenShare, ScreenShareOff, Gift, Hand } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TextChat from '@/components/chat/text-chat';
 import ChatMessageInput from '@/components/chat/ChatMessageInput';
@@ -31,7 +31,7 @@ import {
 import type { Room, ActiveGame, GameSettings, Message, VoiceParticipant } from '@/lib/types';
 import GameCountdownCard from '@/components/game/GameCountdownCard';
 import RoomGameCard from '@/components/game/RoomGameCard';
-import { startGameInRoom, submitAnswer, endGameWithoutWinner, getGameSettings } from '@/lib/actions/gameActions';
+import { startGameInRoom, submitAnswer, endGameWithoutWinner, getGameSettings, requestToSpeak } from '@/lib/actions/roomActions';
 import OpenPortalDialog from '@/components/rooms/OpenPortalDialog';
 
 
@@ -42,23 +42,23 @@ export default function RoomPage() {
     const roomId = params.id as string;
     
     // --- Auth & Contexts ---
-    const { user, loading: authLoading, featureFlags } = useAuth();
+    const { user, loading: authLoading, featureFlags, userData } = useAuth();
     const { 
         self, isConnecting, isConnected, isSharingScreen, localScreenStream, remoteScreenStreams,
         startScreenShare, stopScreenShare, joinRoom, leaveRoom, toggleSelfMute,
-        setActiveRoomId, playMusic, stopMusic, isMusicPlaying, isProcessingMusic
+        participants, setActiveRoomId,
     } = useVoiceChat();
 
     // --- Component State ---
     const [room, setRoom] = useState<Room | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
-    const [voiceParticipants, setVoiceParticipants] = useState<VoiceParticipant[]>([]);
     const [messagesLoading, setMessagesLoading] = useState(true);
     const [isParticipantSheetOpen, setIsParticipantSheetOpen] = useState(false);
     const [showExitDialog, setShowExitDialog] = useState(false);
     const [isPortalDialogOpen, setIsPortalDialogOpen] = useState(false);
     const chatScrollRef = useRef<HTMLDivElement>(null);
-    const musicInputRef = useRef<HTMLInputElement>(null);
+    const [isRequestingSpeak, setIsRequestingSpeak] = useState(false);
+
 
     // --- Game State ---
     const [activeGame, setActiveGame] = useState<ActiveGame | null>(null);
@@ -71,7 +71,10 @@ export default function RoomPage() {
 
     const isHost = user?.uid === room?.createdBy.uid;
     const isModerator = room?.moderators?.includes(user?.uid || '') || false;
-    const screenSharer = voiceParticipants.find(p => p.isSharingScreen);
+    const canSpeak = !room?.requestToSpeakEnabled || self?.canSpeak || isModerator || isHost;
+    const hasRequestedSpeak = room?.speakRequests?.includes(user?.uid || '');
+
+    const screenSharer = participants.find(p => p.isSharingScreen);
     const remoteScreenStream = screenSharer && !isSharingScreen ? remoteScreenStreams[screenSharer.uid] : null;
 
     useEffect(() => {
@@ -99,14 +102,8 @@ export default function RoomPage() {
             setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message)));
             setMessagesLoading(false);
         });
-
-        const voiceParticipantsQuery = collection(db, 'rooms', roomId, 'voiceParticipants');
-        const voiceUnsub = onSnapshot(voiceParticipantsQuery, (snapshot) => {
-            const vpData = snapshot.docs.map(doc => doc.data() as VoiceParticipant);
-            setVoiceParticipants(vpData);
-        });
-
-        return () => { roomUnsub(); messagesUnsub(); voiceUnsub(); };
+        
+        return () => { roomUnsub(); messagesUnsub(); };
     }, [roomId, router, toast]);
     
     useEffect(() => {
@@ -147,12 +144,23 @@ export default function RoomPage() {
     
     const handleJoinVoice = useCallback(async () => { if (!user) return; await joinRoom(); }, [user, joinRoom]);
     const handleExitVoiceChat = useCallback(async () => { await leaveRoom(); setShowExitDialog(false); }, [leaveRoom]);
-    const handleExitAndNavigate = useCallback(async () => { await leaveRoom(); router.push('/rooms'); }, [leaveRoom, router]);
     const handleToggleMute = useCallback(async () => { if (!self || !user) return; await toggleSelfMute(); }, [self, user, toggleSelfMute]);
     const handleAnswerSubmit = useCallback(async (answerIndex: number) => { if (!user || !activeGame) return; try { await submitAnswer(roomId, activeGame.id, user.uid, answerIndex); } catch (error: any) { toast({ variant: "destructive", description: error.message || "Cevap gönderilemedi." }); }}, [user, activeGame, roomId, toast]);
     const handleGameTimerEnd = useCallback(() => { if (!activeGame || !isHost) return; endGameWithoutWinner(roomId, activeGame.id); }, [activeGame, isHost, roomId]);
-    const handleMusicFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; if (file) { await playMusic(file); } e.target.value = ''; };
-    
+
+    const handleRequestToSpeak = async () => {
+        if (!user || !room || !userData) return;
+        setIsRequestingSpeak(true);
+        try {
+            await requestToSpeak(room.id, {uid: user.uid, username: userData.username, photoURL: userData.photoURL});
+            toast({ description: "Söz hakkı isteği gönderildi." });
+        } catch(e: any) {
+            toast({ variant: 'destructive', description: e.message });
+        } finally {
+            setIsRequestingSpeak(false);
+        }
+    }
+
     const isLoading = authLoading || !room;
     const isRoomParticipant = room?.participants?.some(p => p.uid === user?.uid);
     if (isLoading) return <div className="flex h-full items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
@@ -171,8 +179,8 @@ export default function RoomPage() {
                             </div>
                         ) : (
                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 min-h-[8rem] place-content-start">
-                                {voiceParticipants.length > 0 ? (
-                                    voiceParticipants.map((p) => (
+                                {participants.length > 0 ? (
+                                    participants.map((p) => (
                                         <VoiceUserIcon key={p.uid} room={room} participant={p} isHost={isHost} isModerator={isModerator} currentUserId={user!.uid} />
                                     ))
                                 ) : (
@@ -200,35 +208,36 @@ export default function RoomPage() {
                 </div>
 
                 <footer className="p-3 border-t bg-background shrink-0 flex items-center gap-2">
+                     <Button onClick={() => setIsPortalDialogOpen(true)} variant="ghost" size="icon" className="rounded-full bg-muted hover:bg-muted/80">
+                        <Gift className="h-5 w-5 text-yellow-500"/>
+                    </Button>
+                    {isConnected && user ? (
+                        <>
+                            {canSpeak ? (
+                                <Button onClick={handleToggleMute} variant="ghost" size="icon" className="rounded-full bg-muted hover:bg-muted/80">
+                                    {self?.isMuted ? <MicOff className="h-5 w-5 text-destructive"/> : <Mic className="h-5 w-5"/>}
+                                </Button>
+                            ) : (
+                                <Button onClick={handleRequestToSpeak} variant="ghost" size="icon" className="rounded-full bg-muted hover:bg-muted/80" disabled={hasRequestedSpeak || isRequestingSpeak}>
+                                    {isRequestingSpeak ? <Loader2 className="h-5 w-5 animate-spin" /> : <Hand className="h-5 w-5"/>}
+                                </Button>
+                            )}
+                            <Button onClick={isSharingScreen ? stopScreenShare : startScreenShare} variant="ghost" size="icon" className="rounded-full bg-muted hover:bg-muted/80">
+                                {isSharingScreen ? <ScreenShareOff className="h-5 w-5 text-destructive"/> : <ScreenShare className="h-5 w-5"/>}
+                            </Button>
+                            <Button onClick={() => setShowExitDialog(true)} variant="destructive" size="icon" className="rounded-full">
+                                <PhoneOff className="h-5 w-5" />
+                                <span className="sr-only">Ayrıl</span>
+                            </Button>
+                        </>
+                    ) : (
+                        <Button onClick={handleJoinVoice} disabled={isConnecting || isConnected} className="rounded-full bg-primary text-primary-foreground h-10 px-4">
+                            {isConnecting ? <Loader2 className="h-5 w-5 animate-spin"/> : <Mic className="h-5 w-5"/>}
+                            <span className="ml-2">Katıl</span>
+                        </Button>
+                    )}
                     <div className="flex-1">
                         <ChatMessageInput roomId={roomId} canSendMessage={isRoomParticipant || false} />
-                    </div>
-                    <div className="flex items-center gap-1">
-                        {isConnected && user ? (
-                            <>
-                                <input type="file" ref={musicInputRef} onChange={handleMusicFileChange} className="hidden" accept="audio/*" />
-                                <Button onClick={isMusicPlaying ? stopMusic : () => musicInputRef.current?.click()} variant="ghost" size="icon" className="rounded-full" disabled={isProcessingMusic}>
-                                    {isProcessingMusic ? <Loader2 className="h-5 w-5 animate-spin"/> : (isMusicPlaying ? <VolumeX className="h-5 w-5 text-destructive"/> : <Music className="h-5 w-5"/>) }
-                                </Button>
-                                <Button onClick={handleToggleMute} variant="ghost" size="icon" className="rounded-full">
-                                    {self?.isMuted ? <MicOff className="h-5 w-5 text-destructive" /> : <Mic className="h-5 w-5" />}
-                                </Button>
-                                <Button onClick={isSharingScreen ? stopScreenShare : startScreenShare} variant="ghost" size="icon" className="rounded-full">
-                                    {isSharingScreen ? <ScreenShareOff className="h-5 w-5 text-destructive" /> : <ScreenShare className="h-5 w-5" />}
-                                </Button>
-                                <Button onClick={() => setShowExitDialog(true)} variant="destructive" size="icon" className="rounded-full">
-                                    <PhoneOff className="h-5 w-5" />
-                                </Button>
-                            </>
-                        ) : (
-                            <Button onClick={handleJoinVoice} disabled={isConnecting || isConnected} className="rounded-full bg-primary text-primary-foreground h-10 px-6 font-semibold">
-                                {isConnecting ? <Loader2 className="h-5 w-5 animate-spin"/> : <Mic className="mr-2 h-5 w-5"/>}
-                                <span>Katıl</span>
-                            </Button>
-                        )}
-                         <Button onClick={() => setIsPortalDialogOpen(true)} variant="ghost" size="icon" className="rounded-full">
-                            <Gift className="h-5 w-5 text-yellow-500" />
-                        </Button>
                     </div>
                 </footer>
             </div>
@@ -238,12 +247,11 @@ export default function RoomPage() {
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Odadan Ayrıl</AlertDialogTitle>
-                        <AlertDialogDescription>Sesli sohbet bağlantını arka planda tutarak ana sayfaya dönebilir veya hem sesten hem odadan tamamen çıkabilirsin.</AlertDialogDescription>
+                        <AlertDialogDescription>Ne yapmak istersiniz? Odayı arka plana alabilir veya sadece sesli sohbetten çıkabilirsiniz.</AlertDialogDescription>
                     </AlertDialogHeader>
-                    <AlertDialogFooter className="sm:justify-start gap-2">
-                        <Button onClick={handleExitAndNavigate} variant="destructive">Hem Sesten Hem Odadan Çık</Button>
-                        <Button variant="secondary" onClick={() => { router.push('/rooms'); setShowExitDialog(false); }}>Arka Plana Al</Button>
-                        <AlertDialogCancel>İptal</AlertDialogCancel>
+                    <AlertDialogFooter>
+                         <Button variant="outline" onClick={() => { router.push('/rooms'); setShowExitDialog(false); }}>Arka Plana Al</Button>
+                        <Button onClick={handleExitVoiceChat}>Sesli sohbetten çık</Button>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

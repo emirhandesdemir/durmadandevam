@@ -190,3 +190,33 @@ export async function updateModerators(roomId: string, targetUserId: string, act
         return { success: false, error: error.message };
     }
 }
+
+export async function updateRoomSettings(roomId: string, settings: { requestToSpeakEnabled: boolean }) {
+    if (!roomId) throw new Error("Oda ID'si gerekli.");
+    const roomRef = doc(db, 'rooms', roomId);
+    await updateDoc(roomRef, settings);
+    return { success: true };
+}
+
+export async function requestToSpeak(roomId: string, user: UserInfo) {
+    if (!roomId || !user.uid) throw new Error("Gerekli bilgi eksik.");
+    const roomRef = doc(db, 'rooms', roomId);
+    await updateDoc(roomRef, { speakRequests: arrayUnion(user.uid) });
+    return { success: true };
+}
+
+export async function manageSpeakingPermission(roomId: string, targetUserId: string, allow: boolean) {
+    if (!roomId || !targetUserId) throw new Error("Gerekli bilgi eksik.");
+    
+    const batch = writeBatch(db);
+    const roomRef = doc(db, 'rooms', roomId);
+    const participantRef = doc(roomRef, 'voiceParticipants', targetUserId);
+
+    // Remove user from the request list regardless of action
+    batch.update(roomRef, { speakRequests: arrayRemove(targetUserId) });
+    // Update their permission
+    batch.update(participantRef, { canSpeak: allow });
+
+    await batch.commit();
+    return { success: true };
+}
