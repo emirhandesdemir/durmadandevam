@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { collection, onSnapshot, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import StatCard from "@/components/admin/stat-card";
-import { Users, MessageSquare, FileText, Puzzle, Headphones, BarChart3, SlidersHorizontal, Settings, Database, HeartPulse } from "lucide-react";
+import { Users, MessageSquare, FileText, Puzzle, Headphones, BarChart3, SlidersHorizontal, Settings } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -154,42 +154,6 @@ export default function DashboardPage() {
                 <CardFooter>
                      <Button asChild variant="outline">
                         <Link href="/admin/analytics">Analizi Görüntüle</Link>
-                    </Button>
-                </CardFooter>
-            </Card>
-             <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-3">
-                        <HeartPulse className="w-6 h-6 text-primary"/>
-                        Uygulama Sağlığı
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-muted-foreground text-sm">
-                        Performans metriklerini ve hata raporlarını Firebase'de izleyin.
-                    </p>
-                </CardContent>
-                <CardFooter>
-                     <Button asChild variant="outline">
-                        <Link href="/admin/health">Sağlığı İzle</Link>
-                    </Button>
-                </CardFooter>
-            </Card>
-            <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-3">
-                        <Database className="w-6 h-6 text-primary"/>
-                        Kullanım & Trafik
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-muted-foreground text-sm">
-                        Veritabanı, depolama ve hosting kullanımını ve maliyetlerini izleyin.
-                    </p>
-                </CardContent>
-                <CardFooter>
-                    <Button asChild variant="outline">
-                        <Link href="/admin/usage">Kullanımı Görüntüle</Link>
                     </Button>
                 </CardFooter>
             </Card>

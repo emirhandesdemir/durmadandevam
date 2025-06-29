@@ -10,7 +10,7 @@ import { db } from "@/lib/firebase";
 import { getGameSettings, updateGameSettings } from "@/lib/actions/gameActions";
 import { useToast } from "@/hooks/use-toast";
 
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";

@@ -18,18 +18,20 @@ import {
   Settings,
   X,
   Swords,
-  SlidersHorizontal, // Yeni ikon
+  SlidersHorizontal,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "../ui/button";
 
 // Navigasyon öğeleri listesi
 const navItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/analytics", label: "İstatistikler", icon: BarChart3 },
   { href: "/admin/users", label: "Kullanıcılar", icon: Users },
   { href: "/admin/rooms", label: "Odalar", icon: MessageSquare },
   { href: "/admin/posts", label: "Gönderiler", icon: FileText },
   { href: "/admin/questions", label: "Quiz Soruları", icon: Puzzle },
-  { href: "/admin/features", label: "Özellik Yönetimi", icon: SlidersHorizontal }, // Yeni sayfa
+  { href: "/admin/features", label: "Özellik Yönetimi", icon: SlidersHorizontal },
   { href: "/admin/theme", label: "Tema Ayarları", icon: Palette },
   { href: "/admin/system", label: "Sistem Ayarları", icon: Settings },
 ];
