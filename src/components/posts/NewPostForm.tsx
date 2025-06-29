@@ -16,9 +16,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Image as ImageIcon, Send, Loader2, X, Sparkles } from "lucide-react";
+import { Image as ImageIcon, Send, Loader2, X, Sparkles, ArrowUp } from "lucide-react";
 
 export default function NewPostForm() {
   const router = useRouter();
@@ -127,7 +126,6 @@ export default function NewPostForm() {
             userAvatar: userData.photoURL || null,
             userAvatarFrame: userData.selectedAvatarFrame || '',
             userRole: userData.role || 'user',
-            userGender: userData.gender || null,
             text: text,
             imageUrl: imageUrl || "",
             imagePublicId: "", // Legacy field, kept for compatibility if needed
@@ -204,16 +202,31 @@ export default function NewPostForm() {
                     <Sparkles className="h-5 w-5 text-primary" />
                     AI ile Stil Ver
                 </Label>
-                <div className="flex items-center gap-2">
-                    <Input 
+                 <div className="relative">
+                    <Textarea
                         id="ai-style-prompt"
-                        placeholder="ör., suluboya resim yap, arka planı kaldır..."
+                        placeholder="Resme uygulamak istediğiniz stili veya değişikliği açıklayın. Örn: 'anime karakterine dönüştür' veya 'arka planı kaldır'..."
                         value={stylePrompt}
                         onChange={(e) => setStylePrompt(e.target.value)}
                         disabled={isLoading}
+                        className="rounded-xl pr-12 min-h-[50px] resize-none"
+                        rows={2}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleApplyAiStyle();
+                            }
+                        }}
                     />
-                    <Button onClick={handleApplyAiStyle} disabled={isLoading || !stylePrompt.trim()}>
-                        {isStyling ? <Loader2 className="h-4 w-4 animate-spin"/> : "Uygula"}
+                    <Button
+                        type="button"
+                        size="icon"
+                        className="absolute right-2.5 bottom-2.5 h-8 w-8 rounded-full"
+                        onClick={handleApplyAiStyle}
+                        disabled={isLoading || !stylePrompt.trim()}
+                        aria-label="Stili uygula"
+                    >
+                        {isStyling ? <Loader2 className="h-4 w-4 animate-spin"/> : <ArrowUp className="h-4 w-4" />}
                     </Button>
                 </div>
               </div>

@@ -56,6 +56,13 @@ const styleImageFlow = ai.defineFlow(
         config: {
             // Hem resim hem metin çıktısı talep etmek, modelin daha iyi çalışmasını sağlar
             responseModalities: ['IMAGE', 'TEXT'],
+            // Hata olasılığını azaltmak için güvenlik ayarlarını daha az kısıtlayıcı yap
+            safetySettings: [
+                { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+                { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+                { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+                { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+            ],
         },
     });
 
