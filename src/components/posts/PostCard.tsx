@@ -180,7 +180,7 @@ export default function PostCard({ post }: PostCardProps) {
                                     <Tooltip>
                                         <TooltipTrigger className="flex items-center gap-1 text-primary font-semibold">
                                             <Sparkles className="h-3 w-3" />
-                                            <span>AI ile Düzenlendi</span>
+                                            <span>HiweWalkAI ile düzenlendi</span>
                                         </TooltipTrigger>
                                         <TooltipContent>
                                             <p>Bu gönderideki resim HiweWalkAI ile düzenlenmiştir.</p>
