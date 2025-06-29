@@ -1,44 +1,37 @@
-# HiweWalk Firebase Cloud Functions
+# Anlık Bildirimleri Aktif Etme Rehberi
 
-Bu klasör, uygulamanız için arka plan işlemlerini yürüten (örneğin, anlık bildirim gönderme) sunucu tarafı kodlarını içerir.
+Uygulamanızın, kapalıyken bile kullanıcılara anlık bildirim (push notification) gönderebilmesi için sunucu tarafında küçük bir kurulum gereklidir. Bu işlem için terminal kullanmanız gerekecek, ancak adımları olabildiğince basitleştirdik.
 
-## Kurulum ve Dağıtım
+## Neden Bu Gerekli?
 
-Bu fonksiyonları projenize dağıtmak için aşağıdaki adımları izleyin. Bu adımlar için bilgisayarınızda [Node.js](https://nodejs.org/) ve npm'in kurulu olması gerekmektedir.
+Bildirim gönderme işlemi, güvenli bir sunucu ortamından yapılmalıdır. `firebase-functions`, bu iş için harika bir çözümdür ve projenize bu özelliği eklemek için aşağıdaki adımları izlemeniz yeterlidir.
 
-### 1. Firebase CLI Kurulumu
+---
 
-Eğer daha önce kurmadıysanız, Firebase'in komut satırı aracını (CLI) bilgisayarınıza global olarak yükleyin:
+### Adım 1: Firebase CLI Kurulumu (Eğer Yüklü Değilse)
+
+Bilgisayarınızda Firebase'in komut satırı aracı (CLI) yüklü değilse, terminali açıp şu komutu bir kereye mahsus çalıştırın:
 
 ```bash
 npm install -g firebase-tools
 ```
 
-### 2. Firebase'e Giriş Yapın
+### Adım 2: Firebase Hesabınıza Giriş Yapın
 
-Aşağıdaki komutu çalıştırarak Firebase hesabınıza giriş yapın. Tarayıcınızda bir pencere açılacak ve giriş yapmanız istenecektir.
+Yine terminalde, aşağıdaki komutla Firebase hesabınıza giriş yapın:
 
 ```bash
 firebase login
 ```
 
-### 3. Fonksiyonları Dağıtın (Deploy)
+Bu komut tarayıcınızda bir pencere açarak giriş yapmanızı isteyecektir.
 
-Bu adımları projenizin ana dizininde (root directory) çalıştırdığınızdan emin olun.
+### Adım 3: Fonksiyonları Dağıtın (Deploy)
 
-a. Bu `functions` klasörüne gidin:
-```bash
-cd functions
-```
+Bu son adım, bildirim gönderme kodunuzu sunucuya yükleyecektir. Projenizin ana klasöründeyken terminale şu komutu yapıştırın:
 
-b. Gerekli Node.js paketlerini yükleyin:
-```bash
-npm install
-```
-
-c. Fonksiyonları Firebase projenize dağıtın:
 ```bash
 firebase deploy --only functions
 ```
 
-Dağıtım işlemi birkaç dakika sürebilir. Tamamlandığında, anlık bildirim sisteminiz aktif hale gelecektir!
+Hepsi bu kadar! Bu komut tamamlandığında, anlık bildirim sisteminiz tamamen aktif hale gelecektir.
