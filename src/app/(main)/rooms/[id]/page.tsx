@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
-import { Loader2, Mic, PhoneOff, ScreenShare, ScreenShareOff, Gift, Hand } from 'lucide-react';
+import { Loader2, Mic, PhoneOff, ScreenShare, ScreenShareOff, Gift, Hand, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TextChat from '@/components/chat/text-chat';
 import ChatMessageInput from '@/components/chat/ChatMessageInput';
@@ -170,16 +170,26 @@ export default function RoomPage() {
     
     return (
         <>
-            <div className="flex flex-col h-full bg-background text-foreground">
-                <RoomHeader 
-                    room={room} 
-                    isHost={isHost} 
-                    onParticipantListToggle={() => setIsParticipantSheetOpen(true)} 
-                    onBackClick={() => setShowExitDialog(true)} 
-                    onStartGameClick={() => setIsGameLobbyOpen(true)}
-                />
-                <div className="flex-1 flex flex-col overflow-hidden">
-                    <div className="p-4 shrink-0 space-y-4 border-b">
+            <div className="flex flex-col lg:flex-row h-full">
+                <div className="flex-1 flex flex-col bg-background">
+                    <RoomHeader 
+                        room={room} 
+                        isHost={isHost} 
+                        onParticipantListToggle={() => setIsParticipantSheetOpen(true)} 
+                        onBackClick={() => setShowExitDialog(true)} 
+                        onStartGameClick={() => setIsGameLobbyOpen(true)}
+                    />
+                    <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+                        <TextChat messages={messages} loading={messagesLoading} roomId={roomId} />
+                    </div>
+                    <footer className="p-3 border-t bg-background shrink-0">
+                        <ChatMessageInput roomId={roomId} canSendMessage={isRoomParticipant || false} />
+                    </footer>
+                </div>
+                
+                <aside className="w-full lg:w-80 lg:border-l shrink-0 bg-card">
+                     <div className="h-full flex flex-col p-4">
+                        <h3 className="font-bold mb-4 text-foreground">SESLİ SOHBET</h3>
                         {screenSharer ? (
                             <div className='animate-in fade-in duration-300'>
                                 {isSharingScreen && localScreenStream && <ScreenShareView stream={localScreenStream} />}
@@ -187,72 +197,62 @@ export default function RoomPage() {
                                 <p className="text-center text-xs text-muted-foreground mt-2">{screenSharer.username} ekranını paylaşıyor...</p>
                             </div>
                         ) : (
-                           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 min-h-[8rem] place-content-start">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-4">
                                 {participants.length > 0 ? (
                                     participants.map((p) => (
                                         <VoiceUserIcon key={p.uid} room={room} participant={p} isHost={isHost} isModerator={isModerator} currentUserId={user!.uid} />
                                     ))
                                 ) : (
                                     <div className="col-span-full flex flex-col items-center justify-center text-muted-foreground h-full py-8">
-                                        <Mic className="h-10 w-10 mb-2" />
-                                        <p className="font-semibold">Sesli sohbette kimse yok.</p>
-                                        <p className="text-sm">Katılan ilk kişi sen ol!</p>
+                                        <p>Sesli sohbette kimse yok.</p>
                                     </div>
                                 )}
                             </div>
                         )}
-                        {featureFlags?.quizGameEnabled && (
-                            <div className="pt-2">
-                                {gameLoading ? null : activeGame && gameSettings && user ? (
-                                    <RoomGameCard game={activeGame} settings={gameSettings} onAnswerSubmit={handleAnswerSubmit} onTimerEnd={handleGameTimerEnd} currentUserId={user.uid} />
-                                ) : countdown !== null && countdown > 0 && countdown <= 20 ? (
-                                    <GameCountdownCard timeLeft={countdown} />
-                                ) : null}
-                            </div>
-                        )}
-                    </div>
-                    <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
-                        <TextChat messages={messages} loading={messagesLoading} roomId={roomId} />
-                    </div>
-                </div>
-
-                <footer className="p-3 border-t bg-background shrink-0 flex items-center gap-2">
-                     <Button onClick={() => setIsPortalDialogOpen(true)} variant="ghost" size="icon" className="rounded-full bg-muted hover:bg-muted/80">
-                        <Gift className="h-5 w-5 text-yellow-500"/>
-                    </Button>
-                    {isConnected && user ? (
-                        <>
-                            {canSpeak ? (
-                                <Button onClick={handleToggleMute} variant="ghost" size="icon" className="rounded-full bg-muted hover:bg-muted/80">
-                                    {self?.isMuted ? <MicOff className="h-5 w-5 text-destructive"/> : <Mic className="h-5 w-5"/>}
-                                </Button>
+                        
+                        <div className="mt-auto pt-4">
+                            {featureFlags?.quizGameEnabled && (
+                                <div className="mb-4">
+                                    {gameLoading ? null : activeGame && gameSettings && user ? (
+                                        <RoomGameCard game={activeGame} settings={gameSettings} onAnswerSubmit={handleAnswerSubmit} onTimerEnd={handleGameTimerEnd} currentUserId={user.uid} />
+                                    ) : countdown !== null && countdown > 0 && countdown <= 20 ? (
+                                        <GameCountdownCard timeLeft={countdown} />
+                                    ) : null}
+                                </div>
+                            )}
+                             {isConnected && user ? (
+                                <div className="flex items-center justify-center gap-2 p-2 bg-muted rounded-lg">
+                                    {canSpeak ? (
+                                        <Button onClick={handleToggleMute} variant="ghost" size="icon" className="rounded-full">
+                                            {self?.isMuted ? <MicOff className="h-5 w-5 text-destructive"/> : <Mic className="h-5 w-5"/>}
+                                        </Button>
+                                    ) : (
+                                        <Button onClick={handleRequestToSpeak} variant="ghost" size="icon" className="rounded-full" disabled={hasRequestedSpeak || isRequestingSpeak}>
+                                            {isRequestingSpeak ? <Loader2 className="h-5 w-5 animate-spin" /> : <Hand className="h-5 w-5"/>}
+                                        </Button>
+                                    )}
+                                    <Button onClick={isSharingScreen ? stopScreenShare : startScreenShare} variant="ghost" size="icon" className="rounded-full">
+                                        {isSharingScreen ? <ScreenShareOff className="h-5 w-5 text-destructive"/> : <ScreenShare className="h-5 w-5"/>}
+                                    </Button>
+                                    <Button onClick={handleExitVoiceChat} variant="destructive" size="icon" className="rounded-full">
+                                        <PhoneOff className="h-5 w-5" />
+                                        <span className="sr-only">Ayrıl</span>
+                                    </Button>
+                                </div>
                             ) : (
-                                <Button onClick={handleRequestToSpeak} variant="ghost" size="icon" className="rounded-full bg-muted hover:bg-muted/80" disabled={hasRequestedSpeak || isRequestingSpeak}>
-                                    {isRequestingSpeak ? <Loader2 className="h-5 w-5 animate-spin" /> : <Hand className="h-5 w-5"/>}
+                                <Button onClick={handleJoinVoice} disabled={isConnecting || isConnected} className="w-full">
+                                    {isConnecting ? <Loader2 className="h-5 w-5 animate-spin"/> : <Mic className="h-5 w-5"/>}
+                                    <span className="ml-2">Sesli Sohbete Katıl</span>
                                 </Button>
                             )}
-                            <Button onClick={isSharingScreen ? stopScreenShare : startScreenShare} variant="ghost" size="icon" className="rounded-full bg-muted hover:bg-muted/80">
-                                {isSharingScreen ? <ScreenShareOff className="h-5 w-5 text-destructive"/> : <ScreenShare className="h-5 w-5"/>}
-                            </Button>
-                            <Button onClick={() => setShowExitDialog(true)} variant="destructive" size="icon" className="rounded-full">
-                                <PhoneOff className="h-5 w-5" />
-                                <span className="sr-only">Ayrıl</span>
-                            </Button>
-                        </>
-                    ) : (
-                        <Button onClick={handleJoinVoice} disabled={isConnecting || isConnected} className="rounded-full bg-primary text-primary-foreground h-10 px-4">
-                            {isConnecting ? <Loader2 className="h-5 w-5 animate-spin"/> : <Mic className="h-5 w-5"/>}
-                            <span className="ml-2">Katıl</span>
-                        </Button>
-                    )}
-                    <div className="flex-1">
-                        <ChatMessageInput roomId={roomId} canSendMessage={isRoomParticipant || false} />
-                    </div>
-                </footer>
+                        </div>
+                     </div>
+                </aside>
             </div>
-             <ParticipantListSheet isOpen={isParticipantSheetOpen} onOpenChange={setIsParticipantSheetOpen} room={room} />
-             <OpenPortalDialog isOpen={isPortalDialogOpen} onOpenChange={setIsPortalDialogOpen} roomId={roomId} roomName={room?.name || ''} />
-             <GameLobbyDialog 
+
+            <ParticipantListSheet isOpen={isParticipantSheetOpen} onOpenChange={setIsParticipantSheetOpen} room={room} />
+            <OpenPortalDialog isOpen={isPortalDialogOpen} onOpenChange={setIsPortalDialogOpen} roomId={roomId} roomName={room?.name || ''} />
+            <GameLobbyDialog 
                 isOpen={isGameLobbyOpen} 
                 onOpenChange={setIsGameLobbyOpen}
                 roomId={roomId}
