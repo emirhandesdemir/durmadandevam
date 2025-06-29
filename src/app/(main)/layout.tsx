@@ -10,6 +10,7 @@ import { useState, useRef } from 'react';
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import NotificationPermissionManager from "@/components/common/NotificationPermissionManager";
+import PwaInstallBanner from "@/components/common/PwaInstallBanner";
 
 export default function MainAppLayout({
   children,
@@ -41,6 +42,7 @@ export default function MainAppLayout({
   return (
     <VoiceChatProvider>
       <NotificationPermissionManager />
+      <PwaInstallBanner />
       <div className="relative flex h-dvh w-full flex-col bg-background overflow-hidden">
         <main 
           ref={scrollRef} 
