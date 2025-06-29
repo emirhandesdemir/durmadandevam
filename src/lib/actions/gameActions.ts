@@ -21,7 +21,7 @@ import {
     setDoc,
     arrayUnion
 } from "firebase/firestore";
-import type { GameQuestion, GameSettings, ActiveGame } from "../types";
+import type { GameQuestion, GameSettings, ActiveGame, GameInviteData } from "../types";
 import { revalidatePath } from "next/cache";
 
 // Ayarları almak için fonksiyon
@@ -90,7 +90,95 @@ export async function deleteQuestion(id: string) {
 }
 
 
-// --- Oyun Mekanikleri ---
+// --- Çok Oyunculu Oyun Akışı ---
+
+export async function initiateGameInvite(
+    roomId: string, 
+    host: { uid: string, username: string },
+    gameType: GameInviteData['gameType'],
+    gameName: string,
+    invitedPlayers: { uid: string, username: string }[]
+) {
+    const messagesRef = collection(db, 'rooms', roomId, 'messages');
+    
+    const inviteData: GameInviteData = {
+        host,
+        gameType,
+        gameName,
+        invitedPlayers: [host, ...invitedPlayers], // Host is also a player
+        acceptedPlayers: [host], // Host auto-accepts
+        declinedPlayers: [],
+        status: 'pending'
+    };
+
+    await addDoc(messagesRef, {
+        type: 'game_invite',
+        uid: 'system',
+        username: 'System',
+        text: `${host.username} bir ${gameName} oyunu başlattı.`,
+        createdAt: serverTimestamp(),
+        gameInviteData: inviteData
+    });
+
+    revalidatePath(`/rooms/${roomId}`);
+}
+
+export async function respondToGameInvite(
+    roomId: string,
+    messageId: string,
+    respondingUser: { uid: string, username: string },
+    accepted: boolean
+) {
+    const messageRef = doc(db, 'rooms', roomId, 'messages', messageId);
+
+    await runTransaction(db, async (transaction) => {
+        const messageDoc = await transaction.get(messageRef);
+        if (!messageDoc.exists() || !messageDoc.data().gameInviteData) {
+            throw new Error("Davet bulunamadı.");
+        }
+
+        const inviteData = messageDoc.data().gameInviteData as GameInviteData;
+
+        if (inviteData.status !== 'pending') {
+            throw new Error("Bu davet artık geçerli değil.");
+        }
+
+        const isAlreadyAccepted = inviteData.acceptedPlayers.some(p => p.uid === respondingUser.uid);
+        const isAlreadyDeclined = inviteData.declinedPlayers.some(p => p.uid === respondingUser.uid);
+        if (isAlreadyAccepted || isAlreadyDeclined) {
+            throw new Error("Bu davete zaten yanıt verdin.");
+        }
+
+        let newInviteData: GameInviteData;
+
+        if (accepted) {
+            newInviteData = {
+                ...inviteData,
+                acceptedPlayers: [...inviteData.acceptedPlayers, respondingUser]
+            };
+        } else {
+            newInviteData = {
+                ...inviteData,
+                declinedPlayers: [...inviteData.declinedPlayers, respondingUser],
+                status: 'cancelled' // One person declines, game is cancelled
+            };
+        }
+        
+        // Check if all players have accepted
+        if (accepted && newInviteData.acceptedPlayers.length === newInviteData.invitedPlayers.length) {
+            newInviteData.status = 'active';
+            // TODO: Start the actual game logic here
+            // For now, we just update the message.
+        }
+        
+        transaction.update(messageRef, { gameInviteData: newInviteData });
+    });
+    
+    revalidatePath(`/rooms/${roomId}`);
+}
+
+
+// --- Quiz Oyunu Mekanikleri ---
 
 /**
  * Bir odada yeni bir quiz oyunu başlatır.

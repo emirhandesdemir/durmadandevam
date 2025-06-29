@@ -13,13 +13,15 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Loader2 } from 'lucide-react';
 import type { Message } from '@/lib/types';
 import PortalMessageCard from './PortalMessageCard';
+import GameInviteMessage from '../game/GameInviteMessage';
 
 interface TextChatProps {
   messages: Message[];
   loading: boolean;
+  roomId: string;
 }
 
-export default function TextChat({ messages, loading }: TextChatProps) {
+export default function TextChat({ messages, loading, roomId }: TextChatProps) {
   const { user: currentUser } = useAuth();
 
   if (!currentUser) return null;
@@ -52,6 +54,10 @@ export default function TextChat({ messages, loading }: TextChatProps) {
 
         if (msg.type === 'portal') {
             return <PortalMessageCard key={msg.id} message={msg} />;
+        }
+        
+        if (msg.type === 'game_invite' && msg.gameInviteData) {
+            return <GameInviteMessage key={msg.id} message={msg} roomId={roomId} />;
         }
 
         const isCurrentUser = msg.uid === currentUser.uid;

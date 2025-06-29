@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft, MoreHorizontal, Users, Timer, AlertTriangle, UserPlus } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Users, Timer, AlertTriangle, UserPlus, Gamepad2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Room } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -10,12 +10,19 @@ import { addSystemMessage, deleteExpiredRoom } from '@/lib/actions/roomActions';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import InviteDialog from './InviteDialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface RoomHeaderProps {
   room: Room;
   isHost: boolean;
   onParticipantListToggle: () => void;
-  onBackClick: () => void; // Onay penceresini tetiklemek için yeni prop
+  onBackClick: () => void;
+  onStartGameClick: () => void;
 }
 
 // Zamanı hh:mm:ss formatına dönüştüren yardımcı fonksiyon
@@ -26,7 +33,7 @@ const formatTime = (totalSeconds: number) => {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
 
-export default function RoomHeader({ room, isHost, onParticipantListToggle, onBackClick }: RoomHeaderProps) {
+export default function RoomHeader({ room, isHost, onParticipantListToggle, onBackClick, onStartGameClick }: RoomHeaderProps) {
     const { user } = useAuth();
     const { toast } = useToast();
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -79,34 +86,46 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, onBa
 
     return (
         <>
-            <header className="flex items-center justify-between p-3 border-b border-gray-700/50 shrink-0">
+            <header className="flex items-center justify-between p-3 border-b shrink-0">
                 <div className="flex items-center gap-2">
                     <Button onClick={onBackClick} variant="ghost" size="icon" className="rounded-full">
                         <ChevronLeft />
                     </Button>
-                    <h1 className="text-md font-bold text-white truncate max-w-[120px] sm:max-w-[180px]">{room.name}</h1>
+                    <h1 className="text-md font-bold truncate max-w-[120px] sm:max-w-[180px]">{room.name}</h1>
                 </div>
 
                 <div className="flex items-center gap-1 sm:gap-2">
                     {timeLeft !== null && expiresAt && (
                         <div className={cn(
                             "flex items-center gap-1.5 text-sm font-semibold p-2 rounded-full transition-colors",
-                            isWarningTime ? "bg-destructive/20 text-destructive" : "text-gray-400"
+                            isWarningTime ? "bg-destructive/20 text-destructive" : "text-muted-foreground"
                         )}>
                             {isWarningTime ? <AlertTriangle className="h-4 w-4" /> : <Timer className="h-4 w-4" />}
                             <span className="hidden sm:inline">{formatTime(timeLeft)}</span>
                         </div>
                     )}
                     <Button variant="ghost" className="flex items-center gap-1.5 text-sm font-semibold p-2" onClick={onParticipantListToggle}>
-                        <Users className="h-4 w-4 text-gray-400" />
+                        <Users className="h-4 w-4 text-muted-foreground" />
                         <span>{room.participants?.length || 0}</span>
                     </Button>
-                    <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setIsInviteOpen(true)}>
+                     <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setIsInviteOpen(true)}>
                         <UserPlus className="h-5 w-5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="rounded-full">
-                        <MoreHorizontal />
-                    </Button>
+                    {isHost && (
+                         <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="rounded-full">
+                                    <MoreHorizontal />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={onStartGameClick}>
+                                    <Gamepad2 className="mr-2 h-4 w-4"/>
+                                    Oyun Başlat
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
                 </div>
             </header>
             <InviteDialog

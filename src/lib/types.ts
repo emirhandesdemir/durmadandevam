@@ -198,6 +198,17 @@ export interface DirectMessageMetadata {
     };
 }
 
+export interface GameInviteData {
+    host: { uid: string; username: string };
+    gameType: 'dice' | 'rps' | 'bottle';
+    gameName: string;
+    invitedPlayers: { uid: string; username: string }[];
+    acceptedPlayers: { uid: string; username: string }[];
+    declinedPlayers: { uid: string; username: string }[];
+    status: 'pending' | 'active' | 'cancelled' | 'finished';
+}
+
+
 export interface Message {
   id: string;
   uid: string;
@@ -206,12 +217,13 @@ export interface Message {
   text?: string;
   imageUrl?: string;
   videoUrl?: string;
-  type?: 'system' | 'game' | 'portal' | 'user';
+  type?: 'system' | 'game' | 'portal' | 'user' | 'game_invite';
   createdAt: Timestamp;
   selectedBubble?: string;
   selectedAvatarFrame?: string;
   portalRoomId?: string;
   portalRoomName?: string;
+  gameInviteData?: GameInviteData;
 }
 
 

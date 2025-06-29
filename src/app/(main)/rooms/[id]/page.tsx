@@ -1,14 +1,14 @@
 // src/app/(main)/rooms/[id]/page.tsx
 "use client";
 
-import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, onSnapshot, collection, query, orderBy, limit, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
-import { Loader2, Mic, MicOff, Plus, Crown, PhoneOff, ScreenShare, ScreenShareOff, ChevronsUpDown, Gift, Hand } from 'lucide-react';
+import { Loader2, Mic, PhoneOff, ScreenShare, ScreenShareOff, Gift, Hand } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TextChat from '@/components/chat/text-chat';
 import ChatMessageInput from '@/components/chat/ChatMessageInput';
@@ -16,8 +16,6 @@ import VoiceUserIcon from '@/components/voice/VoiceUserIcon';
 import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
 import RoomHeader from '@/components/rooms/RoomHeader';
 import ScreenShareView from '@/components/voice/ScreenShareView';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,12 +28,13 @@ import {
 } from "@/components/ui/alert-dialog"
 
 // --- Game Imports ---
-import type { Room, ActiveGame, GameSettings, Message, VoiceParticipant } from '@/lib/types';
+import type { Room, ActiveGame, GameSettings, Message } from '@/lib/types';
 import GameCountdownCard from '@/components/game/GameCountdownCard';
 import RoomGameCard from '@/components/game/RoomGameCard';
 import { startGameInRoom, submitAnswer, endGameWithoutWinner, getGameSettings } from '@/lib/actions/gameActions';
 import { requestToSpeak } from '@/lib/actions/roomActions';
 import OpenPortalDialog from '@/components/rooms/OpenPortalDialog';
+import GameLobbyDialog from '@/components/game/GameLobbyDialog';
 
 
 export default function RoomPage() {
@@ -59,6 +58,7 @@ export default function RoomPage() {
     const [isParticipantSheetOpen, setIsParticipantSheetOpen] = useState(false);
     const [showExitDialog, setShowExitDialog] = useState(false);
     const [isPortalDialogOpen, setIsPortalDialogOpen] = useState(false);
+    const [isGameLobbyOpen, setIsGameLobbyOpen] = useState(false);
     const chatScrollRef = useRef<HTMLDivElement>(null);
     const [isRequestingSpeak, setIsRequestingSpeak] = useState(false);
 
@@ -171,7 +171,13 @@ export default function RoomPage() {
     return (
         <>
             <div className="flex flex-col h-full bg-background text-foreground">
-                <RoomHeader room={room} isHost={isHost} onParticipantListToggle={() => setIsParticipantSheetOpen(true)} onBackClick={() => setShowExitDialog(true)} />
+                <RoomHeader 
+                    room={room} 
+                    isHost={isHost} 
+                    onParticipantListToggle={() => setIsParticipantSheetOpen(true)} 
+                    onBackClick={() => setShowExitDialog(true)} 
+                    onStartGameClick={() => setIsGameLobbyOpen(true)}
+                />
                 <div className="flex-1 flex flex-col overflow-hidden">
                     <div className="p-4 shrink-0 space-y-4 border-b">
                         {screenSharer ? (
@@ -206,7 +212,7 @@ export default function RoomPage() {
                         )}
                     </div>
                     <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
-                        <TextChat messages={messages} loading={messagesLoading} />
+                        <TextChat messages={messages} loading={messagesLoading} roomId={roomId} />
                     </div>
                 </div>
 
@@ -246,6 +252,12 @@ export default function RoomPage() {
             </div>
              <ParticipantListSheet isOpen={isParticipantSheetOpen} onOpenChange={setIsParticipantSheetOpen} room={room} />
              <OpenPortalDialog isOpen={isPortalDialogOpen} onOpenChange={setIsPortalDialogOpen} roomId={roomId} roomName={room?.name || ''} />
+             <GameLobbyDialog 
+                isOpen={isGameLobbyOpen} 
+                onOpenChange={setIsGameLobbyOpen}
+                roomId={roomId}
+                participants={room?.participants || []}
+            />
             <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
