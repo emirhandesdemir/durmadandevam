@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { collection, onSnapshot, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import StatCard from "@/components/admin/stat-card";
-import { Users, MessageSquare, FileText, Puzzle, Headphones } from "lucide-react";
+import { Users, MessageSquare, FileText, Puzzle, Headphones, BarChart3 } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -66,7 +66,7 @@ export default function DashboardPage() {
        {/* Hızlı Erişim Kartları */}
       <div className="mt-8">
         <h2 className="text-xl font-semibold tracking-tight text-foreground">Yönetim Araçları</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
            <Card className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-3">
@@ -82,6 +82,24 @@ export default function DashboardPage() {
                 <CardFooter>
                     <Button asChild variant="outline">
                         <Link href="/admin/users">Kullanıcıları Yönet</Link>
+                    </Button>
+                </CardFooter>
+            </Card>
+             <Card className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-3">
+                        <MessageSquare className="w-6 h-6 text-primary"/>
+                        Oda Yönetimi
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground text-sm">
+                       Aktif odaları görüntüleyin, sohbetleri izleyin veya odaları kapatın.
+                    </p>
+                </CardContent>
+                <CardFooter>
+                    <Button asChild variant="outline">
+                        <Link href="/admin/rooms">Odaları Yönet</Link>
                     </Button>
                 </CardFooter>
             </Card>
@@ -118,6 +136,24 @@ export default function DashboardPage() {
                 <CardFooter>
                      <Button asChild variant="outline">
                         <Link href="/admin/questions">Soruları Yönet</Link>
+                    </Button>
+                </CardFooter>
+            </Card>
+             <Card className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-3">
+                        <BarChart3 className="w-6 h-6 text-primary"/>
+                        İstatistikler
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground text-sm">
+                        Uygulama kullanım verilerini ve büyüme trendlerini görüntüleyin.
+                    </p>
+                </CardContent>
+                <CardFooter>
+                     <Button asChild variant="outline">
+                        <Link href="/admin/analytics">Analizi Görüntüle</Link>
                     </Button>
                 </CardFooter>
             </Card>
