@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Post } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck, Sparkles } from "lucide-react";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -175,6 +175,20 @@ export default function PostCard({ post }: PostCardProps) {
                             )}
                         </div>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            {post.editedWithAI && (
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger className="flex items-center gap-1 text-primary font-semibold">
+                                            <Sparkles className="h-3 w-3" />
+                                            <span>AI ile Düzenlendi</span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Bu gönderideki resim HiweWalkAI ile düzenlenmiştir.</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            )}
+                            {post.editedWithAI && <span>·</span>}
                             <span>{timeAgo}</span>
                             {isOwner && !isEditing && (
                                 <DropdownMenu>

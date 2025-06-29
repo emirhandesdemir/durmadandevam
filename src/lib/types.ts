@@ -66,6 +66,7 @@ export interface Post {
     text: string;
     imageUrl?: string;
     imagePublicId?: string;
+    editedWithAI?: boolean;
     createdAt: Timestamp | { seconds: number; nanoseconds: number };
     likes: string[]; // Beğenen kullanıcıların UID'lerini tutan dizi
     likeCount: number;

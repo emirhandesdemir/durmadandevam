@@ -39,6 +39,7 @@ export default function NewPostForm() {
   const [croppedImage, setCroppedImage] = useState<string | null>(null);
   const [originalCroppedImage, setOriginalCroppedImage] = useState<string | null>(null); 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [wasEditedByAI, setWasEditedByAI] = useState(false);
   
   // AI Styling states
   const [stylePrompt, setStylePrompt] = useState('');
@@ -97,6 +98,7 @@ export default function NewPostForm() {
       setOriginalCroppedImage(null);
       setStylePrompt('');
       setAiChatHistory([]);
+      setWasEditedByAI(false);
       if(fileInputRef.current) {
           fileInputRef.current.value = "";
       }
@@ -123,6 +125,7 @@ export default function NewPostForm() {
 
           if (result.success && result.data?.styledPhotoDataUri) {
               setCroppedImage(result.data.styledPhotoDataUri);
+              setWasEditedByAI(true);
               setAiChatHistory(prev => [
                   ...prev.filter(msg => !msg.isLoading),
                   { id: Date.now(), role: 'ai', imageUrl: result.data.styledPhotoDataUri }
@@ -175,6 +178,7 @@ export default function NewPostForm() {
             text: text,
             imageUrl: imageUrl || "",
             imagePublicId: "", 
+            editedWithAI: wasEditedByAI,
             createdAt: serverTimestamp(),
             likes: [],
             likeCount: 0,
@@ -249,7 +253,7 @@ export default function NewPostForm() {
                         <Sparkles className="h-5 w-5 text-primary" />
                         AI Sohbet Asistanı
                     </Label>
-                    <Button variant="ghost" size="sm" onClick={() => setCroppedImage(originalCroppedImage)} disabled={isLoading}>
+                    <Button variant="ghost" size="sm" onClick={() => { setCroppedImage(originalCroppedImage); setWasEditedByAI(false); }} disabled={isLoading}>
                         <RefreshCcw className="h-3 w-3 mr-2"/>
                         Sıfırla
                     </Button>
