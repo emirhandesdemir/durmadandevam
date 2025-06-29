@@ -18,6 +18,7 @@ import ReactCrop, {
 import "react-image-crop/dist/ReactCrop.css";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { getGameSettings } from "@/lib/actions/gameActions";
 
 interface ImageCropperDialogProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ interface ImageCropperDialogProps {
 function getCroppedImg(
   image: HTMLImageElement,
   crop: PixelCrop,
+  quality: number
 ): Promise<string> {
   const canvas = document.createElement("canvas");
   const scaleX = image.naturalWidth / image.width;
@@ -62,7 +64,7 @@ function getCroppedImg(
 
   return new Promise((resolve, reject) => {
     // Return as a data URL
-    resolve(canvas.toDataURL("image/jpeg", 0.9));
+    resolve(canvas.toDataURL("image/jpeg", quality));
   });
 }
 
@@ -109,7 +111,9 @@ export default function ImageCropperDialog({
     
     setIsCropping(true);
     try {
-        const croppedImageUrl = await getCroppedImg(imgRef.current, completedCrop);
+        const settings = await getGameSettings();
+        const quality = settings.imageUploadQuality || 0.9;
+        const croppedImageUrl = await getCroppedImg(imgRef.current, completedCrop, quality);
         onCropComplete(croppedImageUrl);
         setIsOpen(false);
     } catch (error) {

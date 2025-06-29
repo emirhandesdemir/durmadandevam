@@ -38,6 +38,8 @@ export async function getGameSettings(): Promise<GameSettings> {
         questionTimerSeconds: 15,
         rewardAmount: 5,
         cooldownSeconds: 30,
+        afkTimeoutMinutes: 8,
+        imageUploadQuality: 0.9,
     };
 }
 

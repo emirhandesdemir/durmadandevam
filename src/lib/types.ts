@@ -115,8 +115,6 @@ export interface VoiceParticipant {
     isSpeaker: boolean;
     isMuted: boolean;
     isSharingScreen: boolean;
-    handRaised?: boolean;
-    canSpeak?: boolean;
     joinedAt: Timestamp;
     lastActiveAt?: Timestamp;
     selectedBubble?: string;
@@ -138,6 +136,7 @@ export interface GameSettings {
     rewardAmount: number;
     cooldownSeconds: number;
     afkTimeoutMinutes: number;
+    imageUploadQuality: number;
 }
 
 export interface ActiveGame {
