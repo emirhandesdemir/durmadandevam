@@ -163,8 +163,10 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         if (user.uid > otherUid) {
              pc.onnegotiationneeded = async () => { 
                 try { 
-                    await pc.setLocalDescription(await pc.createOffer()); 
-                    if (pc.localDescription) await sendSignal(otherUid, 'offer', pc.localDescription.toJSON()); 
+                    const offer = await pc.createOffer();
+                    await pc.setLocalDescription(offer);
+                    // The localDescription is now set, so we can safely send it.
+                    await sendSignal(otherUid, 'offer', pc.localDescription!.toJSON()); 
                 } catch (e) { console.error("Nego error:", e); } 
             };
         }
@@ -178,10 +180,15 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         try {
             if (type === 'offer') {
                 await pc.setRemoteDescription(new RTCSessionDescription(data));
-                await pc.setLocalDescription(await pc.createAnswer());
-                if(pc.localDescription) await sendSignal(from, 'answer', pc.localDescription.toJSON());
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                // The localDescription is now set, so we can safely send it.
+                await sendSignal(from, 'answer', pc.localDescription!.toJSON());
             } else if (type === 'answer') {
-                await pc.setRemoteDescription(new RTCSessionDescription(data));
+                // It's important to only set the answer if we're expecting one.
+                if (pc.signalingState === 'have-local-offer') {
+                    await pc.setRemoteDescription(new RTCSessionDescription(data));
+                }
             } else if (type === 'ice-candidate' && pc.remoteDescription) {
                 await pc.addIceCandidate(new RTCIceCandidate(data));
             }
