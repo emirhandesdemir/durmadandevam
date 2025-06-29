@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from "react";
 import { collection, onSnapshot, doc, getCountFromServer } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import StatCard from "@/components/admin/stat-card";
-import { Users, MessageSquare, FileText, Puzzle, Headphones, BarChart3, SlidersHorizontal, Settings, Database, HeartPulse } from "lucide-react";
+import { Users, MessageSquare, FileText, Puzzle, Headphones, BarChart3, SlidersHorizontal, Settings, HeartPulse } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -170,6 +170,24 @@ export default function DashboardPage() {
                 <CardFooter>
                      <Button asChild variant="outline">
                         <Link href="/admin/analytics">Analizi Görüntüle</Link>
+                    </Button>
+                </CardFooter>
+            </Card>
+             <Card className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-3">
+                        <HeartPulse className="w-6 h-6 text-primary"/>
+                        Sistem Durumu
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground text-sm">
+                        Servislerin canlı durumunu kontrol edin ve detaylı analizlere erişin.
+                    </p>
+                </CardContent>
+                <CardFooter>
+                     <Button asChild variant="outline">
+                        <Link href="/admin/status">Durumu Görüntüle</Link>
                     </Button>
                 </CardFooter>
             </Card>
