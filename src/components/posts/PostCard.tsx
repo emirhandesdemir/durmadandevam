@@ -85,16 +85,16 @@ export default function PostCard({ post }: PostCardProps) {
     }, [isEditing]);
 
     const handleLike = async () => {
-        if (!currentUser || isLiking) return;
+        if (!currentUser || !currentUserData || isLiking) return;
         setIsLiking(true);
         try {
             await likePost(
                 post.id,
                 {
                     uid: currentUser.uid,
-                    displayName: currentUser.displayName,
-                    photoURL: currentUser.photoURL,
-                    selectedAvatarFrame: currentUserData?.selectedAvatarFrame || ''
+                    displayName: currentUserData.username,
+                    photoURL: currentUserData.photoURL || null,
+                    selectedAvatarFrame: currentUserData.selectedAvatarFrame || ''
                 }
             );
         } catch (error) {

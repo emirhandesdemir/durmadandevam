@@ -80,8 +80,8 @@ export default function CommentSheet({ open, onOpenChange, post }: CommentSheetP
                 text: newCommentText,
                 user: {
                     uid: user.uid,
-                    displayName: user.displayName,
-                    photoURL: user.photoURL,
+                    displayName: userData.username,
+                    photoURL: userData.photoURL || null,
                     userAvatarFrame: userData.selectedAvatarFrame || '',
                 },
                 replyTo: replyingTo || undefined
