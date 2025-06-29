@@ -30,32 +30,38 @@ export default function RoomGameCard({ game, settings, onAnswerSubmit, onTimerEn
     const hasAnswered = (game.answeredBy || []).includes(currentUserId);
     const isDisabled = hasAnswered || isSubmitting;
 
-    // Geri sayım sayacını yöneten useEffect
+    // Geri sayım sayacını ve ilerleme çubuğunu yöneten useEffect'ler
     useEffect(() => {
+        // Yeni bir oyun başladığında zamanlayıcıyı sıfırla.
         setTimeLeft(settings.questionTimerSeconds);
-        
+    }, [game.id, settings.questionTimerSeconds]);
+
+    useEffect(() => {
+        // Zaman dolduysa veya zaten sıfırsa interval başlatma.
+        if (timeLeft <= 0) {
+            return;
+        }
         const timer = setInterval(() => {
-            setTimeLeft(prevTime => {
-                if (prevTime <= 1) {
-                    clearInterval(timer);
-                    if(!hasAnswered) { // Sadece cevap vermemişse ve süre bittiyse tetikle
-                       onTimerEnd();
-                    }
-                    return 0;
-                }
-                return prevTime - 1;
-            });
+            setTimeLeft(prevTime => prevTime - 1);
         }, 1000);
 
         return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [game.id, settings.questionTimerSeconds]);
+    }, [timeLeft]);
 
-    // İlerleme çubuğunu güncelleyen useEffect
     useEffect(() => {
+        // Süre dolduğunda, onTimerEnd'i güvenli bir şekilde çağır.
+        if (timeLeft === 0 && !hasAnswered) {
+            onTimerEnd();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [timeLeft, hasAnswered]);
+
+    useEffect(() => {
+        // İlerleme çubuğunu güncelle.
         const newProgress = (timeLeft / settings.questionTimerSeconds) * 100;
         setProgress(newProgress);
     }, [timeLeft, settings.questionTimerSeconds]);
+
 
     // Cevap verme fonksiyonu
     const handleAnswerClick = async (index: number) => {
