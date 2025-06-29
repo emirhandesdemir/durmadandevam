@@ -1,14 +1,14 @@
 // src/app/(main)/rooms/[id]/page.tsx
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, onSnapshot, collection, query, orderBy, limit, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
-import { Loader2, Mic, MicOff, Crown, PhoneOff, ScreenShare, ScreenShareOff, Gift, Hand } from 'lucide-react';
+import { Loader2, Mic, MicOff, Plus, Crown, PhoneOff, ScreenShare, ScreenShareOff, ChevronsUpDown, Gift, Hand } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TextChat from '@/components/chat/text-chat';
 import ChatMessageInput from '@/components/chat/ChatMessageInput';
@@ -16,6 +16,8 @@ import VoiceUserIcon from '@/components/voice/VoiceUserIcon';
 import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
 import RoomHeader from '@/components/rooms/RoomHeader';
 import ScreenShareView from '@/components/voice/ScreenShareView';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,7 +33,8 @@ import {
 import type { Room, ActiveGame, GameSettings, Message, VoiceParticipant } from '@/lib/types';
 import GameCountdownCard from '@/components/game/GameCountdownCard';
 import RoomGameCard from '@/components/game/RoomGameCard';
-import { startGameInRoom, submitAnswer, endGameWithoutWinner, getGameSettings, requestToSpeak } from '@/lib/actions/roomActions';
+import { startGameInRoom, submitAnswer, endGameWithoutWinner, getGameSettings } from '@/lib/actions/gameActions';
+import { requestToSpeak } from '@/lib/actions/roomActions';
 import OpenPortalDialog from '@/components/rooms/OpenPortalDialog';
 
 
@@ -152,7 +155,7 @@ export default function RoomPage() {
         if (!user || !room || !userData) return;
         setIsRequestingSpeak(true);
         try {
-            await requestToSpeak(room.id, {uid: user.uid, username: userData.username, photoURL: userData.photoURL});
+            await requestToSpeak(room.id, {uid: user.uid, username: userData.username, photoURL: userData.photoURL || null});
             toast({ description: "Söz hakkı isteği gönderildi." });
         } catch(e: any) {
             toast({ variant: 'destructive', description: e.message });

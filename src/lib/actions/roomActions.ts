@@ -3,8 +3,11 @@
 
 import { db } from '@/lib/firebase';
 import { deleteRoomWithSubcollections } from '@/lib/firestoreUtils';
-import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch, arrayUnion, arrayRemove, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch, arrayUnion, arrayRemove, updateDoc, runTransaction, increment } from 'firebase/firestore';
 import { createNotification } from './notificationActions';
+import type { Room } from '../types';
+
+const voiceStatsRef = doc(db, 'config', 'voiceStats');
 
 export async function addSystemMessage(roomId: string, text: string) {
     if (!roomId || !text) throw new Error("Oda ID'si ve mesaj metni gereklidir.");
@@ -176,8 +179,42 @@ export async function openPortalForRoom(roomId: string, userId: string) {
     const userRef = doc(db, 'users', userId);
     const roomRef = doc(db, 'rooms', roomId);
     
-    // ... (transaction logic remains the same)
+    await runTransaction(db, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        const roomDoc = await transaction.get(roomRef);
+
+        if (!userDoc.exists() || !roomDoc.exists()) throw new Error("Kullanıcı veya oda bulunamadı.");
+
+        const userData = userDoc.data();
+        // if (userData.diamonds < cost) throw new Error("Yeterli elmasınız yok.");
+
+        const fiveMinutesInMs = 5 * 60 * 1000;
+        const newExpiresAt = Timestamp.fromMillis(Date.now() + fiveMinutesInMs);
+        
+        // transaction.update(userRef, { diamonds: increment(-cost) });
+        transaction.update(roomRef, { portalExpiresAt: newExpiresAt });
+
+        const systemMessage = {
+            type: 'portal',
+            text: `✨ ${roomDoc.data().createdBy.username}, "${roomDoc.data().name}" odasına bir portal açtı!`,
+            createdAt: serverTimestamp(),
+            uid: 'system',
+            username: 'System',
+            portalRoomId: roomId,
+            portalRoomName: roomDoc.data().name
+        };
+        
+        // Bu mesajı tüm diğer aktif odalara gönder (Burası karmaşıklaşabilir)
+        // Şimdilik sadece bu odaya ve belki ana akışa bir bildirim olarak ekleyebiliriz.
+        // Bu örnekte, diğer odalara yayma kısmını basitleştiriyoruz ve sadece mevcut odaya bilgi veriyoruz.
+        // Gerçek bir senaryoda, bu bir Cloud Function ile tüm odaları gezerek yapılmalıdır.
+        const messagesRef = collection(db, "rooms", roomId, "messages");
+        transaction.set(doc(messagesRef), systemMessage);
+    });
+
+    return { success: true };
 }
+
 
 export async function updateModerators(roomId: string, targetUserId: string, action: 'add' | 'remove') {
     const roomRef = doc(db, 'rooms', roomId);
@@ -219,4 +256,40 @@ export async function manageSpeakingPermission(roomId: string, targetUserId: str
 
     await batch.commit();
     return { success: true };
+}
+
+/**
+ * Oda yöneticisinin bir katılımcıyı sesli sohbetten atması.
+ * Bu işlem artık kullanıcıyı odanın ana katılımcı listesinden ÇIKARMAZ.
+ */
+export async function kickFromVoice(roomId: string, currentUserId: string, targetUserId: string) {
+    if (!currentUserId || currentUserId === targetUserId) return { success: false, error: "Geçersiz işlem." };
+
+    const roomRef = doc(db, 'rooms', roomId);
+    const targetUserVoiceRef = doc(roomRef, 'voiceParticipants', targetUserId);
+
+    try {
+        await runTransaction(db, async (transaction) => {
+             const roomDoc = await transaction.get(roomRef);
+            if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
+            const roomData = roomDoc.data() as Room;
+
+            const isHost = roomData.createdBy.uid === currentUserId;
+            const isModerator = roomData.moderators?.includes(currentUserId);
+
+            if (!isHost && !isModerator) {
+                 throw new Error("Bu işlemi yapma yetkiniz yok.");
+            }
+            
+            const targetUserDoc = await transaction.get(targetUserVoiceRef);
+            if (!targetUserDoc.exists()) return;
+            
+            transaction.delete(targetUserVoiceRef);
+            transaction.update(roomRef, { voiceParticipantsCount: increment(-1) });
+            transaction.set(voiceStatsRef, { totalUsers: increment(-1) }, { merge: true });
+        });
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
 }

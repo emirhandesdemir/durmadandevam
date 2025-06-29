@@ -62,6 +62,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
                 photoURL: user.photoURL,
                 isMuted: false,
                 isSharingScreen: false,
+                canSpeak: false,
                 joinedAt: serverTimestamp() as Timestamp,
                 lastActiveAt: serverTimestamp() as Timestamp,
                 selectedBubble: userData.selectedBubble || '',
@@ -159,40 +160,4 @@ export async function updateLastActive(roomId: string, userId: string) {
     try {
         await updateDoc(userVoiceRef, { lastActiveAt: serverTimestamp() });
     } catch (error) { console.error("Aktivite güncellenirken hata:", error); }
-}
-
-/**
- * Oda yöneticisinin bir katılımcıyı sesli sohbetten atması.
- * Bu işlem artık kullanıcıyı odanın ana katılımcı listesinden ÇIKARMAZ.
- */
-export async function kickFromVoice(roomId: string, currentUserId: string, targetUserId: string) {
-    if (!currentUserId || currentUserId === targetUserId) return { success: false, error: "Geçersiz işlem." };
-
-    const roomRef = doc(db, 'rooms', roomId);
-    const targetUserVoiceRef = doc(roomRef, 'voiceParticipants', targetUserId);
-
-    try {
-        await runTransaction(db, async (transaction) => {
-             const roomDoc = await transaction.get(roomRef);
-            if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
-            const roomData = roomDoc.data() as Room;
-
-            const isHost = roomData.createdBy.uid === currentUserId;
-            const isModerator = roomData.moderators?.includes(currentUserId);
-
-            if (!isHost && !isModerator) {
-                 throw new Error("Bu işlemi yapma yetkiniz yok.");
-            }
-            
-            const targetUserDoc = await transaction.get(targetUserVoiceRef);
-            if (!targetUserDoc.exists()) return;
-            
-            transaction.delete(targetUserVoiceRef);
-            transaction.update(roomRef, { voiceParticipantsCount: increment(-1) });
-            transaction.set(voiceStatsRef, { totalUsers: increment(-1) }, { merge: true });
-        });
-        return { success: true };
-    } catch (error: any) {
-        return { success: false, error: error.message };
-    }
 }
