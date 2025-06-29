@@ -14,7 +14,7 @@ import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
 import RoomHeader from '@/components/rooms/RoomHeader';
 
 // --- Game Imports ---
-import type { Room, ActiveGameSession, GameSettings, Message } from '@/lib/types';
+import type { Room, ActiveGameSession, GameSettings, Message, ActiveGame } from '@/lib/types';
 import GameLobbyDialog from '@/components/game/GameLobbyDialog';
 import RoomFooter from '@/components/rooms/RoomFooter';
 import SpeakerLayout from '@/components/rooms/SpeakerLayout';
@@ -113,10 +113,13 @@ export default function RoomPage() {
                 // Only show the result card if the game finished in the last 15 seconds
                 if (finishedGameData.finishedAt && Date.now() - finishedGameData.finishedAt.toMillis() < 15000) {
                      setFinishedGame(finishedGameData);
-                     setMultiplayerGame(null); // Clear active game when a finished one is found
                      const timer = setTimeout(() => setFinishedGame(null), 10000); // Show for 10 seconds
                      return () => clearTimeout(timer);
+                } else {
+                    setFinishedGame(null);
                 }
+            } else {
+                setFinishedGame(null);
             }
         });
         return () => unsub();
@@ -164,6 +167,8 @@ export default function RoomPage() {
         return <VoiceChatPanel />;
     };
 
+    const isGameActive = !!(multiplayerGame || finishedGame || activeQuiz || quizCountdown);
+
     return (
         <>
             <div className="flex flex-col h-full bg-background text-foreground">
@@ -176,7 +181,13 @@ export default function RoomPage() {
                 />
                  <div className="flex-1 flex overflow-hidden">
                     <main ref={chatScrollRef} className="flex-1 flex flex-col overflow-y-auto pb-20">
-                        <SpeakerLayout room={room} />
+                         {isGameActive ? (
+                            <div className="p-4 md:hidden">
+                                {renderRightPanelContent()}
+                            </div>
+                        ) : (
+                            <SpeakerLayout room={room} />
+                        )}
                         <RoomInfoCards room={room} isOwner={isHost} />
                         <TextChat messages={messages} loading={messagesLoading} room={room} />
                     </main>
