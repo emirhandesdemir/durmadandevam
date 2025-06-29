@@ -28,7 +28,7 @@ type GameType = 'dice' | 'rps' | 'bottle';
 const gameOptions: { id: GameType, name: string, icon: React.ElementType, minPlayers: number, maxPlayers: number }[] = [
   { id: 'dice', name: 'Zar Oyunu', icon: Dice6, minPlayers: 2, maxPlayers: 8 },
   { id: 'rps', name: 'Taş-Kağıt-Makas', icon: Hand, minPlayers: 2, maxPlayers: 2 },
-  { id: 'bottle', name: 'Şişe Çevirmece', icon: Bot, minPlayers: 2, maxPlayers: 8 },
+  { id: 'bottle', name: 'Şişe Çevirmece', icon: Bot, minPlayers: 2, maxPlayers: 2 },
 ];
 
 interface GameLobbyDialogProps {
@@ -54,20 +54,28 @@ export default function GameLobbyDialog({ isOpen, onOpenChange, roomId, particip
     }
   };
 
-  const handlePlayerSelect = (playerId: string) => {
-    setSelectedPlayers(prev => 
-      prev.includes(playerId)
-        ? prev.filter(id => id !== playerId)
-        : [...prev, playerId]
-    );
+  const handlePlayerSelect = (playerId: string, isSingleSelect: boolean) => {
+    if (isSingleSelect) {
+      setSelectedPlayers([playerId]);
+    } else {
+      setSelectedPlayers(prev =>
+        prev.includes(playerId)
+          ? prev.filter(id => id !== playerId)
+          : [...prev, playerId]
+      );
+    }
   };
   
   const handleStartGame = async () => {
     if (!user || !userData || !gameConfig || !roomId) return;
     
-    if (selectedPlayers.length < gameConfig.minPlayers || selectedPlayers.length > gameConfig.maxPlayers) {
-      toast({ variant: 'destructive', description: `Bu oyun için ${gameConfig.minPlayers} ila ${gameConfig.maxPlayers} arasında oyuncu seçmelisiniz.` });
-      return;
+    const totalPlayersIncludingHost = selectedPlayers.length + 1;
+    if (totalPlayersIncludingHost < gameConfig.minPlayers || totalPlayersIncludingHost > gameConfig.maxPlayers) {
+        toast({ 
+            variant: 'destructive', 
+            description: `Bu oyun için ${gameConfig.minPlayers} ila ${gameConfig.maxPlayers} arasında oyuncu gerekir. (Siz dahil ${totalPlayersIncludingHost} kişi seçtiniz)` 
+        });
+        return;
     }
 
     setIsSubmitting(true);
@@ -101,6 +109,12 @@ export default function GameLobbyDialog({ isOpen, onOpenChange, roomId, particip
   };
 
   const otherParticipants = participants.filter(p => p.uid !== user?.uid);
+  
+  const isSelectionInvalid = useMemo(() => {
+    if (!gameConfig) return true;
+    const totalPlayers = selectedPlayers.length + 1;
+    return totalPlayers < gameConfig.minPlayers || totalPlayers > gameConfig.maxPlayers;
+  }, [selectedPlayers, gameConfig]);
 
   return (
     <Dialog open={isOpen} onOpenChange={resetAndClose}>
@@ -133,27 +147,52 @@ export default function GameLobbyDialog({ isOpen, onOpenChange, roomId, particip
 
         {step === 2 && gameConfig && (
             <div className="py-4 flex flex-col flex-1 overflow-hidden">
-                <p className="text-sm font-medium mb-2">Oyuncular ({selectedPlayers.length} / {gameConfig.maxPlayers})</p>
-                <ScrollArea className="flex-1 border rounded-lg">
-                    <div className="p-2 space-y-1">
-                        {otherParticipants.length > 0 ? otherParticipants.map(p => (
-                            <div key={p.uid} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent">
-                                <Avatar className="h-9 w-9">
-                                    <AvatarImage src={p.photoURL || undefined} />
-                                    <AvatarFallback>{p.username.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <Label htmlFor={p.uid} className="flex-1 font-medium cursor-pointer">{p.username}</Label>
-                                <Checkbox 
-                                    id={p.uid} 
-                                    checked={selectedPlayers.includes(p.uid)} 
-                                    onCheckedChange={() => handlePlayerSelect(p.uid)}
-                                    disabled={selectedPlayers.length >= gameConfig.maxPlayers && !selectedPlayers.includes(p.uid)}
-                                />
+                {gameConfig.id === 'bottle' ? (
+                     <>
+                        <p className="text-sm font-medium mb-2">Oyuncu Seç (1 kişi)</p>
+                        <RadioGroup onValueChange={(playerId) => handlePlayerSelect(playerId, true)} value={selectedPlayers[0] || ''}>
+                            <ScrollArea className="flex-1 border rounded-lg">
+                                <div className="p-2 space-y-1">
+                                    {otherParticipants.length > 0 ? otherParticipants.map(p => (
+                                        <Label key={p.uid} htmlFor={p.uid} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent cursor-pointer has-[:checked]:bg-accent">
+                                            <Avatar className="h-9 w-9">
+                                                <AvatarImage src={p.photoURL || undefined} />
+                                                <AvatarFallback>{p.username.charAt(0)}</AvatarFallback>
+                                            </Avatar>
+                                            <span className="flex-1 font-medium">{p.username}</span>
+                                            <RadioGroupItem value={p.uid} id={p.uid} />
+                                        </Label>
+                                    )) : <p className="text-center text-muted-foreground p-4">Odada başka oyuncu yok.</p>}
+                                </div>
+                            </ScrollArea>
+                        </RadioGroup>
+                        <p className="text-xs text-muted-foreground mt-2">Şişe çevirmece için 1 oyuncu seçin.</p>
+                    </>
+                ) : (
+                    <>
+                        <p className="text-sm font-medium mb-2">Oyuncular ({selectedPlayers.length} / {gameConfig.maxPlayers - 1})</p>
+                        <ScrollArea className="flex-1 border rounded-lg">
+                            <div className="p-2 space-y-1">
+                                {otherParticipants.length > 0 ? otherParticipants.map(p => (
+                                    <div key={p.uid} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent">
+                                        <Avatar className="h-9 w-9">
+                                            <AvatarImage src={p.photoURL || undefined} />
+                                            <AvatarFallback>{p.username.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                        <Label htmlFor={p.uid} className="flex-1 font-medium cursor-pointer">{p.username}</Label>
+                                        <Checkbox 
+                                            id={p.uid} 
+                                            checked={selectedPlayers.includes(p.uid)} 
+                                            onCheckedChange={() => handlePlayerSelect(p.uid, false)}
+                                            disabled={selectedPlayers.length >= (gameConfig.maxPlayers - 1) && !selectedPlayers.includes(p.uid)}
+                                        />
+                                    </div>
+                                )) : <p className="text-center text-muted-foreground p-4">Odada başka oyuncu yok.</p>}
                             </div>
-                        )) : <p className="text-center text-muted-foreground p-4">Odada başka oyuncu yok.</p>}
-                    </div>
-                </ScrollArea>
-                 <p className="text-xs text-muted-foreground mt-2">Bu oyun için en az {gameConfig.minPlayers}, en fazla {gameConfig.maxPlayers} oyuncu seçebilirsiniz.</p>
+                        </ScrollArea>
+                        <p className="text-xs text-muted-foreground mt-2">Bu oyun için siz hariç en az {gameConfig.minPlayers - 1}, en fazla {gameConfig.maxPlayers - 1} oyuncu seçebilirsiniz.</p>
+                    </>
+                )}
             </div>
         )}
 
@@ -164,7 +203,7 @@ export default function GameLobbyDialog({ isOpen, onOpenChange, roomId, particip
           {step === 1 ? (
              <Button onClick={handleNextStep} disabled={!selectedGame}>İleri</Button>
           ) : (
-            <Button onClick={handleStartGame} disabled={isSubmitting || selectedPlayers.length < (gameConfig?.minPlayers || 2)}>
+            <Button onClick={handleStartGame} disabled={isSubmitting || isSelectionInvalid}>
                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Davet Gönder
             </Button>
           )}
