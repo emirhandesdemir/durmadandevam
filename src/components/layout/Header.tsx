@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Send, Users, Bell } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import PwaInstallButton from "../common/PwaInstallButton";
 
 /**
  * Ana uygulama için üst navigasyon çubuğu (Header).
@@ -25,6 +26,7 @@ export default function Header() {
                     <span className="text-xl font-bold tracking-tight">HiweWalk</span>
                 </Link>
                 <div className="flex items-center gap-1">
+                    <PwaInstallButton />
                     <Button variant="ghost" size="icon" className="rounded-full" onClick={() => router.push('/dm')}>
                         <Send className="h-5 w-5" />
                         <span className="sr-only">Mesajlar</span>
