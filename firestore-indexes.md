@@ -51,4 +51,16 @@ Firestore, bir sorgu için indeks gerektiğinde genellikle konsol çıktısında
   https://console.firebase.google.com/v1/r/project/yenidendeneme-ea9ed/firestore/indexes?create_exemption=Cltwcm9qZWN0cy95ZW5pZGVuZGVuZW1lLWVhOWVkL2RhdGFiYXNlcy8oZGVmYXVsdCkvY29sbGVjdGlvbkdyb3Vwcy9jb21tZW50cy9maWVsZHMvY3JlYXRlZEF0EAIaDQoJY3JlYXRlZEF0EAE
   ```
 
+### 5. Bildirim Filtreleme İndeksi
+
+- **Amaç:** Bildirimler sayfasında, bildirimleri türüne göre (beğeni, yorum vb.) filtrelemek ve en yeniden eskiye doğru sıralamak.
+- **Koleksiyon Grubu:** `notifications`
+- **Alanlar:**
+    1. `type` (Artan)
+    2. `createdAt` (Azalan)
+- **Oluşturma Linki:**
+  ```
+  https://console.firebase.google.com/v1/r/project/yenidendeneme-ea9ed/firestore/indexes?create_composite=Cllwcm9qZWN0cy95ZW5pZGVuZGVuZW1lLWVhOWVkL2RhdGFiYXNlcy8oZGVmYXVsdCkvY29sbGVjdGlvbkdyb3Vwcy9ub3RpZmljYXRpb25zL2luZGV4ZXMvXxABGggKBHR5cGUQARoNCgljcmVhdGVkQXQQAhoMCghfX25hbWVfXxAC
+  ```
+
 Bu indeksleri projenizin ilk kurulum aşamasında oluşturmak, gelecekte karşılaşabileceğiniz sorgu hatalarını önleyecektir.
