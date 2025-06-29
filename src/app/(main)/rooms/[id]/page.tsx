@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
-import { Loader2, Mic, MicOff, Plus, Crown, PhoneOff, ScreenShare, ScreenShareOff, ChevronsUpDown, Gift } from 'lucide-react';
+import { Loader2, Mic, MicOff, Plus, Crown, PhoneOff, ScreenShare, ScreenShareOff, ChevronsUpDown, Gift, Music, MusicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TextChat from '@/components/chat/text-chat';
 import ChatMessageInput from '@/components/chat/ChatMessageInput';
@@ -48,7 +48,7 @@ export default function RoomPage() {
     const { 
         self, isConnecting, isConnected, isSharingScreen, localScreenStream, remoteScreenStreams,
         startScreenShare, stopScreenShare, joinRoom, leaveRoom, toggleSelfMute,
-        participants, setActiveRoomId,
+        participants, setActiveRoomId, playMusic, stopMusic, isMusicPlaying, isProcessingMusic
     } = useVoiceChat();
 
     // --- Component State ---
@@ -60,6 +60,7 @@ export default function RoomPage() {
     const [isPortalDialogOpen, setIsPortalDialogOpen] = useState(false);
     const [isVoiceStageCollapsed, setVoiceStageCollapsed] = useState(false);
     const chatScrollRef = useRef<HTMLDivElement>(null);
+    const musicInputRef = useRef<HTMLInputElement>(null);
 
     // --- Game State ---
     const [activeGame, setActiveGame] = useState<ActiveGame | null>(null);
@@ -216,6 +217,15 @@ export default function RoomPage() {
         endGameWithoutWinner(roomId, activeGame.id);
     }, [activeGame, isHost, roomId]);
 
+    const handleMusicFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            await playMusic(file);
+        }
+        e.target.value = ''; // Reset input
+    }
+
+
     // --- Memoized Values ---
     
     const { hostParticipant, otherParticipants } = useMemo(() => {
@@ -325,6 +335,7 @@ export default function RoomPage() {
                      <Button onClick={() => setIsPortalDialogOpen(true)} variant="ghost" size="icon" className="rounded-full bg-muted hover:bg-muted/80">
                         <Gift className="h-5 w-5 text-yellow-500"/>
                     </Button>
+                    <input type="file" ref={musicInputRef} onChange={handleMusicFileChange} className="hidden" accept="audio/*" />
                     {isConnected && user ? (
                         <>
                             <Button onClick={handleToggleMute} variant="ghost" size="icon" className="rounded-full bg-muted hover:bg-muted/80">
@@ -332,6 +343,9 @@ export default function RoomPage() {
                             </Button>
                             <Button onClick={isSharingScreen ? stopScreenShare : startScreenShare} variant="ghost" size="icon" className="rounded-full bg-muted hover:bg-muted/80">
                                 {isSharingScreen ? <ScreenShareOff className="h-5 w-5 text-destructive"/> : <ScreenShare className="h-5 w-5"/>}
+                            </Button>
+                             <Button onClick={isMusicPlaying ? stopMusic : () => musicInputRef.current?.click()} variant="ghost" size="icon" className="rounded-full bg-muted hover:bg-muted/80" disabled={isProcessingMusic}>
+                                {isProcessingMusic ? <Loader2 className="h-5 w-5 animate-spin"/> : (isMusicPlaying ? <MusicOff className="h-5 w-5 text-destructive"/> : <Music className="h-5 w-5"/>) }
                             </Button>
                             <Button onClick={() => setShowExitDialog(true)} variant="destructive" size="icon" className="rounded-full">
                                 <PhoneOff className="h-5 w-5" />

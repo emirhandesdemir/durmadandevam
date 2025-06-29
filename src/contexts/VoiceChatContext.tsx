@@ -1,4 +1,3 @@
-
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo, useRef } from 'react';
@@ -13,11 +12,7 @@ import { usePathname, useRouter } from 'next/navigation';
 const ICE_SERVERS = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        {
-            urls: 'turn:openrelay.metered.ca:80',
-            username: 'openrelayproject',
-            credential: 'openrelayproject',
-        },
+        { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
     ],
 };
 
@@ -27,6 +22,8 @@ interface VoiceChatContextType {
     self: VoiceParticipant | null;
     isConnecting: boolean;
     isConnected: boolean;
+    isMusicPlaying: boolean;
+    isProcessingMusic: boolean;
     remoteAudioStreams: Record<string, MediaStream>;
     remoteScreenStreams: Record<string, MediaStream>;
     localScreenStream: MediaStream | null;
@@ -37,6 +34,8 @@ interface VoiceChatContextType {
     joinRoom: () => Promise<void>;
     leaveRoom: () => Promise<void>;
     toggleSelfMute: () => Promise<void>;
+    playMusic: (file: File) => Promise<void>;
+    stopMusic: () => Promise<void>;
 }
 
 const VoiceChatContext = createContext<VoiceChatContextType | undefined>(undefined);
@@ -58,6 +57,16 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const [remoteAudioStreams, setRemoteAudioStreams] = useState<Record<string, MediaStream>>({});
     const [remoteScreenStreams, setRemoteScreenStreams] = useState<Record<string, MediaStream>>({});
 
+    // Müzik için State'ler ve Ref'ler
+    const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+    const [isProcessingMusic, setIsProcessingMusic] = useState(false);
+    const musicAudioContextRef = useRef<AudioContext | null>(null);
+    const musicAudioElementRef = useRef<HTMLAudioElement | null>(null);
+    const localMicSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+    const musicSourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
+    const activeAudioTrackRef = useRef<MediaStreamTrack | null>(null);
+    const audioSendersRef = useRef<Record<string, RTCRtpSender>>({});
+
     const peerConnections = useRef<Record<string, RTCPeerConnection>>({});
     const screenSenderRef = useRef<Record<string, RTCRtpSender>>({});
     const audioAnalysers = useRef<Record<string, { analyser: AnalyserNode, dataArray: Uint8Array, context: AudioContext }>>({});
@@ -69,7 +78,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const isSharingScreen = !!localScreenStream;
 
     const _cleanupAndResetState = useCallback(() => {
-        console.log("Cleaning up all connections and state.");
         Object.values(peerConnections.current).forEach(pc => pc.close());
         peerConnections.current = {};
         
@@ -78,6 +86,12 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         setLocalStream(null);
         setLocalScreenStream(null);
 
+        if (musicAudioElementRef.current) {
+            musicAudioElementRef.current.pause();
+            musicAudioElementRef.current.src = "";
+        }
+        musicAudioContextRef.current?.close();
+        
         Object.values(audioAnalysers.current).forEach(({ context }) => context.close());
         audioAnalysers.current = {};
         if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
@@ -85,13 +99,15 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         setRemoteAudioStreams({});
         setRemoteScreenStreams({});
         screenSenderRef.current = {};
+        audioSendersRef.current = {};
         setParticipants([]);
-        setActiveRoom(null); // Clear room data
-        setConnectedRoomId(null); // Clear connected room ID
+        setActiveRoom(null);
+        setConnectedRoomId(null);
         setIsConnecting(false);
+        setIsMusicPlaying(false);
+        setIsProcessingMusic(false);
     }, [localStream, localScreenStream]);
 
-    // This state holds the actual connected room ID, persisting through navigation
     const [connectedRoomId, setConnectedRoomId] = useState<string | null>(null);
 
     const leaveRoom = useCallback(async () => {
@@ -124,9 +140,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             for (const amplitude of dataArray) { sum += amplitude * amplitude; }
             const volume = Math.sqrt(sum / dataArray.length);
             
-            const isSpeaking = volume > 20;
-            newSpeakingStates[uid] = isSpeaking;
-            if (uid === user?.uid && isSpeaking) {
+            newSpeakingStates[uid] = volume > 20;
+            if (uid === user?.uid && newSpeakingStates[uid]) {
                 isSelfSpeaking = true;
             }
         });
@@ -157,7 +172,11 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
         const pc = new RTCPeerConnection(ICE_SERVERS);
         peerConnections.current[otherUid] = pc;
-        localStream.getAudioTracks().forEach(track => pc.addTrack(track, localStream));
+        
+        const track = activeAudioTrackRef.current || localStream.getAudioTracks()[0];
+        if (track) {
+            audioSendersRef.current[otherUid] = pc.addTrack(track, localStream);
+        }
 
         pc.ontrack = e => e.track.kind === 'audio' ? setRemoteAudioStreams(p => ({ ...p, [otherUid]: e.streams[0] })) : setRemoteScreenStreams(p => ({ ...p, [otherUid]: e.streams[0] }));
         pc.onicecandidate = e => e.candidate && sendSignal(otherUid, 'ice-candidate', e.candidate.toJSON());
@@ -189,22 +208,77 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             }
         } catch (error) { console.error("Signal handling error:", type, error); }
     }, [createPeerConnection, sendSignal]);
+    
+    const stopMusic = useCallback(async () => {
+        if (!localStream) return;
+        
+        musicAudioElementRef.current?.pause();
+        musicSourceNodeRef.current?.disconnect();
+        
+        const originalMicTrack = localStream.getAudioTracks()[0];
+        activeAudioTrackRef.current = originalMicTrack;
+
+        if (originalMicTrack) {
+            for (const peerId in audioSendersRef.current) {
+                await audioSendersRef.current[peerId].replaceTrack(originalMicTrack);
+            }
+        }
+        setIsMusicPlaying(false);
+    }, [localStream]);
+
+    const playMusic = useCallback(async (file: File) => {
+        if (!localStream || !user || !connectedRoomId || isProcessingMusic) return;
+        setIsProcessingMusic(true);
+        if (isMusicPlaying) await stopMusic();
+
+        try {
+            const audioEl = musicAudioElementRef.current || document.createElement('audio');
+            audioEl.src = URL.createObjectURL(file);
+            audioEl.loop = true;
+            audioEl.muted = true;
+            musicAudioElementRef.current = audioEl;
+
+            const context = musicAudioContextRef.current || new (window.AudioContext || (window as any).webkitAudioContext)();
+            if (!musicAudioContextRef.current) musicAudioContextRef.current = context;
+            
+            if (!localMicSourceRef.current) localMicSourceRef.current = context.createMediaStreamSource(localStream);
+
+            const musicSource = context.createMediaElementSource(audioEl);
+            musicSourceNodeRef.current = musicSource;
+            
+            const destination = context.createMediaStreamDestination();
+            localMicSourceRef.current.connect(destination);
+            musicSource.connect(destination);
+            
+            const mixedTrack = destination.stream.getAudioTracks()[0];
+            activeAudioTrackRef.current = mixedTrack;
+
+            for (const peerId in audioSendersRef.current) {
+                await audioSendersRef.current[peerId].replaceTrack(mixedTrack);
+            }
+
+            await audioEl.play();
+            setIsMusicPlaying(true);
+        } catch (e) {
+            toast({ variant: 'destructive', description: "Müzik çalınırken bir hata oluştu."});
+            await stopMusic();
+        } finally {
+            setIsProcessingMusic(false);
+        }
+    }, [localStream, user, connectedRoomId, isProcessingMusic, isMusicPlaying, stopMusic, toast]);
+
 
     const joinRoom = useCallback(async () => {
         if (!user || !activeRoomId || isConnected || isConnecting) return;
-        
         setIsConnecting(true);
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000 }, video: false });
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
             setLocalStream(stream);
+            activeAudioTrackRef.current = stream.getAudioTracks()[0];
             
             const result = await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL });
-            if (!result.success) {
-                throw new Error(result.error || 'Sesli sohbete katılamadınız.');
-            }
-            // Set the persistent connection ID
+            if (!result.success) throw new Error(result.error || 'Sesli sohbete katılamadınız.');
             setConnectedRoomId(activeRoomId);
-
         } catch (error: any) {
             toast({ variant: "destructive", title: "Katılım Başarısız", description: error.message });
             _cleanupAndResetState();
@@ -215,35 +289,20 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     
     const startScreenShare = useCallback(async () => {
         if (!user || !connectedRoomId || isSharingScreen) return;
-
         try {
-            if (!navigator?.mediaDevices?.getDisplayMedia) {
-                throw new Error('Tarayıcınız bu özelliği desteklemiyor gibi görünüyor.');
-            }
             const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: "always" } as MediaTrackConstraints, audio: false });
             const screenTrack = screenStream.getVideoTracks()[0];
             if (!screenTrack) throw new Error("No screen track found");
-
             screenTrack.onended = () => stopScreenShare();
             setLocalScreenStream(screenStream);
-            
             for (const peerId in peerConnections.current) {
                 screenSenderRef.current[peerId] = peerConnections.current[peerId].addTrack(screenTrack, screenStream);
             }
             await toggleScreenShareAction(connectedRoomId, user.uid, true);
         } catch (error: any) {
-             console.error("Screen share error:", error);
              let description = 'Ekran paylaşımı başlatılamadı.';
-             if (error.name === 'NotAllowedError') {
-                 description = 'Ekran paylaşımı için izin vermeniz gerekiyor. Lütfen tekrar deneyin ve tarayıcı istemine izin verin.';
-             } else {
-                description = `Bu özellik güncel bir tarayıcı ve güvenli (HTTPS) bir bağlantı gerektirebilir. Hata: ${error.message}`;
-             }
-            toast({ 
-                variant: 'destructive', 
-                title: 'Hata', 
-                description: description
-            });
+             if (error.name === 'NotAllowedError') description = 'Ekran paylaşımı için izin vermeniz gerekiyor.';
+             toast({ variant: 'destructive', title: 'Hata', description });
         }
     }, [user, connectedRoomId, isSharingScreen, stopScreenShare, toast]);
 
@@ -262,53 +321,32 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     }, [self, connectedRoomId, localStream, user]);
 
     useEffect(() => {
-        const setupAnalyser = (stream: MediaStream, uid: string) => {
-            if (!audioAnalysers.current[uid]) {
-                const context = new (window.AudioContext || (window as any).webkitAudioContext)();
-                const source = context.createMediaStreamSource(stream);
-                const analyser = context.createAnalyser();
-                analyser.fftSize = 256;
-                analyser.smoothingTimeConstant = 0.5;
-                source.connect(analyser);
-                audioAnalysers.current[uid] = { analyser, dataArray: new Uint8Array(analyser.frequencyBinCount), context };
-            }
-        };
-
-        if (localStream && user) setupAnalyser(localStream, user.uid);
-        Object.entries(remoteAudioStreams).forEach(([uid, stream]) => setupAnalyser(stream, uid));
-        
-        const currentUids = new Set([user?.uid, ...Object.keys(remoteAudioStreams)]);
-        Object.keys(audioAnalysers.current).forEach(uid => {
-            if (!currentUids.has(uid)) {
-                audioAnalysers.current[uid]?.context.close();
-                delete audioAnalysers.current[uid];
-            }
-        });
-
-    }, [localStream, remoteAudioStreams, user]);
+        if (localStream && user) {
+            const context = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const source = context.createMediaStreamSource(localStream);
+            const analyser = context.createAnalyser();
+            analyser.fftSize = 256;
+            analyser.smoothingTimeConstant = 0.5;
+            source.connect(analyser);
+            audioAnalysers.current[user.uid] = { analyser, dataArray: new Uint8Array(analyser.frequencyBinCount), context };
+        }
+    }, [localStream, user]);
 
     useEffect(() => {
-        if (isConnected) {
-            animationFrameId.current = requestAnimationFrame(runAudioAnalysis);
-        } else {
-            if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
-        }
+        if (isConnected) animationFrameId.current = requestAnimationFrame(runAudioAnalysis);
+        else if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
         return () => { if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current); };
     }, [isConnected, runAudioAnalysis]);
     
-    // Main listener effect, depends on the actual `connectedRoomId`
     useEffect(() => {
         if (!user || !connectedRoomId) return;
-        
         const roomUnsub = onSnapshot(doc(db, "rooms", connectedRoomId), docSnap => {
-            if (docSnap.exists()) {
-                 setActiveRoom({id: docSnap.id, ...docSnap.data()} as Room)
-            } else {
-                 toast({ variant: 'destructive', title: 'Oda Bulunamadı', description: 'Bu oda artık mevcut değil veya süresi dolmuş.' });
+            if (docSnap.exists()) setActiveRoom({id: docSnap.id, ...docSnap.data()} as Room);
+            else {
+                 toast({ variant: 'destructive', title: 'Oda Bulunamadı', description: 'Bu oda artık mevcut değil.' });
                  leaveRoom().then(() => { if(pathname.startsWith('/rooms/')) router.push('/rooms'); });
             }
         });
-
         const participantsUnsub = onSnapshot(collection(db, "rooms", connectedRoomId, "voiceParticipants"), snapshot => {
             const fetched = snapshot.docs.map(d => d.data() as VoiceParticipant);
             setParticipants(fetched);
@@ -317,27 +355,16 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 _cleanupAndResetState();
             }
         });
-        
         const signalsUnsub = onSnapshot(query(collection(db, `rooms/${connectedRoomId}/signals`), where('to', '==', user.uid)), s => {
-             s.docChanges().forEach(async c => {
-                if (c.type === 'added') {
-                    await handleSignal(c.doc.data().from, c.doc.data().type, c.doc.data().data);
-                    await deleteDoc(c.doc.ref);
-                }
-             })
+             s.docChanges().forEach(async c => { if (c.type === 'added') { await handleSignal(c.doc.data().from, c.doc.data().type, c.doc.data().data); await deleteDoc(c.doc.ref); } });
         });
-        
-        return () => { 
-            roomUnsub(); 
-            participantsUnsub(); 
-            signalsUnsub(); 
-        };
+        return () => { roomUnsub(); participantsUnsub(); signalsUnsub(); };
     }, [user, connectedRoomId, isConnected, _cleanupAndResetState, handleSignal, toast, router, pathname, leaveRoom]);
     
     useEffect(() => {
         if (!isConnected || !user || !localStream) return;
         const otherP = participants.filter(p => p.uid !== user.uid);
-        otherP.forEach(p => createPeerConnection(p.uid));
+        otherP.forEach(p => { if (!peerConnections.current[p.uid]) createPeerConnection(p.uid); });
         Object.keys(peerConnections.current).forEach(uid => {
             if (!otherP.some(p => p.uid === uid)) {
                 peerConnections.current[uid]?.close();
@@ -354,7 +381,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     const value = {
         activeRoom, participants: memoizedParticipants, self, isConnecting, isConnected, remoteAudioStreams, remoteScreenStreams, isSharingScreen, localScreenStream,
-        setActiveRoomId, joinRoom, leaveRoom, toggleSelfMute, startScreenShare, stopScreenShare,
+        setActiveRoomId, joinRoom, leaveRoom, toggleSelfMute, startScreenShare, stopScreenShare, playMusic, stopMusic, isMusicPlaying, isProcessingMusic
     };
 
     return <VoiceChatContext.Provider value={value}>{children}</VoiceChatContext.Provider>;

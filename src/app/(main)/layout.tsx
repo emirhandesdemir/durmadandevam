@@ -30,6 +30,7 @@ export default function MainAppLayout({
       setHidden(true);
       return;
     }
+    // 150px'ten fazla kaydırıldıysa ve aşağı doğruysa gizle
     if (latest > previous && latest > 150) {
       setHidden(true);
     } else {
@@ -43,8 +44,8 @@ export default function MainAppLayout({
         <main 
           ref={scrollRef} 
           className={cn(
-            "flex-1 flex flex-col", // Always a flex container
-            isFullPageLayout ? "overflow-hidden" : "overflow-y-auto" // Conditional scrolling
+            "flex-1 flex flex-col", // Her zaman esnek bir kapsayıcı
+            isFullPageLayout ? "overflow-hidden" : "overflow-y-auto" // Koşullu kaydırma
           )}
         >
            <motion.header
@@ -60,7 +61,7 @@ export default function MainAppLayout({
             </motion.header>
           
            <div className={cn(
-             // For full-page layouts, make the wrapper a flex container that grows
+             // Tam sayfa düzenleri için sarmalayıcıyı büyüyen bir esnek kapsayıcı yap
              isFullPageLayout ? "flex-1 flex flex-col overflow-hidden" : "",
              !isHomePage && !isFullPageLayout && "p-4"
             )}
