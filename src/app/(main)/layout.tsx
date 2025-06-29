@@ -40,7 +40,13 @@ export default function MainAppLayout({
   return (
     <VoiceChatProvider>
       <div className="relative flex h-dvh w-full flex-col bg-background overflow-hidden">
-        <main ref={scrollRef} className="flex-1 overflow-y-auto">
+        <main 
+          ref={scrollRef} 
+          className={cn(
+            "flex-1 flex flex-col", // Always a flex container
+            isFullPageLayout ? "overflow-hidden" : "overflow-y-auto" // Conditional scrolling
+          )}
+        >
            <motion.header
               variants={{
                 visible: { y: 0, height: 'auto' },
@@ -53,7 +59,12 @@ export default function MainAppLayout({
               <Header />
             </motion.header>
           
-           <div className={cn(!isHomePage && !isFullPageLayout && "p-4")}>
+           <div className={cn(
+             // For full-page layouts, make the wrapper a flex container that grows
+             isFullPageLayout ? "flex-1 flex flex-col overflow-hidden" : "",
+             !isHomePage && !isFullPageLayout && "p-4"
+            )}
+           >
             {children}
            </div>
         </main>
