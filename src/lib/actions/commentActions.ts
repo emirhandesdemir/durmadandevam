@@ -1,4 +1,3 @@
-// src/lib/actions/commentActions.ts
 'use server';
 
 import { db } from "@/lib/firebase";
@@ -10,8 +9,13 @@ import {
     deleteDoc,
     writeBatch,
     increment,
-    getDoc
+    getDoc,
+    getDocs,
+    query,
+    where,
+    limit,
 } from "firebase/firestore";
+import { createNotification } from "./notificationActions";
 
 interface AddCommentArgs {
     postId: string;
@@ -28,6 +32,41 @@ interface AddCommentArgs {
     }
 }
 
+async function findUserByUsername(username: string): Promise<{ uid: string } | null> {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('username', '==', username), limit(1));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) {
+        return null;
+    }
+    return { uid: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+}
+
+async function handleMentions(text: string, postId: string, sender: { uid: string, displayName: string | null, photoURL: string | null, selectedAvatarFrame?: string }) {
+    const mentionRegex = /@(\w+)/g;
+    const mentions = text.match(mentionRegex);
+
+    if (mentions) {
+        const usernames = mentions.map(m => m.substring(1));
+        for (const username of usernames) {
+            const mentionedUser = await findUserByUsername(username);
+            if (mentionedUser && mentionedUser.uid !== sender.uid) {
+                await createNotification({
+                    recipientId: mentionedUser.uid,
+                    senderId: sender.uid,
+                    senderUsername: sender.displayName || "Biri",
+                    senderAvatar: sender.photoURL,
+                    senderAvatarFrame: sender.selectedAvatarFrame,
+                    type: 'mention',
+                    postId: postId,
+                    commentText: text,
+                });
+            }
+        }
+    }
+}
+
+
 export async function addComment({ postId, text, user, replyTo }: AddCommentArgs) {
     if (!user || !user.uid) throw new Error("Yetkilendirme hatası.");
     if (!text.trim()) throw new Error("Yorum metni boş olamaz.");
@@ -37,7 +76,6 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
 
     const batch = writeBatch(db);
     
-    // Create new comment document
     const newCommentRef = doc(commentsColRef); 
     batch.set(newCommentRef, {
         uid: user.uid,
@@ -49,36 +87,29 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
         replyTo: replyTo || null,
     });
 
-    // Increment comment count on post
     batch.update(postRef, {
         commentCount: increment(1)
     });
     
-    // Atomically create notification if not commenting on own post
     const postSnap = await getDoc(postRef);
     const postData = postSnap.data();
 
     if (postData && postData.uid !== user.uid) {
-        const notificationsRef = collection(db, 'notifications');
-        const newNotifRef = doc(notificationsRef);
-        batch.set(newNotifRef, {
+        await createNotification({
             recipientId: postData.uid,
             senderId: user.uid,
             senderUsername: user.displayName || "Biri",
             senderAvatar: user.photoURL,
+            senderAvatarFrame: user.userAvatarFrame,
             type: 'comment',
             postId: postId,
             postImage: postData.imageUrl || null,
             commentText: text,
-            createdAt: serverTimestamp(),
-            read: false,
-        });
-
-        const recipientUserRef = doc(db, 'users', postData.uid);
-        batch.update(recipientUserRef, {
-            hasUnreadNotifications: true
         });
     }
+    
+    // Yorumdaki bahsetmeleri işle
+    await handleMentions(text, postId, user);
 
     await batch.commit();
 }
@@ -90,10 +121,7 @@ export async function deleteComment(postId: string, commentId: string) {
 
     const batch = writeBatch(db);
 
-    // Delete comment
     batch.delete(commentRef);
-
-    // Decrement comment count on post
     batch.update(postRef, {
         commentCount: increment(-1)
     });

@@ -11,73 +11,85 @@ import {
     serverTimestamp,
     arrayRemove,
     arrayUnion,
+    collection,
+    query,
+    where,
+    getDocs
 } from "firebase/firestore";
 import { ref, deleteObject } from "firebase/storage";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
 
-/**
- * Bir gönderiyi ve (varsa) ilişkili resmini Storage'dan siler.
- * İşlem sonrası ilgili yolları yeniden doğrular.
- * @param postId Silinecek gönderinin ID'si.
- */
+async function findUserByUsername(username: string): Promise<{ uid: string } | null> {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('username', '==', username), limit(1));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) {
+        return null;
+    }
+    return { uid: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+}
+
+async function handleMentions(text: string, postId: string, sender: { uid: string, displayName: string | null, photoURL: string | null, selectedAvatarFrame?: string }) {
+    const mentionRegex = /@(\w+)/g;
+    const mentions = text.match(mentionRegex);
+
+    if (mentions) {
+        const usernames = mentions.map(m => m.substring(1));
+        for (const username of usernames) {
+            const mentionedUser = await findUserByUsername(username);
+            if (mentionedUser && mentionedUser.uid !== sender.uid) {
+                await createNotification({
+                    recipientId: mentionedUser.uid,
+                    senderId: sender.uid,
+                    senderUsername: sender.displayName || "Biri",
+                    senderAvatar: sender.photoURL,
+                    senderAvatarFrame: sender.selectedAvatarFrame,
+                    type: 'mention',
+                    postId: postId,
+                });
+            }
+        }
+    }
+}
+
 export async function deletePost(postId: string) {
     if (!postId) throw new Error("Gönderi ID'si gerekli.");
-
     const postRef = doc(db, "posts", postId);
-
     try {
         const postSnap = await getDoc(postRef);
         if (!postSnap.exists()) {
-            console.log("Silinecek gönderi zaten mevcut değil.");
-            return; // Already deleted
+            return;
         }
         
         const postData = postSnap.data();
         const imageUrl = postData.imageUrl;
-
-        // Firestore belgesini sil
         await deleteDoc(postRef);
 
-        // Eğer resim varsa, Firebase Storage'dan sil
         if (imageUrl) {
             const imageRef = ref(storage, imageUrl);
             await deleteObject(imageRef).catch((error) => {
-                // Nesne zaten yoksa hatayı yoksay, diğer hataları logla
                 if (error.code !== 'storage/object-not-found') {
                     console.error("Storage resmi silinirken hata oluştu:", error);
                 }
             });
         }
-
-        // İlgili sayfaların cache'ini temizleyerek güncellenmesini sağla
         revalidatePath('/home');
         if (postData.uid) {
             revalidatePath(`/profile/${postData.uid}`);
         }
-        
     } catch (error) {
-        console.error("Gönderi silinirken bir hata oluştu:", error);
+        console.error("Gönderi silinirken hata oluştu:", error);
         throw new Error("Gönderi silinemedi.");
     }
 }
 
-/**
- * Bir gönderinin metin içeriğini günceller.
- * İşlem sonrası ilgili yolları yeniden doğrular.
- * @param postId Güncellenecek gönderinin ID'si.
- * @param newText Yeni metin içeriği.
- */
 export async function updatePost(postId: string, newText: string) {
     if (!postId) throw new Error("Gönderi ID'si gerekli.");
-    
     const postRef = doc(db, "posts", postId);
     await updateDoc(postRef, {
         text: newText,
-        // editedAt: serverTimestamp(), // To show "edited" label if needed
     });
-
-    // Sayfa yenilemesi için cache'i temizle
     const postSnap = await getDoc(postRef);
     if(postSnap.exists()) {
         const postData = postSnap.data();
@@ -86,10 +98,6 @@ export async function updatePost(postId: string, newText: string) {
     }
 }
 
-
-/**
- * Bir gönderiyi beğenir veya beğeniyi geri alır ve ilgili yolları yeniden doğrular.
- */
 export async function likePost(
     postId: string,
     currentUser: { uid: string, displayName: string | null, photoURL: string | null, selectedAvatarFrame?: string }
@@ -98,11 +106,9 @@ export async function likePost(
     
     await runTransaction(db, async (transaction) => {
         const postSnap = await transaction.get(postRef);
-        if (!postSnap.exists()) {
-            throw new Error("Gönderi bulunamadı.");
-        }
-        const currentPostData = postSnap.data();
-        const isCurrentlyLiked = (currentPostData.likes || []).includes(currentUser.uid);
+        if (!postSnap.exists()) throw new Error("Gönderi bulunamadı.");
+        const postData = postSnap.data();
+        const isCurrentlyLiked = (postData.likes || []).includes(currentUser.uid);
 
         if (isCurrentlyLiked) {
             transaction.update(postRef, {
@@ -115,27 +121,20 @@ export async function likePost(
                 likeCount: increment(1)
             });
             
-            // Kullanıcı kendi gönderisini beğenirse bildirim gönderme
-            if (currentPostData.uid !== currentUser.uid) {
+            if (postData.uid !== currentUser.uid) {
                 await createNotification({
-                    recipientId: currentPostData.uid,
+                    recipientId: postData.uid,
                     senderId: currentUser.uid,
                     senderUsername: currentUser.displayName || "Biri",
                     senderAvatar: currentUser.photoURL,
                     senderAvatarFrame: currentUser.selectedAvatarFrame,
                     type: 'like',
                     postId: postId,
-                    postImage: currentPostData.imageUrl || null,
+                    postImage: postData.imageUrl || null,
                 });
             }
         }
     });
-
-    // İşlem sonrası revalidate için veriyi tekrar çek.
-    const finalPostSnap = await getDoc(postRef);
-    if (finalPostSnap.exists()) {
-        const postData = finalPostSnap.data();
-        revalidatePath('/home');
-        revalidatePath(`/profile/${postData.uid}`);
-    }
+    revalidatePath('/home');
+    revalidatePath(`/profile/*`);
 }

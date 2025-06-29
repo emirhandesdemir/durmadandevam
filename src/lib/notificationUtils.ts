@@ -1,23 +1,42 @@
-/**
- * @fileOverview Utility functions for handling push notifications (FCM).
- */
 'use client';
 
-// This is a placeholder for Firebase Cloud Messaging (FCM) logic.
-// In a real app, you would handle:
-// 1. Requesting permission from the user to show notifications.
-// 2. Getting the FCM token for the device.
-// 3. Saving the token to Firestore to send targeted notifications later.
-// 4. Setting up a service worker to handle background notifications.
+import { toast } from "@/hooks/use-toast";
+import { saveFCMToken } from "./actions/userActions";
 
-export async function requestNotificationPermission() {
-    console.log("Requesting notification permission...");
-    // Placeholder for Notification.requestPermission()
-    return Promise.resolve("default");
-}
-
-export async function getFCMToken() {
-    console.log("Getting FCM token...");
-    // Placeholder for getToken(messaging, { vapidKey: '...' })
-    return Promise.resolve("mock_fcm_token");
+/**
+ * Kullanıcıdan bildirim izni ister.
+ * @returns {Promise<boolean>} İzin verilip verilmediğini döner.
+ */
+export async function requestNotificationPermission(userId: string): Promise<boolean> {
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+    toast({
+      variant: 'destructive',
+      title: 'Desteklenmiyor',
+      description: 'Tarayıcınız anlık bildirimleri desteklemiyor.',
+    });
+    return false;
+  }
+  
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      console.log('Bildirim izni verildi.');
+      // Simulating token fetching and saving for now.
+      const mockToken = `mock_fcm_token_${userId}_${Date.now()}`;
+      console.log('FCM Jetonu Alındı:', mockToken);
+      await saveFCMToken(userId, mockToken);
+      return true;
+    } else {
+      console.log('Bildirim izni verilmedi.');
+      return false;
+    }
+  } catch (error) {
+    console.error('Bildirim izni istenirken hata:', error);
+    toast({
+      variant: 'destructive',
+      title: 'Hata',
+      description: 'Bildirim izni alınırken bir sorun oluştu.',
+    });
+    return false;
+  }
 }

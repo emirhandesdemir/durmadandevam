@@ -20,6 +20,7 @@ export interface UserProfile {
     selectedBubble?: string;
     selectedAvatarFrame?: string;
     hasUnreadNotifications?: boolean;
+    fcmTokens?: string[];
 }
 
 export interface ProfileViewer {
@@ -45,7 +46,7 @@ export interface Notification {
     senderUsername: string;
     senderAvatar: string | null;
     senderAvatarFrame?: string;
-    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'portal_opened';
+    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention';
     postId?: string | null;
     postImage?: string | null;
     commentText?: string;
@@ -165,7 +166,6 @@ export interface VoiceStats {
     totalUsers: number;
 }
 
-// YENİ: Direkt Mesajlaşma Sistemi için Türler
 export interface DirectMessage {
     id: string;
     senderId: string;

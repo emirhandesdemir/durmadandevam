@@ -1,4 +1,3 @@
-// src/lib/actions/followActions.ts
 'use server';
 
 import { db } from '@/lib/firebase';
@@ -126,7 +125,6 @@ export async function handleFollowRequest(currentUserId: string, requesterId: st
     }
   });
 
-  revalidatePath('/requests');
   revalidatePath(`/profile/${requesterId}`);
   revalidatePath(`/profile/${currentUserId}`);
 }
