@@ -68,6 +68,7 @@ export default function RoomPage() {
     const [countdown, setCountdown] = useState<number | null>(null);
     const activeGameRef = useRef(activeGame);
 
+    // Ensure ref is always up-to-date with the latest state
     useEffect(() => {
         activeGameRef.current = activeGame;
     }, [activeGame]);
@@ -84,11 +85,12 @@ export default function RoomPage() {
         return () => setActiveRoomId(null);
     }, [roomId, setActiveRoomId]);
 
+    // Fetch game settings once on mount
     useEffect(() => {
         getGameSettings().then(setGameSettings);
     }, []);
 
-    // Oda verisi ve mesajları dinle
+    // Listen for Room and Messages data
     useEffect(() => {
         if (!roomId) return;
         
@@ -114,53 +116,60 @@ export default function RoomPage() {
         return () => { roomUnsub(); messagesUnsub(); };
     }, [roomId, router, toast]);
     
-    // Listen for games and countdowns
-     useEffect(() => {
-        if (!roomId || !featureFlags?.quizGameEnabled || !gameSettings) {
+    // Consolidated Game Lifecycle Effect
+    useEffect(() => {
+        if (!roomId || !featureFlags?.quizGameEnabled) {
             setGameLoading(false);
             return;
         }
 
         setGameLoading(true);
 
+        // Listener for active game documents
         const gamesQuery = query(collection(db, `rooms/${roomId}/games`), where("status", "==", "active"), limit(1));
         const gameUnsub = onSnapshot(gamesQuery, (snapshot) => {
             if (!snapshot.empty) {
                 const gameData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ActiveGame;
-                if(JSON.stringify(gameData) !== JSON.stringify(activeGameRef.current)){
+                if (JSON.stringify(gameData) !== JSON.stringify(activeGameRef.current)) {
                     setActiveGame(gameData);
+                    setCountdown(null);
                 }
-                setCountdown(null);
             } else {
-                 if (activeGameRef.current) {
-                    setActiveGame(null);
-                 }
+                setActiveGame(null);
             }
             setGameLoading(false);
         });
         
-        const roomTimestampUnsub = onSnapshot(doc(db, 'rooms', roomId), (docSnap) => {
-             if (docSnap.exists() && !activeGameRef.current) {
+        // Listener for room document to start countdowns
+        const roomUnsub = onSnapshot(doc(db, 'rooms', roomId), (docSnap) => {
+            if (docSnap.exists() && !activeGameRef.current) {
                 const roomData = docSnap.data() as Room;
                 const nextGameTime = roomData.nextGameTimestamp?.toDate().getTime();
                 if (nextGameTime) {
                     const remaining = Math.round((nextGameTime - Date.now()) / 1000);
-                    setCountdown(remaining > 0 ? remaining : 0);
+                    setCountdown(remaining > 0 ? remaining : null);
+                } else {
+                    setCountdown(null);
                 }
             }
         });
 
         return () => {
             gameUnsub();
-            roomTimestampUnsub();
+            roomUnsub();
         };
-    }, [roomId, featureFlags, gameSettings]);
+    }, [roomId, featureFlags?.quizGameEnabled]);
 
-    // Handle countdown ticker and game start
+    // Effect to handle the countdown timer itself
     useEffect(() => {
-        if (countdown === null || countdown < 0) return;
-        if (countdown === 0 && isHost && !activeGameRef.current) {
-             startGameInRoom(roomId).catch(err => console.error("Failed to start game:", err));
+        if (countdown === null || countdown < 0) {
+            return;
+        }
+        
+        if (countdown === 0 && isHost) {
+            if (!activeGameRef.current) {
+                startGameInRoom(roomId).catch(err => console.error("Failed to auto-start game:", err));
+            }
         }
 
         const timerId = setTimeout(() => {

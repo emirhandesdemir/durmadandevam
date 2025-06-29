@@ -56,7 +56,6 @@ export default function MainAppLayout({
            <div className={cn(!isHomePage && !isFullPageLayout && "p-4")}>
             {children}
            </div>
-           {isHomePage && children}
         </main>
         
         <VoiceAudioPlayer />
