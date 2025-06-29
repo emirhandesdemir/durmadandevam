@@ -5,9 +5,11 @@ import { useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { createPost } from "@/lib/actions/postActions";
 import { cn } from "@/lib/utils";
 import { uploadImage } from "@/lib/actions/cloudinaryActions";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
 
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -83,16 +85,20 @@ export default function NewPostForm() {
             imagePublicId = uploadResult.public_id;
         }
 
-        // 2. Call the server action with the image URL
-        await createPost({
+        // 2. Add post document to Firestore directly from the client
+        await addDoc(collection(db, 'posts'), {
             uid: user.uid,
             username: userData.username,
             userAvatar: userData.photoURL,
             userAvatarFrame: userData.selectedAvatarFrame || '',
             userRole: userData.role || 'user',
-            text,
-            imageUrl,
-            imagePublicId,
+            text: text,
+            imageUrl: imageUrl || "",
+            imagePublicId: imagePublicId || "",
+            createdAt: serverTimestamp(),
+            likes: [],
+            likeCount: 0,
+            commentCount: 0,
         });
 
         toast({ title: "Başarıyla Paylaşıldı!", description: "Gönderiniz ana sayfada görünecektir." });

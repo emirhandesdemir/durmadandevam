@@ -20,53 +20,6 @@ import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
 import { deleteImage } from './cloudinaryActions';
 
-interface CreatePostArgs {
-    uid: string;
-    username: string;
-    userAvatar?: string | null;
-    userAvatarFrame?: string;
-    userRole?: 'admin' | 'user';
-    text: string;
-    imageUrl?: string;
-    imagePublicId?: string;
-}
-
-export async function createPost(args: CreatePostArgs) {
-    const { uid, username, userAvatar, userAvatarFrame, userRole, text, imageUrl, imagePublicId } = args;
-
-    if (!uid) {
-        throw new Error("Kullanıcı doğrulanmadı.");
-    }
-    if (!text.trim() && !imageUrl) {
-        throw new Error("Gönderi metin veya resim içermelidir.");
-    }
-
-    try {
-        await addDoc(collection(db, 'posts'), {
-            uid,
-            username,
-            userAvatar,
-            userAvatarFrame: userAvatarFrame || '',
-            userRole: userRole || 'user',
-            text,
-            imageUrl: imageUrl || "",
-            imagePublicId: imagePublicId || "",
-            createdAt: serverTimestamp(),
-            likes: [],
-            likeCount: 0,
-            commentCount: 0,
-        });
-    } catch (error) {
-        console.error("Firestore doküman oluşturma hatası:", error);
-        throw new Error("Gönderi oluşturulamadı. Veritabanı hatası.");
-    }
-    
-    revalidatePath('/home');
-    revalidatePath(`/profile/${uid}`);
-
-    return { success: true };
-}
-
 
 export async function deletePost(postId: string, imagePublicId?: string) {
     const postRef = doc(db, "posts", postId);
