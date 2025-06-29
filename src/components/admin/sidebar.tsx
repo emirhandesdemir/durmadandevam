@@ -19,7 +19,8 @@ import {
   X,
   Swords,
   SlidersHorizontal,
-  BarChart3 // Yeni ikon
+  BarChart3,
+  Database, // Yeni ikon
 } from "lucide-react";
 import { Button } from "../ui/button";
 
@@ -27,6 +28,7 @@ import { Button } from "../ui/button";
 const navItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/analytics", label: "İstatistikler", icon: BarChart3 },
+  { href: "/admin/usage", label: "Kullanım & Trafik", icon: Database },
   { href: "/admin/users", label: "Kullanıcılar", icon: Users },
   { href: "/admin/rooms", label: "Odalar", icon: MessageSquare },
   { href: "/admin/posts", label: "Gönderiler", icon: FileText },

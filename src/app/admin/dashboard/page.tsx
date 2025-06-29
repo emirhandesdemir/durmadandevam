@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { collection, onSnapshot, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import StatCard from "@/components/admin/stat-card";
-import { Users, MessageSquare, FileText, Puzzle, Headphones, BarChart3 } from "lucide-react";
+import { Users, MessageSquare, FileText, Puzzle, Headphones, BarChart3, SlidersHorizontal, Settings, Database } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -85,7 +85,7 @@ export default function DashboardPage() {
                     </Button>
                 </CardFooter>
             </Card>
-             <Card className="hover:shadow-lg transition-shadow">
+            <Card className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-3">
                         <MessageSquare className="w-6 h-6 text-primary"/>
@@ -139,7 +139,7 @@ export default function DashboardPage() {
                     </Button>
                 </CardFooter>
             </Card>
-             <Card className="hover:shadow-lg transition-shadow">
+            <Card className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-3">
                         <BarChart3 className="w-6 h-6 text-primary"/>
@@ -148,12 +148,66 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent>
                     <p className="text-muted-foreground text-sm">
-                        Uygulama kullanım verilerini ve büyüme trendlerini görüntüleyin.
+                        Kullanıcı büyümesi ve etkileşim gibi metrikleri görselleştirin.
                     </p>
                 </CardContent>
                 <CardFooter>
                      <Button asChild variant="outline">
                         <Link href="/admin/analytics">Analizi Görüntüle</Link>
+                    </Button>
+                </CardFooter>
+            </Card>
+            <Card className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-3">
+                        <SlidersHorizontal className="w-6 h-6 text-primary"/>
+                        Özellik Yönetimi
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground text-sm">
+                        Quiz oyunu veya gönderi akışı gibi modülleri açıp kapatın.
+                    </p>
+                </CardContent>
+                <CardFooter>
+                     <Button asChild variant="outline">
+                        <Link href="/admin/features">Özellikleri Yönet</Link>
+                    </Button>
+                </CardFooter>
+            </Card>
+             <Card className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-3">
+                        <Database className="w-6 h-6 text-primary"/>
+                        Kullanım & Trafik
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground text-sm">
+                        Veritabanı, depolama ve hosting kullanımını ve maliyetlerini izleyin.
+                    </p>
+                </CardContent>
+                <CardFooter>
+                    <Button asChild variant="outline">
+                        <Link href="/admin/usage">Kullanımı Görüntüle</Link>
+                    </Button>
+                </CardFooter>
+            </Card>
+             <Card className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-3">
+                        <Settings className="w-6 h-6 text-primary"/>
+                        Sistem Ayarları
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground text-sm">
+                        Uygulama genelindeki oyun, zaman aşımı gibi ayarları yapın.
+                    </p>
+                </CardContent>
+                <CardFooter>
+                    <Button asChild variant="outline">
+                        <Link href="/admin/system">Ayarları Yönet</Link>
                     </Button>
                 </CardFooter>
             </Card>
