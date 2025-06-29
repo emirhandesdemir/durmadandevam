@@ -15,6 +15,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'HiweWalk',
   description: 'Herkese açık odalar oluşturun ve katılın.',
+  manifest: '/manifest.json',
+  icons: {
+    apple: '/icons/icon.svg',
+  },
+  themeColor: '#111827',
 };
 
 export default function RootLayout({
