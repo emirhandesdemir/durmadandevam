@@ -6,7 +6,6 @@ export interface UserProfile {
     username: string;
     email: string;
     photoURL?: string | null;
-    avatarPublicId?: string;
     bio?: string;
     postCount?: number;
     role: 'admin' | 'user';
@@ -64,7 +63,6 @@ export interface Post {
     userRole?: 'admin' | 'user';
     text: string;
     imageUrl?: string;
-    imagePublicId?: string;
     createdAt: Timestamp | { seconds: number; nanoseconds: number };
     likes: string[]; // Beğenen kullanıcıların UID'lerini tutan dizi
     likeCount: number;

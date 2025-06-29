@@ -16,20 +16,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, MessageCircle, Lock, UserPlus, Eye } from "lucide-react";
+import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, Lock, Eye } from "lucide-react";
 import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
 import { useState, useRef, useEffect } from "react";
-import { auth, db } from "@/lib/firebase";
+import { auth, db, storage } from "@/lib/firebase";
 import { updateProfile } from "firebase/auth";
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import { doc, updateDoc } from "firebase/firestore";
-import { uploadImage, deleteImage } from "@/lib/actions/cloudinaryActions";
+import { ref, uploadString, getDownloadURL, deleteObject } from "firebase/storage";
 import ProfileViewerList from "./ProfileViewerList";
 import { Textarea } from "../ui/textarea";
 import { useRouter } from 'next/navigation';
@@ -55,9 +55,7 @@ export default function ProfilePageClient() {
     const { user, userData, loading, handleLogout } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
-    const { theme, setTheme } = useTheme();
-
-    // State'ler
+    
     const [username, setUsername] = useState("");
     const [bio, setBio] = useState("");
     const [privateProfile, setPrivateProfile] = useState(false);
@@ -69,7 +67,6 @@ export default function ProfilePageClient() {
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // userData'dan gelen verilerle state'leri başlat
     useEffect(() => {
         if (userData) {
             setUsername(userData.username || "");
@@ -81,7 +78,6 @@ export default function ProfilePageClient() {
         }
     }, [userData]);
     
-    // Değişiklik olup olmadığını kontrol et
     const hasChanges = 
         username !== (userData?.username || "") || 
         bio !== (userData?.bio || "") ||
@@ -120,14 +116,22 @@ export default function ProfilePageClient() {
             const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
     
             if (newAvatar) {
-                // Delete old avatar from Cloudinary if it exists
-                if (userData?.avatarPublicId) {
-                    await deleteImage(userData.avatarPublicId);
+                if (userData?.photoURL && userData.photoURL.includes('firebasestorage.googleapis.com')) {
+                    try {
+                        const oldImageRef = ref(storage, userData.photoURL);
+                        await deleteObject(oldImageRef);
+                    } catch (error: any) {
+                         if (error.code !== 'storage/object-not-found') {
+                            console.error("Eski avatar silinirken hata:", error);
+                        }
+                    }
                 }
-                const uploadResult = await uploadImage(newAvatar, 'avatars');
-                updates.photoURL = uploadResult.secure_url;
-                updates.avatarPublicId = uploadResult.public_id;
-                authProfileUpdates.photoURL = uploadResult.secure_url;
+                const newAvatarRef = ref(storage, `avatars/${user.uid}`);
+                const snapshot = await uploadString(newAvatarRef, newAvatar, 'data_url');
+                const finalPhotoURL = await getDownloadURL(snapshot.ref);
+                
+                updates.photoURL = finalPhotoURL;
+                authProfileUpdates.photoURL = finalPhotoURL;
             }
     
             if (username !== userData?.username) {

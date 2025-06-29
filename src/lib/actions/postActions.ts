@@ -1,7 +1,7 @@
 // src/lib/actions/postActions.ts
 'use server';
 
-import { db } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
 import { 
     doc, 
     writeBatch, 
@@ -11,23 +11,27 @@ import {
     updateDoc,
     increment,
     runTransaction,
-    collection,
-    serverTimestamp,
-    addDoc,
     getDoc,
 } from "firebase/firestore";
+import { ref, deleteObject } from "firebase/storage";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
-import { deleteImage } from './cloudinaryActions';
 
-
-export async function deletePost(postId: string, imagePublicId?: string) {
+export async function deletePost(postId: string, imageUrl?: string) {
     const postRef = doc(db, "posts", postId);
     
     await deleteDoc(postRef);
 
-    if (imagePublicId) {
-        await deleteImage(imagePublicId);
+    if (imageUrl) {
+        try {
+            const imageRef = ref(storage, imageUrl);
+            await deleteObject(imageRef);
+        } catch (error: any) {
+            // It's okay if the image doesn't exist, log other errors
+            if (error.code !== 'storage/object-not-found') {
+                console.error("Firebase Storage resmi silinirken hata oluştu:", error);
+            }
+        }
     }
 }
 

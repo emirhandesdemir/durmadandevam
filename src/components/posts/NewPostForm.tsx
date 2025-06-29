@@ -6,9 +6,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { uploadImage } from "@/lib/actions/cloudinaryActions";
+import { db, storage } from "@/lib/firebase";
+import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 
 
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
@@ -76,16 +76,15 @@ export default function NewPostForm() {
     
     try {
         let imageUrl = "";
-        let imagePublicId = "";
 
-        // 1. Upload image on the client if it exists
+        // 1. Upload image to Firebase Storage if it exists
         if (croppedImage) {
-            const uploadResult = await uploadImage(croppedImage, 'posts');
-            imageUrl = uploadResult.secure_url;
-            imagePublicId = uploadResult.public_id;
+            const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}_post`);
+            const snapshot = await uploadString(imageRef, croppedImage, 'data_url');
+            imageUrl = await getDownloadURL(snapshot.ref);
         }
 
-        // 2. Add post document to Firestore directly from the client
+        // 2. Add post document to Firestore
         await addDoc(collection(db, 'posts'), {
             uid: user.uid,
             username: userData.username,
@@ -94,7 +93,6 @@ export default function NewPostForm() {
             userRole: userData.role || 'user',
             text: text,
             imageUrl: imageUrl || "",
-            imagePublicId: imagePublicId || "",
             createdAt: serverTimestamp(),
             likes: [],
             likeCount: 0,
