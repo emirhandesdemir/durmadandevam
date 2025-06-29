@@ -259,37 +259,57 @@ export async function manageSpeakingPermission(roomId: string, targetUserId: str
 }
 
 /**
- * Oda yöneticisinin bir katılımcıyı sesli sohbetten atması.
- * Bu işlem artık kullanıcıyı odanın ana katılımcı listesinden ÇIKARMAZ.
+ * Kicks a user from the voice chat of a room by the host or a moderator.
+ * This action only removes them from the voice subcollection, not the main participants list.
+ * @param roomId The ID of the room.
+ * @param currentUserId The ID of the user performing the action (host/moderator).
+ * @param targetUserId The ID of the user to be kicked.
  */
-export async function kickFromVoice(roomId: string, currentUserId: string, targetUserId: string) {
-    if (!currentUserId || currentUserId === targetUserId) return { success: false, error: "Geçersiz işlem." };
+export async function kickFromVoice(roomId: string, currentUserId: string, targetUserId:string) {
+    if (!currentUserId || !targetUserId || currentUserId === targetUserId) {
+        throw new Error("Invalid operation.");
+    }
 
     const roomRef = doc(db, 'rooms', roomId);
     const targetUserVoiceRef = doc(roomRef, 'voiceParticipants', targetUserId);
+    const voiceStatsRef = doc(db, 'config', 'voiceStats');
 
     try {
         await runTransaction(db, async (transaction) => {
-             const roomDoc = await transaction.get(roomRef);
-            if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
+            const roomDoc = await transaction.get(roomRef);
+            if (!roomDoc.exists()) {
+                throw new Error("Room not found.");
+            }
             const roomData = roomDoc.data() as Room;
 
             const isHost = roomData.createdBy.uid === currentUserId;
             const isModerator = roomData.moderators?.includes(currentUserId);
 
             if (!isHost && !isModerator) {
-                 throw new Error("Bu işlemi yapma yetkiniz yok.");
+                throw new Error("You do not have permission to perform this action.");
             }
             
             const targetUserDoc = await transaction.get(targetUserVoiceRef);
-            if (!targetUserDoc.exists()) return;
+            if (!targetUserDoc.exists()) {
+                // User is already gone, nothing to do.
+                return;
+            }
             
+            // Delete the user from voice participants
             transaction.delete(targetUserVoiceRef);
-            transaction.update(roomRef, { voiceParticipantsCount: increment(-1) });
-            transaction.set(voiceStatsRef, { totalUsers: increment(-1) }, { merge: true });
+
+            // Decrement the voice participant count
+            transaction.update(roomRef, { 
+                voiceParticipantsCount: increment(-1) 
+            });
+
+            // Decrement the global voice stats
+            transaction.set(voiceStatsRef, { 
+                totalUsers: increment(-1) 
+            }, { merge: true });
         });
-        return { success: true };
     } catch (error: any) {
-        return { success: false, error: error.message };
+        console.error("Error kicking user from voice:", error);
+        throw new Error(error.message || "Could not kick user from voice.");
     }
 }

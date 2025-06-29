@@ -24,13 +24,13 @@ export default function MainAppLayout({
   const isFullPageLayout = isHeaderlessPage;
   const isHomePage = pathname === '/home';
 
+  // Simplified and more robust animation logic
   useMotionValueEvent(scrollY, "change", (latest) => {
     const previous = scrollY.getPrevious() ?? 0;
-    if (isHeaderlessPage) {
-      setHidden(true);
-      return;
-    }
-    if (latest > previous && latest > 150) {
+    
+    // Hide header on scroll down, show on scroll up.
+    // A threshold of 100 prevents hiding on small scrolls near the top.
+    if (latest > previous && latest > 100) {
       setHidden(true);
     } else {
       setHidden(false);
@@ -50,7 +50,7 @@ export default function MainAppLayout({
            <motion.header
               variants={{
                 visible: { y: 0, height: 'auto' },
-                hidden: { y: "-100%", height: 0, transition: { duration: 0.2 } },
+                hidden: { y: "-100%", height: 0 },
               }}
               animate={hidden || isHeaderlessPage ? "hidden" : "visible"}
               transition={{ duration: 0.35, ease: "easeInOut" }}
