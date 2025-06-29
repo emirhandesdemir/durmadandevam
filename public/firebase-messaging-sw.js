@@ -1,78 +1,59 @@
 // public/firebase-messaging-sw.js
-// Bu dosya, PWA'nız kapalıyken bile Firebase'den gelen anlık bildirimleri yakalar ve görüntüler.
+importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js");
 
-// ÖNEMLİ: Service Worker'lar kendi kapsamlarında çalışır ve doğrudan DOM'a erişemezler.
-// Bu yüzden Firebase SDK'larının özel 'sw' (service worker) sürümlerini kullanırız.
+const firebaseConfig = {
+  apiKey: "AIzaSyBHLuoO7KM9ai0dMeCcGhmSHSVYCDO1rEo",
+  authDomain: "yenidendeneme-ea9ed.firebaseapp.com",
+  projectId: "yenidendeneme-ea9ed",
+  storageBucket: "yenidendeneme-ea9ed.appspot.com",
+  messagingSenderId: "903324685291",
+  appId: "1:903324685291:web:2e82831fac65c682b3ffae",
+  measurementId: "G-J3EB02J0LN"
+};
 
-try {
-  // Firebase SDK'larını içe aktar
-  self.importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js');
-  self.importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js');
+firebase.initializeApp(firebaseConfig);
 
-  // Firebase yapılandırmanızı buraya yapıştırın.
-  // Bu bilgiler, uygulamanızdaki `src/lib/firebase.ts` dosyasındakilerle aynı olmalıdır.
-  const firebaseConfig = {
-      apiKey: "AIzaSyBHLuoO7KM9ai0dMeCcGhmSHSVYCDO1rEo",
-      authDomain: "yenidendeneme-ea9ed.firebaseapp.com",
-      projectId: "yenidendeneme-ea9ed",
-      storageBucket: "yenidendeneme-ea9ed.appspot.com",
-      messagingSenderId: "903324685291",
-      appId: "1:903324685291:web:2e82831fac65c682b3ffae"
-  };
+if (firebase.messaging.isSupported()) {
+    const messaging = firebase.messaging();
 
-  firebase.initializeApp(firebaseConfig);
-  const messaging = firebase.messaging();
+    messaging.onBackgroundMessage((payload) => {
+      console.log(
+        "[firebase-messaging-sw.js] Received background message ",
+        payload
+      );
 
-  // Arka planda gelen mesajları dinle
-  messaging.onBackgroundMessage((payload) => {
-    console.log('[firebase-messaging-sw.js] Arka plan mesajı alındı: ', payload);
-    
-    // Gelen payload'dan bildirim başlığını ve seçeneklerini çıkar
-    const notificationTitle = payload.notification.title;
-    const notificationOptions = {
-      body: payload.notification.body,
-      icon: payload.notification.icon || '/icons/icon-192x192.png',
-      // 'data' alanı, bildirime tıklandığında hangi URL'nin açılacağını belirler
-      data: {
-          url: payload.fcmOptions?.link || '/' // Cloud Function'dan gelen link
-      }
-    };
+      const notificationTitle = payload.notification.title;
+      const notificationOptions = {
+        body: payload.notification.body,
+        icon: payload.notification.icon || "/icons/icon-192x192.png",
+        data: {
+            url: payload.fcmOptions?.link || '/'
+        }
+      };
 
-    // Bildirimi kullanıcının ekranında göster
-    self.registration.showNotification(notificationTitle, notificationOptions);
-  });
+      self.registration.showNotification(notificationTitle, notificationOptions);
+    });
 
-  // Bildirime tıklandığında ne olacağını belirleyen event listener
-  self.addEventListener('notificationclick', (event) => {
-    // Bildirimi kapat
-    event.notification.close();
-
-    const urlToOpen = new URL(event.notification.data.url, self.location.origin).href;
-
-    // Odaklanılacak veya açılacak pencereyi bulma/açma işlemini başlat
-    event.waitUntil(
-        clients.matchAll({
-            type: "window",
-            includeUncontrolled: true // Diğer sekmelerdeki client'ları da dahil et
-        }).then((clientList) => {
-            // Eğer uygulama zaten o URL'de açıksa, o sekmeye odaklan
-            for (const client of clientList) {
-                if (client.url === urlToOpen && 'focus' in client) {
-                    return client.focus();
+    self.addEventListener('notificationclick', (event) => {
+        event.notification.close();
+        const targetUrl = event.notification.data.url || '/';
+        event.waitUntil(
+            self.clients.matchAll({ type: 'window' }).then(clientsArr => {
+                // If a Window tab matching the targeted URL already exists, focus that.
+                const hadWindowToFocus = clientsArr.some(windowClient => {
+                    if (windowClient.url === targetUrl) {
+                        windowClient.focus();
+                        return true;
+                    }
+                    return false;
+                });
+                
+                // Otherwise, open a new tab to the applicable URL and focus it.
+                if (!hadWindowToFocus && self.clients.openWindow) {
+                   return self.clients.openWindow(targetUrl);
                 }
-            }
-            // Eğer uygulama açık ama farklı bir sayfadaysa, o sayfaya git
-            if (clientList.length > 0 && 'navigate' in clientList[0]) {
-                 return clientList[0].navigate(urlToOpen).then(client => client.focus());
-            }
-            // Değilse yeni bir sekmede aç
-            if (clients.openWindow) {
-                return clients.openWindow(urlToOpen);
-            }
-        })
-    );
-  });
-
-} catch (e) {
-  console.error("Service Worker başlatılırken hata oluştu:", e);
+            })
+        );
+    });
 }
