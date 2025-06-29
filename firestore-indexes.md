@@ -52,4 +52,16 @@ Firestore, bir sorgu için indeks gerektiğinde genellikle konsol çıktısında
   https://console.firebase.google.com/v1/r/project/yenidendeneme-ea9ed/firestore/indexes?create_composite=Cllwcm9qZWN0cy95ZW5pZGVuZGVuZW1lLWVhOWVkL2RhdGFiYXNlcy8oZGVmYXVsdCkvY29sbGVjdGlvbkdyb3Vwcy9ub3RpZmljYXRpb25zL2luZGV4ZXMvXxABGggKBHR5cGUQARoNCgljcmVhdGVkQXQQAhoMCghfX25hbWVfXxAC
   ```
 
+### 5. Oyun Sonuçları İndeksi
+
+- **Amaç:** Bir odadaki bitmiş oyunları en yeniden eskiye doğru sıralayarak son oyunun sonucunu göstermek.
+- **Koleksiyon Grubu:** `games`
+- **Alanlar:**
+    1. `status` (Artan / Ascending)
+    2. `finishedAt` (Azalan / Descending)
+- **Oluşturma Linki:**
+  ```
+  https://console.firebase.google.com/v1/r/project/yenidendeneme-ea9ed/firestore/indexes?create_composite=ClFwcm9qZWN0cy95ZW5pZGVuZGVuZW1lLWVhOWVkL2RhdGFiYXNlcy8oZGVmYXVsdCkvY29sbGVjdGlvbkdyb3Vwcy9nYW1lcy9pbmRleGVzL18QARoKCgZzdGF0dXMQARoOCgpmaW5pc2hlZEF0EAIaDAoIX19uYW1lX18QAg
+  ```
+
 Bu indeksleri projenizin ilk kurulum aşamasında oluşturmak, gelecekte karşılaşabileceğiniz sorgu hatalarını önleyecektir.
