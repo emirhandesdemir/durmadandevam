@@ -32,11 +32,10 @@ export async function findUserByUsername(username: string): Promise<UserProfile 
     return deepSerialize(userData);
 }
 
-export async function saveFCMToken(userId: string, token: string): Promise<{ success: boolean; error?: string }> {
+export async function saveFCMToken(userId: string, token: string) {
   if (!userId || !token) {
-    return { success: false, error: 'Kullanıcı ID ve jeton gereklidir.' };
+    throw new Error('Kullanıcı ID ve jeton gereklidir.');
   }
-
   const userRef = doc(db, 'users', userId);
   try {
     await updateDoc(userRef, {

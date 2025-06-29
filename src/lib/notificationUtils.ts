@@ -2,13 +2,11 @@
 
 import { toast } from "@/hooks/use-toast";
 import { saveFCMToken } from "./actions/userActions";
+import { getToken } from "firebase/messaging";
+import { messaging } from "./firebase";
 
-/**
- * Kullanıcıdan bildirim izni ister.
- * @returns {Promise<boolean>} İzin verilip verilmediğini döner.
- */
 export async function requestNotificationPermission(userId: string): Promise<boolean> {
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+  if (!messaging || !('Notification' in window) || !('serviceWorker' in navigator)) {
     toast({
       variant: 'destructive',
       title: 'Desteklenmiyor',
@@ -20,22 +18,29 @@ export async function requestNotificationPermission(userId: string): Promise<boo
   try {
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
-      console.log('Bildirim izni verildi.');
-      // Simulating token fetching and saving for now.
-      const mockToken = `mock_fcm_token_${userId}_${Date.now()}`;
-      console.log('FCM Jetonu Alındı:', mockToken);
-      await saveFCMToken(userId, mockToken);
-      return true;
+      const vapidKey = "REPLACE_WITH_YOUR_VAPID_KEY_FROM_FIREBASE_CONSOLE";
+      
+      const currentToken = await getToken(messaging, { vapidKey });
+      
+      if (currentToken) {
+        await saveFCMToken(userId, currentToken);
+        return true;
+      } else {
+        toast({
+          variant: 'destructive',
+          description: 'Bildirim jetonu alınamadı. Lütfen tarayıcı ayarlarınızı kontrol edin.',
+        });
+        return false;
+      }
     } else {
-      console.log('Bildirim izni verilmedi.');
       return false;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Bildirim izni istenirken hata:', error);
     toast({
       variant: 'destructive',
       title: 'Hata',
-      description: 'Bildirim izni alınırken bir sorun oluştu.',
+      description: `Bildirim izni alınırken bir sorun oluştu. VAPID anahtarınızı kontrol edin. Hata: ${error.message}`,
     });
     return false;
   }

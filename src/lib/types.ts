@@ -229,3 +229,9 @@ export interface RoomActivityDataPoint {
     hour: string;
     rooms: number;
 }
+
+export interface HealthCheckResult {
+  service: string;
+  status: 'ok' | 'error';
+  details: string;
+}

@@ -39,6 +39,11 @@ export async function createNotification(data: CreateNotificationArgs) {
     await updateDoc(recipientUserRef, {
       hasUnreadNotifications: true,
     });
+    
+    // In a production app, this is where you would trigger a backend service
+    // (like a Firebase Cloud Function) to send a push notification.
+    // That function would read the recipient's FCM tokens from their user document
+    // and use the Firebase Admin SDK to send the message.
 
   } catch (error) {
     console.error("Bildirim oluşturulurken hata:", error);

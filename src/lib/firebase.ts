@@ -19,6 +19,6 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
-// const messaging = getMessaging(app); // Uncomment when FCM is implemented
+const messaging = (typeof window !== 'undefined') ? getMessaging(app) : null;
 
-export { app, auth, db, storage };
+export { app, auth, db, storage, messaging };
