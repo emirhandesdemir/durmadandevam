@@ -175,7 +175,6 @@ export default function NewPostForm() {
             userAvatar: userData.photoURL || null,
             userAvatarFrame: userData.selectedAvatarFrame || '',
             userRole: userData.role || 'user',
-            userGender: userData.gender,
             text: text,
             imageUrl: imageUrl || "",
             editedWithAI: wasEditedByAI,

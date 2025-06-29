@@ -41,7 +41,7 @@ async function handlePostMentions(postId: string, text: string, sender: { uid: s
                     type: 'mention',
                     postId: postId,
                     postImage: postData?.imageUrl || null,
-                    commentText: text, 
+                    commentText: text, // The post text where the mention happened
                 });
             }
         }
