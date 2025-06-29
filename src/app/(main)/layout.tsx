@@ -28,10 +28,8 @@ export default function MainAppLayout({
 
   useMotionValueEvent(scrollY, "change", (latest) => {
     const previous = scrollY.getPrevious() ?? 0;
-    if (isHeaderlessPage) {
-      setHidden(true);
-      return;
-    }
+    // Header is not rendered on headerless pages, so we don't need to check for it here.
+    // This hook now only controls the scroll-based hiding on pages that *do* have a header.
     if (latest > previous && latest > 150) {
       setHidden(true);
     } else {
@@ -51,17 +49,19 @@ export default function MainAppLayout({
             isFullPageLayout ? "overflow-hidden" : "overflow-y-auto pb-24"
           )}
         >
-           <motion.header
-              variants={{
-                visible: { y: 0 },
-                hidden: { y: "-100%" },
-              }}
-              animate={hidden || isHeaderlessPage ? "hidden" : "visible"}
-              transition={{ duration: 0.35, ease: "easeInOut" }}
-              className="sticky top-0 z-40"
-            >
-              <Header />
-            </motion.header>
+           {!isHeaderlessPage && (
+              <motion.header
+                variants={{
+                  visible: { y: 0 },
+                  hidden: { y: "-100%" },
+                }}
+                animate={hidden ? "hidden" : "visible"}
+                transition={{ duration: 0.35, ease: "easeInOut" }}
+                className="sticky top-0 z-40"
+              >
+                <Header />
+              </motion.header>
+           )}
           
            <div className={cn(
              isFullPageLayout ? "flex-1 flex flex-col overflow-hidden" : "",
