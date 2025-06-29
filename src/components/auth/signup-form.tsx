@@ -29,18 +29,22 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 
 const formSchema = z.object({
   username: z.string().min(3, { message: "Kullanıcı adı en az 3 karakter olmalıdır." }),
   email: z.string().email({ message: "Geçersiz e-posta adresi." }),
   password: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır." }),
+  gender: z.enum(['male', 'female'], { required_error: "Cinsiyet seçimi zorunludur." }),
 });
 
 export default function SignUpForm() {
     const { toast } = useToast();
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -71,6 +75,7 @@ export default function SignUpForm() {
                 photoURL: user.photoURL,
                 bio: "", // Add default empty bio
                 role: userRole,
+                gender: values.gender,
                 createdAt: serverTimestamp(),
                 diamonds: 0,
                 followers: [],
@@ -149,13 +154,59 @@ export default function SignUpForm() {
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel className="ml-4">Şifre</FormLabel>
+                                    <div className="relative">
                                     <FormControl>
-                                        <Input className="rounded-full px-5 py-6" type="password" placeholder="••••••••" {...field} />
+                                        <Input className="rounded-full px-5 py-6 pr-12" type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...field} />
                                     </FormControl>
+                                     <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute inset-y-0 right-0 h-full w-12 rounded-full text-muted-foreground"
+                                        onClick={() => setShowPassword((prev) => !prev)}
+                                    >
+                                        {showPassword ? <EyeOff /> : <Eye />}
+                                    </Button>
+                                    </div>
                                     <FormMessage className="ml-4" />
                                 </FormItem>
                             )}
                         />
+                        <FormField
+                          control={form.control}
+                          name="gender"
+                          render={({ field }) => (
+                            <FormItem className="space-y-3">
+                              <FormLabel className="ml-4">Cinsiyet</FormLabel>
+                              <FormControl>
+                                <RadioGroup
+                                  onValueChange={field.onChange}
+                                  defaultValue={field.value}
+                                  className="flex space-x-4 ml-4"
+                                >
+                                  <FormItem className="flex items-center space-x-2 space-y-0">
+                                    <FormControl>
+                                      <RadioGroupItem value="male" />
+                                    </FormControl>
+                                    <FormLabel className="font-normal">
+                                      Erkek
+                                    </FormLabel>
+                                  </FormItem>
+                                  <FormItem className="flex items-center space-x-2 space-y-0">
+                                    <FormControl>
+                                      <RadioGroupItem value="female" />
+                                    </FormControl>
+                                    <FormLabel className="font-normal">
+                                      Kadın
+                                    </FormLabel>
+                                  </FormItem>
+                                </RadioGroup>
+                              </FormControl>
+                              <FormMessage className="ml-4"/>
+                            </FormItem>
+                          )}
+                        />
+
                         <Button type="submit" size="lg" className="w-full rounded-full py-6 text-lg font-semibold shadow-lg shadow-primary/30 transition-transform hover:scale-105" disabled={isLoading}>
                             {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
                             Hesap Oluştur

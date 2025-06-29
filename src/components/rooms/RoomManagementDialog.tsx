@@ -22,12 +22,10 @@ import {
   } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { deleteRoomAsOwner, extendRoomTime, updateRoomSettings } from "@/lib/actions/roomActions";
-import { Trash2, Loader2, ShieldAlert, Clock, Gem, Hand } from "lucide-react";
+import { deleteRoomAsOwner, extendRoomTime } from "@/lib/actions/roomActions";
+import { Trash2, Loader2, ShieldAlert, Clock } from "lucide-react";
 import type { Room } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
-import { Switch } from "../ui/switch";
-import { Label } from "../ui/label";
 
 interface RoomManagementDialogProps {
   isOpen: boolean;
@@ -41,25 +39,6 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExtending, setIsExtending] = useState(false);
-  const [isTogglingMode, setIsTogglingMode] = useState(false);
-  const [requestToSpeak, setRequestToSpeak] = useState(room?.requestToSpeakEnabled || false);
-
-  const handleToggleRequestToSpeak = async (enabled: boolean) => {
-      if (!room || !user) return;
-      setIsTogglingMode(true);
-      setRequestToSpeak(enabled);
-      try {
-          await updateRoomSettings(room.id, user.uid, { requestToSpeakEnabled: enabled });
-          toast({
-              description: `El kaldırma modu ${enabled ? 'açıldı' : 'kapatıldı'}.`
-          });
-      } catch (error: any) {
-          setRequestToSpeak(!enabled); // Revert on error
-          toast({ variant: 'destructive', description: error.message });
-      } finally {
-          setIsTogglingMode(false);
-      }
-  }
 
   const handleDeleteRoom = async () => {
     if (!room || !user) return;
@@ -132,14 +111,6 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
                 {isExtending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Clock className="mr-2 h-4 w-4" />}
                 Uzat
               </Button>
-            </div>
-
-            <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
-              <div>
-                 <Label htmlFor="request-speak-mode" className="font-bold text-foreground flex items-center gap-2"><Hand className="h-4 w-4"/>El Kaldırma Modu</Label>
-                <p className="text-sm text-muted-foreground">Aktifse, katılımcıların konuşmak için izin istemesi gerekir.</p>
-              </div>
-              <Switch id="request-speak-mode" checked={requestToSpeak} onCheckedChange={handleToggleRequestToSpeak} disabled={isTogglingMode} />
             </div>
 
             <div>

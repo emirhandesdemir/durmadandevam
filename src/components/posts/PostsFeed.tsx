@@ -3,56 +3,53 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, onSnapshot, query, orderBy, Timestamp } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy, where, Query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import PostCard from "./PostCard";
 import { Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
+import type { Post } from "@/lib/types";
 
-// Post verisinin arayüz (interface) tanımı
-export interface Post {
-    id: string;
-    uid: string;
-    username: string;
-    userAvatar?: string;
-    userAvatarFrame?: string;
-    userRole?: 'admin' | 'user';
-    text: string;
-    imageUrl?: string;
-    imagePublicId?: string;
-    createdAt: Timestamp | { seconds: number; nanoseconds: number };
-    likes: string[]; // Beğenen kullanıcıların UID'lerini tutan dizi
-    likeCount: number;
-    commentCount: number;
-}
 
 /**
  * PostsFeed Bileşeni
  * 
  * Ana sayfada kullanıcıların gönderilerini listeleyen akış alanıdır.
  * - Firestore'daki 'posts' koleksiyonunu gerçek zamanlı olarak dinler.
+ * - Kullanıcının cinsiyetine göre akışı kişiselleştirir.
  * - Gönderileri oluşturulma tarihine göre en yeniden eskiye doğru sıralar.
  * - Her gönderi için bir PostCard bileşeni oluşturur.
- * - Yükleme durumu ve hiç gönderi olmaması durumlarını yönetir.
  */
 export default function PostsFeed() {
+  const { userData } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Firestore'dan gönderileri çekmek için useEffect kullanılır
   useEffect(() => {
-    // 'posts' koleksiyonuna sorgu oluşturulur, 'createdAt' alanına göre azalan sırada sıralanır.
-    const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+    setLoading(true);
+    
+    // userData yüklenene kadar beklemeye gerek yok, null ise varsayılan sorguyu kullanırız.
+    const postsCollection = collection(db, "posts");
+    let postsQuery: Query;
 
+    if (userData?.gender === 'male') {
+        // Erkek kullanıcılar için sadece kadınların gönderilerini göster
+        postsQuery = query(postsCollection, where("userGender", "==", "female"), orderBy("createdAt", "desc"));
+    } else {
+        // Kadın kullanıcılar, cinsiyeti belirtilmemiş veya giriş yapmamış kullanıcılar için tüm gönderileri göster
+        postsQuery = query(postsCollection, orderBy("createdAt", "desc"));
+    }
+    
     // onSnapshot ile koleksiyondaki değişiklikler gerçek zamanlı olarak dinlenir.
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const unsubscribe = onSnapshot(postsQuery, (querySnapshot) => {
       const postsData: Post[] = [];
       querySnapshot.forEach((doc) => {
-        // Her dökümanı Post arayüzüne uygun bir objeye dönüştürerek diziye ekle
         postsData.push({ id: doc.id, ...doc.data() } as Post);
       });
-      setPosts(postsData); // State'i yeni veriyle güncelle
-      setLoading(false); // Yükleme tamamlandı
+      setPosts(postsData);
+      setLoading(false);
     }, (error) => {
         console.error("Error fetching posts:", error);
         setLoading(false);
@@ -60,7 +57,7 @@ export default function PostsFeed() {
 
     // Bileşen DOM'dan kaldırıldığında (unmount) dinleyiciyi temizle
     return () => unsubscribe();
-  }, []); // Boş bağımlılık dizisi sayesinde bu efekt sadece bileşen ilk yüklendiğinde çalışır.
+  }, [userData]); // userData değiştiğinde (login sonrası vb.) sorguyu yeniden çalıştır
 
   // Veri yüklenirken gösterilecek olan yükleme animasyonu
   if (loading) {
@@ -86,7 +83,6 @@ export default function PostsFeed() {
 
   return (
     <div className="flex flex-col">
-      {/* Gelen gönderi verilerini map ile dönerek her biri için bir PostCard oluştur */}
       {posts.map((post) => (
         <PostCard key={post.id} post={post} />
       ))}

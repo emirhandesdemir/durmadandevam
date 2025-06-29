@@ -9,6 +9,7 @@ export interface UserProfile {
     bio?: string;
     postCount?: number;
     role: 'admin' | 'user';
+    gender?: 'male' | 'female';
     createdAt: Timestamp;
     privateProfile: boolean;
     acceptsFollowRequests: boolean;
@@ -61,6 +62,7 @@ export interface Post {
     userAvatar?: string | null;
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
+    userGender?: 'male' | 'female';
     text: string;
     imageUrl?: string;
     imagePublicId?: string;
@@ -103,6 +105,7 @@ export interface Room {
     maxParticipants: number;
     nextGameTimestamp?: Timestamp;
     voiceParticipantsCount?: number;
+    requestToSpeakEnabled?: boolean;
 }
 
 export interface VoiceParticipant {
@@ -112,6 +115,8 @@ export interface VoiceParticipant {
     isSpeaker: boolean;
     isMuted: boolean;
     isSharingScreen: boolean;
+    handRaised?: boolean;
+    canSpeak?: boolean;
     joinedAt: Timestamp;
     lastActiveAt?: Timestamp;
     selectedBubble?: string;

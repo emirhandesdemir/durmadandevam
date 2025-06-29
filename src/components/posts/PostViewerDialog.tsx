@@ -3,7 +3,7 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import PostCard from "./PostCard";
-import type { Post } from "./PostsFeed";
+import type { Post } from "@/lib/types";
 
 interface PostViewerDialogProps {
   post: Post;

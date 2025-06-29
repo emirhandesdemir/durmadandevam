@@ -2,7 +2,7 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import type { Post } from "./PostsFeed";
+import type { Post } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck } from "lucide-react";

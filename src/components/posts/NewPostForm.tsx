@@ -114,8 +114,7 @@ export default function NewPostForm() {
     
     try {
         let imageUrl = "";
-        let imagePublicId = ""; // Keep this for potential future use with other services
-
+        
         if (croppedImage) {
             const imageRef = ref(storage, `upload/posts/${user.uid}/${Date.now()}_post.jpg`);
             const snapshot = await uploadString(imageRef, croppedImage, 'data_url');
@@ -128,9 +127,10 @@ export default function NewPostForm() {
             userAvatar: userData.photoURL || null,
             userAvatarFrame: userData.selectedAvatarFrame || '',
             userRole: userData.role || 'user',
+            userGender: userData.gender || null,
             text: text,
             imageUrl: imageUrl || "",
-            imagePublicId: imagePublicId,
+            imagePublicId: "", // Legacy field, kept for compatibility if needed
             createdAt: serverTimestamp(),
             likes: [],
             likeCount: 0,
