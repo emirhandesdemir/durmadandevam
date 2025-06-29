@@ -17,9 +17,9 @@ export const metadata: Metadata = {
   description: 'Herkese açık odalar oluşturun ve katılın.',
   manifest: '/manifest.json',
   icons: {
-    apple: '/icons/icon.svg',
+    icon: '/icons/icon-512x512.png',
+    apple: '/icons/icon-512x512.png',
   },
-  themeColor: '#09090B',
   applicationName: "HiweWalk",
   appleWebApp: {
     capable: true,

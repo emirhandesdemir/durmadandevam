@@ -1,29 +1,61 @@
 {
   "name": "HiweWalk",
   "short_name": "HiweWalk",
-  "description": "Herkese açık odalar oluşturun ve katılın.",
+  "description": "Herkese açık odalar oluşturun ve katılın. Düşüncelerinizi paylaşın ve yeni insanlarla tanışın.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#09090B",
+  "theme_color": "#09090B",
+  "categories": ["social", "entertainment"],
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     },
     {
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     },
     {
-      "src": "/icons/icon.svg",
+      "src": "/icons/icon-512x512.svg",
       "sizes": "any",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "maskable"
     }
   ],
-  "theme_color": "#7C3AED",
-  "background_color": "#09090B",
-  "start_url": "/",
-  "display": "standalone",
-  "orientation": "portrait"
+  "screenshots": [
+    {
+      "src": "https://placehold.co/1080x1920.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Ana Akış"
+    },
+    {
+      "src": "https://placehold.co/1080x1920.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Sohbet Odası"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Yeni Gönderi Oluştur",
+      "short_name": "Oluştur",
+      "description": "Yeni bir fikir veya fotoğraf paylaş.",
+      "url": "/create-post",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Odalara Gözat",
+      "short_name": "Odalar",
+      "description": "Aktif sohbet odalarını keşfet.",
+      "url": "/rooms",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ]
 }
