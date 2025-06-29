@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, query, where, orderBy, onSnapshot, limit, Query, writeBatch } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, limit, Query, writeBatch, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Notification } from '@/lib/types';
 import NotificationItem from './NotificationItem';
@@ -28,9 +28,10 @@ export default function NotificationList({ filter }: NotificationListProps) {
       where('read', '==', false)
     );
     const unreadSnapshot = await getDocs(unreadQuery);
+    const userRef = doc(db, 'users', user.uid);
 
+    // If there's nothing to mark as read, we still ensure the main flag is false.
     if (unreadSnapshot.empty) {
-      const userRef = doc(db, 'users', user.uid);
       await updateDoc(userRef, { hasUnreadNotifications: false });
       return;
     }
@@ -40,7 +41,6 @@ export default function NotificationList({ filter }: NotificationListProps) {
       batch.update(doc.ref, { read: true });
     });
     
-    const userRef = doc(db, 'users', user.uid);
     batch.update(userRef, { hasUnreadNotifications: false });
     
     await batch.commit();
