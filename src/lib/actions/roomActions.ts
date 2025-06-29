@@ -3,9 +3,8 @@
 
 import { db } from '@/lib/firebase';
 import { deleteRoomWithSubcollections } from '@/lib/firestoreUtils';
-import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch, arrayUnion, arrayRemove, updateDoc, increment, runTransaction } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch, arrayUnion, arrayRemove, updateDoc } from 'firebase/firestore';
 import { createNotification } from './notificationActions';
-import type { Room } from '../types';
 
 export async function addSystemMessage(roomId: string, text: string) {
     if (!roomId || !text) throw new Error("Oda ID'si ve mesaj metni gereklidir.");
@@ -190,42 +189,4 @@ export async function updateModerators(roomId: string, targetUserId: string, act
     } catch (error: any) {
         return { success: false, error: error.message };
     }
-}
-
-// --- Yeni Eylemler ---
-export async function updateRoomSettings(roomId: string, userId: string, settings: { requestToSpeakEnabled: boolean }) {
-    const roomRef = doc(db, 'rooms', roomId);
-    const roomDoc = await getDoc(roomRef);
-    if (!roomDoc.exists() || roomDoc.data().createdBy.uid !== userId) {
-        throw new Error("Bu işlemi yapma yetkiniz yok.");
-    }
-    await updateDoc(roomRef, settings);
-    const message = `✋ El kaldırma modu ${settings.requestToSpeakEnabled ? 'açıldı' : 'kapatıldı'}.`;
-    await addSystemMessage(roomId, message);
-}
-
-export async function requestToSpeak(roomId: string, userId: string, handRaised: boolean) {
-    const participantRef = doc(db, 'rooms', roomId, 'voiceParticipants', userId);
-    await updateDoc(participantRef, { handRaised });
-}
-
-export async function manageSpeakingPermission(roomId: string, moderatorId: string, targetUserId: string, canSpeak: boolean) {
-    const roomRef = doc(db, 'rooms', roomId);
-    const participantRef = doc(roomRef, 'voiceParticipants', targetUserId);
-    
-    const roomDoc = await getDoc(roomRef);
-    if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
-    const roomData = roomDoc.data() as Room;
-
-    const isHost = roomData.createdBy.uid === moderatorId;
-    const isModerator = roomData.moderators?.includes(moderatorId);
-
-    if (!isHost && !isModerator) throw new Error("Bu işlemi yapma yetkiniz yok.");
-    
-    const updates: any = { canSpeak, handRaised: false };
-    if (!canSpeak) {
-        updates.isMuted = true;
-    }
-
-    await updateDoc(participantRef, updates);
 }

@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
-import { Loader2, Mic, MicOff, Crown, PhoneOff, ScreenShare, ScreenShareOff, ChevronsUpDown, Gift, Music, VolumeX, Hand } from 'lucide-react';
+import { Loader2, Mic, MicOff, PhoneOff, ScreenShare, ScreenShareOff, Gift, Music, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TextChat from '@/components/chat/text-chat';
 import ChatMessageInput from '@/components/chat/ChatMessageInput';
@@ -16,8 +16,6 @@ import VoiceUserIcon from '@/components/voice/VoiceUserIcon';
 import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
 import RoomHeader from '@/components/rooms/RoomHeader';
 import ScreenShareView from '@/components/voice/ScreenShareView';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,7 +28,7 @@ import {
 } from "@/components/ui/alert-dialog"
 
 // --- Game Imports ---
-import type { Room, ActiveGame, GameSettings, Message } from '@/lib/types';
+import type { Room, ActiveGame, GameSettings, Message, VoiceParticipant } from '@/lib/types';
 import GameCountdownCard from '@/components/game/GameCountdownCard';
 import RoomGameCard from '@/components/game/RoomGameCard';
 import { startGameInRoom, submitAnswer, endGameWithoutWinner, getGameSettings } from '@/lib/actions/gameActions';
@@ -47,18 +45,18 @@ export default function RoomPage() {
     const { user, loading: authLoading, featureFlags } = useAuth();
     const { 
         self, isConnecting, isConnected, isSharingScreen, localScreenStream, remoteScreenStreams,
-        startScreenShare, stopScreenShare, joinRoom, leaveRoom, toggleSelfMute, handleRequestToSpeak,
-        participants, setActiveRoomId, playMusic, stopMusic, isMusicPlaying, isProcessingMusic
+        startScreenShare, stopScreenShare, joinRoom, leaveRoom, toggleSelfMute,
+        setActiveRoomId, playMusic, stopMusic, isMusicPlaying, isProcessingMusic
     } = useVoiceChat();
 
     // --- Component State ---
     const [room, setRoom] = useState<Room | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
+    const [voiceParticipants, setVoiceParticipants] = useState<VoiceParticipant[]>([]);
     const [messagesLoading, setMessagesLoading] = useState(true);
     const [isParticipantSheetOpen, setIsParticipantSheetOpen] = useState(false);
     const [showExitDialog, setShowExitDialog] = useState(false);
     const [isPortalDialogOpen, setIsPortalDialogOpen] = useState(false);
-    const [isVoiceStageCollapsed, setVoiceStageCollapsed] = useState(false);
     const chatScrollRef = useRef<HTMLDivElement>(null);
     const musicInputRef = useRef<HTMLInputElement>(null);
 
@@ -73,7 +71,7 @@ export default function RoomPage() {
 
     const isHost = user?.uid === room?.createdBy.uid;
     const isModerator = room?.moderators?.includes(user?.uid || '') || false;
-    const screenSharer = participants.find(p => p.isSharingScreen);
+    const screenSharer = voiceParticipants.find(p => p.isSharingScreen);
     const remoteScreenStream = screenSharer && !isSharingScreen ? remoteScreenStreams[screenSharer.uid] : null;
 
     useEffect(() => {
@@ -100,12 +98,15 @@ export default function RoomPage() {
         const messagesUnsub = onSnapshot(messagesQuery, (snapshot) => {
             setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message)));
             setMessagesLoading(false);
-        }, (error) => {
-            console.error("Mesajlar alınırken hata:", error);
-            setMessagesLoading(false);
         });
 
-        return () => { roomUnsub(); messagesUnsub(); };
+        const voiceParticipantsQuery = collection(db, 'rooms', roomId, 'voiceParticipants');
+        const voiceUnsub = onSnapshot(voiceParticipantsQuery, (snapshot) => {
+            const vpData = snapshot.docs.map(doc => doc.data() as VoiceParticipant);
+            setVoiceParticipants(vpData);
+        });
+
+        return () => { roomUnsub(); messagesUnsub(); voiceUnsub(); };
     }, [roomId, router, toast]);
     
     useEffect(() => {
@@ -146,12 +147,12 @@ export default function RoomPage() {
     
     const handleJoinVoice = useCallback(async () => { if (!user) return; await joinRoom(); }, [user, joinRoom]);
     const handleExitVoiceChat = useCallback(async () => { await leaveRoom(); setShowExitDialog(false); }, [leaveRoom]);
+    const handleExitAndNavigate = useCallback(async () => { await leaveRoom(); router.push('/rooms'); }, [leaveRoom, router]);
     const handleToggleMute = useCallback(async () => { if (!self || !user) return; await toggleSelfMute(); }, [self, user, toggleSelfMute]);
     const handleAnswerSubmit = useCallback(async (answerIndex: number) => { if (!user || !activeGame) return; try { await submitAnswer(roomId, activeGame.id, user.uid, answerIndex); } catch (error: any) { toast({ variant: "destructive", description: error.message || "Cevap gönderilemedi." }); }}, [user, activeGame, roomId, toast]);
     const handleGameTimerEnd = useCallback(() => { if (!activeGame || !isHost) return; endGameWithoutWinner(roomId, activeGame.id); }, [activeGame, isHost, roomId]);
     const handleMusicFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; if (file) { await playMusic(file); } e.target.value = ''; };
-    const onHandRaise = async () => { if(!self) return; await handleRequestToSpeak(!self.handRaised); };
-
+    
     const isLoading = authLoading || !room;
     const isRoomParticipant = room?.participants?.some(p => p.uid === user?.uid);
     if (isLoading) return <div className="flex h-full items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
@@ -169,52 +170,17 @@ export default function RoomPage() {
                                 <p className="text-center text-xs text-muted-foreground mt-2">{screenSharer.username} ekranını paylaşıyor...</p>
                             </div>
                         ) : (
-                           <div className="relative min-h-[10rem]">
-                                {!isVoiceStageCollapsed ? (
-                                <div className="flex flex-wrap items-start justify-center gap-x-2 gap-y-4 animate-in fade-in duration-300">
-                                    {participants.length > 0 ? (
-                                    participants
-                                        .sort((a, b) => {
-                                            const aIsHost = a.uid === room.createdBy.uid; const bIsHost = b.uid === room.createdBy.uid;
-                                            if (aIsHost) return -1; if (bIsHost) return 1;
-                                            const aIsMod = room.moderators?.includes(a.uid); const bIsMod = room.moderators?.includes(b.uid);
-                                            if (aIsMod && !bIsMod) return -1; if (!aIsMod && bIsMod) return 1;
-                                            return 0;
-                                        })
-                                        .map((p) => (
-                                        <VoiceUserIcon key={p.uid} room={room} participant={p} isHost={isHost} isModerator={isModerator} currentUserId={user!.uid} size="sm" />
-                                        ))
-                                    ) : (
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
-                                        <Mic className="h-10 w-10 mb-2" />
-                                        <p>Sesli sohbete katılın.</p>
-                                    </div>
-                                    )}
-                                </div>
+                           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 min-h-[8rem] place-content-start">
+                                {voiceParticipants.length > 0 ? (
+                                    voiceParticipants.map((p) => (
+                                        <VoiceUserIcon key={p.uid} room={room} participant={p} isHost={isHost} isModerator={isModerator} currentUserId={user!.uid} />
+                                    ))
                                 ) : (
-                                <div className="flex h-full min-h-[10rem] items-center justify-center gap-2 py-4 animate-in fade-in duration-300">
-                                    {participants.length > 0 ? participants.map(p => (
-                                    <TooltipProvider key={p.uid}>
-                                        <Tooltip>
-                                            <TooltipTrigger>
-                                                <Avatar className="h-10 w-10 border-2 border-transparent data-[speaking=true]:border-green-500" data-speaking={p.isSpeaker && !p.isMuted}>
-                                                    <AvatarImage src={p.photoURL || undefined} />
-                                                    <AvatarFallback>{p.username.charAt(0)}</AvatarFallback>
-                                                </Avatar>
-                                            </TooltipTrigger>
-                                            <TooltipContent className="bg-muted border-border text-foreground"><p>{p.username}</p></TooltipContent>
-                                        </Tooltip>
-                                    </TooltipProvider>
-                                    )) : ( <p className="text-sm text-muted-foreground">Sesli sohbette kimse yok.</p> )}
-                                </div>
-                                )}
-                                {participants.length > 0 && (
-                                <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
-                                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setVoiceStageCollapsed(!isVoiceStageCollapsed)}>
-                                        <ChevronsUpDown className="h-4 w-4 mr-2" />
-                                        {isVoiceStageCollapsed ? "Genişlet" : "Küçült"}
-                                    </Button>
-                                </div>
+                                    <div className="col-span-full flex flex-col items-center justify-center text-muted-foreground h-full py-8">
+                                        <Mic className="h-10 w-10 mb-2" />
+                                        <p className="font-semibold">Sesli sohbette kimse yok.</p>
+                                        <p className="text-sm">Katılan ilk kişi sen ol!</p>
+                                    </div>
                                 )}
                             </div>
                         )}
@@ -241,11 +207,6 @@ export default function RoomPage() {
                         {isConnected && user ? (
                             <>
                                 <input type="file" ref={musicInputRef} onChange={handleMusicFileChange} className="hidden" accept="audio/*" />
-                                {room.requestToSpeakEnabled && !self?.canSpeak && (
-                                     <Button onClick={onHandRaise} variant="ghost" size="icon" className="rounded-full" data-active={self?.handRaised}>
-                                        <Hand className={self?.handRaised ? "text-primary" : ""}/>
-                                    </Button>
-                                )}
                                 <Button onClick={isMusicPlaying ? stopMusic : () => musicInputRef.current?.click()} variant="ghost" size="icon" className="rounded-full" disabled={isProcessingMusic}>
                                     {isProcessingMusic ? <Loader2 className="h-5 w-5 animate-spin"/> : (isMusicPlaying ? <VolumeX className="h-5 w-5 text-destructive"/> : <Music className="h-5 w-5"/>) }
                                 </Button>
@@ -277,11 +238,12 @@ export default function RoomPage() {
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Odadan Ayrıl</AlertDialogTitle>
-                        <AlertDialogDescription>Ne yapmak istersiniz? Odayı arka plana alabilir veya sadece sesli sohbetten çıkabilirsiniz.</AlertDialogDescription>
+                        <AlertDialogDescription>Sesli sohbet bağlantını arka planda tutarak ana sayfaya dönebilir veya hem sesten hem odadan tamamen çıkabilirsin.</AlertDialogDescription>
                     </AlertDialogHeader>
-                    <AlertDialogFooter>
-                         <Button variant="outline" onClick={() => { router.push('/rooms'); setShowExitDialog(false); }}>Arka Plana Al</Button>
-                        <Button onClick={handleExitVoiceChat}>Sesli sohbetten çık</Button>
+                    <AlertDialogFooter className="sm:justify-start gap-2">
+                        <Button onClick={handleExitAndNavigate} variant="destructive">Hem Sesten Hem Odadan Çık</Button>
+                        <Button variant="secondary" onClick={() => { router.push('/rooms'); setShowExitDialog(false); }}>Arka Plana Al</Button>
+                        <AlertDialogCancel>İptal</AlertDialogCancel>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

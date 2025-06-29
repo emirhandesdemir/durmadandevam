@@ -103,7 +103,6 @@ export interface Room {
     maxParticipants: number;
     nextGameTimestamp?: Timestamp;
     voiceParticipantsCount?: number;
-    requestToSpeakEnabled?: boolean;
 }
 
 export interface VoiceParticipant {
@@ -117,8 +116,6 @@ export interface VoiceParticipant {
     lastActiveAt?: Timestamp;
     selectedBubble?: string;
     selectedAvatarFrame?: string;
-    handRaised?: boolean;
-    canSpeak?: boolean;
 }
 
 export interface GameQuestion {
