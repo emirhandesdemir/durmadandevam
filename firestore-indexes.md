@@ -40,4 +40,15 @@ Firestore, bir sorgu için indeks gerektiğinde genellikle konsol çıktısında
     1. `lastActiveAt` (Artan)
 - **Not:** Bu tek alanlı bir indekstir ve genellikle Firestore tarafından otomatik olarak yönetilir. Ancak bir hata alırsanız, `voiceParticipants` alt koleksiyonu için `lastActiveAt` alanına artan sırada bir indeks oluşturmanız gerekebilir.
 
+### 4. Yorum Analizi İndeksi
+
+- **Amaç:** Yönetim panelindeki analiz sayfasında, son 7 günde oluşturulan yorumları saymak.
+- **Koleksiyon Grubu:** `comments`
+- **Alanlar:**
+    1. `createdAt` (Artan)
+- **Oluşturma Linki:**
+  ```
+  https://console.firebase.google.com/v1/r/project/yenidendeneme-ea9ed/firestore/indexes?create_exemption=Cltwcm9qZWN0cy95ZW5pZGVuZGVuZW1lLWVhOWVkL2RhdGFiYXNlcy8oZGVmYXVsdCkvY29sbGVjdGlvbkdyb3Vwcy9jb21tZW50cy9maWVsZHMvY3JlYXRlZEF0EAIaDQoJY3JlYXRlZEF0EAE
+  ```
+
 Bu indeksleri projenizin ilk kurulum aşamasında oluşturmak, gelecekte karşılaşabileceğiniz sorgu hatalarını önleyecektir.
