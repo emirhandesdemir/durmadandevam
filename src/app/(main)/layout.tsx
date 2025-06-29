@@ -27,8 +27,9 @@ export default function MainAppLayout({
         <main 
           ref={scrollRef} 
           className={cn(
-            "flex-1 flex flex-col", // Always a flex container
-            isFullPageLayout ? "overflow-hidden" : "overflow-y-auto" // Conditional scrolling
+            "flex-1 flex flex-col",
+            isFullPageLayout ? "overflow-hidden" : "overflow-y-auto",
+            !isFullPageLayout && "pb-24" // Add padding for the bottom nav
           )}
         >
            <header
@@ -41,7 +42,6 @@ export default function MainAppLayout({
             </header>
           
            <div className={cn(
-             // For full-page layouts, make the wrapper a flex container that grows
              isFullPageLayout ? "flex-1 flex flex-col overflow-hidden" : "",
              !isHomePage && !isFullPageLayout && "p-4"
             )}

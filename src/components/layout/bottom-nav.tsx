@@ -39,7 +39,6 @@ export default function BottomNav() {
     return null;
   }
 
-  // Hide nav on full-screen pages like a specific room or DM chat
   if ((pathname.startsWith('/rooms/') && pathname !== '/rooms') || (pathname.startsWith('/dm/') && pathname !== '/dm')) {
     return null;
   }
@@ -62,17 +61,17 @@ export default function BottomNav() {
     },
     {
       id: 'profile',
-      isActive: pathname.startsWith('/profile'), // Active on both /profile and /profile/[uid]
-      href: `/profile/${user.uid}`, // Always link to the public profile from the main nav
-      label: 'Profil', // The label is always "Profil"
+      isActive: pathname.startsWith('/profile'),
+      href: `/profile/${user.uid}`,
+      label: 'Profil',
     },
   ];
 
   return (
     <>
-      <div className="fixed bottom-4 left-0 right-0 z-50 flex justify-center pointer-events-none">
-        <div className="bg-background/80 backdrop-blur-md p-2 rounded-full border shadow-lg pointer-events-auto">
-          <nav className="flex items-center justify-around gap-2">
+      <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
+        <div className="bg-background/80 backdrop-blur-md p-1.5 rounded-full shadow-lg pointer-events-auto mb-4 mx-auto">
+          <nav className="flex items-center justify-around gap-1">
             {navItems.map((item) => {
               if (!item) return null;
               const Icon = item.icon;
@@ -88,7 +87,7 @@ export default function BottomNav() {
                   key={item.id}
                   {...actionProps}
                   className={cn(
-                    'flex flex-col h-14 w-16 items-center justify-center rounded-xl text-muted-foreground transition-all duration-300',
+                    'flex flex-col h-12 w-14 items-center justify-center rounded-xl text-muted-foreground transition-all duration-300',
                     item.isActive ? 'text-primary' : 'hover:text-foreground'
                   )}
                 >
@@ -96,7 +95,7 @@ export default function BottomNav() {
                     <div className="relative">
                       <div className={cn('avatar-frame-wrapper', userData?.selectedAvatarFrame)}>
                         <Avatar className={cn(
-                          "relative z-[1] h-7 w-7 transition-all",
+                          "relative z-[1] h-6 w-6 transition-all",
                           item.isActive && "ring-2 ring-primary ring-offset-2 ring-offset-background"
                         )}>
                           <AvatarImage src={user.photoURL || undefined} />
@@ -105,7 +104,7 @@ export default function BottomNav() {
                       </div>
                     </div>
                   ) : (
-                    Icon && <Icon className="h-6 w-6" />
+                    Icon && <Icon className="h-5 w-5" />
                   )}
                   <span className="text-xs font-medium">{item.label}</span>
                 </Component>
