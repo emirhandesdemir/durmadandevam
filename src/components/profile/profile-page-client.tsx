@@ -55,6 +55,7 @@ export default function ProfilePageClient() {
     const { user, userData, loading, handleLogout } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
+    const { theme, setTheme } = useTheme();
     
     const [username, setUsername] = useState("");
     const [bio, setBio] = useState("");
