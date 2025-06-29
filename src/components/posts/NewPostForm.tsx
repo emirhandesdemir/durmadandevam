@@ -78,7 +78,7 @@ export default function NewPostForm() {
         let imageUrl = "";
 
         if (croppedImage) {
-            const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}_post`);
+            const imageRef = ref(storage, `upload/posts/${user.uid}/${Date.now()}_post`);
             const snapshot = await uploadString(imageRef, croppedImage, 'data_url');
             imageUrl = await getDownloadURL(snapshot.ref);
         }
