@@ -201,13 +201,19 @@ export interface DirectMessageMetadata {
     };
 }
 
+interface PlayerInfo {
+    uid: string;
+    username: string;
+    photoURL?: string | null;
+}
+
 export interface GameInviteData {
-    host: { uid: string; username: string };
+    host: PlayerInfo;
     gameType: 'dice' | 'rps' | 'bottle';
     gameName: string;
-    invitedPlayers: { uid: string; username: string }[];
-    acceptedPlayers: { uid: string; username: string }[];
-    declinedPlayers: { uid: string; username: string }[];
+    invitedPlayers: PlayerInfo[];
+    acceptedPlayers: PlayerInfo[];
+    declinedPlayers: PlayerInfo[];
     status: 'pending' | 'active' | 'accepted' | 'cancelled' | 'finished';
 }
 

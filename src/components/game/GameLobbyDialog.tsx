@@ -71,11 +71,11 @@ export default function GameLobbyDialog({ isOpen, onOpenChange, roomId, particip
     setIsSubmitting(true);
     try {
         const invitedPlayerDetails = participants.filter(p => selectedPlayers.includes(p.uid))
-            .map(p => ({ uid: p.uid, username: p.username }));
+            .map(p => ({ uid: p.uid, username: p.username, photoURL: p.photoURL || null }));
 
         await initiateGameInvite(
             roomId,
-            { uid: user.uid, username: userData.username },
+            { uid: user.uid, username: userData.username, photoURL: userData.photoURL || null },
             gameConfig.id,
             gameConfig.name,
             invitedPlayerDetails

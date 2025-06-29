@@ -21,8 +21,14 @@ import {
     setDoc,
     arrayUnion
 } from "firebase/firestore";
-import type { GameQuestion, GameSettings, ActiveGame, GameInviteData, ActiveGameSession, UserProfile } from "../types";
+import type { GameQuestion, GameSettings, ActiveGame, GameInviteData, ActiveGameSession, Room } from "../types";
 import { revalidatePath } from "next/cache";
+
+interface PlayerInfo {
+    uid: string;
+    username: string;
+    photoURL?: string | null;
+}
 
 // Ayarları almak için fonksiyon
 export async function getGameSettings(): Promise<GameSettings> {
@@ -94,10 +100,10 @@ export async function deleteQuestion(id: string) {
 
 export async function initiateGameInvite(
     roomId: string, 
-    host: { uid: string, username: string },
+    host: PlayerInfo,
     gameType: GameInviteData['gameType'],
     gameName: string,
-    invitedPlayers: { uid: string, username: string }[]
+    invitedPlayers: PlayerInfo[]
 ) {
     const messagesRef = collection(db, 'rooms', roomId, 'messages');
     
@@ -126,7 +132,7 @@ export async function initiateGameInvite(
 export async function respondToGameInvite(
     roomId: string,
     messageId: string,
-    respondingUser: { uid: string, username: string },
+    respondingUser: PlayerInfo,
     accepted: boolean
 ) {
     const messageRef = doc(db, 'rooms', roomId, 'messages', messageId);
@@ -170,19 +176,14 @@ export async function respondToGameInvite(
             
             // Create the actual game document
             const gameRef = doc(collection(db, 'rooms', roomId, 'games'), messageId); // use messageId as gameId
-            const roomDoc = await transaction.get(doc(db, 'rooms', roomId));
-            const roomData = roomDoc.data() as Room;
-
-            // Fetch full player profiles to get photoURL
-            const playerUids = newInviteData.acceptedPlayers.map(p => p.uid);
-            const usersQuery = query(collection(db, 'users'), where('uid', 'in', playerUids));
-            const usersSnapshot = await getDocs(usersQuery);
-            const playerProfiles = usersSnapshot.docs.map(d => d.data() as UserProfile);
-
-            const playersForGame = newInviteData.acceptedPlayers.map(p => {
-                const profile = playerProfiles.find(prof => prof.uid === p.uid);
-                return { ...p, photoURL: profile?.photoURL || null };
-            });
+            
+            // The user info (including photoURL) is already in newInviteData.acceptedPlayers
+            // No need to fetch user profiles again inside the transaction.
+            const playersForGame = newInviteData.acceptedPlayers.map(p => ({
+                uid: p.uid,
+                username: p.username,
+                photoURL: p.photoURL || null,
+            }));
             
             const newGameSession: Omit<ActiveGameSession, 'id'> = {
                 gameType: newInviteData.gameType,

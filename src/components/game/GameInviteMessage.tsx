@@ -31,7 +31,11 @@ export default function GameInviteMessage({ message, roomId }: GameInviteMessage
     const handleResponse = async (accepted: boolean) => {
         setIsResponding(true);
         try {
-            await respondToGameInvite(roomId, message.id, { uid: user.uid, username: userData.username }, accepted);
+            await respondToGameInvite(roomId, message.id, { 
+                uid: user.uid, 
+                username: userData.username, 
+                photoURL: userData.photoURL || null,
+            }, accepted);
         } catch (error: any) {
             toast({ variant: 'destructive', description: error.message });
         } finally {
@@ -45,7 +49,7 @@ export default function GameInviteMessage({ message, roomId }: GameInviteMessage
     if (status === 'cancelled' || declinedPlayers.length > 0) {
         statusText = "Oyun daveti reddedildi veya iptal edildi.";
         statusColor = "text-destructive";
-    } else if (status === 'active') {
+    } else if (status === 'accepted') {
         statusText = "Tüm oyuncular kabul etti. Oyun başlıyor!";
         statusColor = "text-green-600";
     }
@@ -74,7 +78,7 @@ export default function GameInviteMessage({ message, roomId }: GameInviteMessage
                                     hasAccepted && "border-green-500/50 bg-green-500/10",
                                     hasDeclined && "border-destructive/50 bg-destructive/10 line-through"
                                 )}>
-                                    <Avatar className="h-5 w-5"><AvatarImage/><AvatarFallback>{p.username.charAt(0)}</AvatarFallback></Avatar>
+                                    <Avatar className="h-5 w-5"><AvatarImage src={p.photoURL || undefined}/><AvatarFallback>{p.username.charAt(0)}</AvatarFallback></Avatar>
                                     <span>{p.username}</span>
                                     {hasAccepted && <Check className="h-4 w-4 text-green-600"/>}
                                     {hasDeclined && <X className="h-4 w-4 text-destructive"/>}
