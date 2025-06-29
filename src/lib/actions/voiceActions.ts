@@ -57,12 +57,16 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
             const voiceCount = roomData.voiceParticipantsCount || 0;
             if (voiceCount >= roomData.maxParticipants) throw new Error("Sesli sohbet dolu.");
 
+            const isHostOrMod = roomData.createdBy.uid === user.uid || (roomData.moderators || []).includes(user.uid);
+
             const participantData: Omit<VoiceParticipant, 'isSpeaker'> = {
                 uid: user.uid,
                 username: user.displayName || 'Anonim',
                 photoURL: user.photoURL,
-                isMuted: false,
+                isMuted: roomData.requestToSpeakEnabled ? !isHostOrMod : false, // El kaldırma modu aktifse ve mod değilse sustur
                 isSharingScreen: false,
+                canSpeak: roomData.requestToSpeakEnabled ? isHostOrMod : true, // El kaldırma modu aktifse sadece modlar konuşabilir
+                handRaised: false, // Herkes eli aşağıda başlar
                 joinedAt: serverTimestamp() as Timestamp,
                 lastActiveAt: serverTimestamp() as Timestamp,
                 selectedBubble: userData.selectedBubble || '',
@@ -91,6 +95,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
         return { success: false, error: error.message };
     }
 }
+
 
 /**
  * Kullanıcının sesli sohbetten ayrılması için sunucu eylemi.
@@ -173,7 +178,7 @@ export async function kickFromVoice(roomId: string, currentUserId: string, targe
 
     try {
         await runTransaction(db, async (transaction) => {
-            const roomDoc = await transaction.get(roomRef);
+             const roomDoc = await transaction.get(roomRef);
             if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
             const roomData = roomDoc.data() as Room;
 

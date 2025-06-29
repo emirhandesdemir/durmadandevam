@@ -29,11 +29,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Hand } from "lucide-react";
+import { Switch } from "../ui/switch";
+import { Label } from "../ui/label";
 
 const formSchema = z.object({
   name: z.string().min(3, { message: "Ad en az 3 karakter olmalıdır." }).max(50, {message: "Ad en fazla 50 karakter olabilir."}),
   description: z.string().min(3, { message: "Açıklama en az 3 karakter olmalıdır." }).max(100, {message: "Açıklama en fazla 100 karakter olabilir."}),
+  requestToSpeakEnabled: z.boolean().default(false),
 });
 
 export default function CreateRoomForm() {
@@ -44,7 +47,7 @@ export default function CreateRoomForm() {
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
-        defaultValues: { name: "", description: "" },
+        defaultValues: { name: "", description: "", requestToSpeakEnabled: false },
     });
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -68,6 +71,7 @@ export default function CreateRoomForm() {
             const newRoom: any = {
                 name: values.name,
                 description: values.description,
+                requestToSpeakEnabled: values.requestToSpeakEnabled,
                 createdBy: {
                   uid: user.uid,
                   username: user.displayName || "Bilinmeyen Kullanıcı",
@@ -75,7 +79,7 @@ export default function CreateRoomForm() {
                   role: userData.role || 'user',
                   selectedAvatarFrame: userData.selectedAvatarFrame || ''
                 },
-                moderators: [user.uid], // Creator is the first moderator
+                moderators: [user.uid],
                 createdAt: serverTimestamp(),
                 participants: [{
                     uid: user.uid,
@@ -130,6 +134,30 @@ export default function CreateRoomForm() {
                                 <FormMessage className="ml-4" />
                             </FormItem>
                         )} />
+                        <FormField
+                            control={form.control}
+                            name="requestToSpeakEnabled"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                                <div className="space-y-0.5">
+                                    <FormLabel className="flex items-center gap-2">
+                                        <Hand className="h-4 w-4"/>
+                                        El Kaldırma Modu
+                                    </FormLabel>
+                                    <p className="text-xs text-muted-foreground">
+                                        Aktifse, katılımcıların konuşmak için izin istemesi gerekir.
+                                    </p>
+                                </div>
+                                <FormControl>
+                                    <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    />
+                                </FormControl>
+                                </FormItem>
+                            )}
+                        />
+
                         <Button type="submit" size="lg" className="w-full rounded-full py-6 text-lg font-semibold bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg transition-transform hover:scale-105 disabled:opacity-75" disabled={isLoading}>
                              {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
                              Oluştur

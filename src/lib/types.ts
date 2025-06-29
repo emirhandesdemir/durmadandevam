@@ -58,7 +58,7 @@ export interface Post {
     id: string;
     uid: string;
     username: string;
-    userAvatar?: string;
+    userAvatar?: string | null;
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     text: string;
@@ -103,6 +103,7 @@ export interface Room {
     maxParticipants: number;
     nextGameTimestamp?: Timestamp;
     voiceParticipantsCount?: number;
+    requestToSpeakEnabled?: boolean;
 }
 
 export interface VoiceParticipant {
@@ -116,6 +117,8 @@ export interface VoiceParticipant {
     lastActiveAt?: Timestamp;
     selectedBubble?: string;
     selectedAvatarFrame?: string;
+    handRaised?: boolean;
+    canSpeak?: boolean;
 }
 
 export interface GameQuestion {
@@ -182,6 +185,7 @@ export interface DirectMessageMetadata {
         text: string;
         senderId: string;
         timestamp: Timestamp;
+        read?: boolean;
     } | null;
     unreadCounts: {
         [uid: string]: number;

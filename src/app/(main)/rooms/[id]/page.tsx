@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
-import { Loader2, Mic, MicOff, Plus, Crown, PhoneOff, ScreenShare, ScreenShareOff, ChevronsUpDown, Gift, Music, MusicOff } from 'lucide-react';
+import { Loader2, Mic, MicOff, Plus, Crown, PhoneOff, ScreenShare, ScreenShareOff, ChevronsUpDown, Gift, Music, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TextChat from '@/components/chat/text-chat';
 import ChatMessageInput from '@/components/chat/ChatMessageInput';
@@ -345,7 +345,7 @@ export default function RoomPage() {
                                 {isSharingScreen ? <ScreenShareOff className="h-5 w-5 text-destructive"/> : <ScreenShare className="h-5 w-5"/>}
                             </Button>
                              <Button onClick={isMusicPlaying ? stopMusic : () => musicInputRef.current?.click()} variant="ghost" size="icon" className="rounded-full bg-muted hover:bg-muted/80" disabled={isProcessingMusic}>
-                                {isProcessingMusic ? <Loader2 className="h-5 w-5 animate-spin"/> : (isMusicPlaying ? <MusicOff className="h-5 w-5 text-destructive"/> : <Music className="h-5 w-5"/>) }
+                                {isProcessingMusic ? <Loader2 className="h-5 w-5 animate-spin"/> : (isMusicPlaying ? <VolumeX className="h-5 w-5 text-destructive"/> : <Music className="h-5 w-5"/>) }
                             </Button>
                             <Button onClick={() => setShowExitDialog(true)} variant="destructive" size="icon" className="rounded-full">
                                 <PhoneOff className="h-5 w-5" />

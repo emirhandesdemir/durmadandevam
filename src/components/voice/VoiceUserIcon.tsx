@@ -12,7 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import { kickFromVoice, muteUserInRoom, unmuteUserInRoom } from "@/lib/actions/voiceActions";
+import { kickFromVoice } from "@/lib/actions/voiceActions";
+import { manageSpeakingPermission } from "@/lib/actions/roomActions";
 import type { VoiceParticipant, Room } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -23,11 +24,13 @@ import {
   Loader2,
   User,
   Shield,
-  VolumeX,
+  Hand,
+  Check
 } from "lucide-react";
 import { useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useRouter } from "next/navigation";
+import { useVoiceChat } from "@/contexts/VoiceChatContext";
 
 
 interface VoiceUserIconProps {
@@ -49,6 +52,7 @@ export default function VoiceUserIcon({
 }: VoiceUserIconProps) {
   const { toast } = useToast();
   const router = useRouter();
+  const { handleManageSpeakingPermission } = useVoiceChat();
   const [isProcessing, setIsProcessing] = useState(false);
 
   const isSelf = participant.uid === currentUserId;
@@ -72,6 +76,18 @@ export default function VoiceUserIcon({
     }
   };
 
+  const handlePermission = async (allow: boolean) => {
+    if (!canModerate) return;
+    setIsProcessing(true);
+    try {
+        await handleManageSpeakingPermission(participant.uid, allow);
+    } catch (e: any) {
+        toast({ variant: "destructive", description: e.message });
+    } finally {
+        setIsProcessing(false);
+    }
+  };
+
   const handleViewProfile = () => {
       router.push(`/profile/${participant.uid}`);
   }
@@ -86,12 +102,25 @@ export default function VoiceUserIcon({
       </DropdownMenuItem>
       {canModerate && !isSelf && !isParticipantHost && (
         <>
+            <DropdownMenuSeparator/>
+            {participant.handRaised && !participant.canSpeak && (
+                <DropdownMenuItem onClick={() => handlePermission(true)} className="text-green-500 focus:text-green-500">
+                    <Check className="mr-2 h-4 w-4" />
+                    <span>Konuşma İzni Ver</span>
+                </DropdownMenuItem>
+            )}
+             {participant.canSpeak && (
+                <DropdownMenuItem onClick={() => handlePermission(false)} className="text-amber-500 focus:text-amber-500">
+                    <MicOff className="mr-2 h-4 w-4" />
+                    <span>Sessize Al & İzni Kaldır</span>
+                </DropdownMenuItem>
+            )}
             <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
-            onClick={handleKick}
+                className="text-destructive focus:text-destructive"
+                onClick={handleKick}
             >
-            <LogOut className="mr-2 h-4 w-4" />
-            <span>Sesten At</span>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Sesten At</span>
             </DropdownMenuItem>
         </>
       )}
@@ -127,13 +156,18 @@ export default function VoiceUserIcon({
                 </AvatarFallback>
               </Avatar>
           </div>
-          <div className={cn("absolute bg-card/70 backdrop-blur-sm rounded-full shadow-md", iconBadgePos)}>
-            {participant.isMuted ? (
-              <MicOff className={cn(iconSize, "text-destructive")} />
-            ) : (
-              <Mic className={cn(iconSize, "text-foreground")} />
+            <div className={cn("absolute bg-card/70 backdrop-blur-sm rounded-full shadow-md", iconBadgePos)}>
+                {participant.isMuted ? (
+                <MicOff className={cn(iconSize, "text-destructive")} />
+                ) : (
+                <Mic className={cn(iconSize, "text-foreground")} />
+                )}
+            </div>
+            {participant.handRaised && (
+                 <div className="absolute top-0 -right-1 p-1 bg-blue-500 rounded-full border-2 border-background">
+                    <Hand className="h-3 w-3 text-white" />
+                 </div>
             )}
-          </div>
       </div>
 
       <div className="flex items-center justify-center gap-1 w-full">

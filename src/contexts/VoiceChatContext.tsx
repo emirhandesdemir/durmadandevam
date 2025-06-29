@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { collection, onSnapshot, doc, addDoc, query, where, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Room, VoiceParticipant } from '../types';
+import { requestToSpeak, manageSpeakingPermission } from '@/lib/actions/roomActions';
 import { joinVoiceChat, leaveVoiceChat, updateLastActive, toggleSelfMute as toggleMuteAction, toggleScreenShare as toggleScreenShareAction } from '@/lib/actions/voiceActions';
 import { useToast } from '@/hooks/use-toast';
 import { usePathname, useRouter } from 'next/navigation';
@@ -12,7 +13,11 @@ import { usePathname, useRouter } from 'next/navigation';
 const ICE_SERVERS = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+        {
+            urls: 'turn:openrelay.metered.ca:80',
+            username: 'openrelayproject',
+            credential: 'openrelayproject',
+        },
     ],
 };
 
@@ -36,6 +41,9 @@ interface VoiceChatContextType {
     toggleSelfMute: () => Promise<void>;
     playMusic: (file: File) => Promise<void>;
     stopMusic: () => Promise<void>;
+    // New methods for hand raising
+    handleRequestToSpeak: (raise: boolean) => Promise<void>;
+    handleManageSpeakingPermission: (targetUserId: string, allow: boolean) => Promise<void>;
 }
 
 const VoiceChatContext = createContext<VoiceChatContextType | undefined>(undefined);
@@ -57,7 +65,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const [remoteAudioStreams, setRemoteAudioStreams] = useState<Record<string, MediaStream>>({});
     const [remoteScreenStreams, setRemoteScreenStreams] = useState<Record<string, MediaStream>>({});
 
-    // Müzik için State'ler ve Ref'ler
     const [isMusicPlaying, setIsMusicPlaying] = useState(false);
     const [isProcessingMusic, setIsProcessingMusic] = useState(false);
     const musicAudioContextRef = useRef<AudioContext | null>(null);
@@ -308,6 +315,11 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     const toggleSelfMute = useCallback(async () => {
         if (!self || !connectedRoomId || !localStream) return;
+        if (activeRoom?.requestToSpeakEnabled && !self.canSpeak) {
+            toast({ variant: 'destructive', description: "Konuşma izniniz yok. El kaldırarak izin isteyebilirsiniz."});
+            return;
+        }
+
         const audioTrack = localStream.getAudioTracks()[0];
         if (audioTrack) {
             const newMutedState = !self.isMuted;
@@ -318,7 +330,18 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 lastActiveUpdateTimestamp.current = Date.now();
             }
         }
-    }, [self, connectedRoomId, localStream, user]);
+    }, [self, connectedRoomId, localStream, user, activeRoom, toast]);
+
+    // --- New Hand Raising Actions ---
+    const handleRequestToSpeak = useCallback(async (raise: boolean) => {
+        if (!user || !connectedRoomId) return;
+        await requestToSpeak(connectedRoomId, user.uid, raise);
+    }, [user, connectedRoomId]);
+
+    const handleManageSpeakingPermission = useCallback(async (targetUserId: string, allow: boolean) => {
+        if (!user || !connectedRoomId) return;
+        await manageSpeakingPermission(connectedRoomId, user.uid, targetUserId, allow);
+    }, [user, connectedRoomId]);
 
     useEffect(() => {
         if (localStream && user) {
@@ -381,7 +404,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     const value = {
         activeRoom, participants: memoizedParticipants, self, isConnecting, isConnected, remoteAudioStreams, remoteScreenStreams, isSharingScreen, localScreenStream,
-        setActiveRoomId, joinRoom, leaveRoom, toggleSelfMute, startScreenShare, stopScreenShare, playMusic, stopMusic, isMusicPlaying, isProcessingMusic
+        setActiveRoomId, joinRoom, leaveRoom, toggleSelfMute, startScreenShare, stopScreenShare, playMusic, stopMusic, isMusicPlaying, isProcessingMusic,
+        handleRequestToSpeak, handleManageSpeakingPermission
     };
 
     return <VoiceChatContext.Provider value={value}>{children}</VoiceChatContext.Provider>;
