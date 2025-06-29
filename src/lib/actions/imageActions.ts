@@ -12,8 +12,9 @@ export async function applyImageFilter(input: StyleImageInput) {
     try {
         const result = await styleImage(input);
         return { success: true, data: result };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Resim filtresi uygulanırken hata oluştu:", error);
-        return { success: false, error: "Filtre uygulanırken bir hata oluştu. Lütfen tekrar deneyin." };
+        // Hatanın gerçek mesajını istemciye gönder, böylece daha net bilgi alınır.
+        return { success: false, error: error.message || "Bilinmeyen bir AI hatası oluştu." };
     }
 }
