@@ -1,18 +1,17 @@
 // src/app/admin/dashboard/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { collection, onSnapshot, doc } from "firebase/firestore";
+import { useState, useEffect, useCallback } from "react";
+import { collection, onSnapshot, doc, getCountFromServer } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import StatCard from "@/components/admin/stat-card";
-import { Users, MessageSquare, FileText, Puzzle, Headphones, BarChart3, SlidersHorizontal, Settings } from "lucide-react";
+import { Users, MessageSquare, FileText, Puzzle, Headphones, BarChart3, SlidersHorizontal, Settings, Database, HeartPulse } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import type { VoiceStats } from "@/lib/types";
 
 export default function DashboardPage() {
-  // Veri sayımları ve yükleme durumu için state'ler
   const [userCount, setUserCount] = useState(0);
   const [roomCount, setRoomCount] = useState(0);
   const [postCount, setPostCount] = useState(0);
@@ -20,31 +19,48 @@ export default function DashboardPage() {
   const [voiceUserCount, setVoiceUserCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Firestore'dan verileri anlık olarak dinlemek için useEffect
+  // Use a callback to fetch non-realtime counts for efficiency
+  const fetchCounts = useCallback(async () => {
+    try {
+      const [
+        userSnapshot,
+        roomSnapshot,
+        postSnapshot,
+        questionSnapshot,
+      ] = await Promise.all([
+        getCountFromServer(collection(db, "users")),
+        getCountFromServer(collection(db, "rooms")),
+        getCountFromServer(collection(db, "posts")),
+        getCountFromServer(collection(db, "game_questions")),
+      ]);
+
+      setUserCount(userSnapshot.data().count);
+      setRoomCount(roomSnapshot.data().count);
+      setPostCount(postSnapshot.data().count);
+      setQuestionCount(questionSnapshot.data().count);
+      
+    } catch (error) {
+        console.error("Error fetching counts:", error);
+    }
+  }, []);
+
   useEffect(() => {
     setIsLoading(true);
+    fetchCounts();
 
-    const unsubscribers = [
-        onSnapshot(collection(db, "users"), (snapshot) => setUserCount(snapshot.size)),
-        onSnapshot(collection(db, "rooms"), (snapshot) => setRoomCount(snapshot.size)),
-        onSnapshot(collection(db, "posts"), (snapshot) => setPostCount(snapshot.size)),
-        onSnapshot(collection(db, "game_questions"), (snapshot) => setQuestionCount(snapshot.size)),
-        onSnapshot(doc(db, "config", "voiceStats"), (doc) => {
-            if (doc.exists()) {
-                setVoiceUserCount((doc.data() as VoiceStats).totalUsers || 0);
-            }
-        }),
-    ];
+    // Still use a listener for the live voice user count, as it's a single doc read
+    const voiceStatsUnsub = onSnapshot(doc(db, "config", "voiceStats"), (doc) => {
+      if (doc.exists()) {
+        setVoiceUserCount((doc.data() as VoiceStats).totalUsers || 0);
+      }
+    });
 
-    // Tüm dinleyiciler kurulduktan bir süre sonra yükleme durumunu false yap
-    const timer = setTimeout(() => setIsLoading(false), 800);
+    setIsLoading(false);
 
-    // Component unmount olduğunda dinleyicileri ve zamanlayıcıyı temizle
     return () => {
-        unsubscribers.forEach(unsub => unsub());
-        clearTimeout(timer);
+      voiceStatsUnsub();
     };
-  }, []);
+  }, [fetchCounts]);
 
   return (
     <div>

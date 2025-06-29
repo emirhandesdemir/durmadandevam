@@ -137,6 +137,8 @@ export interface GameSettings {
     cooldownSeconds: number;
     afkTimeoutMinutes: number;
     imageUploadQuality: number;
+    audioBitrate: number;
+    videoBitrate: number;
 }
 
 export interface ActiveGame {

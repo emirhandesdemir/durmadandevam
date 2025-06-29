@@ -28,6 +28,8 @@ const settingsSchema = z.object({
   cooldownSeconds: z.coerce.number().min(10, "Bekleme süresi en az 10 saniye olmalıdır."),
   afkTimeoutMinutes: z.coerce.number().min(1, "AFK süresi en az 1 dakika olmalıdır."),
   imageUploadQuality: z.coerce.number().min(0.1, "Kalite en az 0.1 olmalı").max(1, "Kalite en fazla 1 olabilir"),
+  audioBitrate: z.coerce.number().min(16, "Bit hızı en az 16 olmalı").max(128, "Bit hızı en fazla 128 olabilir"),
+  videoBitrate: z.coerce.number().min(100, "Bit hızı en az 100 olmalı").max(2000, "Bit hızı en fazla 2000 olabilir"),
 });
 
 
@@ -46,6 +48,8 @@ export default function SystemSettingsPage() {
             cooldownSeconds: 30,
             afkTimeoutMinutes: 8,
             imageUploadQuality: 0.9,
+            audioBitrate: 64,
+            videoBitrate: 1000,
         },
     });
 
@@ -181,10 +185,29 @@ export default function SystemSettingsPage() {
                                 <Signal className="h-6 w-6 text-muted-foreground" />
                                 <CardTitle>WebRTC & Ses Kalitesi Ayarları</CardTitle>
                             </div>
-                            <CardDescription>Sesli sohbetin bant genişliği ve kalitesiyle ilgili ayarlar. (Yakında)</CardDescription>
+                            <CardDescription>Sesli sohbetin bant genişliği ve kalitesiyle ilgili ayarlar.</CardDescription>
                         </CardHeader>
-                        <CardContent>
-                            <p className="text-sm text-muted-foreground">Bu ayarlar gelecekteki bir güncellemede eklenecektir ve WebRTC bağlantılarının kalitesini yönetmenizi sağlayacaktır.</p>
+                        <CardContent className="space-y-6">
+                            {loading ? (
+                                <div className="space-y-6"><Skeleton className="h-16 w-full" /><Skeleton className="h-16 w-full" /></div>
+                            ) : (
+                                <>
+                                    <FormField control={form.control} name="audioBitrate" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Ses Bit Hızı (kbps)</FormLabel>
+                                            <FormControl><Input type="number" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                    <FormField control={form.control} name="videoBitrate" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Video Bit Hızı (kbps)</FormLabel>
+                                            <FormControl><Input type="number" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                </>
+                            )}
                         </CardContent>
                     </Card>
                 </div>

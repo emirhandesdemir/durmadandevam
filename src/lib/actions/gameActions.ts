@@ -29,7 +29,20 @@ export async function getGameSettings(): Promise<GameSettings> {
     const settingsRef = doc(db, 'config', 'gameSettings');
     const docSnap = await getDoc(settingsRef);
     if (docSnap.exists()) {
-        return docSnap.data() as GameSettings;
+        // Firestore'dan gelen veriyi varsayılanlarla birleştirerek eksik alanları doldur
+        const firestoreData = docSnap.data();
+        return {
+            dailyDiamondLimit: 50,
+            gameIntervalMinutes: 5,
+            questionTimerSeconds: 15,
+            rewardAmount: 5,
+            cooldownSeconds: 30,
+            afkTimeoutMinutes: 8,
+            imageUploadQuality: 0.9,
+            audioBitrate: 64,
+            videoBitrate: 1000,
+            ...firestoreData
+        } as GameSettings;
     }
     // Varsayılan ayarlar
     return {
@@ -40,6 +53,8 @@ export async function getGameSettings(): Promise<GameSettings> {
         cooldownSeconds: 30,
         afkTimeoutMinutes: 8,
         imageUploadQuality: 0.9,
+        audioBitrate: 64,
+        videoBitrate: 1000,
     };
 }
 
