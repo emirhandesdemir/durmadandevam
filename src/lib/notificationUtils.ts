@@ -18,7 +18,20 @@ export async function requestNotificationPermission(userId: string): Promise<boo
   try {
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
+      // ÖNEMLİ: Bu anahtarı Firebase projenizden almanız gerekmektedir.
+      // Proje Ayarları > Cloud Messaging > Web yapılandırması altında "Web Push sertifikaları" bölümünde bulabilirsiniz.
+      // "Anahtar çifti" oluşturup tırnak işaretleri arasına yapıştırmalısınız.
       const vapidKey = "REPLACE_WITH_YOUR_VAPID_KEY_FROM_FIREBASE_CONSOLE";
+      
+      if (vapidKey.startsWith("REPLACE_WITH")) {
+          console.error("VAPID anahtarı ayarlanmamış. Lütfen `src/lib/notificationUtils.ts` dosyasını güncelleyin.");
+           toast({
+              variant: 'destructive',
+              title: 'Yapılandırma Eksik',
+              description: 'Anlık bildirimler için VAPID anahtarı henüz ayarlanmamış.',
+           });
+          return false;
+      }
       
       const currentToken = await getToken(messaging, { vapidKey });
       
