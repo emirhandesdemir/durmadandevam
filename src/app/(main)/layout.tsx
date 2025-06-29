@@ -5,8 +5,7 @@ import Header from "@/components/layout/Header";
 import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
 import PersistentVoiceBar from "@/components/voice/PersistentVoiceBar";
 import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
-import { motion, useScroll, useMotionValueEvent } from 'framer-motion';
-import { useState, useRef } from 'react';
+import { useRef } from 'react';
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
@@ -16,26 +15,11 @@ export default function MainAppLayout({
   children: React.ReactNode;
 }) {
   const scrollRef = useRef<HTMLElement>(null);
-  const { scrollY } = useScroll({ container: scrollRef });
-  const [hidden, setHidden] = useState(false);
   const pathname = usePathname();
 
   const isHeaderlessPage = (pathname.startsWith('/rooms/') && pathname !== '/rooms') || (pathname.startsWith('/dm/') && pathname !== '/dm');
   const isFullPageLayout = isHeaderlessPage;
   const isHomePage = pathname === '/home';
-
-  // Simplified and more robust animation logic
-  useMotionValueEvent(scrollY, "change", (latest) => {
-    const previous = scrollY.getPrevious() ?? 0;
-    
-    // Hide header on scroll down, show on scroll up.
-    // A threshold of 100 prevents hiding on small scrolls near the top.
-    if (latest > previous && latest > 100) {
-      setHidden(true);
-    } else {
-      setHidden(false);
-    }
-  });
 
   return (
     <VoiceChatProvider>
@@ -47,17 +31,14 @@ export default function MainAppLayout({
             isFullPageLayout ? "overflow-hidden" : "overflow-y-auto" // Conditional scrolling
           )}
         >
-           <motion.header
-              variants={{
-                visible: { y: 0, height: 'auto' },
-                hidden: { y: "-100%", height: 0 },
-              }}
-              animate={hidden || isHeaderlessPage ? "hidden" : "visible"}
-              transition={{ duration: 0.35, ease: "easeInOut" }}
-              className="sticky top-0 z-40 overflow-hidden"
+           <header
+              className={cn(
+                "sticky top-0 z-40",
+                isHeaderlessPage && "hidden"
+              )}
             >
               <Header />
-            </motion.header>
+            </header>
           
            <div className={cn(
              // For full-page layouts, make the wrapper a flex container that grows
