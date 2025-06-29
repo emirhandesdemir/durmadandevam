@@ -89,7 +89,7 @@ export default function NewPostForm() {
         await addDoc(collection(db, 'posts'), {
             uid: user.uid,
             username: userData.username,
-            userAvatar: userData.photoURL,
+            userAvatar: userData.photoURL || null,
             userAvatarFrame: userData.selectedAvatarFrame || '',
             userRole: userData.role || 'user',
             text: text,
