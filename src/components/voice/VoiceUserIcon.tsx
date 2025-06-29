@@ -12,8 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import { kickFromVoice } from "@/lib/actions/voiceActions";
-import { manageSpeakingPermission } from "@/lib/actions/roomActions";
+import { kickFromVoice, manageSpeakingPermission } from "@/lib/actions/voiceActions";
 import type { VoiceParticipant, Room } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -25,7 +24,7 @@ import {
   User,
   Shield,
   Hand,
-  Check
+  Check,
 } from "lucide-react";
 import { useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -75,7 +74,7 @@ export default function VoiceUserIcon({
       setIsProcessing(false);
     }
   };
-
+  
   const handlePermission = async (allow: boolean) => {
     if (!canModerate) return;
     setIsProcessing(true);
@@ -174,12 +173,22 @@ export default function VoiceUserIcon({
           <p className={cn("font-semibold text-foreground truncate", nameSize, size === 'lg' ? 'max-w-[120px]' : 'max-w-[60px]')}>{participant.username}</p>
           {isParticipantHost && (
               <TooltipProvider>
-                  <Tooltip><TooltipTrigger><Crown className={cn("text-yellow-400 shrink-0", size === 'lg' ? 'h-5 w-5' : 'h-4 w-4' )} /></TooltipTrigger><TooltipContent><p>Oda Sahibi</p></TooltipContent></Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Crown className={cn("text-yellow-400 shrink-0", size === 'lg' ? 'h-5 w-5' : 'h-4 w-4' )} />
+                    </TooltipTrigger>
+                    <TooltipContent><p>Oda Sahibi</p></TooltipContent>
+                  </Tooltip>
               </TooltipProvider>
           )}
           {isParticipantModerator && !isParticipantHost && (
               <TooltipProvider>
-                  <Tooltip><TooltipTrigger><Shield className={cn("text-blue-400 shrink-0", size === 'lg' ? 'h-5 w-5' : 'h-4 w-4' )} /></TooltipTrigger><TooltipContent><p>Moderatör</p></TooltipContent></Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Shield className={cn("text-blue-400 shrink-0", size === 'lg' ? 'h-5 w-5' : 'h-4 w-4' )} />
+                    </TooltipTrigger>
+                    <TooltipContent><p>Moderatör</p></TooltipContent>
+                  </Tooltip>
               </TooltipProvider>
           )}
       </div>
