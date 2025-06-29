@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import { kickFromVoice, manageSpeakingPermission } from "@/lib/actions/voiceActions";
+import { kickFromVoice } from "@/lib/actions/voiceActions";
 import type { VoiceParticipant, Room } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -23,6 +23,7 @@ import {
   Loader2,
   User,
   Shield,
+  VolumeX,
   Hand,
   Check,
 } from "lucide-react";
@@ -74,7 +75,7 @@ export default function VoiceUserIcon({
       setIsProcessing(false);
     }
   };
-  
+
   const handlePermission = async (allow: boolean) => {
     if (!canModerate) return;
     setIsProcessing(true);
@@ -86,6 +87,7 @@ export default function VoiceUserIcon({
         setIsProcessing(false);
     }
   };
+
 
   const handleViewProfile = () => {
       router.push(`/profile/${participant.uid}`);
@@ -102,7 +104,7 @@ export default function VoiceUserIcon({
       {canModerate && !isSelf && !isParticipantHost && (
         <>
             <DropdownMenuSeparator/>
-            {participant.handRaised && !participant.canSpeak && (
+             {participant.handRaised && !participant.canSpeak && (
                 <DropdownMenuItem onClick={() => handlePermission(true)} className="text-green-500 focus:text-green-500">
                     <Check className="mr-2 h-4 w-4" />
                     <span>Konuşma İzni Ver</span>
@@ -128,12 +130,12 @@ export default function VoiceUserIcon({
   
   const nameSize = size === 'lg' ? "text-sm" : "text-xs";
   const iconSize = size === 'lg' ? "h-5 w-5" : "h-4 w-4";
-  const avatarSize = size === 'lg' ? "h-20 w-20" : "w-full aspect-square";
+  const avatarSize = size === 'lg' ? "h-20 w-20" : "h-16 w-16";
   const iconBadgePos = size === 'lg' ? "bottom-1 right-1 p-2" : "bottom-0 right-0 p-1.5";
   const speakingRing = participant.isSpeaker && !participant.isMuted;
 
   const avatar = (
-    <div className="relative flex flex-col items-center gap-1.5">
+     <div className={cn("relative flex flex-col items-center gap-1.5", size === 'lg' ? "w-24" : "w-20")}>
        <div className={cn("relative", avatarSize)}>
           {participant.selectedBubble && (
             <div className={`bubble-wrapper ${participant.selectedBubble}`}>
@@ -162,7 +164,7 @@ export default function VoiceUserIcon({
                 <Mic className={cn(iconSize, "text-foreground")} />
                 )}
             </div>
-            {participant.handRaised && (
+             {participant.handRaised && (
                  <div className="absolute top-0 -right-1 p-1 bg-blue-500 rounded-full border-2 border-background">
                     <Hand className="h-3 w-3 text-white" />
                  </div>
@@ -175,7 +177,7 @@ export default function VoiceUserIcon({
               <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                        <Crown className={cn("text-yellow-400 shrink-0", size === 'lg' ? 'h-5 w-5' : 'h-4 w-4' )} />
+                        <button><Crown className={cn("text-yellow-400 shrink-0", size === 'lg' ? 'h-5 w-5' : 'h-4 w-4' )} /></button>
                     </TooltipTrigger>
                     <TooltipContent><p>Oda Sahibi</p></TooltipContent>
                   </Tooltip>
@@ -185,7 +187,7 @@ export default function VoiceUserIcon({
               <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                        <Shield className={cn("text-blue-400 shrink-0", size === 'lg' ? 'h-5 w-5' : 'h-4 w-4' )} />
+                         <button><Shield className={cn("text-blue-400 shrink-0", size === 'lg' ? 'h-5 w-5' : 'h-4 w-4' )} /></button>
                     </TooltipTrigger>
                     <TooltipContent><p>Moderatör</p></TooltipContent>
                   </Tooltip>
@@ -203,7 +205,7 @@ export default function VoiceUserIcon({
             className="cursor-pointer rounded-full text-center"
           >
             {isProcessing ? (
-              <div className={cn("flex items-center justify-center rounded-full bg-muted/50 aspect-square", avatarSize)}>
+              <div className={cn("flex items-center justify-center rounded-full bg-muted/50", avatarSize)}>
                   <Loader2 className="h-8 w-8 animate-spin" />
               </div>
             ) : (
