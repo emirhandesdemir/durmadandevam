@@ -1,37 +1,35 @@
+
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-
-    // Avatars: Users can only write to their own avatar path. Anyone can read.
-    match /upload/avatars/{userId}/{fileName} {
-      allow read: if true;
+    // Allow public read access for all files, which is common for social media apps.
+    // This allows anyone to see images, profile pictures, etc.
+    match /{allPaths=**} {
+      allow read;
+    }
+    
+    // Allow users to upload to their own avatar folder.
+    match /upload/avatars/{userId}/{allPaths=**} {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Posts: Authenticated users can write. Anyone can read.
-    match /upload/posts/{userId}/{fileName} {
-      allow read: if true;
+    // Allow users to upload to their own posts folder.
+    match /upload/posts/{userId}/{allPaths=**} {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
-    
-    // Room Cover Images: Only authenticated users can write. Anyone can read.
-    match /upload/rooms/{roomId}/{fileName} {
-        allow read: if true;
-        allow write: if request.auth != null;
-    }
-    
-    // Room Media: Only authenticated users can write. Anyone can read.
-     match /upload/rooms/{roomId}/{mediaType}/{fileName} {
-        allow read: if true;
-        allow write: if request.auth != null;
+
+    // Allow users to upload to a DM chat they are a part of.
+    // The chatId is a combination of the two user UIDs, sorted alphabetically.
+    match /dms/{chatId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid in chatId.split('_');
     }
 
-    // Direct Messages: Only participants of the chat can read/write.
-    // The chatId is composed of two UIDs, sorted and joined by '_'.
-    // We check if the requesting user's UID is part of the chatId string.
-    match /dms/{chatId}/{mediaType}/{fileName} {
-      allow read, write: if request.auth != null && request.auth.uid in chatId.split('_');
+    // Allow authenticated users to upload to any room's media folder.
+    // For enhanced security, you could add a rule to check if the user is a participant in the room.
+    // e.g. `exists(/databases/$(database)/documents/rooms/$(roomId)/participants/$(request.auth.uid))`
+    match /upload/rooms/{roomId}/{allPaths=**} {
+        allow write: if request.auth != null;
     }
   }
 }

@@ -64,7 +64,7 @@ export default function EditMessageDialog({ isOpen, onOpenChange, message, chatI
         <DialogHeader>
           <DialogTitle>Mesajı Düzenle</DialogTitle>
           <DialogDescription>
-            Mesajınızı güncelleyin. Bu işlem geri alınamaz.
+            Mesajınızı güncelleyin...
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
