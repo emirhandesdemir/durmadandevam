@@ -90,15 +90,22 @@ export const sendPushNotification = functions
         }
 
         const payload: admin.messaging.MessagingPayload = {
+            // Notification for foreground display
             notification: {
                 title: title,
                 body: body,
                 icon: "/icons/icon-192x192.png",
-                click_action: link, // For older browsers/some platforms
+            },
+            // Data for background service worker
+            data: {
+                title: title,
+                body: body,
+                icon: "/icons/icon-192x192.png",
+                link: link,
             },
             webpush: {
                 fcmOptions: {
-                    link: link, // For modern browsers
+                    link: link,
                 },
             },
         };

@@ -1,4 +1,7 @@
-// Import the Firebase app and messaging libraries
+// public/firebase-messaging-sw.js
+
+// This file needs to be in the public directory
+// Make sure you have the correct firebase-app and firebase-messaging-sw js files
 import { initializeApp } from "firebase/app";
 import { getMessaging, onBackgroundMessage } from "firebase/messaging/sw";
 
@@ -13,51 +16,48 @@ const firebaseConfig = {
   measurementId: "G-J3EB02J0LN"
 };
 
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
-// Set up the background message handler
 onBackgroundMessage(messaging, (payload) => {
-  console.log(
-    "[firebase-messaging-sw.js] Received background message ",
-    payload
-  );
+  console.log("[firebase-messaging-sw.js] Received background message ", payload);
   
-  // Customize notification here
-  const notificationTitle = payload.notification?.title || "Yeni Bildirim";
+  // Customize notification here. We use the data payload for consistency.
+  const notificationTitle = payload.data.title;
   const notificationOptions = {
-    body: payload.notification?.body || "Detaylar için uygulamayı açın.",
-    icon: payload.notification?.icon || "/icons/icon-192x192.png",
+    body: payload.data.body,
+    icon: payload.data.icon || '/icons/icon-192x192.png',
     data: {
-      url: payload.fcmOptions?.link || '/'
+        url: payload.data.link // Pass the URL to the 'notificationclick' event
     }
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// Optional: Handle notification clicks
+// Handle notification click to open the correct URL
 self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
+    event.notification.close(); // Close the notification
 
-  const urlToOpen = event.notification.data.url;
-  
-  event.waitUntil(
-    clients.matchAll({
-      type: "window",
-      includeUncontrolled: true
-    }).then((clientList) => {
-      if (clientList.length > 0) {
-        let client = clientList[0];
-        for (let i = 0; i < clientList.length; i++) {
-          if (clientList[i].focused) {
-            client = clientList[i];
-          }
-        }
-        return client.focus().then(c => c.navigate(urlToOpen));
-      }
-      return clients.openWindow(urlToOpen);
-    })
-  );
+    const urlToOpen = new URL(event.notification.data.url || '/', self.location.origin).href;
+
+    // This looks for an existing window and focuses it.
+    event.waitUntil(
+        clients.matchAll({
+            type: "window",
+            includeUncontrolled: true
+        }).then((clientList) => {
+            for (let i = 0; i < clientList.length; i++) {
+                let client = clientList[i];
+                if (client.url === urlToOpen && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            if (clients.openWindow) {
+                return clients.openWindow(urlToOpen);
+            }
+        })
+    );
 });
