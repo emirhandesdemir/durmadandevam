@@ -1,12 +1,32 @@
-
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow read access for everyone and write access for any authenticated user.
-    // This is a permissive rule set for development and testing.
+    // Allow read access on all files by default.
+    // Deny write access; it will be granted on a per-path basis below.
     match /{allPaths=**} {
-      allow read;
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Allow authenticated users to write to a folder named with their own UID.
+    // This is a secure pattern for user-generated content like avatars and posts.
+    // Example path: /upload/user123/avatar.jpg
+    match /upload/{userId}/{allPaths=**} {
+        allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+     // A more specific rule for room uploads, allowing any authenticated user to upload.
+     // This is useful if participants other than the creator need to upload files.
+     // For stricter control, you would check against a participants list in Firestore.
+    match /upload/rooms/{roomId}/{allPaths=**} {
+      allow write: if request.auth != null;
+    }
+    
+    // Allow any authenticated user to upload to the DMs folder.
+    // Read access is difficult to restrict here without custom claims, so we rely
+    // on unguessable URLs for privacy.
+    match /upload/dms/{chatId}/{allPaths=**} {
       allow write: if request.auth != null;
     }
   }
