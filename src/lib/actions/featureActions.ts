@@ -22,6 +22,7 @@ export async function getFeatureFlags(): Promise<FeatureFlags> {
     return {
         quizGameEnabled: true,
         postFeedEnabled: true,
+        contentModerationEnabled: true,
     };
 }
 

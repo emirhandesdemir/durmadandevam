@@ -192,6 +192,7 @@ export interface ActiveGame {
 export interface FeatureFlags {
     quizGameEnabled: boolean;
     postFeedEnabled: boolean;
+    contentModerationEnabled: boolean;
 }
 
 export interface VoiceStats {

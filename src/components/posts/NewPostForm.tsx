@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { storage } from "@/lib/firebase";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { applyImageFilter } from "@/lib/actions/imageActions";
+import { checkImageSafety } from "@/lib/actions/moderationActions";
 import { createPost } from "@/lib/actions/postActions";
 import { getFollowingForSuggestions } from "@/lib/actions/userActions";
 import type { UserProfile } from "@/lib/types";
@@ -27,7 +28,7 @@ import { Input } from "../ui/input";
 
 export default function NewPostForm() {
   const router = useRouter();
-  const { user, userData } = useAuth();
+  const { user, userData, featureFlags } = useAuth();
   const { toast } = useToast();
   
   const [text, setText] = useState("");
@@ -49,6 +50,7 @@ export default function NewPostForm() {
   const [isAiEditing, setIsAiEditing] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isModerating, setIsModerating] = useState(false);
 
 
   const fetchSuggestions = useCallback(async () => {
@@ -181,6 +183,24 @@ export default function NewPostForm() {
     try {
         let imageUrl = "";
         
+        // Content Moderation Check
+        if (featureFlags?.contentModerationEnabled && croppedImage) {
+            setIsModerating(true);
+            const safetyResult = await checkImageSafety({ photoDataUri: croppedImage });
+            setIsModerating(false);
+
+            if (!safetyResult.success || !safetyResult.data?.isSafe) {
+                toast({
+                    variant: "destructive",
+                    title: "Uygunsuz İçerik Tespit Edildi",
+                    description: safetyResult.data?.reason || "Bu resim topluluk kurallarını ihlal ettiği için paylaşılamadı.",
+                    duration: 7000,
+                });
+                setIsSubmitting(false);
+                return;
+            }
+        }
+        
         if (croppedImage) {
             const imageRef = ref(storage, `upload/posts/${user.uid}/${Date.now()}_post.jpg`);
             const snapshot = await uploadString(imageRef, croppedImage, 'data_url');
@@ -254,7 +274,7 @@ export default function NewPostForm() {
   };
 
 
-  const isLoading = isSubmitting || isAiLoading;
+  const isLoading = isSubmitting || isAiLoading || isModerating;
 
   return (
     <>
@@ -354,8 +374,8 @@ export default function NewPostForm() {
             onClick={handleShare}
             disabled={isLoading || (!text.trim() && !croppedImage)}
           >
-            {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-            <span className="ml-2 hidden sm:inline">Paylaş</span>
+            {isSubmitting || isModerating ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+            <span className="ml-2 hidden sm:inline">{isModerating ? 'Kontrol Ediliyor...' : (isSubmitting ? 'Paylaşılıyor...' : 'Paylaş')}</span>
           </Button>
         </div>
       </Card>

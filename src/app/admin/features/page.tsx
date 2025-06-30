@@ -10,7 +10,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { SlidersHorizontal, Loader2, Gamepad2, Newspaper } from "lucide-react";
+import { SlidersHorizontal, Loader2, Gamepad2, Newspaper, FileLock2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function FeatureManagementPage() {
@@ -81,7 +81,7 @@ export default function FeatureManagementPage() {
                 </div>
             </div>
 
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <Card>
                     <CardHeader>
                         <div className="flex items-center gap-3">
@@ -131,6 +131,33 @@ export default function FeatureManagementPage() {
                                 id="post-feed"
                                 checked={flags?.postFeedEnabled ?? true}
                                 onCheckedChange={(value) => handleFlagChange('postFeedEnabled', value)}
+                                disabled={saving}
+                            />
+                        </div>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <div className="flex items-center gap-3">
+                             <FileLock2 className="h-6 w-6 text-primary" />
+                            <CardTitle>İçerik Moderasyonu</CardTitle>
+                        </div>
+                        <CardDescription>AI destekli içerik denetleme sistemleri.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                         <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                            <div className="space-y-0.5">
+                                <Label htmlFor="content-moderation" className="text-base">
+                                    Müstehcen İçerik Filtresi
+                                </Label>
+                                <p className="text-xs text-muted-foreground">
+                                   Yüklenen resimlerin çıplaklık veya pornografi içerip içermediğini denetler.
+                                </p>
+                            </div>
+                            <Switch
+                                id="content-moderation"
+                                checked={flags?.contentModerationEnabled ?? true}
+                                onCheckedChange={(value) => handleFlagChange('contentModerationEnabled', value)}
                                 disabled={saving}
                             />
                         </div>
