@@ -23,6 +23,9 @@ export interface UserProfile {
     selectedAvatarFrame?: string;
     hasUnreadNotifications?: boolean;
     fcmTokens?: string[];
+    blockedUsers?: string[];
+    isBanned?: boolean;
+    reportCount?: number;
 }
 
 export interface ProfileViewer {
@@ -32,6 +35,18 @@ export interface ProfileViewer {
     photoURL?: string | null;
     selectedAvatarFrame?: string;
 }
+
+export interface Report {
+    id: string;
+    reporterId: string;
+    reporterUsername: string;
+    reportedUserId: string;
+    reportedUsername: string;
+    reason: string;
+    details: string;
+    timestamp: Timestamp;
+}
+
 
 export interface FollowRequest {
     uid: string;

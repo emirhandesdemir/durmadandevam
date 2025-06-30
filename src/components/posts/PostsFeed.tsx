@@ -29,6 +29,11 @@ export default function PostsFeed() {
                 id: doc.id,
                 ...doc.data()
             } as Post));
+            
+            // Filter out posts from users the current user has blocked
+            if (userData?.blockedUsers) {
+                postsData = postsData.filter(post => !userData.blockedUsers.includes(post.uid));
+            }
 
             // Apply custom sorting if the user is male
             if (userData?.gender === 'male') {

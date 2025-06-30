@@ -35,6 +35,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { toast } = useToast();
 
+  const handleLogout = useCallback(async () => {
+    try {
+        await signOut(auth);
+        toast({
+            title: "Oturum Kapatıldı",
+            description: "Başarıyla çıkış yaptınız.",
+        });
+        window.location.href = '/login'; 
+    } catch (error) {
+        console.error("Logout error", error);
+        toast({
+            title: "Hata",
+            description: "Çıkış yapılırken bir hata oluştu.",
+            variant: "destructive",
+        });
+    }
+  }, [toast]);
+
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -56,7 +75,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user) {
       const userDocRef = doc(db, 'users', user.uid);
       unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
-        setUserData(docSnap.exists() ? docSnap.data() as UserProfile : null);
+        if (docSnap.exists()) {
+            const data = docSnap.data() as UserProfile;
+             if (data.isBanned) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Hesabınız Askıya Alındı',
+                    description: 'Bu hesaba erişiminiz kısıtlanmıştır. Detaylar için destek ile iletişime geçin.',
+                    duration: Infinity,
+                });
+                handleLogout();
+                return;
+            }
+            setUserData(data);
+        } else {
+            setUserData(null);
+        }
         setFirestoreLoading(false);
       }, (error) => {
         console.error("Firestore user listener error:", error);
@@ -72,27 +106,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubscribeUser();
       unsubscribeFeatures();
     };
-  }, [user]);
+  }, [user, handleLogout, toast]);
 
   const loading = authLoading || firestoreLoading;
-
-  const handleLogout = useCallback(async () => {
-    try {
-        await signOut(auth);
-        toast({
-            title: "Oturum Kapatıldı",
-            description: "Başarıyla çıkış yaptınız.",
-        });
-        window.location.href = '/login'; 
-    } catch (error) {
-        console.error("Logout error", error);
-        toast({
-            title: "Hata",
-            description: "Çıkış yapılırken bir hata oluştu.",
-            variant: "destructive",
-        });
-    }
-  }, [toast]);
 
   const value = { user, userData, loading, handleLogout, featureFlags };
 

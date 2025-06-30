@@ -3,6 +3,7 @@
 
 import { db } from '@/lib/firebase';
 import { doc, deleteDoc, updateDoc, increment } from 'firebase/firestore';
+import { revalidatePath } from 'next/cache';
 
 /**
  * Bir kullanıcının Firestore veritabanı kaydını siler.
@@ -16,6 +17,7 @@ export async function deleteUserFromFirestore(uid: string) {
     try {
         const userDocRef = doc(db, 'users', uid);
         await deleteDoc(userDocRef);
+        revalidatePath('/admin/users');
         return { success: true };
     } catch (error) {
         console.error("Firestore'dan kullanıcı silinirken hata:", error);
@@ -34,6 +36,7 @@ export async function updateUserRole(uid: string, newRole: 'admin' | 'user') {
     try {
         const userDocRef = doc(db, 'users', uid);
         await updateDoc(userDocRef, { role: newRole });
+        revalidatePath('/admin/users');
         return { success: true };
     } catch (error)
     {
@@ -58,9 +61,23 @@ export async function modifyUserDiamonds(uid: string, amount: number) {
         await updateDoc(userDocRef, {
             diamonds: increment(amount)
         });
+        revalidatePath('/admin/users');
         return { success: true };
     } catch (error) {
         console.error("Kullanıcı elmasları güncellenirken hata:", error);
         return { success: false, error: "Elmaslar güncellenemedi." };
+    }
+}
+
+export async function banUser(uid: string, ban: boolean) {
+    if (!uid) throw new Error("Kullanıcı ID'si gerekli.");
+    try {
+        const userDocRef = doc(db, 'users', uid);
+        await updateDoc(userDocRef, { isBanned: ban });
+        revalidatePath('/admin/users');
+        return { success: true };
+    } catch (error: any) {
+        console.error(`Kullanıcı ${ban ? 'yasaklanırken' : 'yasağı kaldırılırken'} hata:`, error);
+        return { success: false, error: 'İşlem gerçekleştirilemedi.' };
     }
 }

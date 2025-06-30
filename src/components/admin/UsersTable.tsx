@@ -6,8 +6,8 @@ import type { UserData } from "@/app/admin/users/page";
 import { format } from "date-fns";
 import { tr } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
-import { deleteUserFromFirestore, updateUserRole } from "@/lib/actions/adminActions";
-import { MoreHorizontal, Trash2, UserCheck, UserX, Loader2, ShieldCheck, Shield, Gem } from "lucide-react";
+import { deleteUserFromFirestore, updateUserRole, banUser } from "@/lib/actions/adminActions";
+import { MoreHorizontal, Trash2, UserCheck, UserX, Loader2, ShieldCheck, Shield, Gem, Ban } from "lucide-react";
 
 import {
   Table,
@@ -40,6 +40,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import ManageDiamondsDialog from "./ManageDiamondsDialog";
+import { cn } from "@/lib/utils";
 
 interface UsersTableProps {
   users: UserData[];
@@ -83,6 +84,18 @@ export default function UsersTable({ users }: UsersTableProps) {
         }
         setIsProcessing(null);
     }
+    
+    const handleToggleBan = async (user: UserData) => {
+        const newBanState = !user.isBanned;
+        setIsProcessing(user.uid);
+        const result = await banUser(user.uid, newBanState);
+        if(result.success) {
+            toast({ title: "Başarılı", description: `${user.username} adlı kullanıcı ${newBanState ? 'yasaklandı' : 'yasağı kaldırıldı'}.` });
+        } else {
+            toast({ title: "Hata", description: result.error, variant: "destructive" });
+        }
+        setIsProcessing(null);
+    }
 
   return (
       <>
@@ -91,6 +104,8 @@ export default function UsersTable({ users }: UsersTableProps) {
                 <TableRow>
                 <TableHead>Kullanıcı</TableHead>
                 <TableHead>Rol</TableHead>
+                <TableHead>Durum</TableHead>
+                <TableHead>Şikayet</TableHead>
                 <TableHead>Elmas</TableHead>
                 <TableHead>Katılma Tarihi</TableHead>
                 <TableHead className="text-right">Eylemler</TableHead>
@@ -98,7 +113,7 @@ export default function UsersTable({ users }: UsersTableProps) {
             </TableHeader>
             <TableBody>
                 {users.map((user) => (
-                <TableRow key={user.uid}>
+                <TableRow key={user.uid} className={cn(user.reportCount && user.reportCount > 2 && "bg-destructive/10 hover:bg-destructive/20")}>
                     <TableCell>
                         <div className="flex items-center gap-3">
                             <Avatar>
@@ -116,6 +131,14 @@ export default function UsersTable({ users }: UsersTableProps) {
                            {user.role === 'admin' ? <ShieldCheck className="mr-1 h-3 w-3" /> : <Shield className="mr-1 h-3 w-3" />}
                            {user.role}
                         </Badge>
+                    </TableCell>
+                    <TableCell>
+                         <Badge variant={user.isBanned ? 'destructive' : 'secondary'}>
+                            {user.isBanned ? 'Yasaklı' : 'Aktif'}
+                        </Badge>
+                    </TableCell>
+                    <TableCell>
+                        <span className="font-semibold">{user.reportCount || 0}</span>
                     </TableCell>
                     <TableCell>
                         <div className="flex items-center font-semibold">
@@ -142,6 +165,10 @@ export default function UsersTable({ users }: UsersTableProps) {
                                 <DropdownMenuItem onClick={() => handleToggleAdmin(user)}>
                                     {user.role === 'admin' ? <UserX className="mr-2 h-4 w-4" /> : <UserCheck className="mr-2 h-4 w-4" />}
                                     <span>{user.role === 'admin' ? 'Admin Yetkisini Al' : 'Admin Yap'}</span>
+                                </DropdownMenuItem>
+                                 <DropdownMenuItem onClick={() => handleToggleBan(user)}>
+                                    <Ban className="mr-2 h-4 w-4" />
+                                    <span>{user.isBanned ? 'Yasağı Kaldır' : 'Kullanıcıyı Yasakla'}</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => setShowDeleteConfirm(user)} className="text-destructive focus:text-destructive">

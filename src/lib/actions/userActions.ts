@@ -3,10 +3,10 @@
 
 import { db, storage } from '@/lib/firebase';
 import type { UserProfile } from '@/lib/types';
-import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
-import { followUser } from './followActions';
+import { revalidatePath } from 'next/cache';
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     if (!uid) return null;
@@ -47,6 +47,42 @@ export async function saveFCMToken(userId: string, token: string) {
     return { success: false, error: error.message };
   }
 }
+
+export async function updateOnboardingData({ userId, avatarDataUrl, bio, followingUids }: {
+    userId: string,
+    avatarDataUrl: string | null,
+    bio: string,
+    followingUids: string[]
+}) {
+    const userRef = doc(db, 'users', userId);
+    const batch = writeBatch(db);
+
+    let photoURL = null;
+    if (avatarDataUrl) {
+        const avatarRef = ref(storage, `upload/avatars/${userId}/avatar.jpg`);
+        await uploadString(avatarRef, avatarDataUrl, 'data_url');
+        photoURL = await getDownloadURL(avatarRef);
+    }
+
+    const updates: any = { bio };
+    if (photoURL) {
+        updates.photoURL = photoURL;
+    }
+    
+    batch.update(userRef, updates);
+
+    // Takip etme işlemleri
+    if (followingUids.length > 0) {
+        batch.update(userRef, { following: arrayUnion(...followingUids) });
+        for (const targetId of followingUids) {
+            const targetRef = doc(db, 'users', targetId);
+            batch.update(targetRef, { followers: arrayUnion(userId) });
+        }
+    }
+
+    await batch.commit();
+}
+
 
 export async function getSuggestedUsers(currentUserId: string): Promise<UserProfile[]> {
     const usersRef = collection(db, 'users');
@@ -92,4 +128,78 @@ export async function getFollowingForSuggestions(userId: string): Promise<Pick<U
     }
 
     return deepSerialize(suggestions);
+}
+
+// Block and Report Actions
+export async function blockUser(blockerId: string, targetId: string) {
+    if (!blockerId || !targetId) throw new Error("Gerekli kullanıcı bilgileri eksik.");
+    if (blockerId === targetId) throw new Error("Kendinizi engelleyemezsiniz.");
+
+    const blockerRef = doc(db, 'users', blockerId);
+
+    try {
+        await updateDoc(blockerRef, {
+            blockedUsers: arrayUnion(targetId)
+        });
+        revalidatePath(`/profile/${targetId}`);
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: "Kullanıcı engellenemedi: " + error.message };
+    }
+}
+
+export async function unblockUser(blockerId: string, targetId: string) {
+    if (!blockerId || !targetId) throw new Error("Gerekli kullanıcı bilgileri eksik.");
+
+    const blockerRef = doc(db, 'users', blockerId);
+
+    try {
+        await updateDoc(blockerRef, {
+            blockedUsers: arrayRemove(targetId)
+        });
+        revalidatePath(`/profile/${targetId}`);
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: "Engelleme kaldırılamadı: " + error.message };
+    }
+}
+
+
+interface ReportData {
+    reporterId: string;
+    reporterUsername: string;
+    reportedUserId: string;
+    reportedUsername: string;
+    reason: string;
+    details: string;
+}
+
+export async function submitReport(reportData: ReportData) {
+    if (!reportData.reporterId || !reportData.reportedUserId) {
+        throw new Error("Raporlayan ve raporlanan kullanıcı ID'leri gereklidir.");
+    }
+    
+    const reportsRef = collection(db, 'reports');
+    const reportedUserRef = doc(db, 'users', reportData.reportedUserId);
+    
+    try {
+        const batch = writeBatch(db);
+        
+        // Add new report document
+        const newReportRef = doc(reportsRef);
+        batch.set(newReportRef, { ...reportData, timestamp: serverTimestamp() });
+        
+        // Increment report count on user's profile
+        batch.update(reportedUserRef, { reportCount: increment(1) });
+        
+        await batch.commit();
+        
+        revalidatePath(`/admin/reports`);
+        revalidatePath(`/admin/users`);
+        
+        return { success: true };
+    } catch (error: any) {
+        console.error("Error submitting report:", error);
+        return { success: false, error: "Rapor gönderilirken bir hata oluştu." };
+    }
 }
