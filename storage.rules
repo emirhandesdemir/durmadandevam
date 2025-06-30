@@ -2,17 +2,32 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow users to write to their own designated upload folders for posts and avatars.
-    match /upload/{userId}/{allPaths=**} {
+
+    // Allow public read access for all uploaded files so users can see each other's content.
+    match /{allPaths=**} {
       allow read;
+    }
+
+    // AVATARS: Users can only write to their own avatar folder.
+    match /upload/avatars/{userId}/{allPaths=**} {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Allow users in a DM chat to read/write files in that chat's folder.
-    // The chatId is composed of two uids, e.g., 'uid1_uid2'.
-    // The `matches` function checks if the user's uid is a substring of the chatId.
+    // POSTS: Users can only write to their own post image folder.
+    match /upload/posts/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // ROOMS: Any authenticated user can upload files to any room.
+    // For enhanced security, this could be restricted to room participants.
+    match /upload/rooms/{roomId}/{allPaths=**} {
+      allow write: if request.auth != null;
+    }
+
+    // DMs: Users can only write to chats they are a part of.
+    // The chatId is a concatenation of two sorted UIDs, so this check works for both participants.
     match /dms/{chatId}/{allPaths=**} {
-      allow read, write: if request.auth != null && chatId.matches(request.auth.uid);
+      allow write: if request.auth != null && chatId.matches(request.auth.uid);
     }
   }
 }
