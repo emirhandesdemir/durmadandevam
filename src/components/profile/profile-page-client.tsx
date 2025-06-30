@@ -127,7 +127,7 @@ export default function ProfilePageClient() {
             const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
     
             if (newAvatar) {
-                const newAvatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.jpg`);
+                const newAvatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.png`);
                 const snapshot = await uploadString(newAvatarRef, newAvatar, 'data_url');
                 const finalPhotoURL = await getDownloadURL(snapshot.ref);
                 
@@ -344,7 +344,14 @@ export default function ProfilePageClient() {
                     </Button>
                 </CardFooter>
             </Card>
-            <ImageCropperDialog isOpen={!!imageToCrop} setIsOpen={(isOpen) => !isOpen && setImageToCrop(null)} imageSrc={imageToCrop} aspectRatio={1} onCropComplete={handleCropComplete} />
+            <ImageCropperDialog 
+              isOpen={!!imageToCrop} 
+              setIsOpen={(isOpen) => !isOpen && setImageToCrop(null)} 
+              imageSrc={imageToCrop} 
+              aspectRatio={1} 
+              onCropComplete={handleCropComplete} 
+              circularCrop={true}
+            />
         </>
     );
 }

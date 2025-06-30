@@ -61,6 +61,7 @@ export default function Step1Welcome({ onAvatarChange }: Step1WelcomeProps) {
         imageSrc={imageToCrop}
         aspectRatio={1}
         onCropComplete={handleCropComplete}
+        circularCrop={true}
       />
     </>
   );
