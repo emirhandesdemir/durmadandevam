@@ -11,24 +11,32 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { deleteMessage } from '@/lib/actions/dmActions';
+import { deleteMessage, editMessage } from '@/lib/actions/dmActions';
+import { Textarea } from '../ui/textarea'; // Import Textarea
+import { Button } from '../ui/button'; // Import Button
 
 interface MessageBubbleProps {
   message: DirectMessage;
   currentUserId: string;
   chatId: string;
-  onEdit: (message: DirectMessage) => void;
 }
 
 /**
  * Sohbetteki tek bir mesaj baloncuğunu temsil eder.
+ * Artık mesaj düzenleme işlevini kendi içinde barındırır.
  */
-export default function MessageBubble({ message, currentUserId, chatId, onEdit }: MessageBubbleProps) {
+export default function MessageBubble({ message, currentUserId, chatId }: MessageBubbleProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
-  
+
+  // --- New states for inline editing ---
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedText, setEditedText] = useState(message.text || '');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  // ---
+
   const isSender = message.senderId === currentUserId;
   const isDeleted = !!message.deleted;
   const alignClass = isSender ? 'items-end' : 'items-start';
@@ -43,7 +51,6 @@ export default function MessageBubble({ message, currentUserId, chatId, onEdit }
     setIsProcessing(true);
     try {
         await deleteMessage(chatId, message.id, user.uid);
-        // No toast needed, UI will update
         setShowDeleteConfirm(false);
     } catch (error: any) {
         toast({ variant: 'destructive', description: error.message || 'Mesaj silinemedi.' });
@@ -51,6 +58,31 @@ export default function MessageBubble({ message, currentUserId, chatId, onEdit }
         setIsProcessing(false);
     }
   };
+
+  // --- New handlers for inline editing ---
+  const handleEditClick = () => {
+    setEditedText(message.text || ''); // Reset text on each edit click
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditedText(message.text || ''); // Revert to original text
+  };
+
+  const handleSaveEdit = async () => {
+    if (!user || !editedText.trim()) return;
+    setIsSavingEdit(true);
+    try {
+        await editMessage(chatId, message.id, editedText, user.uid);
+        setIsEditing(false);
+    } catch (error: any) {
+        toast({ variant: 'destructive', description: `Mesaj düzenlenemedi: ${error.message}` });
+    } finally {
+        setIsSavingEdit(false);
+    }
+  };
+  // ---
 
   return (
     <>
@@ -72,11 +104,29 @@ export default function MessageBubble({ message, currentUserId, chatId, onEdit }
           <div className={cn('p-3 rounded-2xl relative', bubbleClass)}>
             {isDeleted ? (
               <p className="text-sm italic opacity-70">Bu mesaj silindi</p>
+            ) : isEditing ? (
+                // --- Editing UI ---
+                <div className="space-y-2">
+                    <Textarea
+                        value={editedText}
+                        onChange={(e) => setEditedText(e.target.value)}
+                        className="bg-background text-foreground min-h-[60px] resize-none"
+                        autoFocus
+                    />
+                    <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="ghost" onClick={handleCancelEdit}>İptal</Button>
+                        <Button size="sm" onClick={handleSaveEdit} disabled={isSavingEdit}>
+                            {isSavingEdit ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Kaydet
+                        </Button>
+                    </div>
+                </div>
+                // --- End Editing UI ---
             ) : (
               <>
                 {message.imageUrl && (
-                    <img 
-                        src={message.imageUrl} 
+                    <img
+                        src={message.imageUrl}
                         alt="Gönderilen resim"
                         className="rounded-lg max-w-xs max-h-64 object-cover cursor-pointer mb-2"
                         onClick={() => window.open(message.imageUrl, '_blank')}
@@ -88,8 +138,8 @@ export default function MessageBubble({ message, currentUserId, chatId, onEdit }
               </>
             )}
           </div>
-          
-          {isSender && !isDeleted && (
+
+          {isSender && !isDeleted && !isEditing && (
              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <button className="p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><MoreHorizontal className="h-4 w-4"/></button>
@@ -98,7 +148,7 @@ export default function MessageBubble({ message, currentUserId, chatId, onEdit }
                      <DropdownMenuItem disabled><Smile className="mr-2 h-4 w-4"/> Tepki Ver</DropdownMenuItem>
                     <DropdownMenuSeparator />
                     {message.text && (
-                        <DropdownMenuItem onClick={() => onEdit(message)}>
+                        <DropdownMenuItem onClick={handleEditClick}>
                             <Pencil className="mr-2 h-4 w-4" />
                             Düzenle
                         </DropdownMenuItem>
@@ -116,8 +166,8 @@ export default function MessageBubble({ message, currentUserId, chatId, onEdit }
             {message.edited && !isDeleted && <span className="text-xs text-muted-foreground italic">düzenlendi</span>}
             <span className="text-xs text-muted-foreground">{time}</span>
             {isSender && !isDeleted && (
-                message.read 
-                ? <CheckCheck className="h-4 w-4 text-primary" /> 
+                message.read
+                ? <CheckCheck className="h-4 w-4 text-primary" />
                 : <Check className="h-4 w-4 text-muted-foreground" />
             )}
         </div>

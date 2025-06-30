@@ -30,17 +30,8 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
   const { user, userData } = useAuth();
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingMessage, setEditingMessage] = useState<DirectMessage | null>(null); // New state
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-
-  // Scroll to bottom when editing is cancelled to prevent layout shifts
-  useEffect(() => {
-    if (!editingMessage) {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [editingMessage]);
-
 
   useEffect(() => {
     // Mesajları gerçek zamanlı olarak dinle
@@ -61,10 +52,8 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
 
   useEffect(() => {
     // Yeni mesaj geldiğinde en alta kaydır
-    if (!editingMessage) {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, editingMessage]);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   if (loading) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-10 w-10 animate-spin" /></div>;
@@ -117,23 +106,18 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
       {/* Mesaj Alanı */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map(msg => (
-          <MessageBubble key={msg.id} message={msg} currentUserId={user.uid} chatId={chatId} onEdit={setEditingMessage} />
+          <MessageBubble key={msg.id} message={msg} currentUserId={user.uid} chatId={chatId} />
         ))}
         <div ref={messagesEndRef} />
       </div>
 
       {/* Mesaj Giriş Alanı */}
       <footer className="p-3 border-t bg-background">
-         <div className={cn(
-            "dm-input-glow transition-all duration-300", 
-            editingMessage ? 'p-0.5 shadow-lg shadow-primary/30 rounded-xl' : 'p-0 rounded-full'
-            )}>
+         <div className="dm-input-glow rounded-full">
             <NewMessageInput
               chatId={chatId}
               sender={{ uid: user.uid, username: userData.username, photoURL: userData.photoURL, selectedAvatarFrame: userData.selectedAvatarFrame }}
               receiver={{ uid: partner.uid, username: partner.username, photoURL: partner.photoURL, selectedAvatarFrame: partner.selectedAvatarFrame }}
-              editingMessage={editingMessage}
-              onEditDone={() => setEditingMessage(null)}
             />
         </div>
       </footer>
