@@ -26,57 +26,77 @@ interface UserInfo {
 
 /**
  * Yeni bir özel mesaj gönderir ve sohbet metadatasını günceller.
+ * Bu fonksiyon artık bir transaction kullanarak metadata'nın atomik olarak
+ * oluşturulmasını veya güncellenmesini sağlar.
  * @param chatId Sohbetin ID'si.
  * @param sender Gönderen kullanıcı bilgisi.
  * @param receiver Alıcı kullanıcı bilgisi.
  * @param text Gönderilecek mesaj metni.
+ * @param imageUrl Gönderilecek resmin URL'si (isteğe bağlı).
  */
 export async function sendMessage(chatId: string, sender: UserInfo, receiver: UserInfo, text?: string, imageUrl?: string) {
   if (!text?.trim() && !imageUrl) throw new Error('Mesaj içeriği boş olamaz.');
 
-  const messagesColRef = collection(db, 'directMessages', chatId, 'messages');
   const metadataDocRef = doc(db, 'directMessagesMetadata', chatId);
-  const newMessageRef = doc(messagesColRef); // Otomatik ID oluştur
-
-  const batch = writeBatch(db);
-
-  // 1. Yeni mesajı oluştur
-  const messageData: { [key: string]: any } = {
-    senderId: sender.uid,
-    receiverId: receiver.uid,
-    createdAt: serverTimestamp(),
-    read: false,
-    edited: false,
-    text: text || '',
-  };
-
-  if (imageUrl) {
-    messageData.imageUrl = imageUrl;
-  }
-  batch.set(newMessageRef, messageData);
-
-  // 2. Metadata'yı oluştur veya güncelle
-  const lastMessageText = imageUrl ? '📷 Resim' : (text ? (text.length > 30 ? text.substring(0, 27) + '...' : text) : 'Mesaj');
-
-  const metadataUpdate = {
-    participantUids: [sender.uid, receiver.uid],
-    participantInfo: {
-      [sender.uid]: { username: sender.username, photoURL: sender.photoURL || null, selectedAvatarFrame: sender.selectedAvatarFrame || '' },
-      [receiver.uid]: { username: receiver.username, photoURL: receiver.photoURL || null, selectedAvatarFrame: receiver.selectedAvatarFrame || '' },
-    },
-    lastMessage: {
-      text: lastMessageText,
-      senderId: sender.uid,
-      timestamp: serverTimestamp(),
-    },
-    // Alıcının okunmamış mesaj sayısını artır
-    [`unreadCounts.${receiver.uid}`]: increment(1),
-  };
   
-  // `set` ile `merge: true` kullanarak doküman yoksa oluşturur, varsa günceller.
-  batch.set(metadataDocRef, metadataUpdate, { merge: true });
+  await runTransaction(db, async (transaction) => {
+    const messagesColRef = collection(db, 'directMessages', chatId, 'messages');
+    const newMessageRef = doc(messagesCol-ref);
 
-  await batch.commit();
+    // 1. Yeni mesajı oluştur
+    const messageData: { [key: string]: any } = {
+      senderId: sender.uid,
+      receiverId: receiver.uid,
+      createdAt: serverTimestamp(),
+      read: false,
+      edited: false,
+      text: text || '',
+    };
+    if (imageUrl) {
+      messageData.imageUrl = imageUrl;
+    }
+    transaction.set(newMessageRef, messageData);
+    
+    // 2. Metadata'yı oluştur veya güncelle
+    const lastMessageText = imageUrl ? '📷 Resim' : (text ? (text.length > 30 ? text.substring(0, 27) + '...' : text) : 'Mesaj');
+    const metadataDoc = await transaction.get(metadataDocRef);
+
+    if (!metadataDoc.exists()) {
+      // Create new metadata document if it doesn't exist
+      const newMetadata = {
+        participantUids: [sender.uid, receiver.uid],
+        participantInfo: {
+          [sender.uid]: { username: sender.username, photoURL: sender.photoURL || null, selectedAvatarFrame: sender.selectedAvatarFrame || '' },
+          [receiver.uid]: { username: receiver.username, photoURL: receiver.photoURL || null, selectedAvatarFrame: receiver.selectedAvatarFrame || '' },
+        },
+        lastMessage: {
+          text: lastMessageText,
+          senderId: sender.uid,
+          timestamp: serverTimestamp(),
+        },
+        unreadCounts: {
+          [receiver.uid]: 1,
+          [sender.uid]: 0,
+        },
+      };
+      transaction.set(metadataDocRef, newMetadata);
+    } else {
+      // Update existing metadata document
+      const metadataUpdate = {
+        lastMessage: {
+          text: lastMessageText,
+          senderId: sender.uid,
+          timestamp: serverTimestamp(),
+        },
+        [`unreadCounts.${receiver.uid}`]: increment(1),
+        // Ensure participant info is up-to-date
+        [`participantInfo.${sender.uid}`]: { username: sender.username, photoURL: sender.photoURL || null, selectedAvatarFrame: sender.selectedAvatarFrame || '' },
+        [`participantInfo.${receiver.uid}`]: { username: receiver.username, photoURL: receiver.photoURL || null, selectedAvatarFrame: receiver.selectedAvatarFrame || '' },
+      };
+      transaction.update(metadataDocRef, metadataUpdate);
+    }
+  });
+
   revalidatePath(`/dm/${chatId}`);
   revalidatePath('/dm');
 }

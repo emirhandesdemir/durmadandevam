@@ -60,7 +60,7 @@ export default function ChatListItem({ chat, currentUserId, isSelected }: ChatLi
           <div className="flex justify-between items-start mt-1">
             <p className={cn(
                 "text-sm truncate pr-2", 
-                isUnread && !isSelected ? "text-primary font-semibold" : "text-muted-foreground"
+                isUnread && !isSelected ? "text-primary font-bold" : "text-muted-foreground"
             )}>
               {lastMessage && lastMessage.senderId === currentUserId && (
                 <span className="inline-block mr-1">
