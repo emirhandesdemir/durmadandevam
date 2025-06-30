@@ -114,7 +114,7 @@ export default function MessageBubble({ message, currentUserId, chatId }: Messag
                       <span>Tepki Ver</span>
                     </DropdownMenuSubTrigger>
                     <DropdownMenuPortal>
-                      <DropdownMenuSubContent className="p-0">
+                      <DropdownMenuSubContent side="top" align="center" className="p-0">
                           <div className="flex gap-1 p-1">
                               {REACTION_EMOJIS.map(emoji => (
                                   <DropdownMenuItem 
