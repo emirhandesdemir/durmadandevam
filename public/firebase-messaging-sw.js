@@ -1,10 +1,7 @@
-// Arka planda anlık bildirimleri alabilmek için gerekli Firebase servisi.
-// Bu dosyanın içeriği genellikle değiştirilmez.
+// This file must be in the public directory.
+self.importScripts("https://www.gstatic.com/firebasejs/9.2.0/firebase-app-compat.js");
+self.importScripts("https://www.gstatic.com/firebasejs/9.2.0/firebase-messaging-compat.js");
 
-import { initializeApp } from 'firebase/app';
-import { getMessaging } from 'firebase/messaging/sw';
-
-// Not: Bu yapılandırma bilgileri src/lib/firebase.ts dosyasındaki ile aynı olmalıdır.
 const firebaseConfig = {
   apiKey: "AIzaSyBHLuoO7KM9ai0dMeCcGhmSHSVYCDO1rEo",
   authDomain: "yenidendeneme-ea9ed.firebaseapp.com",
@@ -15,11 +12,20 @@ const firebaseConfig = {
   measurementId: "G-J3EB02J0LN"
 };
 
-const app = initializeApp(firebaseConfig);
+firebase.initializeApp(firebaseConfig);
 
-// Arka plan mesajlaşmasını başlat
-getMessaging(app);
+const messaging = firebase.messaging();
 
-// Arka plan bildirimlerini dinlemek için gereken tek şey bu.
-// Firebase SDK gerisini halleder.
-console.info('Firebase messaging service worker is running.');
+messaging.onBackgroundMessage((payload) => {
+    console.log(
+        "[firebase-messaging-sw.js] Received background message ",
+        payload
+    );
+    const notificationTitle = payload.notification.title;
+    const notificationOptions = {
+        body: payload.notification.body,
+        icon: payload.notification.icon || '/icons/icon-192x192.png',
+    };
+
+    self.registration.showNotification(notificationTitle, notificationOptions);
+});

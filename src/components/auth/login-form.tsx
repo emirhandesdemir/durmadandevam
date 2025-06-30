@@ -7,7 +7,6 @@ import * as z from "zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-// sendPasswordResetEmail'i içe aktar
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth"; 
 import { auth } from "@/lib/firebase";
 
@@ -29,7 +28,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, Swords } from "lucide-react";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Geçersiz e-posta adresi." }),
@@ -107,9 +106,10 @@ export default function LoginForm() {
     }
 
     return (
-        <Card className="w-full max-w-sm shadow-xl rounded-3xl border-0">
-            <CardHeader className="text-center">
-                <CardTitle className="text-3xl font-bold">Giriş Yap</CardTitle>
+        <Card className="w-full max-w-sm mx-auto shadow-2xl rounded-2xl bg-card/80 backdrop-blur-lg border-white/20">
+            <CardHeader className="text-center space-y-4">
+                 <Swords className="mx-auto h-12 w-12 text-primary" />
+                <CardTitle className="text-3xl font-bold">Tekrar Hoş Geldin!</CardTitle>
                 <CardDescription>
                     Hesabınıza erişmek için bilgilerinizi girin.
                 </CardDescription>
@@ -122,11 +122,11 @@ export default function LoginForm() {
                             name="email"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="ml-4">E-posta</FormLabel>
+                                    <FormLabel>E-posta</FormLabel>
                                     <FormControl>
-                                        <Input className="rounded-full px-5 py-6" placeholder="ornek@eposta.com" {...field} />
+                                        <Input type="email" placeholder="ornek@eposta.com" {...field} />
                                     </FormControl>
-                                    <FormMessage className="ml-4" />
+                                    <FormMessage />
                                 </FormItem>
                             )}
                         />
@@ -135,38 +135,38 @@ export default function LoginForm() {
                             name="password"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="ml-4">Şifre</FormLabel>
+                                    <div className="flex justify-between items-center">
+                                        <FormLabel>Şifre</FormLabel>
+                                        <Button 
+                                            type="button" 
+                                            variant="link" 
+                                            className="p-0 h-auto text-xs text-muted-foreground hover:text-primary"
+                                            onClick={handlePasswordReset}
+                                            disabled={isResetting}
+                                        >
+                                            {isResetting ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
+                                            Şifremi Unuttum
+                                        </Button>
+                                    </div>
                                     <div className="relative">
                                         <FormControl>
-                                            <Input className="rounded-full px-5 py-6 pr-12" type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...field} />
+                                            <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...field} />
                                         </FormControl>
                                         <Button
                                             type="button"
                                             variant="ghost"
                                             size="icon"
-                                            className="absolute inset-y-0 right-0 h-full w-12 rounded-full text-muted-foreground"
+                                            className="absolute inset-y-0 right-0 h-full text-muted-foreground"
                                             onClick={() => setShowPassword((prev) => !prev)}
                                         >
                                             {showPassword ? <EyeOff /> : <Eye />}
                                         </Button>
                                     </div>
-                                    <FormMessage className="ml-4" />
+                                    <FormMessage/>
                                 </FormItem>
                             )}
                         />
-                         <div className="flex items-center justify-end pr-4 -mt-2">
-                            <Button 
-                                type="button" 
-                                variant="link" 
-                                className="p-0 h-auto text-sm text-muted-foreground hover:text-primary"
-                                onClick={handlePasswordReset}
-                                disabled={isResetting}
-                            >
-                                {isResetting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                Şifremi Unuttum
-                            </Button>
-                        </div>
-                        <Button type="submit" size="lg" className="w-full rounded-full py-6 text-lg font-semibold shadow-lg shadow-primary/30 transition-transform hover:scale-105" disabled={isLoading}>
+                        <Button type="submit" className="w-full text-lg font-semibold shadow-lg shadow-primary/30 transition-transform hover:scale-105" disabled={isLoading}>
                             {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
                             Giriş Yap
                         </Button>
@@ -174,8 +174,8 @@ export default function LoginForm() {
                 </Form>
                 <div className="mt-6 text-center text-sm">
                     Hesabınız yok mu?{" "}
-                    <Link href="/signup" className="font-medium text-primary hover:underline">
-                        Kayıt ol
+                    <Link href="/signup" className="font-semibold text-primary hover:underline">
+                        Hemen Kayıt Ol
                     </Link>
                 </div>
             </CardContent>

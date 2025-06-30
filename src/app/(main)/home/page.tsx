@@ -5,15 +5,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import PostsFeed from "@/components/posts/PostsFeed";
 import { Card, CardContent } from "@/components/ui/card";
 import { EyeOff } from "lucide-react";
+import FirstPostRewardCard from "@/components/posts/FirstPostRewardCard";
 
 /**
  * Ana Sayfa (Home Page)
  * 
  * Uygulamanın ana giriş sayfasıdır. Kullanıcı giriş yaptıktan sonra bu sayfayı görür.
  * Artık admin panelinden kontrol edilebilen bir özellik bayrağına göre gönderi akışını gösterir.
+ * Ayrıca yeni kullanıcılara ilk gönderi ödül kartını gösterir.
  */
 export default function HomePage() {
-  const { featureFlags, loading } = useAuth();
+  const { userData, featureFlags, loading } = useAuth();
   
   // Özellik bayrağı yüklenirken veya devre dışı bırakılmışsa farklı bir içerik göster
   if (!loading && !featureFlags?.postFeedEnabled) {
@@ -36,7 +38,12 @@ export default function HomePage() {
     // Sayfanın ana sarmalayıcısı, arka plan rengini ve minimum yüksekliği ayarlar.
     <div className="min-h-screen bg-background text-foreground">
       <main>
-        <div className="flex flex-col items-center">
+        <div className="flex flex-col items-center gap-4">
+          {!loading && userData?.postCount === 0 && (
+             <div className="w-full px-4 pt-4">
+                <FirstPostRewardCard />
+            </div>
+          )}
           <PostsFeed />
         </div>
       </main>

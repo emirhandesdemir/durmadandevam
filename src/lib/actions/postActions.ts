@@ -59,16 +59,40 @@ export async function createPost(postData: {
     imageUrl: string;
     editedWithAI?: boolean;
 }) {
-    const newPostData = {
-        ...postData,
-        createdAt: serverTimestamp(),
-        likes: [],
-        likeCount: 0,
-        commentCount: 0,
-    };
-    const postRef = await addDoc(collection(db, 'posts'), newPostData);
-    
-    await handlePostMentions(postRef.id, postData.text, {
+    const newPostRef = doc(collection(db, 'posts'));
+    const userRef = doc(db, 'users', postData.uid);
+    let finalPostId = newPostRef.id;
+
+    await runTransaction(db, async (transaction) => {
+        const userSnap = await transaction.get(userRef);
+        if (!userSnap.exists()) throw new Error("User not found.");
+        
+        const userData = userSnap.data();
+        const postCount = userData.postCount || 0;
+        
+        const newPostData = {
+            ...postData,
+            createdAt: serverTimestamp(),
+            likes: [],
+            likeCount: 0,
+            commentCount: 0,
+        };
+        transaction.set(newPostRef, newPostData);
+        
+        if (postCount === 0) {
+            // First post, give 90 more diamonds (10 already given at signup)
+            transaction.update(userRef, {
+                diamonds: increment(90),
+                postCount: increment(1)
+            });
+        } else {
+            transaction.update(userRef, {
+                postCount: increment(1)
+            });
+        }
+    });
+
+    await handlePostMentions(finalPostId, postData.text, {
         uid: postData.uid,
         displayName: postData.username,
         photoURL: postData.userAvatar,
@@ -80,7 +104,7 @@ export async function createPost(postData: {
         revalidatePath(`/profile/${postData.uid}`);
     }
 
-    return { success: true, postId: postRef.id };
+    return { success: true, postId: finalPostId };
 }
 
 
@@ -88,27 +112,29 @@ export async function deletePost(postId: string) {
     if (!postId) throw new Error("Gönderi ID'si gerekli.");
     const postRef = doc(db, "posts", postId);
     try {
-        const postSnap = await getDoc(postRef);
-        if (!postSnap.exists()) {
-            return;
-        }
-        
-        const postData = postSnap.data();
-        const imageUrl = postData.imageUrl;
-        await deleteDoc(postRef);
+        await runTransaction(db, async (transaction) => {
+            const postSnap = await transaction.get(postRef);
+            if (!postSnap.exists()) {
+                console.log("Post already deleted.");
+                return;
+            }
+            
+            const postData = postSnap.data();
+            const userRef = doc(db, 'users', postData.uid);
 
-        if (imageUrl) {
-            const imageRef = ref(storage, imageUrl);
-            await deleteObject(imageRef).catch((error) => {
-                if (error.code !== 'storage/object-not-found') {
-                    console.error("Storage resmi silinirken hata oluştu:", error);
-                }
-            });
-        }
+            transaction.delete(postRef);
+            transaction.update(userRef, { postCount: increment(-1) });
+
+            if (postData.imageUrl) {
+                const imageRef = ref(storage, postData.imageUrl);
+                await deleteObject(imageRef).catch((error) => {
+                    if (error.code !== 'storage/object-not-found') {
+                        console.error("Storage resmi silinirken hata oluştu:", error);
+                    }
+                });
+            }
+        });
         revalidatePath('/home');
-        if (postData.uid) {
-            revalidatePath(`/profile/${postData.uid}`);
-        }
     } catch (error) {
         console.error("Gönderi silinirken hata oluştu:", error);
         throw new Error("Gönderi silinemedi.");

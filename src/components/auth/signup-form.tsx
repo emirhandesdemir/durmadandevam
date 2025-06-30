@@ -29,11 +29,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, Swords } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 
 const formSchema = z.object({
-  username: z.string().min(3, { message: "Kullanıcı adı en az 3 karakter olmalıdır." }),
+  username: z.string().min(3, { message: "Kullanıcı adı en az 3 karakter olmalıdır." }).max(20, { message: "Kullanıcı adı en fazla 20 karakter olabilir."}),
   email: z.string().email({ message: "Geçersiz e-posta adresi." }),
   password: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır." }),
   gender: z.enum(['male', 'female'], { required_error: "Cinsiyet seçimi zorunludur." }),
@@ -108,11 +108,12 @@ export default function SignUpForm() {
                 username: values.username,
                 email: values.email,
                 photoURL: defaultAvatarUrl,
-                bio: "", // Keep bio empty initially
+                bio: "",
                 role: userRole,
                 gender: values.gender,
                 createdAt: serverTimestamp(),
-                diamonds: 0,
+                diamonds: 10, // Start with 10 diamonds
+                postCount: 0, // Initialize post count
                 followers: [],
                 following: [],
                 privateProfile: false,
@@ -147,26 +148,27 @@ export default function SignUpForm() {
     }
 
     return (
-        <Card className="w-full max-w-sm shadow-xl rounded-3xl border-0">
-            <CardHeader className="text-center">
-                <CardTitle className="text-3xl font-bold">Hesap Oluştur</CardTitle>
+        <Card className="w-full max-w-sm mx-auto shadow-2xl rounded-2xl bg-card/80 backdrop-blur-lg border-white/20">
+            <CardHeader className="text-center space-y-4">
+                 <Swords className="mx-auto h-12 w-12 text-primary" />
+                <CardTitle className="text-3xl font-bold">Aramıza Katıl</CardTitle>
                 <CardDescription>
-                    Aramıza katılmak için bilgilerinizi girin.
+                    Yeni bir hesap oluşturmak için bilgilerinizi girin.
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                         <FormField
                             control={form.control}
                             name="username"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="ml-4">Kullanıcı Adı</FormLabel>
+                                    <FormLabel>Kullanıcı Adı</FormLabel>
                                     <FormControl>
-                                        <Input className="rounded-full px-5 py-6" placeholder="hiwewalker" {...field} />
+                                        <Input placeholder="hiwewalker" {...field} />
                                     </FormControl>
-                                    <FormMessage className="ml-4" />
+                                    <FormMessage />
                                 </FormItem>
                             )}
                         />
@@ -175,11 +177,11 @@ export default function SignUpForm() {
                             name="email"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="ml-4">E-posta</FormLabel>
+                                    <FormLabel>E-posta</FormLabel>
                                     <FormControl>
-                                        <Input className="rounded-full px-5 py-6" placeholder="ornek@eposta.com" {...field} />
+                                        <Input type="email" placeholder="ornek@eposta.com" {...field} />
                                     </FormControl>
-                                    <FormMessage className="ml-4" />
+                                    <FormMessage />
                                 </FormItem>
                             )}
                         />
@@ -188,22 +190,22 @@ export default function SignUpForm() {
                             name="password"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="ml-4">Şifre</FormLabel>
+                                    <FormLabel>Şifre</FormLabel>
                                     <div className="relative">
                                     <FormControl>
-                                        <Input className="rounded-full px-5 py-6 pr-12" type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...field} />
+                                        <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...field} />
                                     </FormControl>
                                      <Button
                                         type="button"
                                         variant="ghost"
                                         size="icon"
-                                        className="absolute inset-y-0 right-0 h-full w-12 rounded-full text-muted-foreground"
+                                        className="absolute inset-y-0 right-0 h-full text-muted-foreground"
                                         onClick={() => setShowPassword((prev) => !prev)}
                                     >
                                         {showPassword ? <EyeOff /> : <Eye />}
                                     </Button>
                                     </div>
-                                    <FormMessage className="ml-4" />
+                                    <FormMessage />
                                 </FormItem>
                             )}
                         />
@@ -211,19 +213,19 @@ export default function SignUpForm() {
                           control={form.control}
                           name="gender"
                           render={({ field }) => (
-                            <FormItem className="space-y-3">
-                              <FormLabel className="ml-4">Cinsiyet</FormLabel>
+                            <FormItem className="space-y-2">
+                              <FormLabel>Cinsiyet</FormLabel>
                               <FormControl>
                                 <RadioGroup
                                   onValueChange={field.onChange}
                                   defaultValue={field.value}
-                                  className="flex space-x-4 ml-4"
+                                  className="flex space-x-4 pt-1"
                                 >
                                   <FormItem className="flex items-center space-x-2 space-y-0">
                                     <FormControl>
                                       <RadioGroupItem value="male" />
                                     </FormControl>
-                                    <FormLabel className="font-normal">
+                                    <FormLabel className="font-normal cursor-pointer">
                                       Erkek
                                     </FormLabel>
                                   </FormItem>
@@ -231,18 +233,18 @@ export default function SignUpForm() {
                                     <FormControl>
                                       <RadioGroupItem value="female" />
                                     </FormControl>
-                                    <FormLabel className="font-normal">
+                                    <FormLabel className="font-normal cursor-pointer">
                                       Kadın
                                     </FormLabel>
                                   </FormItem>
                                 </RadioGroup>
                               </FormControl>
-                              <FormMessage className="ml-4"/>
+                              <FormMessage />
                             </FormItem>
                           )}
                         />
 
-                        <Button type="submit" size="lg" className="w-full rounded-full py-6 text-lg font-semibold shadow-lg shadow-primary/30 transition-transform hover:scale-105" disabled={isLoading}>
+                        <Button type="submit" className="w-full text-lg font-semibold shadow-lg shadow-primary/30 transition-transform hover:scale-105" disabled={isLoading}>
                             {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
                             Hesap Oluştur
                         </Button>
@@ -250,8 +252,8 @@ export default function SignUpForm() {
                 </Form>
                 <div className="mt-6 text-center text-sm">
                     Zaten bir hesabınız var mı?{" "}
-                    <Link href="/login" className="font-medium text-primary hover:underline">
-                        Giriş yap
+                    <Link href="/login" className="font-semibold text-primary hover:underline">
+                        Giriş Yap
                     </Link>
                 </div>
             </CardContent>
