@@ -109,13 +109,13 @@ export default function RoomList({ searchTerm }: RoomListProps) {
                 Rastgele Katıl
             </Button>
         </div>
-        <div className="space-y-3">
+         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredRooms.length > 0 ? (
                 filteredRooms.map((room) => (
                     <RoomListItem key={room.id} room={room} />
                 ))
             ) : (
-                <p className="text-center text-muted-foreground py-8">
+                <p className="text-center text-muted-foreground py-8 col-span-full">
                     Aradığın kriterlere uygun oda bulunamadı.
                 </p>
             )}

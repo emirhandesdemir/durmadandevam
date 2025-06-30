@@ -3,7 +3,7 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { LogIn, Check, Loader2, Users, Crown, Clock, Zap } from "lucide-react";
+import { LogIn, Check, Loader2, Users, Clock, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
@@ -12,9 +12,9 @@ import { cn } from "@/lib/utils";
 import type { Room } from "@/lib/types";
 import { joinRoom } from "@/lib/actions/roomActions";
 import { Timestamp } from "firebase/firestore";
-import { Badge } from "../ui/badge";
 import Link from 'next/link';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import { Card, CardHeader, CardContent, CardFooter, CardTitle, CardDescription } from "@/components/ui/card";
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 
 interface RoomListItemProps {
     room: Room;
@@ -87,67 +87,100 @@ export default function RoomListItem({ room }: RoomListItemProps) {
         }
     }
 
+    const ActionButton = () => {
+      if (isParticipant) {
+        return (
+          <Button variant="secondary" className="w-full" onClick={handleEnterClick} disabled={isExpired}>
+            <Check className="mr-2 h-4 w-4" /> Odaya Gir
+          </Button>
+        );
+      }
+      return (
+        <Button onClick={handleJoinClick} disabled={isJoining || isFull || isExpired} className="w-full">
+          {isJoining ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
+          {isExpired ? 'Süresi Doldu' : (isFull ? 'Oda Dolu' : 'Hemen Katıl')}
+        </Button>
+      );
+    }
+
     return (
-        <div className={cn(
-            "relative flex items-center gap-4 p-3 rounded-2xl bg-card hover:bg-muted/50 transition-all duration-300",
-            isExpired && "opacity-50",
-            hasPortal && "ring-2 ring-offset-2 ring-primary ring-offset-background"
+        <Card className={cn(
+            "group relative overflow-hidden transition-all duration-300 flex flex-col",
+            hasPortal ? "bg-gradient-to-tr from-primary/10 via-card to-card border-primary/20" : "bg-card",
+            isExpired && "bg-muted/50"
         )}>
+            {isExpired && (
+                <div className="absolute inset-0 bg-background/80 z-20 flex items-center justify-center">
+                    <p className="font-bold text-lg text-muted-foreground">Süresi Doldu</p>
+                </div>
+            )}
+            
             {hasPortal && (
-                <div className="absolute top-1 right-1">
+                <div className="absolute top-2 right-2 z-10">
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger>
-                                <Zap className="h-4 w-4 text-primary animate-pulse"/>
+                                <div className="relative">
+                                    <Zap className="h-5 w-5 text-primary"/>
+                                    <div className="absolute inset-0 -z-10 animate-ping bg-primary blur-md rounded-full"></div>
+                                </div>
                             </TooltipTrigger>
                             <TooltipContent><p>Bu odaya bir portal açık!</p></TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
                 </div>
             )}
-            <div className="relative">
-                <Link href={`/profile/${room.createdBy.uid}`}>
-                    <div className={cn("avatar-frame-wrapper", room.createdBy.selectedAvatarFrame)}>
-                        <Avatar className="relative z-[1] h-12 w-12 border">
-                            <AvatarImage src={room.createdBy.photoURL || undefined} />
-                            <AvatarFallback>{room.createdBy.username?.charAt(0)}</AvatarFallback>
-                        </Avatar>
+            <div className="flex-1">
+                <CardHeader className="flex-row items-start gap-4 space-y-0 p-4">
+                    <Link href={`/profile/${room.createdBy.uid}`} className="flex-shrink-0">
+                        <div className={cn("avatar-frame-wrapper", room.createdBy.selectedAvatarFrame)}>
+                            <Avatar className="relative z-[1] h-10 w-10 border">
+                                <AvatarImage src={room.createdBy.photoURL || undefined} />
+                                <AvatarFallback>{room.createdBy.username?.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                        </div>
+                    </Link>
+                    <div className="flex-1">
+                        <CardTitle className="text-base truncate">{room.name}</CardTitle>
+                        <CardDescription className="truncate">{room.description}</CardDescription>
                     </div>
-                </Link>
-                 <div className="absolute -bottom-1 -right-1 p-1 bg-background rounded-full">
-                    <Crown className="h-4 w-4 text-yellow-500"/>
-                </div>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                    <div className="flex -space-x-2 overflow-hidden">
+                        {participants.slice(0, 5).map(p => (
+                            <TooltipProvider key={p.uid}>
+                                <Tooltip>
+                                    <TooltipTrigger>
+                                        <Avatar className="h-8 w-8 border-2 border-background">
+                                            <AvatarImage src={p.photoURL || undefined} />
+                                            <AvatarFallback>{p.username?.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>{p.username}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        ))}
+                        {participants.length > 5 && (
+                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground border-2 border-background">
+                                +{participants.length - 5}
+                            </div>
+                        )}
+                    </div>
+                </CardContent>
             </div>
-            <div className="flex-1 overflow-hidden">
-                <p className="font-bold truncate">{room.name}</p>
-                <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm text-muted-foreground truncate">{room.description}</p>
+            <CardFooter className="bg-muted/50 p-2 flex justify-between items-center text-sm mt-auto">
+                <div className="flex items-center gap-4 text-muted-foreground px-2">
+                    <div className="flex items-center gap-1.5"><Users className="h-4 w-4"/><span>{participants.length} / {room.maxParticipants}</span></div>
                     {timeLeft !== null && !isExpired && (
-                        <Badge variant="outline" className="flex items-center gap-1 shrink-0">
-                            <Clock className="h-3 w-3" />
-                            {formatTime(timeLeft)}
-                        </Badge>
+                        <div className="flex items-center gap-1.5"><Clock className="h-4 w-4"/><span>{formatTime(timeLeft)}</span></div>
                     )}
                 </div>
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                <Users className="h-4 w-4"/>
-                <span>{participants.length} / {room.maxParticipants}</span>
-            </div>
-            {isParticipant ? (
-                 <Button variant="ghost" size="sm" onClick={handleEnterClick} disabled={isExpired}>
-                    {isExpired ? "Süresi Doldu" : <><Check className="mr-2 h-4 w-4" /> Gir</>}
-                </Button>
-            ) : (
-                <Button 
-                  onClick={handleJoinClick} 
-                  disabled={isJoining || isFull || isExpired}
-                  size="sm"
-                >
-                    {isJoining ? <Loader2 className="h-4 w-4 animate-spin" /> : isExpired ? null : <LogIn className="mr-2 h-4 w-4" />}
-                    {isExpired ? 'Süresi Doldu' : (isFull ? 'Dolu' : 'Katıl')}
-                </Button>
-            )}
-        </div>
+                <div className="w-1/3">
+                    <ActionButton />
+                </div>
+            </CardFooter>
+        </Card>
     );
 }

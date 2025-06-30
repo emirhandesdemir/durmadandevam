@@ -25,9 +25,9 @@ export async function requestNotificationPermission(userId: string): Promise<boo
       // 2. Proje Ayarları > Cloud Messaging sekmesi
       // 3. Web Push sertifikaları > "Anahtar çifti oluştur"
       // 4. Üretilen anahtarı kopyalayıp aşağıdaki tırnak işaretleri arasına yapıştırın.
-      const vapidKey = "BGL6rDJEO3ucUIIfdlaCLBUqZ8kIDkIhvw00eFGDDu1kWNcfMuV30xy8COoLfUcx2DLS9AOR3OAQ5BhJ4EONJt0";
+      const vapidKey="BEv3RhiBuZQ8cDg2SAQf41tY_ijOEBJyCDLUY648St78CRgE57v8HWYUDBu6huI_kxzF_gKyelZi3Qbfgs8PMaE";
       
-      if (vapidKey.startsWith("YAPISTIRMANIZ_GEREKEN")) {
+      if (vapidKey.startsWith("BEv3RhiBuZQ8cDg2SAQf41tY_ijOEBJyCDLUY648St78CRgE57v8HWYUDBu6huI_kxzF_gKyelZi3Qbfgs8PMaE")) {
           console.error("VAPID anahtarı ayarlanmamış. Lütfen `src/lib/notificationUtils.ts` dosyasını güncelleyin.");
            toast({
               variant: 'destructive',
