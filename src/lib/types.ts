@@ -121,6 +121,7 @@ export interface Room {
     id: string;
     name: string;
     description: string;
+    coverImage?: string;
     createdBy: {
         uid: string;
         username: string;

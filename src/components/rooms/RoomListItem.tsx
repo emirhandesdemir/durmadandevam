@@ -133,8 +133,8 @@ export default function RoomListItem({ room }: RoomListItemProps) {
 
             <div className="relative aspect-[16/9] w-full overflow-hidden">
                 <Image 
-                    src="https://placehold.co/600x400.png"
-                    data-ai-hint="abstract gradient"
+                    src={room.coverImage || `https://placehold.co/600x400/8b5cf6/ffffff?text=HiweWalk`}
+                    data-ai-hint="HiweWalk logo"
                     alt={room.name}
                     fill
                     className="object-cover transition-transform duration-500 group-hover:scale-110"
