@@ -150,20 +150,73 @@ export async function editMessage(chatId: string, messageId: string, newText: st
         
         const messageData = messageDoc.data();
         if (messageData.senderId !== senderId) throw new Error("Bu mesajı düzenleme yetkiniz yok.");
-
-        const fiveMinutesInMs = 5 * 60 * 1000;
-        const messageTime = (messageData.createdAt as Timestamp).toMillis();
-
-        if (Date.now() - messageTime > fiveMinutesInMs) {
-            throw new Error("Mesaj sadece gönderildikten sonraki 5 dakika içinde düzenlenebilir.");
-        }
+        
+        // 5-minute limit removed as per user request.
 
         transaction.update(messageRef, {
             text: newText,
             edited: true,
             editedAt: serverTimestamp(),
         });
+        
+        // Also update last message in metadata if this was the last message
+        const metadataRef = doc(db, 'directMessagesMetadata', chatId);
+        const metadataDoc = await transaction.get(metadataRef);
+        if (metadataDoc.exists()) {
+            const metadata = metadataDoc.data();
+            const lastMessageTimestamp = metadata.lastMessage?.timestamp as Timestamp;
+            const currentMessageTimestamp = messageData.createdAt as Timestamp;
+
+            if (lastMessageTimestamp && currentMessageTimestamp && lastMessageTimestamp.isEqual(currentMessageTimestamp)) {
+                 const lastMessageText = newText.length > 30 ? newText.substring(0, 27) + '...' : newText;
+                 transaction.update(metadataRef, { 'lastMessage.text': lastMessageText });
+            }
+        }
     });
 
     revalidatePath(`/dm/${chatId}`);
+}
+
+
+/**
+ * Kullanıcının kendi gönderdiği bir mesajı siler.
+ * @param chatId Sohbetin ID'si.
+ * @param messageId Silinecek mesajın ID'si.
+ * @param senderId Mesajı gönderen kullanıcının ID'si.
+ */
+export async function deleteMessage(chatId: string, messageId: string, senderId: string) {
+    const messageRef = doc(db, 'directMessages', chatId, 'messages', messageId);
+    const metadataRef = doc(db, 'directMessagesMetadata', chatId);
+    
+    await runTransaction(db, async (transaction) => {
+        const [messageDoc, metadataDoc] = await Promise.all([
+            transaction.get(messageRef),
+            transaction.get(metadataRef)
+        ]);
+
+        if (!messageDoc.exists()) throw new Error("Mesaj bulunamadı.");
+        
+        const messageData = messageDoc.data();
+        if (messageData.senderId !== senderId) throw new Error("Bu mesajı silme yetkiniz yok.");
+
+        transaction.update(messageRef, {
+            text: "Bu mesaj silindi.",
+            imageUrl: null,
+            deleted: true,
+            edited: false
+        });
+
+        if (metadataDoc.exists()) {
+            const metadata = metadataDoc.data();
+            const lastMessageTimestamp = metadata.lastMessage?.timestamp as Timestamp;
+            const currentMessageTimestamp = messageData.createdAt as Timestamp;
+
+            if (lastMessageTimestamp && currentMessageTimestamp && lastMessageTimestamp.isEqual(currentMessageTimestamp)) {
+                 transaction.update(metadataRef, { 'lastMessage.text': 'Bu mesaj silindi.' });
+            }
+        }
+    });
+
+    revalidatePath(`/dm/${chatId}`);
+    return { success: true };
 }

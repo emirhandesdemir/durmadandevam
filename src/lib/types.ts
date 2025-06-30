@@ -212,6 +212,7 @@ export interface DirectMessage {
     read: boolean;
     edited: boolean;
     editedAt?: Timestamp;
+    deleted?: boolean;
 }
 
 export interface DirectMessageMetadata {
