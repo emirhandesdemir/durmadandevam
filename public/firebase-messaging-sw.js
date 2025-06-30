@@ -1,6 +1,10 @@
-// This file must be in the public directory.
-self.importScripts("https://www.gstatic.com/firebasejs/9.2.0/firebase-app-compat.js");
-self.importScripts("https://www.gstatic.com/firebasejs/9.2.0/firebase-messaging-compat.js");
+
+// This file needs to be in the public folder.
+// It handles background notifications for Firebase Cloud Messaging.
+
+// Use the compat libraries for the service worker for broader compatibility.
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
 const firebaseConfig = {
   apiKey: "AIzaSyBHLuoO7KM9ai0dMeCcGhmSHSVYCDO1rEo",
@@ -17,15 +21,45 @@ firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-    console.log(
-        "[firebase-messaging-sw.js] Received background message ",
-        payload
-    );
-    const notificationTitle = payload.notification.title;
-    const notificationOptions = {
-        body: payload.notification.body,
-        icon: payload.notification.icon || '/icons/icon-192x192.png',
-    };
+  console.log('[firebase-messaging-sw.js] Received background message ', payload);
+  
+  const notificationTitle = payload.notification.title;
+  const notificationOptions = {
+    body: payload.notification.body,
+    icon: payload.notification.icon || '/icons/icon-192x192.png',
+    data: {
+      // The Cloud Function sends the target URL in fcmOptions.link
+      url: payload.fcmOptions?.link || '/' 
+    }
+  };
 
-    self.registration.showNotification(notificationTitle, notificationOptions);
+  self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const urlToOpen = new URL(event.notification.data.url, self.location.origin).href;
+
+  const promiseChain = clients.matchAll({
+    type: 'window',
+    includeUncontrolled: true
+  }).then((windowClients) => {
+    let matchingClient = null;
+    for (let i = 0; i < windowClients.length; i++) {
+      const windowClient = windowClients[i];
+      if (windowClient.url === urlToOpen) {
+        matchingClient = windowClient;
+        break;
+      }
+    }
+
+    if (matchingClient) {
+      return matchingClient.focus();
+    } else {
+      return clients.openWindow(urlToOpen);
+    }
+  });
+
+  event.waitUntil(promiseChain);
 });
