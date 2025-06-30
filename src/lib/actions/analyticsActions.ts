@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { collection, collectionGroup, getDocs, query, where, Timestamp } from 'firebase/firestore';
+import { collection, collectionGroup, getDocs, query, where, Timestamp, getCountFromServer } from 'firebase/firestore';
 import { format, sub, startOfDay, endOfDay, getDay, getMonth, getYear } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import type { Post } from '../types';
@@ -115,4 +115,35 @@ export async function getRoomActivityData() {
     });
 
     return result;
+}
+
+/**
+ * Cinsiyete göre toplam gönderi sayılarını hesaplar.
+ */
+export async function getContentCreationByGenderData() {
+    const postsRef = collection(db, 'posts');
+    
+    // 'userGender' alanında null/undefined olmayanları saymak daha güvenli olabilir
+    // ama şimdilik direkt sorgu atıyoruz.
+    const malePostsQuery = query(postsRef, where('userGender', '==', 'male'));
+    const femalePostsQuery = query(postsRef, where('userGender', '==', 'female'));
+    
+    try {
+        const [maleSnapshot, femaleSnapshot] = await Promise.all([
+            getCountFromServer(malePostsQuery),
+            getCountFromServer(femalePostsQuery),
+        ]);
+
+        return [
+            { name: 'Erkek', gönderi: maleSnapshot.data().count },
+            { name: 'Kadın', gönderi: femaleSnapshot.data().count },
+        ];
+    } catch (error) {
+        console.error("Cinsiyete göre gönderi sayısı alınırken hata (indeks gerekli olabilir):", error);
+        // Hata durumunda boş veri döndür
+        return [
+            { name: 'Erkek', gönderi: 0 },
+            { name: 'Kadın', gönderi: 0 },
+        ];
+    }
 }

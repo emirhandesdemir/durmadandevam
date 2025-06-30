@@ -61,49 +61,6 @@ export async function getSuggestedUsers(currentUserId: string): Promise<UserProf
     return deepSerialize(users);
 }
 
-interface UpdateOnboardingDataArgs {
-    userId: string;
-    avatarDataUrl: string | null;
-    bio: string;
-    followingUids: string[];
-}
-
-export async function updateOnboardingData({ userId, avatarDataUrl, bio, followingUids }: UpdateOnboardingDataArgs) {
-    if (!userId) throw new Error("Kullanıcı ID'si bulunamadı.");
-    
-    const userDocRef = doc(db, 'users', userId);
-    const updates: { [key: string]: any } = {};
-
-    if (avatarDataUrl) {
-        const newAvatarRef = ref(storage, `upload/avatars/${userId}/avatar.jpg`);
-        const snapshot = await uploadString(newAvatarRef, avatarDataUrl, 'data_url');
-        updates.photoURL = await getDownloadURL(snapshot.ref);
-    }
-    
-    if (bio.trim()) {
-        updates.bio = bio.trim();
-    }
-    
-    if (Object.keys(updates).length > 0) {
-        await updateDoc(userDocRef, updates);
-    }
-
-    if (followingUids.length > 0) {
-        const userSnap = await getDoc(userDocRef);
-        const currentUserData = userSnap.data();
-        
-        if (currentUserData) {
-            for (const targetUserId of followingUids) {
-                 followUser(userId, targetUserId, {
-                    username: currentUserData.username,
-                    photoURL: updates.photoURL || currentUserData.photoURL || null,
-                    userAvatarFrame: currentUserData.selectedAvatarFrame || ''
-                }).catch(e => console.error(`Failed to follow ${targetUserId}:`, e));
-            }
-        }
-    }
-}
-
 export async function getFollowingForSuggestions(userId: string): Promise<Pick<UserProfile, 'uid' | 'username' | 'photoURL'>[]> {
     if (!userId) return [];
 

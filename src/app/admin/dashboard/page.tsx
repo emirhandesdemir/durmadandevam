@@ -2,10 +2,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { collection, onSnapshot, doc, getCountFromServer } from "firebase/firestore";
+import { collection, onSnapshot, doc, getCountFromServer, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import StatCard from "@/components/admin/stat-card";
-import { Users, MessageSquare, FileText, Puzzle, Headphones, BarChart3, SlidersHorizontal, Settings, HeartPulse } from "lucide-react";
+import { Users, MessageSquare, FileText, Puzzle, Headphones, BarChart3, SlidersHorizontal, Settings, HeartPulse, Mars, Venus } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -13,6 +13,8 @@ import type { VoiceStats } from "@/lib/types";
 
 export default function DashboardPage() {
   const [userCount, setUserCount] = useState(0);
+  const [maleCount, setMaleCount] = useState(0);
+  const [femaleCount, setFemaleCount] = useState(0);
   const [roomCount, setRoomCount] = useState(0);
   const [postCount, setPostCount] = useState(0);
   const [questionCount, setQuestionCount] = useState(0);
@@ -22,22 +24,29 @@ export default function DashboardPage() {
   // Use a callback to fetch non-realtime counts for efficiency
   const fetchCounts = useCallback(async () => {
     try {
+      const usersRef = collection(db, "users");
       const [
         userSnapshot,
         roomSnapshot,
         postSnapshot,
         questionSnapshot,
+        maleSnapshot,
+        femaleSnapshot,
       ] = await Promise.all([
-        getCountFromServer(collection(db, "users")),
+        getCountFromServer(usersRef),
         getCountFromServer(collection(db, "rooms")),
         getCountFromServer(collection(db, "posts")),
         getCountFromServer(collection(db, "game_questions")),
+        getCountFromServer(query(usersRef, where("gender", "==", "male"))),
+        getCountFromServer(query(usersRef, where("gender", "==", "female"))),
       ]);
 
       setUserCount(userSnapshot.data().count);
       setRoomCount(roomSnapshot.data().count);
       setPostCount(postSnapshot.data().count);
       setQuestionCount(questionSnapshot.data().count);
+      setMaleCount(maleSnapshot.data().count);
+      setFemaleCount(femaleSnapshot.data().count);
       
     } catch (error) {
         console.error("Error fetching counts:", error);
@@ -72,8 +81,10 @@ export default function DashboardPage() {
       </p>
 
       {/* İstatistik Kartları */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mt-8">
         <StatCard title="Toplam Kullanıcı" value={userCount} icon={Users} isLoading={isLoading} />
+        <StatCard title="Erkek Kullanıcı" value={maleCount} icon={Mars} isLoading={isLoading} />
+        <StatCard title="Kadın Kullanıcı" value={femaleCount} icon={Venus} isLoading={isLoading} />
         <StatCard title="Aktif Odalar" value={roomCount} icon={MessageSquare} isLoading={isLoading} />
         <StatCard title="Toplam Gönderi" value={postCount} icon={FileText} isLoading={isLoading} />
         <StatCard title="Sesli Aktif Kullanıcı" value={voiceUserCount} icon={Headphones} isLoading={isLoading} />

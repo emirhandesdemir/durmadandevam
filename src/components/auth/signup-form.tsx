@@ -108,7 +108,7 @@ export default function SignUpForm() {
                 username: values.username,
                 email: values.email,
                 photoURL: defaultAvatarUrl,
-                bio: "", // Keep bio empty initially for onboarding
+                bio: "", // Keep bio empty initially
                 role: userRole,
                 gender: values.gender,
                 createdAt: serverTimestamp(),
@@ -124,10 +124,10 @@ export default function SignUpForm() {
 
             toast({
                 title: "Hesap Oluşturuldu!",
-                description: "Profilinizi ayarlamak için yönlendiriliyorsunuz...",
+                description: "Uygulamaya hoş geldin!",
             });
             
-            router.push('/onboarding');
+            router.push('/home');
 
         } catch (error: any)
         {

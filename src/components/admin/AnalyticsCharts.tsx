@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AreaChart, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Area, Bar, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { useTheme } from "next-themes";
-import { getUserGrowthData, getContentCreationData, getRoomActivityData } from "@/lib/actions/analyticsActions";
+import { getUserGrowthData, getContentCreationData, getRoomActivityData, getContentCreationByGenderData } from "@/lib/actions/analyticsActions";
 import type { UserGrowthDataPoint, ContentDataPoint, RoomActivityDataPoint } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2 } from "lucide-react";
@@ -17,10 +17,13 @@ export default function AnalyticsCharts() {
     const [userGrowth, setUserGrowth] = useState<UserGrowthDataPoint[]>([]);
     const [contentCreation, setContentCreation] = useState<ContentDataPoint[]>([]);
     const [roomActivity, setRoomActivity] = useState<RoomActivityDataPoint[]>([]);
+    const [contentByGender, setContentByGender] = useState<{name: string, gönderi: number}[]>([]);
+
     
     const [loadingGrowth, setLoadingGrowth] = useState(true);
     const [loadingContent, setLoadingContent] = useState(true);
     const [loadingRooms, setLoadingRooms] = useState(true);
+    const [loadingGender, setLoadingGender] = useState(true);
 
     useEffect(() => {
         getUserGrowthData().then(data => {
@@ -34,6 +37,10 @@ export default function AnalyticsCharts() {
         getRoomActivityData().then(data => {
             setRoomActivity(data);
             setLoadingRooms(false);
+        });
+        getContentCreationByGenderData().then(data => {
+            setContentByGender(data);
+            setLoadingGender(false);
         });
     }, []);
 
@@ -88,7 +95,7 @@ export default function AnalyticsCharts() {
 
              <Card>
                 <CardHeader>
-                    <CardTitle>İçerik Oluşturma</CardTitle>
+                    <CardTitle>İçerik Üretimi (Haftalık)</CardTitle>
                     <CardDescription>Son 7 gündeki gönderi ve yorum sayıları.</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -114,9 +121,35 @@ export default function AnalyticsCharts() {
                 </CardContent>
             </Card>
 
-             <Card className="lg:col-span-2">
+             <Card>
                 <CardHeader>
-                    <CardTitle>Oda Aktivitesi</CardTitle>
+                    <CardTitle>İçerik Üretimi (Cinsiyete Göre)</CardTitle>
+                    <CardDescription>Toplam gönderilerin cinsiyete göre dağılımı.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {loadingGender ? renderLoading() : (
+                        <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={contentByGender} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke={strokeColor} />
+                                <XAxis dataKey="name" tick={{ fill: tickColor, fontSize: 12 }} tickLine={{ stroke: tickColor }} />
+                                <YAxis tick={{ fill: tickColor, fontSize: 12 }} tickLine={{ stroke: tickColor }} allowDecimals={false} />
+                                <Tooltip
+                                    contentStyle={{
+                                        backgroundColor: 'hsl(var(--card))',
+                                        borderColor: 'hsl(var(--border))',
+                                        borderRadius: 'var(--radius)'
+                                    }}
+                                />
+                                <Bar dataKey="gönderi" fill="hsl(var(--primary))" name="Gönderi Sayısı" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    )}
+                </CardContent>
+            </Card>
+
+             <Card>
+                <CardHeader>
+                    <CardTitle>Oda Aktivitesi (24 Saat)</CardTitle>
                     <CardDescription>Son 24 saat içinde oluşturulan odaların saatlik dağılımı.</CardDescription>
                 </CardHeader>
                 <CardContent>
