@@ -39,6 +39,7 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
   const { user } = useAuth();
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isExtending, setIsExtending] = useState(false);
   const [isIncreasingLimit, setIsIncreasingLimit] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
@@ -84,6 +85,7 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
       });
     } finally {
       setIsDeleting(false);
+      setShowDeleteConfirm(false);
     }
   };
 
