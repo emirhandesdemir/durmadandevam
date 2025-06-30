@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import type { Notification } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Heart, MessageCircle, UserPlus, DoorOpen, Loader2, AtSign, Gem, Repeat } from 'lucide-react';
+import { Heart, MessageCircle, UserPlus, DoorOpen, Loader2, AtSign, Gem, Repeat, Gift } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -35,7 +35,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
     if (notification.postId) {
       // TODO: Implement opening a post dialog/modal
       console.log("Navigating to post:", notification.postId);
-    } else if (notification.type === 'follow' || notification.type === 'mention' || notification.type === 'follow_accept') {
+    } else if (['follow', 'mention', 'follow_accept', 'referral_bonus'].includes(notification.type)) {
        router.push(`/profile/${notification.senderId}`);
     }
   };
@@ -50,6 +50,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
       case 'room_invite': return <DoorOpen className="h-5 w-5 text-green-500" />;
       case 'diamond_transfer': return <Gem className="h-5 w-5 text-cyan-400" />;
       case 'retweet': return <Repeat className="h-5 w-5 text-green-500" />;
+      case 'referral_bonus': return <Gift className="h-5 w-5 text-green-500" />;
       default: return null;
     }
   };
@@ -64,6 +65,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
       case 'room_invite': return <> <span className="font-bold">{notification.senderUsername}</span> seni <span className="font-semibold">{notification.roomName}</span> odasına davet etti.</>;
       case 'diamond_transfer': return <> <span className="font-bold">{notification.senderUsername}</span> sana <strong className="text-cyan-400">{notification.diamondAmount} elmas</strong> gönderdi!</>;
       case 'retweet': return <> <span className="font-bold">{notification.senderUsername}</span> gönderini retweetledi.</>;
+      case 'referral_bonus': return <> <span className="font-bold">{notification.senderUsername}</span> davetinle katıldı ve sana <strong className="text-cyan-400">{notification.diamondAmount} elmas</strong> kazandırdı! 🎉</>;
       default: return 'Bilinmeyen bildirim';
     }
   }
@@ -72,7 +74,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
     <div 
       className={cn(
         "flex items-start gap-4 p-3 rounded-lg transition-colors",
-        notification.type !== 'diamond_transfer' && "cursor-pointer hover:bg-muted/50",
+        !['diamond_transfer', 'referral_bonus'].includes(notification.type) && "cursor-pointer hover:bg-muted/50",
         !notification.read && "bg-primary/5"
       )}
       onClick={handleWrapperClick}

@@ -35,6 +35,7 @@ import { Textarea } from "../ui/textarea";
 import CommentSheet from "../comments/CommentSheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import Link from "next/link";
+import QuoteRetweetDialog from "./QuoteRetweetDialog";
 
 
 interface PostCardProps {
@@ -57,7 +58,7 @@ export default function PostCard({ post, isStandalone = false }: PostCardProps) 
     const [isSaving, setIsSaving] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showComments, setShowComments] = useState(false);
-    const [isRetweeting, setIsRetweeting] = useState(false);
+    const [postToRetweet, setPostToRetweet] = useState<Post | null>(null);
 
 
     // Sync optimistic state with props
@@ -153,30 +154,13 @@ export default function PostCard({ post, isStandalone = false }: PostCardProps) 
         setIsEditing(false);
     };
 
-    const handleRetweet = async () => {
+    const handleRetweet = () => {
         if (!currentUser || !currentUserData) {
             toast({ variant: "destructive", description: "Bu işlemi yapmak için giriş yapmalısınız." });
             return;
         }
         if (post.uid === currentUser.uid || post.retweetOf) return;
-
-        setIsRetweeting(true);
-        try {
-            await retweetPost(post.id, {
-                uid: currentUser.uid,
-                username: currentUserData.username,
-                userAvatar: currentUserData.photoURL,
-                userAvatarFrame: currentUserData.selectedAvatarFrame,
-                userRole: currentUserData.role,
-                userGender: currentUserData.gender
-            });
-            toast({ description: "Retweetlendi!" });
-        } catch (error: any) {
-            console.error("Error retweeting:", error);
-            toast({ variant: "destructive", description: error.message });
-        } finally {
-            setIsRetweeting(false);
-        }
+        setPostToRetweet(post);
     };
     
     if (post.retweetOf) {
@@ -209,6 +193,11 @@ export default function PostCard({ post, isStandalone = false }: PostCardProps) 
                             <Repeat className="h-4 w-4" />
                             <Link href={`/profile/${post.uid}`} className="font-bold hover:underline">{post.username}</Link> retweetledi
                         </div>
+
+                        {/* The QUOTE TEXT from the retweeter */}
+                        {post.text && (
+                          <p className="whitespace-pre-wrap text-sm mb-2">{post.text}</p>
+                        )}
 
                         {/* Original Post Content in a nested box */}
                         <div className="border rounded-lg p-3 space-y-2">
@@ -260,6 +249,7 @@ export default function PostCard({ post, isStandalone = false }: PostCardProps) 
                     </div>
                 </div>
                 <CommentSheet open={showComments} onOpenChange={setShowComments} post={post} />
+                <QuoteRetweetDialog isOpen={!!postToRetweet} onOpenChange={() => setPostToRetweet(null)} post={postToRetweet!} />
             </>
         )
     }
@@ -379,8 +369,8 @@ export default function PostCard({ post, isStandalone = false }: PostCardProps) 
                         <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary" onClick={() => setShowComments(true)}>
                             <MessageCircle className="h-5 w-5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-green-500/10 hover:text-green-500" onClick={handleRetweet} disabled={!currentUser || isOwner || isRetweeting}>
-                            {isRetweeting ? <Loader2 className="h-5 w-5 animate-spin"/> : <Repeat className="h-5 w-5" />}
+                        <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-green-500/10 hover:text-green-500" onClick={handleRetweet} disabled={!currentUser || isOwner}>
+                           <Repeat className="h-5 w-5" />
                         </Button>
                     </div>
 
@@ -403,6 +393,7 @@ export default function PostCard({ post, isStandalone = false }: PostCardProps) 
             </AlertDialog>
             
             <CommentSheet open={showComments} onOpenChange={setShowComments} post={post} />
+            <QuoteRetweetDialog isOpen={!!postToRetweet} onOpenChange={() => setPostToRetweet(null)} post={postToRetweet!} />
         </>
     );
 }

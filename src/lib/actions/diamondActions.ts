@@ -9,7 +9,13 @@ import {
 } from 'firebase/firestore';
 import { createNotification } from './notificationActions';
 
-export async function creditReferrer(referrerId: string) {
+interface NewUserInfo {
+    uid: string;
+    username: string;
+    photoURL: string;
+}
+
+export async function creditReferrer(referrerId: string, newUser: NewUserInfo) {
     if (!referrerId) return;
 
     const userRef = doc(db, 'users', referrerId);
@@ -25,8 +31,21 @@ export async function creditReferrer(referrerId: string) {
                 referralCount: increment(1)
             });
         });
+
+        // Send notification after the transaction is successful
+        await createNotification({
+            recipientId: referrerId,
+            senderId: newUser.uid, // The new user is the "sender" of the event
+            senderUsername: newUser.username,
+            senderAvatar: newUser.photoURL,
+            senderAvatarFrame: '', // New users don't have frames yet
+            type: 'referral_bonus',
+            diamondAmount: 10
+        });
+
     } catch (error) {
         console.error("Error crediting referrer:", error);
+        // Do not rethrow, as signup should succeed even if this fails
     }
 }
 

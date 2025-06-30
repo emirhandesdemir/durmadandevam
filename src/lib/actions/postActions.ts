@@ -207,7 +207,8 @@ export async function retweetPost(
         userAvatarFrame?: string;
         userRole?: 'admin' | 'user';
         userGender?: 'male' | 'female';
-    }
+    },
+    quoteText?: string
 ) {
     if (!originalPostId || !retweeter?.uid) throw new Error("Gerekli bilgiler eksik.");
 
@@ -241,7 +242,7 @@ export async function retweetPost(
             userAvatarFrame: retweeter.userAvatarFrame,
             userRole: retweeter.userRole,
             userGender: retweeter.userGender,
-            text: '', // Retweet has no text of its own
+            text: quoteText || '', // Use the quote text here
             imageUrl: '', // Retweet has no image of its own
             createdAt: serverTimestamp(),
             likes: [],

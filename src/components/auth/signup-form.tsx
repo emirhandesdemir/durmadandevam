@@ -142,7 +142,7 @@ export default function SignUpForm() {
             // Credit the referrer if one exists
             if (ref) {
                 try {
-                    await creditReferrer(ref);
+                    await creditReferrer(ref, { uid: user.uid, username: values.username, photoURL: defaultAvatarUrl });
                 } catch (e) {
                     console.error("Referrer credit failed, but signup continues:", e);
                 }

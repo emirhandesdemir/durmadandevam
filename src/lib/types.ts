@@ -64,7 +64,7 @@ export interface Notification {
     senderUsername: string;
     senderAvatar: string | null;
     senderAvatarFrame?: string;
-    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet';
+    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus';
     postId?: string | null;
     postImage?: string | null;
     commentText?: string;
