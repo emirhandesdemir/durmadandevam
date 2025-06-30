@@ -48,7 +48,7 @@ export default function PostsFeed() {
   return (
     <div className="flex flex-col gap-8">
       {posts.map((post) => (
-        <Card key={post.id} className="w-full overflow-hidden rounded-3xl border-0 bg-card/80 shadow-xl shadow-black/5 backdrop-blur-sm">
+        <Card key={post.id} data-nosnippet className="w-full overflow-hidden rounded-3xl border-0 bg-card/80 shadow-xl shadow-black/5 backdrop-blur-sm">
           {/* Kart Başlığı: Kullanıcı bilgileri ve seçenekler butonu */}
           <CardHeader className="flex flex-row items-center justify-between p-6">
             <div className="flex items-center gap-4">
