@@ -18,7 +18,6 @@ import ReactCrop, {
 import "react-image-crop/dist/ReactCrop.css";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { getGameSettings } from "@/lib/actions/gameActions";
 
 interface ImageCropperDialogProps {
   isOpen: boolean;
@@ -111,9 +110,7 @@ export default function ImageCropperDialog({
     
     setIsCropping(true);
     try {
-        const settings = await getGameSettings();
-        const quality = settings.imageUploadQuality || 0.9;
-        const croppedImageUrl = await getCroppedImg(imgRef.current, completedCrop, quality);
+        const croppedImageUrl = await getCroppedImg(imgRef.current, completedCrop, 0.9);
         onCropComplete(croppedImageUrl);
         setIsOpen(false);
     } catch (error) {
