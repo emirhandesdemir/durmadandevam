@@ -213,6 +213,9 @@ export interface DirectMessage {
     edited: boolean;
     editedAt?: Timestamp;
     deleted?: boolean;
+    reactions?: {
+        [emoji: string]: string[]; // key: emoji, value: array of user UIDs
+    };
 }
 
 export interface DirectMessageMetadata {
@@ -229,6 +232,7 @@ export interface DirectMessageMetadata {
         text: string;
         senderId: string;
         timestamp: Timestamp;
+        read: boolean;
     } | null;
     unreadCounts: {
         [uid: string]: number;
@@ -249,6 +253,7 @@ export interface Message {
   selectedAvatarFrame?: string;
   portalRoomId?: string;
   portalRoomName?: string;
+  gameInviteData?: GameInviteMessageData;
 }
 
 
@@ -300,10 +305,4 @@ export interface GameInviteMessageData {
     acceptedPlayers: { uid: string, username: string, photoURL: string | null }[];
     declinedPlayers: { uid: string, username: string, photoURL: string | null }[];
     status: 'pending' | 'accepted' | 'declined' | 'cancelled';
-}
-
-// Augment the existing Message interface
-export interface Message {
-  // ... existing fields
-  gameInviteData?: GameInviteMessageData;
 }

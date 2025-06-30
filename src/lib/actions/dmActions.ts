@@ -112,25 +112,17 @@ export async function sendMessage(chatId: string, sender: UserInfo, receiver: Us
  * @param currentUserId İşlemi yapan (mesajları okuyan) kullanıcının ID'si.
  */
 export async function markMessagesAsRead(chatId: string, currentUserId: string) {
-    const messagesColRef = collection(db, 'directMessages', chatId, 'messages');
-    const q = query(messagesColRef, where('receiverId', '==', currentUserId), where('read', '==', false));
-    
-    const unreadMessagesSnap = await getDocs(q);
-    if (unreadMessagesSnap.empty) return;
-
-    const batch = writeBatch(db);
-    unreadMessagesSnap.forEach(doc => {
-        batch.update(doc.ref, { read: true });
-    });
-
     const metadataDocRef = doc(db, 'directMessagesMetadata', chatId);
-    batch.update(metadataDocRef, {
-        [`unreadCounts.${currentUserId}`]: 0,
-    });
-    
-    await batch.commit();
-    revalidatePath(`/dm/${chatId}`);
-    revalidatePath('/dm');
+    const metadataDoc = await getDoc(metadataDocRef);
+
+    if (metadataDoc.exists() && (metadataDoc.data().unreadCounts?.[currentUserId] || 0) > 0) {
+        await updateDoc(metadataDocRef, {
+            [`unreadCounts.${currentUserId}`]: 0,
+            'lastMessage.read': true, // Mark last message as read by this user
+        });
+        revalidatePath(`/dm/${chatId}`);
+        revalidatePath('/dm');
+    }
 }
 
 /**
@@ -147,32 +139,29 @@ export async function editMessage(chatId: string, messageId: string, newText: st
     const metadataRef = doc(db, 'directMessagesMetadata', chatId);
     
     await runTransaction(db, async (transaction) => {
-        // 1. Perform all READS first.
         const [messageDoc, metadataDoc] = await Promise.all([
             transaction.get(messageRef),
             transaction.get(metadataRef)
         ]);
 
-        // 2. Perform CHECKS.
         if (!messageDoc.exists()) throw new Error("Mesaj bulunamadı.");
         
         const messageData = messageDoc.data();
         if (messageData.senderId !== senderId) throw new Error("Bu mesajı düzenleme yetkiniz yok.");
 
-        // 3. Prepare and perform all WRITES.
         transaction.update(messageRef, {
             text: newText,
             edited: true,
             editedAt: serverTimestamp(),
         });
         
-        // Also update last message in metadata if this was the last message
         if (metadataDoc.exists()) {
             const metadata = metadataDoc.data();
             const lastMessageTimestamp = metadata.lastMessage?.timestamp as Timestamp;
+            
+            // It's possible for createdAt to not be populated yet if a message is edited very quickly.
+            // In that case, we can't reliably check if it's the last message, but it's a rare edge case.
             const currentMessageTimestamp = messageData.createdAt as Timestamp;
-
-            // Check if the message being edited is indeed the last message.
             if (lastMessageTimestamp && currentMessageTimestamp && lastMessageTimestamp.isEqual(currentMessageTimestamp)) {
                  const lastMessageText = newText.length > 30 ? newText.substring(0, 27) + '...' : newText;
                  transaction.update(metadataRef, { 'lastMessage.text': lastMessageText });
@@ -209,7 +198,8 @@ export async function deleteMessage(chatId: string, messageId: string, senderId:
             text: "Bu mesaj silindi.",
             imageUrl: null,
             deleted: true,
-            edited: false
+            edited: false,
+            reactions: {} // Clear reactions on deletion
         });
 
         if (metadataDoc.exists()) {
@@ -225,4 +215,58 @@ export async function deleteMessage(chatId: string, messageId: string, senderId:
 
     revalidatePath(`/dm/${chatId}`);
     return { success: true };
+}
+
+
+/**
+ * Bir mesaja emoji tepkisi ekler veya kaldırır.
+ * @param chatId Sohbetin ID'si
+ * @param messageId Tepki verilecek mesajın ID'si
+ * @param emoji Tepki emojisi
+ * @param userId Tepki veren kullanıcının ID'si
+ */
+export async function toggleReaction(chatId: string, messageId: string, emoji: string, userId: string) {
+  if (!chatId || !messageId || !emoji || !userId) {
+    throw new Error("Gerekli bilgiler eksik.");
+  }
+
+  const messageRef = doc(db, 'directMessages', chatId, 'messages', messageId);
+
+  try {
+    await runTransaction(db, async (transaction) => {
+      const messageDoc = await transaction.get(messageRef);
+      if (!messageDoc.exists()) {
+        throw new Error("Mesaj bulunamadı.");
+      }
+
+      const messageData = messageDoc.data();
+      const reactions = messageData.reactions || {};
+      const emojiReactors: string[] = reactions[emoji] || [];
+      const userIndex = emojiReactors.indexOf(userId);
+
+      if (userIndex > -1) {
+        // Kullanıcı bu emoji ile zaten tepki vermiş, tepkiyi kaldır
+        emojiReactors.splice(userIndex, 1);
+      } else {
+        // Kullanıcı bu emoji ile tepki vermemiş, tepkiyi ekle
+        emojiReactors.push(userId);
+      }
+
+      if (emojiReactors.length === 0) {
+        // Bu emoji ile artık kimse tepki vermiyorsa, emoji anahtarını sil
+        delete reactions[emoji];
+      } else {
+        reactions[emoji] = emojiReactors;
+      }
+      
+      transaction.update(messageRef, { reactions });
+    });
+    
+    revalidatePath(`/dm/${chatId}`);
+    return { success: true };
+
+  } catch (error: any) {
+    console.error("Reaksiyon değiştirilirken hata oluştu:", error);
+    return { success: false, error: "Reaksiyon güncellenemedi." };
+  }
 }

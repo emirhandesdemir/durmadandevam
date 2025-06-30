@@ -9,11 +9,12 @@ import { tr } from 'date-fns/locale';
 import { Check, CheckCheck, MoreHorizontal, Pencil, Trash2, Loader2, Smile } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { deleteMessage, editMessage } from '@/lib/actions/dmActions';
-import { Textarea } from '../ui/textarea'; // Import Textarea
-import { Button } from '../ui/button'; // Import Button
+import { deleteMessage, editMessage, toggleReaction } from '@/lib/actions/dmActions';
+import { Textarea } from '../ui/textarea';
+import { Button } from '../ui/button';
 
 interface MessageBubbleProps {
   message: DirectMessage;
@@ -21,9 +22,11 @@ interface MessageBubbleProps {
   chatId: string;
 }
 
+const REACTION_EMOJIS = ['👍', '❤️', '😂', '🎉', '😢', '🔥'];
+
 /**
  * Sohbetteki tek bir mesaj baloncuğunu temsil eder.
- * Artık mesaj düzenleme işlevini kendi içinde barındırır.
+ * Artık mesaj düzenleme ve tepki verme işlevlerini barındırır.
  */
 export default function MessageBubble({ message, currentUserId, chatId }: MessageBubbleProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -31,11 +34,9 @@ export default function MessageBubble({ message, currentUserId, chatId }: Messag
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // --- New states for inline editing ---
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(message.text || '');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
-  // ---
 
   const isSender = message.senderId === currentUserId;
   const isDeleted = !!message.deleted;
@@ -45,6 +46,9 @@ export default function MessageBubble({ message, currentUserId, chatId }: Messag
     : 'bg-muted rounded-bl-none';
 
   const time = message.createdAt ? format(message.createdAt.toDate(), 'HH:mm') : '';
+
+  const reactions = message.reactions || {};
+  const hasReactions = Object.keys(reactions).length > 0;
 
   const handleDelete = async () => {
     if (!user) return;
@@ -59,15 +63,14 @@ export default function MessageBubble({ message, currentUserId, chatId }: Messag
     }
   };
 
-  // --- New handlers for inline editing ---
   const handleEditClick = () => {
-    setEditedText(message.text || ''); // Reset text on each edit click
+    setEditedText(message.text || '');
     setIsEditing(true);
   };
 
   const handleCancelEdit = () => {
     setIsEditing(false);
-    setEditedText(message.text || ''); // Revert to original text
+    setEditedText(message.text || '');
   };
 
   const handleSaveEdit = async () => {
@@ -82,84 +85,103 @@ export default function MessageBubble({ message, currentUserId, chatId }: Messag
         setIsSavingEdit(false);
     }
   };
-  // ---
+
+  const handleReactionClick = async (emoji: string) => {
+    if (!user) return;
+    try {
+      await toggleReaction(chatId, message.id, emoji, user.uid);
+    } catch (error: any) {
+      toast({ variant: 'destructive', description: 'Tepki verilemedi.' });
+    }
+  };
 
   return (
     <>
-      <div className={cn('flex flex-col gap-1', alignClass)}>
+      <div className={cn('flex flex-col gap-1', alignClass, hasReactions ? 'pb-4' : '')}>
         <div className="flex items-end gap-2 max-w-[75%] group">
-          {!isSender && !isDeleted && (
-             <DropdownMenu>
+          <div className={cn("flex items-center opacity-0 group-hover:opacity-100 transition-opacity", { "order-first": !isSender, "order-last": isSender })}>
+            {!isDeleted && !isEditing && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full">
+                    <Smile className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-1 rounded-full bg-card shadow-lg border">
+                  <div className="flex gap-1">
+                    {REACTION_EMOJIS.map(emoji => (
+                      <button key={emoji} onClick={() => handleReactionClick(emoji)} className="p-1.5 rounded-full hover:bg-accent transition-transform hover:scale-125">
+                        <span className="text-xl">{emoji}</span>
+                      </button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
+            {isSender && !isDeleted && !isEditing && (
+              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <button className="p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><MoreHorizontal className="h-4 w-4"/></button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                    <DropdownMenuItem disabled><Smile className="mr-2 h-4 w-4"/> Tepki Ver</DropdownMenuItem>
-                    <DropdownMenuItem disabled>Kopyala</DropdownMenuItem>
-                    <DropdownMenuItem disabled>İlet</DropdownMenuItem>
+                  {message.text && (
+                    <DropdownMenuItem onClick={handleEditClick}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Düzenle
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-destructive focus:text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Sil
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-
-          <div className={cn('p-3 rounded-2xl relative', bubbleClass)}>
-            {isDeleted ? (
-              <p className="text-sm italic opacity-70">Bu mesaj silindi</p>
-            ) : isEditing ? (
-                // --- Editing UI ---
-                <div className="space-y-2">
-                    <Textarea
-                        value={editedText}
-                        onChange={(e) => setEditedText(e.target.value)}
-                        className="bg-background text-foreground min-h-[60px] resize-none"
-                        autoFocus
-                    />
-                    <div className="flex justify-end gap-2">
-                        <Button size="sm" variant="ghost" onClick={handleCancelEdit}>İptal</Button>
-                        <Button size="sm" onClick={handleSaveEdit} disabled={isSavingEdit}>
-                            {isSavingEdit ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            Kaydet
-                        </Button>
-                    </div>
-                </div>
-                // --- End Editing UI ---
-            ) : (
-              <>
-                {message.imageUrl && (
-                    <img
-                        src={message.imageUrl}
-                        alt="Gönderilen resim"
-                        className="rounded-lg max-w-xs max-h-64 object-cover cursor-pointer mb-2"
-                        onClick={() => window.open(message.imageUrl, '_blank')}
-                    />
-                )}
-                {message.text && (
-                    <p className="text-sm break-words whitespace-pre-wrap">{message.text}</p>
-                )}
-              </>
+              </DropdownMenu>
             )}
           </div>
 
-          {isSender && !isDeleted && !isEditing && (
-             <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <button className="p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><MoreHorizontal className="h-4 w-4"/></button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                     <DropdownMenuItem disabled><Smile className="mr-2 h-4 w-4"/> Tepki Ver</DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    {message.text && (
-                        <DropdownMenuItem onClick={handleEditClick}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Düzenle
-                        </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-destructive focus:text-destructive">
-                         <Trash2 className="mr-2 h-4 w-4" />
-                         Sil
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          <div className="relative">
+            <div className={cn('p-3 rounded-2xl', bubbleClass)}>
+              {isDeleted ? (
+                <p className="text-sm italic opacity-70">Bu mesaj silindi</p>
+              ) : isEditing ? (
+                <div className="space-y-2">
+                  <Textarea value={editedText} onChange={(e) => setEditedText(e.target.value)} className="bg-background text-foreground min-h-[60px] resize-none" autoFocus />
+                  <div className="flex justify-end gap-2">
+                    <Button size="sm" variant="ghost" onClick={handleCancelEdit}>İptal</Button>
+                    <Button size="sm" onClick={handleSaveEdit} disabled={isSavingEdit}>
+                      {isSavingEdit ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      Kaydet
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {message.imageUrl && (
+                    <img src={message.imageUrl} alt="Gönderilen resim" className="rounded-lg max-w-xs max-h-64 object-cover cursor-pointer mb-2" onClick={() => window.open(message.imageUrl, '_blank')} />
+                  )}
+                  {message.text && (
+                    <p className="text-sm break-words whitespace-pre-wrap">{message.text}</p>
+                  )}
+                </>
+              )}
+            </div>
+
+            {hasReactions && (
+              <div className={cn("absolute -bottom-4 flex items-center gap-1", isSender ? "right-0" : "left-0")}>
+                {Object.entries(reactions).map(([emoji, uids]) => {
+                  if (uids.length === 0) return null;
+                  return (
+                    <button key={emoji} onClick={() => handleReactionClick(emoji)} className={cn("flex items-center gap-1 px-2 py-0.5 rounded-full border bg-background text-xs shadow-sm transition-colors", uids.includes(currentUserId) ? "border-primary bg-primary/10" : "hover:bg-accent")}>
+                      <span>{emoji}</span>
+                      <span className="font-medium text-foreground">{uids.length}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-1.5 px-2">
