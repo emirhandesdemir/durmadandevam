@@ -143,7 +143,7 @@ export default function NewPostForm() {
       reader.onload = () => {
           setImageToCrop(reader.result as string);
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(e.target.files[0]);
     }
   };
 
@@ -383,7 +383,7 @@ export default function NewPostForm() {
         isOpen={!!imageToCrop}
         setIsOpen={(isOpen) => !isOpen && setImageToCrop(null)}
         imageSrc={imageToCrop}
-        aspectRatio={0}
+        aspectRatio={16 / 9}
         onCropComplete={handleCropComplete}
       />
       <AlertDialog open={isAiEditing} onOpenChange={setIsAiEditing}>
