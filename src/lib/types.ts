@@ -17,6 +17,7 @@ export interface UserProfile {
     following: string[];
     followRequests: FollowRequest[];
     diamonds: number;
+    referredBy?: string | null;
     selectedBubble?: string;
     selectedAvatarFrame?: string;
     hasUnreadNotifications?: boolean;
@@ -46,12 +47,13 @@ export interface Notification {
     senderUsername: string;
     senderAvatar: string | null;
     senderAvatarFrame?: string;
-    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention';
+    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer';
     postId?: string | null;
     postImage?: string | null;
     commentText?: string;
     roomId?: string;
     roomName?: string;
+    diamondAmount?: number;
     createdAt: Timestamp;
     read: boolean;
 }

@@ -1,3 +1,4 @@
+// src/lib/actions/notificationActions.ts
 'use server';
 
 import { db } from '@/lib/firebase';
@@ -16,12 +17,13 @@ interface CreateNotificationArgs {
   senderUsername: string;
   senderAvatar: string | null;
   senderAvatarFrame?: string;
-  type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention';
+  type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer';
   postId?: string | null;
   postImage?: string | null;
   commentText?: string;
   roomId?: string;
   roomName?: string;
+  diamondAmount?: number;
 }
 
 export async function createNotification(data: CreateNotificationArgs) {

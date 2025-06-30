@@ -1,7 +1,7 @@
 // src/components/rooms/RoomManagementDialog.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -22,8 +22,8 @@ import {
   } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { deleteRoomAsOwner, extendRoomTime, updateRoomSettings } from "@/lib/actions/roomActions";
-import { Trash2, Loader2, ShieldAlert, Clock, Hand } from "lucide-react";
+import { deleteRoomAsOwner, extendRoomTime, updateRoomSettings, increaseParticipantLimit } from "@/lib/actions/roomActions";
+import { Trash2, Loader2, ShieldAlert, Clock, Hand, UserPlus, Gem } from "lucide-react";
 import type { Room } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { Switch } from "../ui/switch";
@@ -38,12 +38,19 @@ interface RoomManagementDialogProps {
 export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomManagementDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExtending, setIsExtending] = useState(false);
+  const [isIncreasingLimit, setIsIncreasingLimit] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
-  const [requestToSpeak, setRequestToSpeak] = useState(room?.requestToSpeakEnabled || false);
+  const [requestToSpeak, setRequestToSpeak] = useState(false);
   
+  useEffect(() => {
+    if (room) {
+        setRequestToSpeak(room.requestToSpeakEnabled || false);
+    }
+  }, [room]);
+  
+
   const handleToggleRequestToSpeak = async (enabled: boolean) => {
     if (!room) return;
     setIsSavingSettings(true);
@@ -67,7 +74,6 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
         title: "Oda Silindi",
         description: `"${room.name}" adlı odanız başarıyla silindi.`,
       });
-      setShowDeleteConfirm(false);
       setIsOpen(false);
     } catch (error: any) {
       console.error("Oda silinirken hata:", error);
@@ -88,7 +94,7 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
           await extendRoomTime(room.id, user.uid);
           toast({
               title: "Süre Uzatıldı!",
-              description: "Odanızın süresi 10 dakika uzatıldı."
+              description: "Odanızın süresi 20 dakika uzatıldı."
           });
       } catch (error: any) {
           toast({
@@ -101,6 +107,26 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
       }
   }
 
+  const handleIncreaseLimit = async () => {
+    if (!room || !user) return;
+    setIsIncreasingLimit(true);
+    try {
+        await increaseParticipantLimit(room.id, user.uid);
+        toast({
+            title: "Limit Artırıldı!",
+            description: "Katılımcı limiti 1 artırıldı."
+        });
+    } catch (error: any) {
+        toast({
+            title: "Hata",
+            description: error.message || "Limit artırılırken bir hata oluştu.",
+            variant: "destructive",
+        });
+    } finally {
+        setIsIncreasingLimit(false);
+    }
+  }
+
   if (!room) return null;
 
   return (
@@ -110,7 +136,7 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
           <DialogHeader>
             <DialogTitle>"{room.name}" Odasını Yönet</DialogTitle>
             <DialogDescription>
-              Odanızla ilgili ayarları buradan yapabilirsiniz. Bu işlemler kalıcı olabilir.
+              Odanızla ilgili ayarları buradan yapabilirsiniz. Bu işlemler elmas gerektirebilir.
             </DialogDescription>
           </DialogHeader>
 
@@ -125,17 +151,23 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
 
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
-                <h4 className="font-bold text-foreground">Süreyi Uzat</h4>
-                <p className="text-sm text-muted-foreground">Odanın kapanma süresini 10 dakika ertele.</p>
-                <p className="text-xs text-primary/80 mt-1 flex items-center gap-1">(Ücretsiz)</p>
+                <h4 className="font-bold text-foreground">Süreyi Uzat (+20 dk)</h4>
+                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">Maliyet: <strong className="flex items-center gap-1">15 <Gem className="h-3 w-3 text-cyan-400" /></strong></p>
               </div>
-              <Button
-                variant="secondary"
-                onClick={handleExtendTime}
-                disabled={isExtending}
-              >
+              <Button variant="secondary" onClick={handleExtendTime} disabled={isExtending}>
                 {isExtending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Clock className="mr-2 h-4 w-4" />}
                 Uzat
+              </Button>
+            </div>
+            
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <h4 className="font-bold text-foreground">Katılımcı Artır (+1)</h4>
+                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">Maliyet: <strong className="flex items-center gap-1">5 <Gem className="h-3 w-3 text-cyan-400" /></strong></p>
+              </div>
+              <Button variant="secondary" onClick={handleIncreaseLimit} disabled={isIncreasingLimit}>
+                {isIncreasingLimit ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
+                Artır
               </Button>
             </div>
 
@@ -146,10 +178,7 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
                     <h4 className="font-bold text-destructive">Odayı Kalıcı Olarak Sil</h4>
                     <p className="text-sm text-destructive/80">Bu işlem geri alınamaz. Odadaki tüm veriler silinecektir.</p>
                 </div>
-                <Button
-                    variant="destructive"
-                    onClick={() => setShowDeleteConfirm(true)}
-                >
+                <Button variant="destructive" onClick={() => { setIsOpen(false); setTimeout(() => setShowDeleteConfirm(true), 150); }}>
                     <Trash2 className="mr-2 h-4 w-4" />
                     Sil
                 </Button>
@@ -177,11 +206,7 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>İptal</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteRoom}
-              disabled={isDeleting}
-              className="bg-destructive hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={handleDeleteRoom} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
               {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Evet, Odayı Sil
             </AlertDialogAction>

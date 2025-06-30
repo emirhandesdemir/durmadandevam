@@ -1,3 +1,4 @@
+// src/components/notifications/NotificationItem.tsx
 'use client';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -5,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import type { Notification } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Heart, MessageCircle, UserPlus, DoorOpen, Loader2, AtSign } from 'lucide-react';
+import { Heart, MessageCircle, UserPlus, DoorOpen, Loader2, AtSign, Gem } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -30,6 +31,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
   });
 
   const handleWrapperClick = () => {
+    if (notification.type === 'diamond_transfer') return; // Diamond transfer notifications are not clickable
     if (notification.postId) {
       // TODO: Implement opening a post dialog/modal
       console.log("Navigating to post:", notification.postId);
@@ -46,6 +48,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
       case 'follow_accept': return <UserPlus className="h-5 w-5 text-green-500" />;
       case 'mention': return <AtSign className="h-5 w-5 text-indigo-500" />;
       case 'room_invite': return <DoorOpen className="h-5 w-5 text-green-500" />;
+      case 'diamond_transfer': return <Gem className="h-5 w-5 text-cyan-400" />;
       default: return null;
     }
   };
@@ -58,6 +61,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
       case 'follow_accept': return <> <span className="font-bold">{notification.senderUsername}</span> takip isteğini kabul etti.</>;
       case 'mention': return <> <span className="font-bold">{notification.senderUsername}</span> bir gönderide senden bahsetti.</>;
       case 'room_invite': return <> <span className="font-bold">{notification.senderUsername}</span> seni <span className="font-semibold">{notification.roomName}</span> odasına davet etti.</>;
+      case 'diamond_transfer': return <> <span className="font-bold">{notification.senderUsername}</span> sana <strong className="text-cyan-400">{notification.diamondAmount} elmas</strong> gönderdi!</>;
       default: return 'Bilinmeyen bildirim';
     }
   }
@@ -65,7 +69,8 @@ export default function NotificationItem({ notification }: NotificationItemProps
   return (
     <div 
       className={cn(
-        "flex items-start gap-4 p-3 rounded-lg transition-colors cursor-pointer hover:bg-muted/50",
+        "flex items-start gap-4 p-3 rounded-lg transition-colors",
+        notification.type !== 'diamond_transfer' && "cursor-pointer hover:bg-muted/50",
         !notification.read && "bg-primary/5"
       )}
       onClick={handleWrapperClick}

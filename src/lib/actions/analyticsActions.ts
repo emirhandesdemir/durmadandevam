@@ -2,10 +2,11 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { collection, collectionGroup, getDocs, query, where, Timestamp, getCountFromServer } from 'firebase/firestore';
+import { collection, collectionGroup, getDocs, query, where, Timestamp, getCountFromServer, orderBy, limit } from 'firebase/firestore';
 import { format, sub, startOfDay, endOfDay, getDay, getMonth, getYear } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import type { Post } from '../types';
+import type { Post, UserProfile } from '../types';
+import { deepSerialize } from '../server-utils';
 
 
 /**
@@ -146,4 +147,29 @@ export async function getContentCreationByGenderData() {
             { name: 'Kadın', gönderi: 0 },
         ];
     }
+}
+
+/**
+ * En çok elmasa sahip kullanıcıları getirir.
+ */
+export async function getTopDiamondHolders(): Promise<Partial<UserProfile>[]> {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, orderBy('diamonds', 'desc'), limit(5));
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) {
+        return [];
+    }
+    
+    const users = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            uid: data.uid,
+            username: data.username,
+            photoURL: data.photoURL,
+            diamonds: data.diamonds,
+        };
+    });
+
+    return deepSerialize(users);
 }

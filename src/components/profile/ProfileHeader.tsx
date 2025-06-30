@@ -3,7 +3,7 @@
 
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, Settings } from 'lucide-react';
+import { MessageCircle, Settings, Gem } from 'lucide-react';
 import FollowButton from './FollowButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
@@ -11,6 +11,7 @@ import FollowListDialog from './FollowListDialog';
 import Link from 'next/link';
 import { getChatId } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import SendDiamondDialog from '../diamond/SendDiamondDialog';
 
 
 interface ProfileHeaderProps {
@@ -21,8 +22,11 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
   const { user: currentUserAuth, userData: currentUserData } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<'followers' | 'following'>('followers');
+  const [sendDiamondOpen, setSendDiamondOpen] = useState(false);
 
   const isOwnProfile = currentUserAuth?.uid === profileUser.uid;
+  const areMutuals = currentUserData?.following?.includes(profileUser.uid) && profileUser.following?.includes(currentUserAuth?.uid);
+
 
   const handleStatClick = (type: 'followers' | 'following') => {
     setDialogType(type);
@@ -45,7 +49,11 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
         {/* User Info */}
         <div className="mt-4">
           <h1 className="text-2xl font-bold">{profileUser.username}</h1>
-          {profileUser.bio && <p className="text-sm text-muted-foreground max-w-md mt-1">{profileUser.bio}</p>}
+          <div className="flex items-center justify-center gap-2 mt-1 text-cyan-400 font-bold">
+            <Gem className="h-5 w-5"/>
+            <span>{profileUser.diamonds || 0}</span>
+          </div>
+          {profileUser.bio && <p className="text-sm text-muted-foreground max-w-md mt-2">{profileUser.bio}</p>}
         </div>
 
         {/* Stats */}
@@ -82,12 +90,17 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
               </>
             ) : (
                 <>
-                    <FollowButton currentUser={currentUserData} targetUser={profileUser} />
+                    <FollowButton currentUserData={currentUserData} targetUser={profileUser} />
                     <Button asChild>
                         <Link href={`/dm/${getChatId(currentUserAuth!.uid, profileUser.uid)}`}>
                            <MessageCircle className="mr-2 h-4 w-4"/> Mesaj
                         </Link>
                     </Button>
+                    {areMutuals && (
+                         <Button onClick={() => setSendDiamondOpen(true)} variant="outline" className="col-span-2">
+                            <Gem className="mr-2 h-4 w-4"/> Elmas Gönder
+                        </Button>
+                    )}
                 </>
             )}
         </div>
@@ -97,6 +110,11 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
         onOpenChange={setDialogOpen}
         userIds={userIdsToShow || []}
         type={dialogType}
+      />
+       <SendDiamondDialog
+        isOpen={sendDiamondOpen}
+        onOpenChange={setSendDiamondOpen}
+        recipient={profileUser}
       />
     </>
   );

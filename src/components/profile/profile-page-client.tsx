@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, Lock, Eye, Camera, Settings } from "lucide-react";
+import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, Lock, Eye, Camera, Settings, Gift, Copy } from "lucide-react";
 import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { useTheme } from "next-themes";
@@ -67,6 +67,8 @@ export default function ProfilePageClient() {
     const [selectedAvatarFrame, setSelectedAvatarFrame] = useState("");
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [inviteLink, setInviteLink] = useState("");
+
 
     useEffect(() => {
         if (userData) {
@@ -77,7 +79,10 @@ export default function ProfilePageClient() {
             setSelectedBubble(userData.selectedBubble || "");
             setSelectedAvatarFrame(userData.selectedAvatarFrame || "");
         }
-    }, [userData]);
+        if (user) {
+            setInviteLink(`${window.location.origin}/signup?ref=${user.uid}`);
+        }
+    }, [userData, user]);
     
     const hasChanges = 
         username !== (userData?.username || "") || 
@@ -117,16 +122,6 @@ export default function ProfilePageClient() {
             const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
     
             if (newAvatar) {
-                if (userData?.photoURL && userData.photoURL.includes('firebasestorage.googleapis.com')) {
-                    try {
-                        const oldImageRef = ref(storage, userData.photoURL);
-                        await deleteObject(oldImageRef);
-                    } catch (error: any) {
-                         if (error.code !== 'storage/object-not-found') {
-                            console.error("Eski avatar silinirken hata:", error);
-                        }
-                    }
-                }
                 const newAvatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.jpg`);
                 const snapshot = await uploadString(newAvatarRef, newAvatar, 'data_url');
                 const finalPhotoURL = await getDownloadURL(snapshot.ref);
@@ -159,7 +154,7 @@ export default function ProfilePageClient() {
                 description: "Profiliniz başarıyla güncellendi.",
             });
             setNewAvatar(null); 
-            router.push(`/profile/${user.uid}`);
+            router.refresh(); // Sayfayı yenileyerek AuthContext'in güncel veriyi çekmesini sağla
     
         } catch (error: any) {
             toast({
@@ -177,6 +172,11 @@ export default function ProfilePageClient() {
     }
 
     const isAdmin = userData?.role === 'admin';
+
+    const copyToClipboard = () => {
+        navigator.clipboard.writeText(inviteLink);
+        toast({ description: "Davet linki kopyalandı!" });
+    };
 
     return (
         <>
@@ -242,6 +242,20 @@ export default function ProfilePageClient() {
                                         <p className={cn("text-xs text-muted-foreground transition-colors", !privateProfile && "text-muted-foreground/50")}>Kapalıysa, kimse size takip isteği gönderemez.</p>
                                     </div>
                                     <Switch id="requests-mode" checked={acceptsFollowRequests} onCheckedChange={setAcceptsFollowRequests} disabled={!privateProfile}/>
+                                </div>
+                            </AccordionContent>
+                        </AccordionItem>
+                        <AccordionItem value="invite">
+                            <AccordionTrigger>
+                                <div className="flex items-center gap-3"><Gift className="h-5 w-5 text-muted-foreground" /><span className="font-semibold">Davet Sistemi</span></div>
+                            </AccordionTrigger>
+                            <AccordionContent className="space-y-4 pt-2">
+                                <p className="text-sm text-muted-foreground">
+                                    Bu linki arkadaşlarınla paylaş. Senin linkinle kayıt olan her arkadaşın için <strong>10 elmas</strong> kazan!
+                                </p>
+                                <div className="flex gap-2">
+                                    <Input value={inviteLink} readOnly className="text-sm" />
+                                    <Button onClick={copyToClipboard} variant="outline" size="icon"><Copy className="h-4 w-4" /></Button>
                                 </div>
                             </AccordionContent>
                         </AccordionItem>

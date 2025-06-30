@@ -177,28 +177,21 @@ export async function submitAnswer(roomId: string, gameId: string, userId: strin
             transaction.update(gameRef, { answeredBy: arrayUnion(userId) });
             
             if (gameData.correctOptionIndex === answerIndex) {
-                transaction.update(gameRef, { status: 'finished', winner: userId });
+                // Oyunu bitir ve kazananı belirle
+                transaction.update(gameRef, { status: 'finished', winner: userId, finishedAt: serverTimestamp() });
                 await setNextGameTime(transaction, roomRef);
 
                 const settings = await getGameSettings();
                 const reward = settings.rewardAmount;
-                const dailyLimit = settings.dailyDiamondLimit;
-
-                const today = new Date().toISOString().split('T')[0];
-                const dailyEarnings = userData.dailyDiamonds?.[today] || 0;
 
                 let messageText = `🎉 ${userData.username} doğru cevap verdi!`;
 
-                if (dailyEarnings < dailyLimit) {
-                    transaction.update(userRef, {
-                        diamonds: increment(reward),
-                        [`dailyDiamonds.${today}`]: increment(reward)
-                    });
-                    messageText = `🎉 ${userData.username} doğru cevap verdi ve ${reward} elmas kazandı!`;
-                } else {
-                    messageText = `🎉 ${userData.username} doğru cevap verdi ancak günlük ödül limitine ulaştı!`;
-                }
-
+                // Kazanan kullanıcıya ödülünü ver
+                transaction.update(userRef, {
+                    diamonds: increment(reward)
+                });
+                messageText = `🎉 ${userData.username} doğru cevap verdi ve ${reward} elmas kazandı!`;
+                
                 const systemMessage = {
                     type: 'game', text: messageText,
                     createdAt: serverTimestamp(), uid: 'system', username: 'System',
@@ -234,7 +227,7 @@ export async function endGameWithoutWinner(roomId: string, gameId: string) {
             const gameData = gameDoc.data();
             const correctOptionText = gameData.options[gameData.correctOptionIndex];
 
-            transaction.update(gameRef, { status: 'finished' });
+            transaction.update(gameRef, { status: 'finished', finishedAt: serverTimestamp() });
             
             await setNextGameTime(transaction, roomRef);
 

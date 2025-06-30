@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { doc, deleteDoc, updateDoc, increment } from 'firebase/firestore';
 
 /**
  * Bir kullanıcının Firestore veritabanı kaydını siler.
@@ -39,5 +39,28 @@ export async function updateUserRole(uid: string, newRole: 'admin' | 'user') {
     {
         console.error("Kullanıcı rolü güncellenirken hata:", error);
         return { success: false, error: "Rol güncellenemedi." };
+    }
+}
+
+/**
+ * Bir kullanıcının elmas miktarını günceller.
+ * @param uid Elmas miktarı güncellenecek kullanıcının ID'si.
+ * @param amount Eklenecek veya çıkarılacak elmas miktarı (negatif olabilir).
+ */
+export async function modifyUserDiamonds(uid: string, amount: number) {
+    if (!uid) throw new Error("Kullanıcı ID'si gerekli.");
+    if (typeof amount !== 'number' || !Number.isInteger(amount)) {
+        throw new Error("Geçersiz miktar.");
+    }
+    
+    try {
+        const userDocRef = doc(db, 'users', uid);
+        await updateDoc(userDocRef, {
+            diamonds: increment(amount)
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Kullanıcı elmasları güncellenirken hata:", error);
+        return { success: false, error: "Elmaslar güncellenemedi." };
     }
 }

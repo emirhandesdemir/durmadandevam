@@ -5,11 +5,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
+import { creditReferrer } from "@/lib/actions/diamondActions";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -74,6 +75,7 @@ const generateDefaultAvatar = (username: string) => {
 export default function SignUpForm() {
     const { toast } = useToast();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
@@ -102,6 +104,7 @@ export default function SignUpForm() {
             
             const isAdminEmail = values.email === 'admin@example.com';
             const userRole = isAdminEmail ? 'admin' : 'user';
+            const ref = searchParams.get('ref');
 
             await setDoc(doc(db, "users", user.uid), {
                 uid: user.uid,
@@ -113,7 +116,8 @@ export default function SignUpForm() {
                 gender: values.gender,
                 createdAt: serverTimestamp(),
                 diamonds: 10, // Start with 10 diamonds
-                postCount: 0, // Initialize post count
+                referredBy: ref || null,
+                postCount: 0,
                 followers: [],
                 following: [],
                 privateProfile: false,
@@ -122,6 +126,16 @@ export default function SignUpForm() {
                 selectedBubble: '',
                 selectedAvatarFrame: '',
             });
+
+            // Credit the referrer if one exists
+            if (ref) {
+                try {
+                    await creditReferrer(ref);
+                } catch (e) {
+                    console.error("Referrer credit failed, but signup continues:", e);
+                }
+            }
+
 
             toast({
                 title: "Hesap Oluşturuldu!",

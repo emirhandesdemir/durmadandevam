@@ -15,6 +15,7 @@ export interface UserData {
     role: 'admin' | 'user';
     createdAt: Timestamp;
     photoURL?: string;
+    diamonds?: number;
 }
 
 /**

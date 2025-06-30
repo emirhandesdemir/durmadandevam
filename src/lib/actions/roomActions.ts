@@ -9,6 +9,53 @@ import type { Room } from '../types';
 
 const voiceStatsRef = doc(db, 'config', 'voiceStats');
 
+export async function createRoom(
+    userId: string,
+    roomData: Pick<Room, 'name' | 'description' | 'requestToSpeakEnabled'>,
+    creatorInfo: { username: string, photoURL: string | null, role: string, selectedAvatarFrame: string }
+) {
+    if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
+    
+    const userRef = doc(db, 'users', userId);
+    const roomCost = 10;
+
+    return await runTransaction(db, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) throw new Error("Kullanıcı bulunamadı.");
+        
+        const userData = userDoc.data();
+        if ((userData.diamonds || 0) < roomCost) {
+            throw new Error(`Oda oluşturmak için ${roomCost} elmasa ihtiyacınız var.`);
+        }
+        
+        const newRoomRef = doc(collection(db, 'rooms'));
+        const fifteenMinutesInMs = 15 * 60 * 1000;
+        
+        const newRoom = {
+            ...roomData,
+            createdBy: {
+                uid: userId,
+                username: creatorInfo.username,
+                photoURL: creatorInfo.photoURL,
+                role: creatorInfo.role,
+                selectedAvatarFrame: creatorInfo.selectedAvatarFrame,
+            },
+            moderators: [userId],
+            createdAt: serverTimestamp(),
+            participants: [{ uid: userId, username: creatorInfo.username, photoURL: creatorInfo.photoURL }],
+            maxParticipants: 9,
+            voiceParticipantsCount: 0,
+            expiresAt: Timestamp.fromMillis(Date.now() + fifteenMinutesInMs),
+        };
+
+        transaction.set(newRoomRef, newRoom);
+        transaction.update(userRef, { diamonds: increment(-roomCost) });
+        
+        return { success: true, roomId: newRoomRef.id };
+    });
+}
+
+
 export async function addSystemMessage(roomId: string, text: string) {
     if (!roomId || !text) throw new Error("Oda ID'si ve mesaj metni gereklidir.");
 
@@ -148,30 +195,74 @@ export async function sendRoomInvite(
 
 export async function extendRoomTime(roomId: string, userId: string) {
     const roomRef = doc(db, 'rooms', roomId);
+    const userRef = doc(db, 'users', userId);
+    const cost = 15;
 
-    const roomDoc = await getDoc(roomRef);
+    await runTransaction(db, async (transaction) => {
+        const [roomDoc, userDoc] = await Promise.all([
+            transaction.get(roomRef),
+            transaction.get(userRef)
+        ]);
 
-    if (!roomDoc.exists()) {
-        throw new Error("Oda bulunamadı.");
-    }
+        if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
+        if (!userDoc.exists()) throw new Error("Kullanıcı bulunamadı.");
+        
+        const roomData = roomDoc.data();
+        const userData = userDoc.data();
 
-    const roomData = roomDoc.data();
-    if (roomData.createdBy.uid !== userId) {
-        throw new Error("Bu işlemi yapma yetkiniz yok.");
-    }
-    
-    const currentExpiresAt = roomData.expiresAt ? (roomData.expiresAt as Timestamp).toMillis() : Date.now();
-    const tenMinutesInMs = 10 * 60 * 1000;
-    const newExpiresAt = Timestamp.fromMillis(currentExpiresAt + tenMinutesInMs);
-    
-    await updateDoc(roomRef, {
-        expiresAt: newExpiresAt
+        if (roomData.createdBy.uid !== userId) {
+            throw new Error("Bu işlemi yapma yetkiniz yok.");
+        }
+        if ((userData.diamonds || 0) < cost) {
+            throw new Error(`Süre uzatmak için ${cost} elmasa ihtiyacınız var.`);
+        }
+        
+        const currentExpiresAt = roomData.expiresAt ? (roomData.expiresAt as Timestamp).toMillis() : Date.now();
+        const twentyMinutesInMs = 20 * 60 * 1000;
+        const newExpiresAt = Timestamp.fromMillis(currentExpiresAt + twentyMinutesInMs);
+        
+        transaction.update(userRef, { diamonds: increment(-cost) });
+        transaction.update(roomRef, { expiresAt: newExpiresAt });
     });
     
-    await addSystemMessage(roomId, "⏰ Oda sahibi, oda süresini 10 dakika uzattı!");
-
-    return { success: true, newExpiresAt };
+    await addSystemMessage(roomId, `⏰ Oda sahibi, oda süresini 20 dakika uzattı! Bu işlem ${cost} elmasa mal oldu.`);
+    return { success: true };
 }
+
+export async function increaseParticipantLimit(roomId: string, userId: string) {
+    const roomRef = doc(db, 'rooms', roomId);
+    const userRef = doc(db, 'users', userId);
+    const cost = 5;
+
+    await runTransaction(db, async (transaction) => {
+        const [roomDoc, userDoc] = await Promise.all([
+            transaction.get(roomRef),
+            transaction.get(userRef)
+        ]);
+
+        if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
+        if (!userDoc.exists()) throw new Error("Kullanıcı bulunamadı.");
+        
+        const roomData = roomDoc.data();
+        const userData = userDoc.data();
+
+        if (roomData.createdBy.uid !== userId) {
+            throw new Error("Bu işlemi yapma yetkiniz yok.");
+        }
+        if ((userData.diamonds || 0) < cost) {
+            throw new Error(`Katılımcı limitini artırmak için ${cost} elmasa ihtiyacınız var.`);
+        }
+        
+        transaction.update(userRef, { diamonds: increment(-cost) });
+        transaction.update(roomRef, { maxParticipants: increment(1) });
+    });
+
+    const roomSnap = await getDoc(roomRef);
+    const newLimit = roomSnap.data()?.maxParticipants;
+    await addSystemMessage(roomId, `👤 Oda sahibi, katılımcı limitini ${newLimit}'e yükseltti! Bu işlem ${cost} elmasa mal oldu.`);
+    return { success: true };
+}
+
 
 export async function openPortalForRoom(roomId: string, userId: string) {
     const cost = 100; // Şimdilik ücretsiz
@@ -234,7 +325,7 @@ export async function updateRoomDetails(roomId: string, userId: string, details:
     if (!roomDoc.exists() || roomDoc.data().createdBy.uid !== userId) {
         throw new Error("Bu işlemi yapma yetkiniz yok.");
     }
-    await updateDoc(roomRef, details);
+    await updateDoc(roomRef, { ...details, hasDetails: !!(details.rules || details.welcomeMessage) });
     return { success: true };
 }
 

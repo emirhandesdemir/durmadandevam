@@ -5,11 +5,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useState } from "react";
-import { collection, addDoc, serverTimestamp, query, where, getDocs, limit, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { getGameSettings } from "@/lib/actions/gameActions";
+import { createRoom } from "@/lib/actions/roomActions";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,11 +23,12 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Hand } from "lucide-react";
+import { Loader2, Hand, Gem } from "lucide-react";
 import { Switch } from "../ui/switch";
 
 const formSchema = z.object({
@@ -58,52 +57,25 @@ export default function CreateRoomForm() {
         setIsLoading(true);
 
         try {
-            const userRoomsQuery = query(collection(db, "rooms"), where("createdBy.uid", "==", user.uid), limit(1));
-            const userRoomsSnapshot = await getDocs(userRoomsQuery);
-            if (!userRoomsSnapshot.empty) {
-                toast({ title: "Oda Oluşturulamadı", description: "Zaten size ait bir oda var. Şimdilik sadece bir oda oluşturabilirsiniz.", variant: "destructive" });
-                setIsLoading(false);
-                return;
-            }
-            
-            const settings = await getGameSettings();
-            const newRoom: any = {
-                name: values.name,
-                description: values.description,
-                requestToSpeakEnabled: values.requestToSpeakEnabled,
-                speakRequests: [],
-                createdBy: {
-                  uid: user.uid,
-                  username: user.displayName || "Bilinmeyen Kullanıcı",
-                  photoURL: user.photoURL,
-                  role: userData.role || 'user',
-                  selectedAvatarFrame: userData.selectedAvatarFrame || ''
-                },
-                moderators: [user.uid], // Creator is the first moderator
-                createdAt: serverTimestamp(),
-                participants: [{
-                    uid: user.uid,
-                    username: user.displayName || "Anonim",
-                    photoURL: user.photoURL || null
-                }],
-                maxParticipants: 9, 
-                voiceParticipantsCount: 0,
-            };
-
-            const fifteenMinutesInMs = 15 * 60 * 1000;
-            newRoom.expiresAt = Timestamp.fromMillis(Date.now() + fifteenMinutesInMs);
-            newRoom.nextGameTimestamp = Timestamp.fromMillis(Date.now() + settings.gameIntervalMinutes * 60 * 1000);
-            
-            const docRef = await addDoc(collection(db, "rooms"), newRoom);
-
-            toast({
-                title: 'Oda Oluşturuldu!',
-                description: `"${values.name}" odasına yönlendiriliyorsunuz...`,
+            const result = await createRoom(user.uid, values, {
+                username: userData.username,
+                photoURL: userData.photoURL || null,
+                role: userData.role || 'user',
+                selectedAvatarFrame: userData.selectedAvatarFrame || '',
             });
-            router.push(`/rooms/${docRef.id}`); 
-        } catch (error) {
+
+            if (result.success && result.roomId) {
+                toast({
+                    title: 'Oda Oluşturuldu!',
+                    description: `"${values.name}" odasına yönlendiriliyorsunuz...`,
+                });
+                router.push(`/rooms/${result.roomId}`);
+            } else {
+                 throw new Error("Oda ID'si alınamadı.");
+            }
+        } catch (error: any) {
             console.error("Error creating community: ", error);
-            toast({ title: "Hata", description: `Oluşturulurken bir hata oluştu.`, variant: "destructive" });
+            toast({ title: "Hata", description: `Oluşturulurken bir hata oluştu: ${error.message}`, variant: "destructive" });
         } finally {
             setIsLoading(false);
         }
@@ -165,6 +137,11 @@ export default function CreateRoomForm() {
                     </form>
                 </Form>
             </CardContent>
+             <CardFooter className="flex-col text-center">
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    Bu işlem <strong className="flex items-center gap-1">10 <Gem className="h-3 w-3 text-cyan-400" /></strong> gerektirir.
+                </p>
+            </CardFooter>
         </Card>
     );
 }

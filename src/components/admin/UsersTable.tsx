@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { tr } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
 import { deleteUserFromFirestore, updateUserRole } from "@/lib/actions/adminActions";
-import { MoreHorizontal, Trash2, UserCheck, UserX, Loader2, ShieldCheck, Shield } from "lucide-react";
+import { MoreHorizontal, Trash2, UserCheck, UserX, Loader2, ShieldCheck, Shield, Gem } from "lucide-react";
 
 import {
   Table,
@@ -39,6 +39,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import ManageDiamondsDialog from "./ManageDiamondsDialog";
 
 interface UsersTableProps {
   users: UserData[];
@@ -51,6 +52,7 @@ export default function UsersTable({ users }: UsersTableProps) {
     const { toast } = useToast();
     const [isProcessing, setIsProcessing] = useState<string | null>(null); // Hangi kullanıcının işlendiğini tutar
     const [showDeleteConfirm, setShowDeleteConfirm] = useState<UserData | null>(null);
+    const [showDiamondDialog, setShowDiamondDialog] = useState<UserData | null>(null);
 
     const handleDeleteUser = async (user: UserData) => {
         setIsProcessing(user.uid);
@@ -89,6 +91,7 @@ export default function UsersTable({ users }: UsersTableProps) {
                 <TableRow>
                 <TableHead>Kullanıcı</TableHead>
                 <TableHead>Rol</TableHead>
+                <TableHead>Elmas</TableHead>
                 <TableHead>Katılma Tarihi</TableHead>
                 <TableHead className="text-right">Eylemler</TableHead>
                 </TableRow>
@@ -115,6 +118,12 @@ export default function UsersTable({ users }: UsersTableProps) {
                         </Badge>
                     </TableCell>
                     <TableCell>
+                        <div className="flex items-center font-semibold">
+                            <Gem className="mr-2 h-4 w-4 text-cyan-400" />
+                            {user.diamonds || 0}
+                        </div>
+                    </TableCell>
+                    <TableCell>
                         {user.createdAt ? format(user.createdAt.toDate(), 'PPpp', { locale: tr }) : 'Bilinmiyor'}
                     </TableCell>
                     <TableCell className="text-right">
@@ -126,6 +135,10 @@ export default function UsersTable({ users }: UsersTableProps) {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Eylemler</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => setShowDiamondDialog(user)}>
+                                    <Gem className="mr-2 h-4 w-4" />
+                                    <span>Elmasları Yönet</span>
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleToggleAdmin(user)}>
                                     {user.role === 'admin' ? <UserX className="mr-2 h-4 w-4" /> : <UserCheck className="mr-2 h-4 w-4" />}
                                     <span>{user.role === 'admin' ? 'Admin Yetkisini Al' : 'Admin Yap'}</span>
@@ -142,6 +155,13 @@ export default function UsersTable({ users }: UsersTableProps) {
                 ))}
             </TableBody>
         </Table>
+
+        <ManageDiamondsDialog
+            isOpen={!!showDiamondDialog}
+            setIsOpen={() => setShowDiamondDialog(null)}
+            user={showDiamondDialog}
+        />
+
         {/* Silme Onay Dialogu */}
         <AlertDialog open={!!showDeleteConfirm} onOpenChange={(open) => !open && setShowDeleteConfirm(null)}>
             <AlertDialogContent>

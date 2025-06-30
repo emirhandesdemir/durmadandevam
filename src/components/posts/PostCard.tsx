@@ -46,8 +46,11 @@ export default function PostCard({ post, isStandalone = false }: PostCardProps) 
     const { user: currentUser, userData: currentUserData } = useAuth();
     const { toast } = useToast();
 
-    // State'ler
-    const [isLiking, setIsLiking] = useState(false);
+    // Optimistic UI state
+    const [optimisticLiked, setOptimisticLiked] = useState(post.likes?.includes(currentUser?.uid || ''));
+    const [optimisticLikeCount, setOptimisticLikeCount] = useState(post.likeCount);
+
+    // Editing and Deleting State
     const [isDeleting, setIsDeleting] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editedText, setEditedText] = useState(post.text || '');
@@ -55,9 +58,15 @@ export default function PostCard({ post, isStandalone = false }: PostCardProps) 
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showComments, setShowComments] = useState(false);
 
+    // Sync optimistic state with props
+    useEffect(() => {
+        setOptimisticLiked(post.likes?.includes(currentUser?.uid || ''));
+        setOptimisticLikeCount(post.likeCount);
+    }, [post.likeCount, post.likes, currentUser]);
+
+
     // Kontroller
     const isOwner = currentUser?.uid === post.uid;
-    const isLiked = currentUser ? (post.likes || []).includes(currentUser.uid) : false;
     
     // Güvenli tarih dönüşümü
     const createdAtDate = post.createdAt && 'seconds' in post.createdAt 
@@ -86,8 +95,15 @@ export default function PostCard({ post, isStandalone = false }: PostCardProps) 
     }, [isEditing]);
 
     const handleLike = async () => {
-        if (!currentUser || !currentUserData || isLiking) return;
-        setIsLiking(true);
+        if (!currentUser || !currentUserData) return;
+
+        // Optimistic update
+        const previousLiked = optimisticLiked;
+        const previousLikeCount = optimisticLikeCount;
+
+        setOptimisticLiked(!previousLiked);
+        setOptimisticLikeCount(prev => previousLiked ? prev - 1 : prev + 1);
+
         try {
             await likePost(
                 post.id,
@@ -99,10 +115,11 @@ export default function PostCard({ post, isStandalone = false }: PostCardProps) 
                 }
             );
         } catch (error) {
+            // Revert on error
+            setOptimisticLiked(previousLiked);
+            setOptimisticLikeCount(previousLikeCount);
             console.error("Error liking post:", error);
             toast({ variant: "destructive", description: "Beğenirken bir hata oluştu." });
-        } finally {
-            setIsLiking(false);
         }
     };
 
@@ -250,8 +267,8 @@ export default function PostCard({ post, isStandalone = false }: PostCardProps) 
                     
                     {/* Action Buttons */}
                     <div className="mt-3 flex items-center gap-1 -ml-2">
-                        <Button variant="ghost" size="icon" className={cn("rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive", isLiked && "text-destructive")} onClick={handleLike} disabled={isLiking || !currentUser}>
-                           <Heart className={cn("h-5 w-5", isLiked && "fill-current")} />
+                        <Button variant="ghost" size="icon" className={cn("rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive", optimisticLiked && "text-destructive")} onClick={handleLike} disabled={!currentUser}>
+                           <Heart className={cn("h-5 w-5", optimisticLiked && "fill-current")} />
                         </Button>
                         <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary" onClick={() => setShowComments(true)}>
                             <MessageCircle className="h-5 w-5" />
@@ -259,11 +276,11 @@ export default function PostCard({ post, isStandalone = false }: PostCardProps) 
                     </div>
 
                     {/* Stats */}
-                    {(post.likeCount > 0 || post.commentCount > 0) && (
+                    {(optimisticLikeCount > 0 || post.commentCount > 0) && (
                         <div className="mt-1 text-xs text-muted-foreground">
                             <span>{post.commentCount || 0} yanıt</span>
                             <span className="mx-1">·</span>
-                            <span>{post.likeCount || 0} beğeni</span>
+                            <span>{optimisticLikeCount || 0} beğeni</span>
                         </div>
                     )}
                 </div>
