@@ -2,29 +2,10 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    
-    // Allow public read access to all files.
-    // This is simple for a social media app where content is generally public.
+    // Allow read access for everyone and write access for any authenticated user.
+    // This is a permissive rule set for development and testing.
     match /{allPaths=**} {
       allow read;
-    }
-    
-    // Allow users to upload their own avatar.
-    // The path is `upload/avatars/{userId}`.
-    match /upload/avatars/{userId} {
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Allow users to upload images for their own posts.
-    // Path: `upload/posts/{userId}/{some_file_name}`
-    match /upload/posts/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Allow authenticated users to upload files to rooms they are part of.
-    // This is kept simple: any authenticated user can upload to any room.
-    // A more complex rule would require checking Firestore for room membership.
-    match /upload/rooms/{allPaths=**} {
       allow write: if request.auth != null;
     }
   }
