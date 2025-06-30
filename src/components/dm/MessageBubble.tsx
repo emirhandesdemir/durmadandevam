@@ -1,13 +1,13 @@
 // src/components/dm/MessageBubble.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { DirectMessage } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Check, CheckCheck, MoreHorizontal, Pencil, Trash2, Loader2, Smile } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Check, CheckCheck, MoreHorizontal, Pencil, Trash2, Loader2, Play, Pause } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -22,6 +22,74 @@ interface MessageBubbleProps {
 }
 
 const REACTION_EMOJIS = ['👍', '❤️', '😂', '🎉', '😢', '🔥'];
+
+const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+};
+
+const AudioPlayer = ({ audioUrl, duration }: { audioUrl: string; duration: number }) => {
+    const audioRef = useRef<HTMLAudioElement>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [playbackRate, setPlaybackRate] = useState(1);
+
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+
+        const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
+        const handleEnded = () => setIsPlaying(false);
+
+        audio.addEventListener('timeupdate', handleTimeUpdate);
+        audio.addEventListener('ended', handleEnded);
+
+        return () => {
+            audio.removeEventListener('timeupdate', handleTimeUpdate);
+            audio.removeEventListener('ended', handleEnded);
+        };
+    }, []);
+    
+    const togglePlayPause = () => {
+        if (audioRef.current) {
+            if (isPlaying) {
+                audioRef.current.pause();
+            } else {
+                audioRef.current.play();
+            }
+            setIsPlaying(!isPlaying);
+        }
+    };
+
+    const changePlaybackRate = () => {
+        const rates = [1, 1.5, 2];
+        const nextRate = rates[(rates.indexOf(playbackRate) + 1) % rates.length];
+        if (audioRef.current) {
+            audioRef.current.playbackRate = nextRate;
+        }
+        setPlaybackRate(nextRate);
+    };
+
+    return (
+        <div className="flex items-center gap-2 p-2 w-full max-w-[250px]">
+            <audio ref={audioRef} src={audioUrl} preload="metadata" />
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={togglePlayPause}>
+                {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+            </Button>
+            <div className="flex-1 h-1 bg-muted rounded-full relative">
+                <div className="bg-primary h-full rounded-full" style={{ width: `${(currentTime / duration) * 100}%` }} />
+            </div>
+            <div className="flex items-center gap-2">
+                 <span className="text-xs font-mono w-12 text-right">{formatTime(currentTime)}</span>
+                <Button variant="outline" size="sm" className="w-12 text-xs" onClick={changePlaybackRate}>
+                    {playbackRate}x
+                </Button>
+            </div>
+        </div>
+    );
+};
+
 
 /**
  * Sohbetteki tek bir mesaj baloncuğunu temsil eder.
@@ -98,7 +166,6 @@ export default function MessageBubble({ message, currentUserId, chatId }: Messag
     <>
       <div className={cn('flex flex-col gap-1', alignClass, hasReactions ? 'pb-4' : '')}>
         <div className={cn('flex items-end gap-2 max-w-[75%] group', isSender ? 'flex-row-reverse' : '')}>
-            {/* Fixed-size container to prevent layout shift */}
             <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center">
                 {!isDeleted && !isEditing && (
                     <DropdownMenu>
@@ -107,19 +174,21 @@ export default function MessageBubble({ message, currentUserId, chatId }: Messag
                                 <MoreHorizontal className="h-4 w-4" />
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align={isSender ? "end" : "start"}>
-                             {/* Reaction Picker directly in the menu */}
-                            <div className="flex gap-1 p-1">
-                                {REACTION_EMOJIS.map(emoji => (
-                                    <DropdownMenuItem 
-                                        key={emoji} 
-                                        onClick={(e) => { e.preventDefault(); handleReactionClick(emoji); }}
-                                        className="p-1.5 rounded-full hover:bg-accent focus:bg-accent cursor-pointer h-auto w-auto"
-                                    >
-                                        <span className="text-xl">{emoji}</span>
-                                    </DropdownMenuItem>
-                                ))}
-                            </div>
+                         <DropdownMenuContent align={isSender ? "end" : "start"}>
+                             <DropdownMenuSub>
+                                 <DropdownMenuSubTrigger>Tepki Ver</DropdownMenuSubTrigger>
+                                 <DropdownMenuSubContent side="top" align="center" className="flex gap-1 p-1">
+                                     {REACTION_EMOJIS.map(emoji => (
+                                         <DropdownMenuItem 
+                                             key={emoji} 
+                                             onClick={(e) => { e.preventDefault(); handleReactionClick(emoji); }}
+                                             className="p-1.5 rounded-full hover:bg-accent focus:bg-accent cursor-pointer h-auto w-auto"
+                                         >
+                                             <span className="text-xl">{emoji}</span>
+                                         </DropdownMenuItem>
+                                     ))}
+                                 </DropdownMenuSubContent>
+                             </DropdownMenuSub>
                             
                             {isSender && (
                                 <>
@@ -160,6 +229,9 @@ export default function MessageBubble({ message, currentUserId, chatId }: Messag
                 <>
                   {message.imageUrl && (
                     <img src={message.imageUrl} alt="Gönderilen resim" className="rounded-lg max-w-xs max-h-64 object-cover cursor-pointer mb-2" onClick={() => window.open(message.imageUrl, '_blank')} />
+                  )}
+                  {message.audioUrl && message.audioDuration && (
+                     <AudioPlayer audioUrl={message.audioUrl} duration={message.audioDuration} />
                   )}
                   {message.text && (
                     <p className="text-sm break-words whitespace-pre-wrap">{message.text}</p>

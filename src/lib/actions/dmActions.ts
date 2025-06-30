@@ -1,7 +1,7 @@
 // src/lib/actions/dmActions.ts
 'use server';
 
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
 import {
   doc,
   collection,
@@ -15,8 +15,11 @@ import {
   updateDoc,
   runTransaction,
   getDoc,
+  deleteDoc,
 } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { v4 as uuidv4 } from 'uuid';
 
 interface UserInfo {
   uid: string;
@@ -25,26 +28,29 @@ interface UserInfo {
   selectedAvatarFrame?: string;
 }
 
-/**
- * Yeni bir özel mesaj gönderir ve sohbet metadatasını günceller.
- * Bu fonksiyon artık bir transaction kullanarak metadata'nın atomik olarak
- * oluşturulmasını veya güncellenmesini sağlar.
- * @param chatId Sohbetin ID'si.
- * @param sender Gönderen kullanıcı bilgisi.
- * @param receiver Alıcı kullanıcı bilgisi.
- * @param text Gönderilecek mesaj metni.
- * @param imageUrl Gönderilecek resmin URL'si (isteğe bağlı).
- */
-export async function sendMessage(chatId: string, sender: UserInfo, receiver: UserInfo, text?: string, imageUrl?: string) {
-  if (!text?.trim() && !imageUrl) throw new Error('Mesaj içeriği boş olamaz.');
+export async function sendMessage(
+  chatId: string,
+  sender: UserInfo,
+  receiver: UserInfo,
+  content: { text?: string; imageUrl?: string; audio?: { dataUrl: string; duration: number } }
+) {
+  const { text, imageUrl, audio } = content;
+  if (!text?.trim() && !imageUrl && !audio) {
+    throw new Error('Mesaj içeriği boş olamaz.');
+  }
 
   const metadataDocRef = doc(db, 'directMessagesMetadata', chatId);
   
-  await runTransaction(db, async (transaction) => {
-    // 1. Önce OKUMA işlemini yap.
-    const metadataDoc = await transaction.get(metadataDocRef);
+  let finalAudioUrl: string | undefined;
+  if (audio) {
+      const audioPath = `dms/${chatId}/audio/${uuidv4()}.webm`;
+      const audioStorageRef = ref(storage, audioPath);
+      await uploadString(audioStorageRef, audio.dataUrl, 'data_url');
+      finalAudioUrl = await getDownloadURL(audioStorageRef);
+  }
 
-    // 2. YAZMA işlemlerini hazırla.
+  await runTransaction(db, async (transaction) => {
+    const metadataDoc = await transaction.get(metadataDocRef);
     const messagesColRef = collection(db, 'directMessages', chatId, 'messages');
     const newMessageRef = doc(messagesColRef);
 
@@ -56,56 +62,43 @@ export async function sendMessage(chatId: string, sender: UserInfo, receiver: Us
       edited: false,
       text: text || '',
     };
-    if (imageUrl) {
-      messageData.imageUrl = imageUrl;
+    if (imageUrl) messageData.imageUrl = imageUrl;
+    if (finalAudioUrl && audio) {
+        messageData.audioUrl = finalAudioUrl;
+        messageData.audioDuration = audio.duration;
     }
     
-    const lastMessageText = imageUrl ? '📷 Resim' : (text ? (text.length > 30 ? text.substring(0, 27) + '...' : text) : 'Mesaj');
+    let lastMessageText: string;
+    if (finalAudioUrl) lastMessageText = '🎤 Sesli Mesaj';
+    else if (imageUrl) lastMessageText = '📷 Resim';
+    else lastMessageText = text ? (text.length > 30 ? text.substring(0, 27) + '...' : text) : 'Mesaj';
 
-    // 3. Şimdi tüm YAZMA işlemlerini gerçekleştir.
     transaction.set(newMessageRef, messageData);
     
     if (!metadataDoc.exists()) {
-      // Create new metadata document if it doesn't exist
-      const newMetadata = {
+      transaction.set(metadataDocRef, {
         participantUids: [sender.uid, receiver.uid],
         participantInfo: {
           [sender.uid]: { username: sender.username, photoURL: sender.photoURL || null, selectedAvatarFrame: sender.selectedAvatarFrame || '' },
           [receiver.uid]: { username: receiver.username, photoURL: receiver.photoURL || null, selectedAvatarFrame: receiver.selectedAvatarFrame || '' },
         },
-        lastMessage: {
-          text: lastMessageText,
-          senderId: sender.uid,
-          timestamp: serverTimestamp(),
-          read: false,
-        },
-        unreadCounts: {
-          [receiver.uid]: 1,
-          [sender.uid]: 0,
-        },
-      };
-      transaction.set(metadataDocRef, newMetadata);
+        lastMessage: { text: lastMessageText, senderId: sender.uid, timestamp: serverTimestamp(), read: false },
+        unreadCounts: { [receiver.uid]: 1, [sender.uid]: 0 },
+      });
     } else {
-      // Update existing metadata document
-      const metadataUpdate = {
-        lastMessage: {
-          text: lastMessageText,
-          senderId: sender.uid,
-          timestamp: serverTimestamp(),
-          read: false,
-        },
+      transaction.update(metadataDocRef, {
+        lastMessage: { text: lastMessageText, senderId: sender.uid, timestamp: serverTimestamp(), read: false },
         [`unreadCounts.${receiver.uid}`]: increment(1),
-        // Ensure participant info is up-to-date
         [`participantInfo.${sender.uid}`]: { username: sender.username, photoURL: sender.photoURL || null, selectedAvatarFrame: sender.selectedAvatarFrame || '' },
         [`participantInfo.${receiver.uid}`]: { username: receiver.username, photoURL: receiver.photoURL || null, selectedAvatarFrame: receiver.selectedAvatarFrame || '' },
-      };
-      transaction.update(metadataDocRef, metadataUpdate);
+      });
     }
   });
 
   revalidatePath(`/dm/${chatId}`);
   revalidatePath('/dm');
 }
+
 
 /**
  * Bir sohbetteki okunmamış mesajları okundu olarak işaretler.
@@ -198,6 +191,8 @@ export async function deleteMessage(chatId: string, messageId: string, senderId:
         transaction.update(messageRef, {
             text: "Bu mesaj silindi.",
             imageUrl: null,
+            audioUrl: null, // Also clear audio on delete
+            audioDuration: null,
             deleted: true,
             edited: false,
             reactions: {} // Clear reactions on deletion

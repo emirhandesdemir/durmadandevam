@@ -208,6 +208,8 @@ export interface DirectMessage {
     receiverId: string;
     text?: string;
     imageUrl?: string;
+    audioUrl?: string;
+    audioDuration?: number;
     createdAt: Timestamp;
     read: boolean;
     edited: boolean;
