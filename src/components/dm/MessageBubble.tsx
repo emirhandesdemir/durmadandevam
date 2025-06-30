@@ -6,14 +6,15 @@ import type { DirectMessage } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Check, CheckCheck, MoreHorizontal, Pencil, Trash2, Loader2, Play, Pause } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from '@/components/ui/dropdown-menu';
+import { Check, CheckCheck, MoreHorizontal, Pencil, Trash2, Loader2, Play, Pause, Image as ImageIcon, Camera, Timer } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { deleteMessage, editMessage, toggleReaction } from '@/lib/actions/dmActions';
+import { deleteMessage, editMessage, toggleReaction, markImageAsOpened } from '@/lib/actions/dmActions';
 import { Textarea } from '../ui/textarea';
 import { Button } from '../ui/button';
+import ViewOnceDialog from './ViewOnceDialog';
 
 interface MessageBubbleProps {
   message: DirectMessage;
@@ -26,7 +27,7 @@ const REACTION_EMOJIS = ['👍', '❤️', '😂', '🎉', '😢', '🔥'];
 const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
-    return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
 
 const AudioPlayer = ({ audioUrl, duration }: { audioUrl: string; duration: number }) => {
@@ -90,10 +91,20 @@ const AudioPlayer = ({ audioUrl, duration }: { audioUrl: string; duration: numbe
     );
 };
 
+const ViewOncePlaceholder = ({ onClick }: { onClick: () => void }) => {
+    return (
+        <button 
+            onClick={onClick} 
+            className="flex items-center justify-center gap-2 p-3 w-48 bg-muted/50 rounded-lg border-2 border-dashed hover:border-primary hover:bg-primary/10 transition-all"
+        >
+            <Timer className="h-5 w-5"/>
+            <span className="font-semibold text-sm">Fotoğrafı Görüntüle</span>
+        </button>
+    )
+}
 
 /**
  * Sohbetteki tek bir mesaj baloncuğunu temsil eder.
- * Artık mesaj düzenleme ve tepki verme işlevlerini barındırır.
  */
 export default function MessageBubble({ message, currentUserId, chatId }: MessageBubbleProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -104,8 +115,10 @@ export default function MessageBubble({ message, currentUserId, chatId }: Messag
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(message.text || '');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [viewOnceImage, setViewOnceImage] = useState<string | null>(null);
 
   const isSender = message.senderId === currentUserId;
+  const isReceiver = message.receiverId === currentUserId;
   const isDeleted = !!message.deleted;
   const alignClass = isSender ? 'items-end' : 'items-start';
   const bubbleClass = isSender
@@ -161,12 +174,22 @@ export default function MessageBubble({ message, currentUserId, chatId }: Messag
       toast({ variant: 'destructive', description: 'Tepki verilemedi.' });
     }
   };
+  
+  const handleViewOnceClick = async () => {
+    if (!isReceiver || !message.imageUrl) return;
+    try {
+        await markImageAsOpened(chatId, message.id, currentUserId);
+        setViewOnceImage(message.imageUrl);
+    } catch (error: any) {
+        toast({ variant: 'destructive', description: 'Bu fotoğraf görüntülenemiyor.' });
+    }
+  };
 
   return (
     <>
       <div className={cn('flex flex-col gap-1', alignClass, hasReactions ? 'pb-4' : '')}>
         <div className={cn('flex items-end gap-2 max-w-[75%] group', isSender ? 'flex-row-reverse' : '')}>
-            <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center">
+             <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center">
                 {!isDeleted && !isEditing && (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -175,20 +198,17 @@ export default function MessageBubble({ message, currentUserId, chatId }: Messag
                             </Button>
                         </DropdownMenuTrigger>
                          <DropdownMenuContent align={isSender ? "end" : "start"}>
-                             <DropdownMenuSub>
-                                 <DropdownMenuSubTrigger>Tepki Ver</DropdownMenuSubTrigger>
-                                 <DropdownMenuSubContent side="top" align="center" className="flex gap-1 p-1">
-                                     {REACTION_EMOJIS.map(emoji => (
-                                         <DropdownMenuItem 
-                                             key={emoji} 
-                                             onClick={(e) => { e.preventDefault(); handleReactionClick(emoji); }}
-                                             className="p-1.5 rounded-full hover:bg-accent focus:bg-accent cursor-pointer h-auto w-auto"
-                                         >
-                                             <span className="text-xl">{emoji}</span>
-                                         </DropdownMenuItem>
-                                     ))}
-                                 </DropdownMenuSubContent>
-                             </DropdownMenuSub>
+                             <div className='flex gap-1 p-1'>
+                                {REACTION_EMOJIS.map(emoji => (
+                                    <DropdownMenuItem 
+                                        key={emoji} 
+                                        onClick={(e) => { e.preventDefault(); handleReactionClick(emoji); }}
+                                        className="p-1.5 rounded-full hover:bg-accent focus:bg-accent cursor-pointer h-auto w-auto"
+                                    >
+                                        <span className="text-xl">{emoji}</span>
+                                    </DropdownMenuItem>
+                                ))}
+                            </div>
                             
                             {isSender && (
                                 <>
@@ -227,9 +247,16 @@ export default function MessageBubble({ message, currentUserId, chatId }: Messag
                 </div>
               ) : (
                 <>
-                  {message.imageUrl && (
+                  {message.imageType === 'timed' ? (
+                      isReceiver && !message.imageOpened ? (
+                          <ViewOncePlaceholder onClick={handleViewOnceClick} />
+                      ) : (
+                          <p className="text-sm italic opacity-70">Süreli fotoğrafın süresi doldu.</p>
+                      )
+                  ) : message.imageUrl ? (
                     <img src={message.imageUrl} alt="Gönderilen resim" className="rounded-lg max-w-xs max-h-64 object-cover cursor-pointer mb-2" onClick={() => window.open(message.imageUrl, '_blank')} />
-                  )}
+                  ) : null}
+
                   {message.audioUrl && message.audioDuration && (
                      <AudioPlayer audioUrl={message.audioUrl} duration={message.audioDuration} />
                   )}
@@ -282,6 +309,14 @@ export default function MessageBubble({ message, currentUserId, chatId }: Messag
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
+     {viewOnceImage && (
+        <ViewOnceDialog 
+            imageUrl={viewOnceImage} 
+            onClose={() => setViewOnceImage(null)}
+            chatId={chatId}
+            messageId={message.id}
+        />
+     )}
     </>
   );
 }

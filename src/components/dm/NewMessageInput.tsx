@@ -9,8 +9,10 @@ import { useToast } from '@/hooks/use-toast';
 import { sendMessage } from '@/lib/actions/dmActions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Loader2, ImagePlus, X, Mic, StopCircle, Play, Pause, Trash2 } from 'lucide-react';
+import { Send, Loader2, ImagePlus, X, Mic, StopCircle, Play, Pause, Trash2, Camera, Timer } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+
 
 interface UserInfo {
   uid: string;
@@ -44,6 +46,7 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
 
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [imageSendType, setImageSendType] = useState<'permanent' | 'timed'>('permanent');
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -126,9 +129,19 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
     }
     setFile(selectedFile);
   };
+
+  const handleImageOptionClick = (type: 'permanent' | 'timed') => {
+    setImageSendType(type);
+    fileInputRef.current?.click();
+  }
   
   const onSubmit: SubmitHandler<MessageFormValues> = async (data) => {
-    let content: { text?: string; imageUrl?: string; audio?: { dataUrl: string, duration: number } } = {};
+    let content: { 
+        text?: string; 
+        imageUrl?: string; 
+        imageType?: 'permanent' | 'timed';
+        audio?: { dataUrl: string, duration: number } 
+    } = {};
     
     if (recordedAudio) {
       const reader = new FileReader();
@@ -147,7 +160,7 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
       reader.readAsDataURL(file);
       reader.onloadend = async () => {
         const base64Image = reader.result as string;
-        await sendMessage(chatId, sender, receiver, { text: data.text, imageUrl: base64Image });
+        await sendMessage(chatId, sender, receiver, { text: data.text, imageUrl: base64Image, imageType: imageSendType });
         reset();
         setFile(null);
         setIsUploading(false);
@@ -216,6 +229,11 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
         {preview && file && (
             <div className='relative p-2 ml-2 mb-2 bg-background rounded-lg border w-fit'>
                 <img src={preview} alt="Önizleme" className="max-h-24 rounded-md" />
+                 {imageSendType === 'timed' && (
+                    <div className="absolute top-1 right-1 bg-black/50 text-white p-1 rounded-full">
+                        <Timer className="h-4 w-4" />
+                    </div>
+                )}
                 <Button variant="ghost" size="icon" className="absolute -top-3 -right-3 h-6 w-6 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/80" onClick={() => setFile(null)}>
                     <X className="h-4 w-4"/>
                 </Button>
@@ -226,9 +244,26 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
           className="flex w-full items-center space-x-2 p-1"
         >
             <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
-            <Button type="button" variant="ghost" size="icon" className="rounded-full flex-shrink-0" onClick={() => fileInputRef.current?.click()} disabled={isLoading}>
-                <ImagePlus className='h-5 w-5 text-muted-foreground'/>
-            </Button>
+             <Popover>
+                <PopoverTrigger asChild>
+                    <Button type="button" variant="ghost" size="icon" className="rounded-full flex-shrink-0" disabled={isLoading}>
+                        <ImagePlus className='h-5 w-5 text-muted-foreground'/>
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-2" side="top" align="start">
+                    <div className="flex flex-col gap-1">
+                        <Button variant="ghost" className="justify-start" onClick={() => handleImageOptionClick('permanent')}>
+                            <Camera className="mr-2 h-4 w-4" />
+                            Kalıcı Fotoğraf
+                        </Button>
+                         <Button variant="ghost" className="justify-start" onClick={() => handleImageOptionClick('timed')}>
+                            <Timer className="mr-2 h-4 w-4" />
+                            Süreli Fotoğraf
+                        </Button>
+                    </div>
+                </PopoverContent>
+            </Popover>
+
             <Input
                 {...register('text')}
                 placeholder="Bir mesaj yaz..."

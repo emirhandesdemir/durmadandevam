@@ -17,8 +17,8 @@ import {
   getDoc,
   deleteDoc,
 } from 'firebase/firestore';
+import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { revalidatePath } from 'next/cache';
-import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
 
 interface UserInfo {
@@ -32,19 +32,33 @@ export async function sendMessage(
   chatId: string,
   sender: UserInfo,
   receiver: UserInfo,
-  content: { text?: string; imageUrl?: string; audio?: { dataUrl: string; duration: number } }
+  content: { 
+    text?: string; 
+    imageUrl?: string; 
+    imageType?: 'permanent' | 'timed';
+    audio?: { dataUrl: string; duration: number };
+  }
 ) {
-  const { text, imageUrl, audio } = content;
+  const { text, imageUrl, imageType, audio } = content;
   if (!text?.trim() && !imageUrl && !audio) {
     throw new Error('Mesaj içeriği boş olamaz.');
   }
 
   const metadataDocRef = doc(db, 'directMessagesMetadata', chatId);
   
+  let finalImageUrl: string | undefined;
+  if (imageUrl) {
+      const folder = imageType === 'timed' ? 'timed_images' : 'images';
+      const imagePath = `dms/${chatId}/${folder}/${uuidv4()}.jpg`;
+      const imageStorageRef = storageRef(storage, imagePath);
+      await uploadString(imageStorageRef, imageUrl, 'data_url');
+      finalImageUrl = await getDownloadURL(imageStorageRef);
+  }
+
   let finalAudioUrl: string | undefined;
   if (audio) {
       const audioPath = `dms/${chatId}/audio/${uuidv4()}.webm`;
-      const audioStorageRef = ref(storage, audioPath);
+      const audioStorageRef = storageRef(storage, audioPath);
       await uploadString(audioStorageRef, audio.dataUrl, 'data_url');
       finalAudioUrl = await getDownloadURL(audioStorageRef);
   }
@@ -62,7 +76,13 @@ export async function sendMessage(
       edited: false,
       text: text || '',
     };
-    if (imageUrl) messageData.imageUrl = imageUrl;
+    if (finalImageUrl) {
+        messageData.imageUrl = finalImageUrl;
+        messageData.imageType = imageType;
+        if (imageType === 'timed') {
+            messageData.imageOpened = false;
+        }
+    }
     if (finalAudioUrl && audio) {
         messageData.audioUrl = finalAudioUrl;
         messageData.audioDuration = audio.duration;
@@ -70,7 +90,7 @@ export async function sendMessage(
     
     let lastMessageText: string;
     if (finalAudioUrl) lastMessageText = '🎤 Sesli Mesaj';
-    else if (imageUrl) lastMessageText = '📷 Resim';
+    else if (finalImageUrl) lastMessageText = '📷 Fotoğraf';
     else lastMessageText = text ? (text.length > 30 ? text.substring(0, 27) + '...' : text) : 'Mesaj';
 
     transaction.set(newMessageRef, messageData);
@@ -100,6 +120,50 @@ export async function sendMessage(
 }
 
 
+export async function markImageAsOpened(chatId: string, messageId: string, viewerId: string) {
+    const messageRef = doc(db, 'directMessages', chatId, 'messages', messageId);
+    const messageDoc = await getDoc(messageRef);
+
+    if (!messageDoc.exists()) throw new Error("Mesaj bulunamadı.");
+    
+    const messageData = messageDoc.data();
+    if (messageData.receiverId !== viewerId) throw new Error("Bu fotoğrafı görüntüleme yetkiniz yok.");
+    
+    if (messageData.imageType !== 'timed' || messageData.imageOpened) return { success: true };
+
+    await updateDoc(messageRef, { imageOpened: true });
+    
+    revalidatePath(`/dm/${chatId}`);
+    return { success: true };
+}
+
+
+export async function deleteMessageImage(chatId: string, messageId: string, imageUrl: string) {
+  const messageRef = doc(db, 'directMessages', chatId, 'messages', messageId);
+
+  // Delete from storage
+  try {
+    const imageStorageRef = storageRef(storage, imageUrl);
+    await deleteObject(imageStorageRef);
+  } catch (error: any) {
+    // It's okay if the file is already deleted.
+    if (error.code !== 'storage/object-not-found') {
+      console.error("Depolamadan resim silinirken hata:", error);
+    }
+  }
+
+  // Update Firestore document
+  await updateDoc(messageRef, {
+    imageUrl: null,
+    text: "Süreli fotoğrafın süresi doldu.",
+    imageType: 'timed', // Keep type to identify it was a timed photo
+  });
+
+  revalidatePath(`/dm/${chatId}`);
+  return { success: true };
+}
+
+
 /**
  * Bir sohbetteki okunmamış mesajları okundu olarak işaretler.
  * @param chatId Sohbetin ID'si.
@@ -121,25 +185,15 @@ export async function markMessagesAsRead(chatId: string, currentUserId: string) 
 
 /**
  * Kullanıcının kendi gönderdiği bir mesajı düzenler.
- * @param chatId Sohbetin ID'si.
- * @param messageId Düzenlenecek mesajın ID'si.
- * @param newText Mesajın yeni metni.
- * @param senderId Mesajı gönderen kullanıcının ID'si.
  */
 export async function editMessage(chatId: string, messageId: string, newText: string, senderId: string) {
     if (!newText.trim()) throw new Error("Mesaj boş olamaz.");
 
     const messageRef = doc(db, 'directMessages', chatId, 'messages', messageId);
-    const metadataRef = doc(db, 'directMessagesMetadata', chatId);
     
     await runTransaction(db, async (transaction) => {
-        const [messageDoc, metadataDoc] = await Promise.all([
-            transaction.get(messageRef),
-            transaction.get(metadataRef)
-        ]);
-
+        const messageDoc = await transaction.get(messageRef);
         if (!messageDoc.exists()) throw new Error("Mesaj bulunamadı.");
-        
         const messageData = messageDoc.data();
         if (messageData.senderId !== senderId) throw new Error("Bu mesajı düzenleme yetkiniz yok.");
 
@@ -148,19 +202,6 @@ export async function editMessage(chatId: string, messageId: string, newText: st
             edited: true,
             editedAt: serverTimestamp(),
         });
-        
-        if (metadataDoc.exists()) {
-            const metadata = metadataDoc.data();
-            const lastMessageTimestamp = metadata.lastMessage?.timestamp as Timestamp;
-            
-            // It's possible for createdAt to not be populated yet if a message is edited very quickly.
-            // In that case, we can't reliably check if it's the last message, but it's a rare edge case.
-            const currentMessageTimestamp = messageData.createdAt as Timestamp;
-            if (lastMessageTimestamp && currentMessageTimestamp && lastMessageTimestamp.isEqual(currentMessageTimestamp)) {
-                 const lastMessageText = newText.length > 30 ? newText.substring(0, 27) + '...' : newText;
-                 transaction.update(metadataRef, { 'lastMessage.text': lastMessageText });
-            }
-        }
     });
 
     revalidatePath(`/dm/${chatId}`);
@@ -169,44 +210,26 @@ export async function editMessage(chatId: string, messageId: string, newText: st
 
 /**
  * Kullanıcının kendi gönderdiği bir mesajı siler.
- * @param chatId Sohbetin ID'si.
- * @param messageId Silinecek mesajın ID'si.
- * @param senderId Mesajı gönderen kullanıcının ID'si.
  */
 export async function deleteMessage(chatId: string, messageId: string, senderId: string) {
     const messageRef = doc(db, 'directMessages', chatId, 'messages', messageId);
-    const metadataRef = doc(db, 'directMessagesMetadata', chatId);
     
     await runTransaction(db, async (transaction) => {
-        const [messageDoc, metadataDoc] = await Promise.all([
-            transaction.get(messageRef),
-            transaction.get(metadataRef)
-        ]);
-
+        const messageDoc = await transaction.get(messageRef);
         if (!messageDoc.exists()) throw new Error("Mesaj bulunamadı.");
-        
         const messageData = messageDoc.data();
         if (messageData.senderId !== senderId) throw new Error("Bu mesajı silme yetkiniz yok.");
 
         transaction.update(messageRef, {
             text: "Bu mesaj silindi.",
             imageUrl: null,
-            audioUrl: null, // Also clear audio on delete
+            imageType: null,
+            audioUrl: null,
             audioDuration: null,
             deleted: true,
             edited: false,
-            reactions: {} // Clear reactions on deletion
+            reactions: {}
         });
-
-        if (metadataDoc.exists()) {
-            const metadata = metadataDoc.data();
-            const lastMessageTimestamp = metadata.lastMessage?.timestamp as Timestamp;
-            const currentMessageTimestamp = messageData.createdAt as Timestamp;
-
-            if (lastMessageTimestamp && currentMessageTimestamp && lastMessageTimestamp.isEqual(currentMessageTimestamp)) {
-                 transaction.update(metadataRef, { 'lastMessage.text': 'Bu mesaj silindi.' });
-            }
-        }
     });
 
     revalidatePath(`/dm/${chatId}`);
@@ -216,24 +239,16 @@ export async function deleteMessage(chatId: string, messageId: string, senderId:
 
 /**
  * Bir mesaja emoji tepkisi ekler veya kaldırır.
- * @param chatId Sohbetin ID'si
- * @param messageId Tepki verilecek mesajın ID'si
- * @param emoji Tepki emojisi
- * @param userId Tepki veren kullanıcının ID'si
  */
 export async function toggleReaction(chatId: string, messageId: string, emoji: string, userId: string) {
   if (!chatId || !messageId || !emoji || !userId) {
     throw new Error("Gerekli bilgiler eksik.");
   }
-
   const messageRef = doc(db, 'directMessages', chatId, 'messages', messageId);
-
   try {
     await runTransaction(db, async (transaction) => {
       const messageDoc = await transaction.get(messageRef);
-      if (!messageDoc.exists()) {
-        throw new Error("Mesaj bulunamadı.");
-      }
+      if (!messageDoc.exists()) throw new Error("Mesaj bulunamadı.");
 
       const messageData = messageDoc.data();
       const reactions = messageData.reactions || {};
@@ -241,15 +256,12 @@ export async function toggleReaction(chatId: string, messageId: string, emoji: s
       const userIndex = emojiReactors.indexOf(userId);
 
       if (userIndex > -1) {
-        // Kullanıcı bu emoji ile zaten tepki vermiş, tepkiyi kaldır
         emojiReactors.splice(userIndex, 1);
       } else {
-        // Kullanıcı bu emoji ile tepki vermemiş, tepkiyi ekle
         emojiReactors.push(userId);
       }
 
       if (emojiReactors.length === 0) {
-        // Bu emoji ile artık kimse tepki vermiyorsa, emoji anahtarını sil
         delete reactions[emoji];
       } else {
         reactions[emoji] = emojiReactors;
