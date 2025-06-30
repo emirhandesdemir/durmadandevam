@@ -1,4 +1,3 @@
-
 // src/components/posts/PostsFeed.tsx
 "use client";
 
@@ -82,7 +81,7 @@ export default function PostsFeed() {
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col w-full">
       {posts.map((post) => (
         <PostCard key={post.id} post={post} />
       ))}
