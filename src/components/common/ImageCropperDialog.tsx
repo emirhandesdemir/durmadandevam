@@ -143,7 +143,7 @@ export default function ImageCropperDialog({
               crop={crop}
               onChange={(_, percentCrop) => setCrop(percentCrop)}
               onComplete={(c) => setCompletedCrop(c)}
-              aspect={aspectRatio}
+              aspect={aspectRatio || undefined}
               className="max-h-[70vh]"
             >
               <img

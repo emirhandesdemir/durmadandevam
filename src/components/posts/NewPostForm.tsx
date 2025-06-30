@@ -363,7 +363,7 @@ export default function NewPostForm() {
         isOpen={!!imageToCrop}
         setIsOpen={(isOpen) => !isOpen && setImageToCrop(null)}
         imageSrc={imageToCrop}
-        aspectRatio={1}
+        aspectRatio={0}
         onCropComplete={handleCropComplete}
       />
       <AlertDialog open={isAiEditing} onOpenChange={setIsAiEditing}>
