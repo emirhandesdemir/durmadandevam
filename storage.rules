@@ -3,33 +3,29 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow public read access for all files, which is common for social media apps.
-    // This allows anyone to see images, profile pictures, etc.
-    match /{allPaths=**} {
+
+    // POSTS: Allow authenticated users to write to their own post folder. Allow anyone to read.
+    match /upload/posts/{userId}/{allPaths=**} {
       allow read;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // AVATARS: Allow authenticated users to write to their own avatar folder. Allow anyone to read.
+    match /upload/avatars/{userId}/{allPaths=**} {
+      allow read;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Allow users to upload to their own avatar folder.
-    match /upload/avatars/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Allow users to upload to their own posts folder.
-    match /upload/posts/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Allow users to upload to a DM chat they are a part of.
-    // The chatId is a combination of the two user UIDs, sorted alphabetically.
-    match /dms/{chatId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid in chatId.split('_');
-    }
-
-    // Allow authenticated users to upload to any room's media folder.
-    // For enhanced security, you could add a rule to check if the user is a participant in the room.
-    // e.g. `exists(/databases/$(database)/documents/rooms/$(roomId)/participants/$(request.auth.uid))`
+    // ROOM CHAT MEDIA (Images/Videos)
     match /upload/rooms/{roomId}/{allPaths=**} {
-        allow write: if request.auth != null;
+      allow read; 
+      allow write: if request.auth != null;
+    }
+    
+    // DM MEDIA (Audio)
+    match /dms/{chatId}/{allPaths=**} {
+      allow read;
+      allow write: if request.auth != null;
     }
   }
 }
