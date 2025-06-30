@@ -3,7 +3,6 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getMessaging } from "firebase/messaging";
-import { getPerformance } from "firebase/performance";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBHLuoO7KM9ai0dMeCcGhmSHSVYCDO1rEo",
@@ -21,10 +20,5 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 const messaging = (typeof window !== 'undefined') ? getMessaging(app) : null;
-
-// Initialize Performance Monitoring if in a browser environment
-if (typeof window !== 'undefined') {
-  getPerformance(app);
-}
 
 export { app, auth, db, storage, messaging };
