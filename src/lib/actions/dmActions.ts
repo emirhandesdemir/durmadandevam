@@ -41,7 +41,7 @@ export async function sendMessage(chatId: string, sender: UserInfo, receiver: Us
   
   await runTransaction(db, async (transaction) => {
     const messagesColRef = collection(db, 'directMessages', chatId, 'messages');
-    const newMessageRef = doc(messagesCol-ref);
+    const newMessageRef = doc(messagesColRef);
 
     // 1. Yeni mesajı oluştur
     const messageData: { [key: string]: any } = {
