@@ -27,17 +27,6 @@ export async function requestNotificationPermission(userId: string): Promise<boo
       // 4. Üretilen anahtarı kopyalayıp aşağıdaki tırnak işaretleri arasına yapıştırın.
       const vapidKey="BEv3RhiBuZQ8cDg2SAQf41tY_ijOEBJyCDLUY648St78CRgE57v8HWYUDBu6huI_kxzF_gKyelZi3Qbfgs8PMaE";
       
-      if (vapidKey.startsWith("BEv3RhiBuZQ8cDg2SAQf41tY_ijOEBJyCDLUY648St78CRgE57v8HWYUDBu6huI_kxzF_gKyelZi3Qbfgs8PMaE")) {
-          console.error("VAPID anahtarı ayarlanmamış. Lütfen `src/lib/notificationUtils.ts` dosyasını güncelleyin.");
-           toast({
-              variant: 'destructive',
-              title: 'Yapılandırma Eksik',
-              description: 'Anlık bildirimler için VAPID anahtarı henüz ayarlanmamış.',
-              duration: 5000,
-           });
-          return false;
-      }
-      
       const currentToken = await getToken(messaging, { vapidKey });
       
       if (currentToken) {
