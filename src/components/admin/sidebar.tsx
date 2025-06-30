@@ -22,6 +22,7 @@ import {
   BarChart3,
   HeartPulse,
   History,
+  CloudUpload,
 } from "lucide-react";
 import { Button } from "../ui/button";
 
@@ -38,6 +39,7 @@ const navItems = [
   { href: "/admin/logs", label: "Olay Kayıtları", icon: History },
   { href: "/admin/theme", label: "Tema Ayarları", icon: Palette },
   { href: "/admin/system", label: "Sistem Ayarları", icon: Settings },
+  { href: "/admin/deploy", label: "Dağıtımlar", icon: CloudUpload },
 ];
 
 interface SidebarProps {
