@@ -8,7 +8,6 @@ import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Check, CheckCheck, MoreHorizontal, Pencil, Trash2, Loader2, Smile } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import EditMessageDialog from './EditMessageDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -18,13 +17,13 @@ interface MessageBubbleProps {
   message: DirectMessage;
   currentUserId: string;
   chatId: string;
+  onEdit: (message: DirectMessage) => void;
 }
 
 /**
  * Sohbetteki tek bir mesaj baloncuğunu temsil eder.
  */
-export default function MessageBubble({ message, currentUserId, chatId }: MessageBubbleProps) {
-  const [isEditing, setIsEditing] = useState(false);
+export default function MessageBubble({ message, currentUserId, chatId, onEdit }: MessageBubbleProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const { user } = useAuth();
@@ -99,7 +98,7 @@ export default function MessageBubble({ message, currentUserId, chatId }: Messag
                      <DropdownMenuItem disabled><Smile className="mr-2 h-4 w-4"/> Tepki Ver</DropdownMenuItem>
                     <DropdownMenuSeparator />
                     {message.text && (
-                        <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                        <DropdownMenuItem onClick={() => onEdit(message)}>
                             <Pencil className="mr-2 h-4 w-4" />
                             Düzenle
                         </DropdownMenuItem>
@@ -123,15 +122,6 @@ export default function MessageBubble({ message, currentUserId, chatId }: Messag
             )}
         </div>
       </div>
-
-      {!isDeleted && 
-        <EditMessageDialog 
-            isOpen={isEditing}
-            onOpenChange={setIsEditing}
-            message={message}
-            chatId={chatId}
-        />
-      }
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
