@@ -27,6 +27,8 @@ export interface UserProfile {
     blockedUsers?: string[];
     isBanned?: boolean;
     reportCount?: number;
+    isOnline?: boolean;
+    lastSeen?: Timestamp;
 }
 
 export interface ProfileViewer {

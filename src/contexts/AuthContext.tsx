@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { doc, onSnapshot, DocumentData, collection, query, where } from 'firebase/firestore';
+import { doc, onSnapshot, DocumentData, collection, query, where, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -40,6 +40,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const handleLogout = useCallback(async () => {
     try {
+        if (user) { // Ensure user exists before trying to update status
+            const userStatusRef = doc(db, 'users', user.uid);
+            await updateDoc(userStatusRef, {
+                isOnline: false,
+                lastSeen: serverTimestamp()
+            });
+        }
         await signOut(auth);
         toast({
             title: "Oturum Kapatıldı",
@@ -54,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             variant: "destructive",
         });
     }
-  }, [toast]);
+  }, [user, toast]);
 
 
   useEffect(() => {
@@ -65,12 +72,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, []);
 
+  // Presence management
+  useEffect(() => {
+    if (!user) return;
+
+    const userStatusRef = doc(db, 'users', user.uid);
+
+    const updateStatus = (online: boolean) => {
+        updateDoc(userStatusRef, {
+            isOnline: online,
+            lastSeen: serverTimestamp()
+        }).catch(err => console.error("Presence update failed:", err));
+    };
+    
+    // Go online when connected
+    updateStatus(true);
+
+    const handleVisibilityChange = () => {
+        if (document.visibilityState === 'hidden') {
+            updateStatus(false);
+        } else {
+            updateStatus(true);
+        }
+    };
+    
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+        // This might not run on tab close, but runs on component unmount/logout
+        updateStatus(false);
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [user]);
+
   useEffect(() => {
     setFirestoreLoading(true);
 
     const featuresRef = doc(db, 'config', 'featureFlags');
     const unsubscribeFeatures = onSnapshot(featuresRef, (docSnap) => {
-      setFeatureFlags(docSnap.exists() ? docSnap.data() as FeatureFlags : { quizGameEnabled: true, postFeedEnabled: true });
+      setFeatureFlags(docSnap.exists() ? docSnap.data() as FeatureFlags : { quizGameEnabled: true, postFeedEnabled: true, contentModerationEnabled: true });
     });
 
     let unsubscribeUser: () => void = () => {};

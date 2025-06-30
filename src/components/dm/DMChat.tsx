@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { UserProfile, DirectMessage } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,6 +14,8 @@ import MessageBubble from './MessageBubble';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { formatDistanceToNow } from 'date-fns';
+import { tr } from 'date-fns/locale';
 
 
 interface DMChatProps {
@@ -67,13 +69,28 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
             <Link href="/dm"><ChevronLeft /></Link>
         </Button>
         <Link href={`/profile/${partner.uid}`} className="flex items-center gap-3">
-            <div className={cn("avatar-frame-wrapper", partner.selectedAvatarFrame)}>
-                <Avatar className="relative z-[1]">
-                    <AvatarImage src={partner.photoURL || undefined} />
-                    <AvatarFallback>{partner.username.charAt(0)}</AvatarFallback>
-                </Avatar>
+            <div className="relative">
+                <div className={cn("avatar-frame-wrapper", partner.selectedAvatarFrame)}>
+                    <Avatar className="relative z-[1]">
+                        <AvatarImage src={partner.photoURL || undefined} />
+                        <AvatarFallback>{partner.username.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                </div>
+                {partner.isOnline && (
+                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" aria-label="Çevrimiçi" />
+                )}
             </div>
-            <h2 className="font-bold text-lg">{partner.username}</h2>
+            <div>
+                <h2 className="font-bold text-lg">{partner.username}</h2>
+                <p className="text-xs text-muted-foreground">
+                    {partner.isOnline 
+                        ? <span className="text-green-500 font-semibold">Çevrimiçi</span>
+                        : partner.lastSeen 
+                            ? `Son görülme: ${formatDistanceToNow((partner.lastSeen as Timestamp).toDate(), { addSuffix: true, locale: tr })}`
+                            : 'Çevrimdışı'
+                    }
+                </p>
+            </div>
         </Link>
         <div className="flex-1" />
         <Button

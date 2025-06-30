@@ -4,7 +4,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserProfile } from '@/lib/actions/userActions';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { markMessagesAsRead } from '@/lib/actions/dmActions';
 import type { UserProfile } from '@/lib/types';
 import DMChat from '@/components/dm/DMChat';
@@ -42,15 +43,17 @@ export default function ChatPage() {
     const partnerId = chatId.split('_').find(uid => uid !== user.uid);
     
     if (partnerId) {
-      getUserProfile(partnerId).then(profile => {
-        if (profile) {
-            setPartner(profile);
+      const partnerDocRef = doc(db, 'users', partnerId);
+      const unsubscribe = onSnapshot(partnerDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            setPartner(docSnap.data() as UserProfile);
         } else {
              toast({ variant: 'destructive', description: "Sohbet partneri bulunamadı." });
              router.replace('/dm');
         }
         setLoading(false);
       });
+      return () => unsubscribe(); // Cleanup listener
     } else {
         setLoading(false);
     }
