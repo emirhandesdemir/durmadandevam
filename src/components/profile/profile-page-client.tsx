@@ -82,7 +82,9 @@ export default function ProfilePageClient() {
             setSelectedAvatarFrame(userData.selectedAvatarFrame || "");
         }
         if (user) {
-            setInviteLink(`${window.location.origin}/signup?ref=${user.uid}`);
+            // Encode the UID to create a cleaner referral link
+            const encodedRef = btoa(user.uid);
+            setInviteLink(`${window.location.origin}/signup?ref=${encodedRef}`);
         }
     }, [userData, user]);
     

@@ -104,7 +104,19 @@ export default function SignUpForm() {
             
             const isAdminEmail = values.email === 'admin@example.com';
             const userRole = isAdminEmail ? 'admin' : 'user';
-            const ref = searchParams.get('ref');
+            
+            let ref: string | null = null;
+            const encodedRef = searchParams.get('ref');
+            if (encodedRef) {
+                try {
+                    // Decode the Base64 encoded UID
+                    ref = atob(encodedRef);
+                } catch (e) {
+                    console.error("Failed to decode referral code:", e);
+                    ref = null; // Treat malformed ref as no ref
+                }
+            }
+
 
             await setDoc(doc(db, "users", user.uid), {
                 uid: user.uid,

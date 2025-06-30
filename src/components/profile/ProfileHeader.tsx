@@ -49,10 +49,12 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
         {/* User Info */}
         <div className="mt-4">
           <h1 className="text-2xl font-bold">{profileUser.username}</h1>
-          <div className="flex items-center justify-center gap-2 mt-1 text-cyan-400 font-bold">
-            <Gem className="h-5 w-5"/>
-            <span>{profileUser.diamonds || 0}</span>
-          </div>
+          {isOwnProfile && (
+            <div className="flex items-center justify-center gap-2 mt-1 text-cyan-400 font-bold">
+                <Gem className="h-5 w-5"/>
+                <span>{profileUser.diamonds || 0}</span>
+            </div>
+          )}
           {profileUser.bio && <p className="text-sm text-muted-foreground max-w-md mt-2">{profileUser.bio}</p>}
         </div>
 
