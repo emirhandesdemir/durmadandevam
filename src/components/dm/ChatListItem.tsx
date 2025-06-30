@@ -57,12 +57,12 @@ export default function ChatListItem({ chat, currentUserId, isSelected }: ChatLi
             <p className={cn("text-sm truncate", isUnread ? "text-foreground font-medium" : "text-muted-foreground")}>
               {lastMessage && lastMessage.senderId === currentUserId && (
                 <span className="inline-block mr-1">
-                    {lastMessage.read ? <CheckCheck className="h-4 w-4 text-primary" /> : <Check className="h-4 w-4" />}
+                    {lastMessage.read ? <CheckCheck className="h-4 w-4 text-primary" /> : <Check className="h-4 w-4 text-muted-foreground" />}
                 </span>
               )}
               {lastMessage?.text || 'Sohbet başlatıldı'}
             </p>
-            {isUnread && (
+            {isUnread && !isSelected && (
               <Badge className="h-6 w-6 flex items-center justify-center p-0">{unreadCount}</Badge>
             )}
           </div>
