@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Users, Loader2 } from "lucide-react";
 import Link from "next/link";
+import PwaInstallButton from "@/components/common/PwaInstallButton";
 
 export default function Home() {
   const router = useRouter();
@@ -45,13 +46,14 @@ export default function Home() {
           Herkese açık odalar oluşturun ve katılın. Düşüncelerinizi paylaşın, fikirler üzerinde işbirliği yapın ve başkalarıyla gerçek zamanlı olarak bağlantı kurun.
         </p>
       </div>
-      <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+      <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row">
         <Button asChild size="lg" className="transition-transform hover:scale-105">
           <Link href="/login">Giriş Yap</Link>
         </Button>
         <Button asChild size="lg" variant="outline" className="transition-transform hover:scale-105">
           <Link href="/signup">Kayıt Ol</Link>
         </Button>
+        <PwaInstallButton />
       </div>
     </main>
   );

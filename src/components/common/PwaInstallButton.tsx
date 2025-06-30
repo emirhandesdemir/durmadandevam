@@ -4,7 +4,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 export default function PwaInstallButton() {
   const [installPrompt, setInstallPrompt] = useState<any>(null);
@@ -45,18 +44,14 @@ export default function PwaInstallButton() {
   }
 
   return (
-    <TooltipProvider>
-        <Tooltip>
-            <TooltipTrigger asChild>
-                 <Button variant="ghost" size="icon" className="rounded-full" onClick={handleInstallClick}>
-                    <Download className="h-5 w-5" />
-                    <span className="sr-only">Uygulamayı Yükle</span>
-                </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-                <p>Uygulamayı Yükle</p>
-            </TooltipContent>
-        </Tooltip>
-    </TooltipProvider>
+    <Button 
+      size="lg"
+      variant="secondary"
+      onClick={handleInstallClick}
+      className="transition-transform hover:scale-105"
+    >
+        <Download className="mr-2 h-5 w-5" />
+        Uygulamayı Yükle
+    </Button>
   );
 }
