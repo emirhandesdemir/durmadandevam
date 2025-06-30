@@ -225,7 +225,6 @@ export interface DirectMessageMetadata {
         text: string;
         senderId: string;
         timestamp: Timestamp;
-        read?: boolean;
     } | null;
     unreadCounts: {
         [uid: string]: number;

@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { doc, onSnapshot, DocumentData } from 'firebase/firestore';
+import { doc, onSnapshot, DocumentData, collection, query, where } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +14,7 @@ interface AuthContextType {
   user: User | null;
   userData: UserProfile | null;
   featureFlags: FeatureFlags | null;
+  totalUnreadDms: number;
   loading: boolean;
   handleLogout: () => Promise<void>;
 }
@@ -22,6 +23,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   userData: null,
   featureFlags: null,
+  totalUnreadDms: 0,
   loading: true,
   handleLogout: async () => {},
 });
@@ -30,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserProfile | null>(null);
   const [featureFlags, setFeatureFlags] = useState<FeatureFlags | null>(null);
+  const [totalUnreadDms, setTotalUnreadDms] = useState(0);
   const [authLoading, setAuthLoading] = useState(true);
   const [firestoreLoading, setFirestoreLoading] = useState(true);
   const router = useRouter();
@@ -71,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     let unsubscribeUser: () => void = () => {};
+    let unsubscribeDms: () => void = () => {};
 
     if (user) {
       const userDocRef = doc(db, 'users', user.uid);
@@ -97,20 +101,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUserData(null);
         setFirestoreLoading(false);
       });
+
+      // Listen for unread DM count
+      const dmsQuery = query(
+        collection(db, 'directMessagesMetadata'),
+        where('participantUids', 'array-contains', user.uid)
+      );
+      unsubscribeDms = onSnapshot(dmsQuery, (snapshot) => {
+        let total = 0;
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            total += data.unreadCounts?.[user.uid] || 0;
+        });
+        setTotalUnreadDms(total);
+      });
+
     } else {
       setUserData(null);
+      setTotalUnreadDms(0);
       setFirestoreLoading(false);
     }
 
     return () => {
       unsubscribeUser();
       unsubscribeFeatures();
+      unsubscribeDms();
     };
   }, [user, handleLogout, toast]);
 
   const loading = authLoading || firestoreLoading;
 
-  const value = { user, userData, loading, handleLogout, featureFlags };
+  const value = { user, userData, loading, handleLogout, featureFlags, totalUnreadDms };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
