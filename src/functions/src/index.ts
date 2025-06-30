@@ -13,7 +13,7 @@ const db = admin.firestore();
 export const sendPushNotification = functions
     .region("us-central1") // Specify a region for the function
     .firestore.document("users/{userId}/notifications/{notificationId}")
-    .onCreate(async (snapshot, context) => {
+    .onCreate(async (snapshot: functions.firestore.QueryDocumentSnapshot, context: functions.EventContext) => {
         const notificationData = snapshot.data();
         if (!notificationData) {
             console.log("No notification data found.");
@@ -89,7 +89,7 @@ export const sendPushNotification = functions
                 break;
         }
 
-        const payload = {
+        const payload: admin.messaging.MessagingPayload = {
             notification: {
                 title: title,
                 body: body,
@@ -106,7 +106,7 @@ export const sendPushNotification = functions
         const response = await admin.messaging().sendToDevice(tokens, payload);
 
         const tokensToRemove: string[] = [];
-        response.results.forEach((result, index) => {
+        response.results.forEach((result: admin.messaging.MessagingDeviceResult, index: number) => {
             const error = result.error;
             if (error) {
                 console.error(
@@ -136,7 +136,7 @@ export const sendPushNotification = functions
  * Triggers when a new user is created in Firebase Authentication.
  * Creates an audit log entry for the user creation.
  */
-export const onUserCreate = functions.auth.user().onCreate(async (user) => {
+export const onUserCreate = functions.auth.user().onCreate(async (user: admin.auth.UserRecord) => {
     const log = {
         type: "user_created",
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
@@ -154,7 +154,7 @@ export const onUserCreate = functions.auth.user().onCreate(async (user) => {
  * Triggers when a user is deleted from Firebase Authentication.
  * Creates an audit log entry for the user deletion.
  */
-export const onUserDelete = functions.auth.user().onDelete(async (user) => {
+export const onUserDelete = functions.auth.user().onDelete(async (user: admin.auth.UserRecord) => {
     const log = {
         type: "user_deleted",
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
