@@ -1,15 +1,112 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function isUserAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isUser(userId) {
+      return isUserAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isResourceOwner(resource) {
+        return isUser(resource.data.uid);
+    }
+
+    function isAdmin() {
+        // Ensure the user document exists before trying to access its data
+        return isUserAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Default-deny all access
     match /{document=**} {
-      // DİKKAT: BU KURALLAR SON DERECE GÜVENSİZDİR.
-      // Bu kurallar, kimliği doğrulanmamış kullanıcılar da dahil olmak üzere herkesin
-      // veritabanınızdaki tüm verileri okumasına, yazmasına ve silmesine izin verir.
-      // Bu, sadece ve sadece ilk geliştirme aşamasında, hataları ayıklamak için
-      // geçici olarak kullanılmalıdır.
-      // UYGULAMANIZI YAYINLAMADAN ÖNCE MUTLAKA GÜVENLİ KURALLARLA DEĞİŞTİRİN.
-      allow read, write: if true;
+      allow read, write: if false;
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isUserAuthenticated();
+      allow create: if isUser(userId);
+      allow update: if isUser(userId) || isAdmin();
+      allow delete: if isAdmin(); // Only admins can delete user docs
+      
+      match /notifications/{notificationId} {
+        allow read, list: if isUser(userId);
+        allow write: if false; // Created by server actions
+      }
+
+       match /profileViewers/{viewerId} {
+        allow write: if isUser(viewerId);
+        allow read: if isUser(userId);
+      }
+    }
+    
+    // Posts Collection
+    match /posts/{postId} {
+      allow read: if isUserAuthenticated();
+      allow create: if isUserAuthenticated();
+      allow update: if isResourceOwner(resource) || isAdmin();
+      allow delete: if isResourceOwner(resource) || isAdmin();
+
+      match /comments/{commentId} {
+        allow read: if isUserAuthenticated();
+        allow create: if isUserAuthenticated();
+        allow delete: if isResourceOwner(resource) || isAdmin();
+      }
+    }
+    
+    // Rooms Collection
+    match /rooms/{roomId} {
+        allow read, list: if isUserAuthenticated();
+        allow create: if isUserAuthenticated();
+        allow update: if request.auth.uid == resource.data.createdBy.uid || isAdmin();
+        allow delete: if request.auth.uid == resource.data.createdBy.uid || isAdmin();
+        
+        match /voiceParticipants/{participantId} {
+            allow read, list: if isUserAuthenticated();
+            allow create, delete: if isUser(participantId);
+            allow update: if request.auth.uid == get(/databases/$(database)/documents/rooms/$(roomId)).data.createdBy.uid 
+                          || request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.moderators;
+        }
+
+        match /messages/{messageId} {
+            allow read, write: if isUserAuthenticated();
+        }
+
+        match /signals/{signalId} {
+           allow read, write: if isUserAuthenticated();
+        }
+
+        match /games/{gameId} {
+           allow read, write: if isUserAuthenticated();
+        }
+    }
+
+    // Direct Messages
+    match /directMessages/{chatId}/{document=**} {
+        allow read, write: if isUserAuthenticated() && request.auth.uid in chatId.split('_');
+    }
+
+    match /directMessagesMetadata/{chatId} {
+        allow read, write: if isUserAuthenticated() && request.auth.uid in chatId.split('_');
+    }
+
+    // Config Collection
+    match /config/{docId} {
+        allow read: if isUserAuthenticated();
+        allow write: if isAdmin();
+    }
+
+    // Reports and AuditLogs
+    match /reports/{reportId} {
+        allow create: if isUserAuthenticated();
+        allow read, list, delete: if isAdmin();
+    }
+    match /auditLogs/{logId} {
+        allow read, write: if false; // Only backend can write
     }
   }
 }

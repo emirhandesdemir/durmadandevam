@@ -1,116 +1,19 @@
-import * as functions from "firebase-functions";
-import * as admin from "firebase-admin";
-
-admin.initializeApp();
-
-const db = admin.firestore();
-
 /**
- * Triggers when a new notification document is created for a user.
- * Fetches the user's FCM tokens and sends a push notification.
+ * Import function triggers from their respective submodules:
+ *
+ * import {onCall} from "firebase-functions/v2/https";
+ * import {onDocumentWritten} from "firebase-functions/v2/firestore";
+ *
+ * See a full list of supported triggers at https://firebase.google.com/docs/functions
  */
-export const sendPushNotification = functions
-    .region("us-central1") // Specify a region for the function
-    .firestore.document("users/{userId}/notifications/{notificationId}")
-    .onCreate(async (snapshot, context) => {
-        const notificationData = snapshot.data();
-        if (!notificationData) {
-            console.log("No notification data found.");
-            return;
-        }
 
-        const userId = context.params.userId;
-        const userRef = db.collection("users").doc(userId);
-        const userDoc = await userRef.get();
+import {onRequest} from "firebase-functions/v2/https";
+import * as logger from "firebase-functions/logger";
 
-        if (!userDoc.exists) {
-            console.log(`User document not found for userId: ${userId}`);
-            return;
-        }
+// Start writing functions
+// https://firebase.google.com/docs/functions/typescript
 
-        const userData = userDoc.data();
-        if (!userData || !userData.fcmTokens || userData.fcmTokens.length === 0) {
-            console.log(`User ${userId} has no FCM tokens.`);
-            return;
-        }
-        
-        const tokens: string[] = userData.fcmTokens;
-
-        // Construct the notification message
-        let title = "Yeni bir bildiriminiz var!";
-        let body = "Uygulamayı açarak kontrol edin.";
-
-        switch (notificationData.type) {
-            case "like":
-                title = "Yeni Beğeni 👍";
-                body = `${notificationData.senderUsername} gönderinizi beğendi.`;
-                break;
-            case "comment":
-                title = "Yeni Yorum 💬";
-                body = `${notificationData.senderUsername} gönderinize yorum yaptı: "${notificationData.commentText}"`;
-                break;
-            case "follow":
-                title = "Yeni Takipçi 🎉";
-                body = `${notificationData.senderUsername} sizi takip etmeye başladı.`;
-                break;
-            case "follow_accept":
-                    title = "Takip İsteği Kabul Edildi ✅";
-                    body = `${notificationData.senderUsername} takip isteğinizi kabul etti.`;
-                    break;
-            case "mention":
-                title = "Biri Sizden Bahsetti! 📣";
-                body = `${notificationData.senderUsername} bir gönderide sizden bahsetti.`;
-                break;
-            case "room_invite":
-                title = "Oda Daveti 🚪";
-                body = `${notificationData.senderUsername} sizi "${notificationData.roomName}" odasına davet etti.`;
-                break;
-        }
-
-        const payload = {
-            notification: {
-                title: title,
-                body: body,
-                icon: "/icons/icon-192x192.png",
-            },
-            webpush: {
-                fcmOptions: {
-                    // This link will be opened when the notification is clicked.
-                    link: notificationData.postId
-                        ? `/post/${notificationData.postId}`
-                        : `/profile/${notificationData.senderId}`,
-                },
-            },
-        };
-
-        // Send notifications to all tokens.
-        const response = await admin.messaging().sendToDevice(tokens, payload);
-
-        const tokensToRemove: string[] = [];
-        response.results.forEach((result, index) => {
-            const error = result.error;
-            if (error) {
-                console.error(
-                    "Failure sending notification to",
-                    tokens[index],
-                    error
-                );
-                // Cleanup the tokens who are not registered anymore.
-                if (
-                    error.code === "messaging/invalid-registration-token" ||
-                    error.code === "messaging/registration-token-not-registered"
-                ) {
-                    tokensToRemove.push(tokens[index]);
-                }
-            }
-        });
-
-        // If there are any invalid tokens, remove them from the user's document.
-        if (tokensToRemove.length > 0) {
-            return userRef.update({
-                fcmTokens: admin.firestore.FieldValue.arrayRemove(...tokensToRemove),
-            });
-        }
-
-        return null;
-    });
+// export const helloWorld = onRequest((request, response) => {
+//   logger.info("Hello logs!", {structuredData: true});
+//   response.send("Hello from Firebase!");
+// });
