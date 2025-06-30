@@ -61,7 +61,7 @@ function getCroppedImg(
     crop.height
   );
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     // Return as a data URL
     resolve(canvas.toDataURL("image/jpeg", quality));
   });
@@ -110,7 +110,8 @@ export default function ImageCropperDialog({
     
     setIsCropping(true);
     try {
-        const croppedImageUrl = await getCroppedImg(imgRef.current, completedCrop, 0.9);
+        const quality = 0.9;
+        const croppedImageUrl = await getCroppedImg(imgRef.current, completedCrop, quality);
         onCropComplete(croppedImageUrl);
         setIsOpen(false);
     } catch (error) {
