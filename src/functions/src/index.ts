@@ -1,3 +1,4 @@
+
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
@@ -36,34 +37,55 @@ export const sendPushNotification = functions
         
         const tokens: string[] = userData.fcmTokens;
 
-        // Construct the notification message
         let title = "Yeni bir bildiriminiz var!";
         let body = "Uygulamayı açarak kontrol edin.";
+        let link = "/notifications"; // Default link
 
         switch (notificationData.type) {
             case "like":
                 title = "Yeni Beğeni 👍";
                 body = `${notificationData.senderUsername} gönderinizi beğendi.`;
+                link = `/notifications`;
                 break;
             case "comment":
                 title = "Yeni Yorum 💬";
                 body = `${notificationData.senderUsername} gönderinize yorum yaptı: "${notificationData.commentText}"`;
+                link = `/notifications`;
                 break;
             case "follow":
                 title = "Yeni Takipçi 🎉";
                 body = `${notificationData.senderUsername} sizi takip etmeye başladı.`;
+                link = `/profile/${notificationData.senderId}`;
                 break;
             case "follow_accept":
-                    title = "Takip İsteği Kabul Edildi ✅";
-                    body = `${notificationData.senderUsername} takip isteğinizi kabul etti.`;
-                    break;
+                title = "Takip İsteği Kabul Edildi ✅";
+                body = `${notificationData.senderUsername} takip isteğinizi kabul etti.`;
+                link = `/profile/${notificationData.senderId}`;
+                break;
             case "mention":
                 title = "Biri Sizden Bahsetti! 📣";
                 body = `${notificationData.senderUsername} bir gönderide sizden bahsetti.`;
+                link = `/notifications`;
                 break;
             case "room_invite":
                 title = "Oda Daveti 🚪";
                 body = `${notificationData.senderUsername} sizi "${notificationData.roomName}" odasına davet etti.`;
+                link = `/rooms/${notificationData.roomId}`;
+                break;
+            case "diamond_transfer":
+                title = "Elmas Aldınız! 💎";
+                body = `${notificationData.senderUsername} size ${notificationData.diamondAmount} elmas gönderdi!`;
+                link = `/profile/${notificationData.senderId}`;
+                break;
+            case "referral_bonus":
+                title = "Davet Ödülü! 🎉";
+                body = `${notificationData.senderUsername} davetinizle katıldı ve size ${notificationData.diamondAmount} elmas kazandırdı!`;
+                link = `/profile/${notificationData.senderId}`;
+                break;
+            case "retweet":
+                title = "Yeni Retweet 🔁";
+                body = `${notificationData.senderUsername} gönderinizi retweetledi.`;
+                link = '/notifications';
                 break;
         }
 
@@ -72,18 +94,15 @@ export const sendPushNotification = functions
                 title: title,
                 body: body,
                 icon: "/icons/icon-192x192.png",
+                click_action: link, // For older browsers/some platforms
             },
             webpush: {
                 fcmOptions: {
-                    // This link will be opened when the notification is clicked.
-                    link: notificationData.postId
-                        ? `/post/${notificationData.postId}`
-                        : `/profile/${notificationData.senderId}`,
+                    link: link, // For modern browsers
                 },
             },
         };
 
-        // Send notifications to all tokens.
         const response = await admin.messaging().sendToDevice(tokens, payload);
 
         const tokensToRemove: string[] = [];
@@ -95,7 +114,6 @@ export const sendPushNotification = functions
                     tokens[index],
                     error
                 );
-                // Cleanup the tokens who are not registered anymore.
                 if (
                     error.code === "messaging/invalid-registration-token" ||
                     error.code === "messaging/registration-token-not-registered"
@@ -105,7 +123,6 @@ export const sendPushNotification = functions
             }
         });
 
-        // If there are any invalid tokens, remove them from the user's document.
         if (tokensToRemove.length > 0) {
             return userRef.update({
                 fcmTokens: admin.firestore.FieldValue.arrayRemove(...tokensToRemove),
