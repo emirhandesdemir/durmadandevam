@@ -1,31 +1,36 @@
+
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-
-    // Allow public read access for all uploaded files so users can see each other's content.
+    
+    // Allow public read for all files by default.
+    // For a production app, you might want to tighten these rules.
     match /{allPaths=**} {
       allow read;
     }
 
-    // AVATARS: Users can only write to their own avatar folder.
+    // --- WRITE RULES ---
+
+    // Allow a user to write to their own avatar path.
     match /upload/avatars/{userId}/{allPaths=**} {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
-
-    // POSTS: Users can only write to their own post image folder.
+    
+    // Allow a user to write to their own post upload path.
     match /upload/posts/{userId}/{allPaths=**} {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
-    
-    // ROOMS: Any authenticated user can upload files to any room.
-    // For enhanced security, this could be restricted to room participants.
+
+    // Allow a user to write to a room's upload path.
+    // A more secure rule would check if the user is a participant in Firestore.
     match /upload/rooms/{roomId}/{allPaths=**} {
       allow write: if request.auth != null;
     }
 
-    // DMs: Users can only write to chats they are a part of.
-    // The chatId is a concatenation of two sorted UIDs, so this check works for both participants.
+    // Allow a user to upload to a DM chat they are part of.
+    // The chatId is structured as 'uid1_uid2', so this check ensures
+    // the uploader's ID is part of the chatId.
     match /dms/{chatId}/{allPaths=**} {
       allow write: if request.auth != null && chatId.matches(request.auth.uid);
     }
