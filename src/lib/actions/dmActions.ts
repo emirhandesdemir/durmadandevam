@@ -76,6 +76,7 @@ export async function sendMessage(chatId: string, sender: UserInfo, receiver: Us
           text: lastMessageText,
           senderId: sender.uid,
           timestamp: serverTimestamp(),
+          read: false,
         },
         unreadCounts: {
           [receiver.uid]: 1,
@@ -90,6 +91,7 @@ export async function sendMessage(chatId: string, sender: UserInfo, receiver: Us
           text: lastMessageText,
           senderId: sender.uid,
           timestamp: serverTimestamp(),
+          read: false,
         },
         [`unreadCounts.${receiver.uid}`]: increment(1),
         // Ensure participant info is up-to-date
@@ -142,17 +144,22 @@ export async function editMessage(chatId: string, messageId: string, newText: st
     if (!newText.trim()) throw new Error("Mesaj boş olamaz.");
 
     const messageRef = doc(db, 'directMessages', chatId, 'messages', messageId);
+    const metadataRef = doc(db, 'directMessagesMetadata', chatId);
     
     await runTransaction(db, async (transaction) => {
-        const messageDoc = await transaction.get(messageRef);
+        // 1. Perform all READS first.
+        const [messageDoc, metadataDoc] = await Promise.all([
+            transaction.get(messageRef),
+            transaction.get(metadataRef)
+        ]);
 
+        // 2. Perform CHECKS.
         if (!messageDoc.exists()) throw new Error("Mesaj bulunamadı.");
         
         const messageData = messageDoc.data();
         if (messageData.senderId !== senderId) throw new Error("Bu mesajı düzenleme yetkiniz yok.");
-        
-        // 5-minute limit removed as per user request.
 
+        // 3. Prepare and perform all WRITES.
         transaction.update(messageRef, {
             text: newText,
             edited: true,
@@ -160,13 +167,12 @@ export async function editMessage(chatId: string, messageId: string, newText: st
         });
         
         // Also update last message in metadata if this was the last message
-        const metadataRef = doc(db, 'directMessagesMetadata', chatId);
-        const metadataDoc = await transaction.get(metadataRef);
         if (metadataDoc.exists()) {
             const metadata = metadataDoc.data();
             const lastMessageTimestamp = metadata.lastMessage?.timestamp as Timestamp;
             const currentMessageTimestamp = messageData.createdAt as Timestamp;
 
+            // Check if the message being edited is indeed the last message.
             if (lastMessageTimestamp && currentMessageTimestamp && lastMessageTimestamp.isEqual(currentMessageTimestamp)) {
                  const lastMessageText = newText.length > 30 ? newText.substring(0, 27) + '...' : newText;
                  transaction.update(metadataRef, { 'lastMessage.text': lastMessageText });
