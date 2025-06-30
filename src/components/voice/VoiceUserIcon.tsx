@@ -128,6 +128,7 @@ export default function VoiceUserIcon({
   
   const nameSize = size === 'lg' ? "text-base" : "text-xs";
   const avatarSize = size === 'lg' ? "h-24 w-24" : "w-full aspect-square";
+  const fallbackTextSize = size === 'lg' ? "text-4xl" : "text-xl";
   const iconBadgePos = size === 'lg' ? "bottom-1 right-1 p-2" : "bottom-0 right-0 p-1.5";
   const iconSize = size === 'lg' ? "h-5 w-5" : "h-4 w-4";
   
@@ -137,11 +138,6 @@ export default function VoiceUserIcon({
   const avatar = (
     <div className="relative flex flex-col items-center gap-2">
        <div className={cn("relative", avatarSize)}>
-          {participant.selectedBubble && (
-            <div className={`bubble-wrapper ${participant.selectedBubble}`}>
-                {Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}
-            </div>
-          )}
            <div className={cn("avatar-frame-wrapper w-full h-full", participant.selectedAvatarFrame)}>
               <Avatar
                 className={cn(
@@ -152,7 +148,7 @@ export default function VoiceUserIcon({
                 )}
               >
                 <AvatarImage src={participant.photoURL || undefined} />
-                <AvatarFallback className={cn("bg-muted text-muted-foreground", size === 'lg' && "text-3xl")}>
+                <AvatarFallback className={cn("bg-muted text-muted-foreground", fallbackTextSize)}>
                   {participant.username?.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>

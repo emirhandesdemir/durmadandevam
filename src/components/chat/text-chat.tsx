@@ -13,7 +13,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Loader2, Pin } from 'lucide-react';
 import type { Message, Room } from '@/lib/types';
 import PortalMessageCard from './PortalMessageCard';
-import GameInviteMessage from '../game/GameInviteMessage';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { Button } from '../ui/button';
 import { MoreHorizontal } from 'lucide-react';
@@ -73,10 +72,6 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
             return <PortalMessageCard key={msg.id} message={msg} />;
         }
         
-        if (msg.type === 'game_invite' && msg.gameInviteData) {
-            return <GameInviteMessage key={msg.id} message={msg} roomId={room.id} />;
-        }
-
         const isCurrentUser = msg.uid === currentUser.uid;
         return (
           <div key={msg.id} className={cn("flex items-end gap-3 w-full animate-in fade-in slide-in-from-bottom-4 duration-500 group", isCurrentUser && "flex-row-reverse")}>

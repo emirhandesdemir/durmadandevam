@@ -39,6 +39,38 @@ const formSchema = z.object({
   gender: z.enum(['male', 'female'], { required_error: "Cinsiyet seçimi zorunludur." }),
 });
 
+const generateDefaultAvatar = (username: string) => {
+    const getHash = (str: string) => {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = (hash << 5) - hash + char;
+            hash |= 0;
+        }
+        return Math.abs(hash);
+    };
+
+    const hash = getHash(username);
+    const hue = hash % 360;
+    const saturation = 70 + (hash % 10); 
+    const lightness = 45 + (hash % 10);
+    const lightness2 = lightness + 15;
+
+    const svg = `
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="200" height="200" fill="url(#gradient)"/>
+<defs>
+<radialGradient id="gradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+<stop offset="0%" style="stop-color:hsl(${hue}, ${saturation}%, ${lightness2}%);stop-opacity:1" />
+<stop offset="100%" style="stop-color:hsl(${hue}, ${saturation}%, ${lightness}%);stop-opacity:1" />
+</radialGradient>
+</defs>
+</svg>`.replace(/\n/g, "").replace(/\s+/g, " ");
+
+    return `data:image/svg+xml;base64,${btoa(svg)}`;
+};
+
+
 export default function SignUpForm() {
     const { toast } = useToast();
     const router = useRouter();
@@ -61,8 +93,11 @@ export default function SignUpForm() {
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const user = userCredential.user;
             
+            const defaultAvatarUrl = generateDefaultAvatar(values.username);
+
             await updateProfile(user, {
                 displayName: values.username,
+                photoURL: defaultAvatarUrl,
             });
             
             const isAdminEmail = values.email === 'admin@example.com';
@@ -72,7 +107,7 @@ export default function SignUpForm() {
                 uid: user.uid,
                 username: values.username,
                 email: values.email,
-                photoURL: user.photoURL,
+                photoURL: defaultAvatarUrl,
                 bio: "", // Keep bio empty initially for onboarding
                 role: userRole,
                 gender: values.gender,

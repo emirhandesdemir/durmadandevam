@@ -1,15 +1,12 @@
 // src/components/rooms/RoomHeader.tsx
 "use client";
 
-import { useState, useEffect } from 'react';
-import { ChevronLeft, MoreHorizontal, Users, Timer, AlertTriangle, UserPlus, Gamepad2, Gift, Swords } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronLeft, MoreHorizontal, Users, UserPlus, Gift, Zap, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Room } from '@/lib/types';
-import { cn } from '@/lib/utils';
-import { addSystemMessage, deleteExpiredRoom } from '@/lib/actions/roomActions';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
 import InviteDialog from './InviteDialog';
+import OpenPortalDialog from './OpenPortalDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,13 +19,13 @@ interface RoomHeaderProps {
   isHost: boolean;
   onParticipantListToggle: () => void;
   onBackClick: () => void;
-  onStartGameClick: () => void;
+  isSpeakerLayoutCollapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
-export default function RoomHeader({ room, isHost, onParticipantListToggle, onBackClick, onStartGameClick }: RoomHeaderProps) {
-    const { user } = useAuth();
-    const { toast } = useToast();
+export default function RoomHeader({ room, isHost, onParticipantListToggle, onBackClick, isSpeakerLayoutCollapsed, onToggleCollapse }: RoomHeaderProps) {
     const [isInviteOpen, setIsInviteOpen] = useState(false);
+    const [isPortalDialogOpen, setIsPortalDialogOpen] = useState(false);
 
     return (
         <>
@@ -37,6 +34,16 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, onBa
                     <Button onClick={onBackClick} variant="ghost" size="icon" className="rounded-full">
                         <ChevronLeft />
                     </Button>
+                    
+                    {isHost && (
+                         <div className="relative">
+                            <Button onClick={() => setIsPortalDialogOpen(true)} variant="ghost" size="icon" className="rounded-full text-yellow-400 hover:text-yellow-300 animate-pulse">
+                                <Zap className="h-5 w-5" />
+                            </Button>
+                             <div className="absolute inset-0 -z-10 bg-yellow-400/50 blur-lg animate-pulse rounded-full"></div>
+                        </div>
+                    )}
+
                     <div>
                         <h1 className="text-md font-bold truncate max-w-[120px] sm:max-w-[180px]">{room.name}</h1>
                         <p className="text-xs text-muted-foreground">ID: {room.id.substring(0, 10)}</p>
@@ -50,6 +57,9 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, onBa
                     <Button variant="ghost" size="icon" className="rounded-full" onClick={onParticipantListToggle}>
                         <Users className="h-5 w-5" />
                     </Button>
+                    <Button variant="ghost" size="icon" className="rounded-full" onClick={onToggleCollapse}>
+                       {isSpeakerLayoutCollapsed ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
+                    </Button>
                     {isHost && (
                          <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -62,10 +72,6 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, onBa
                                     <UserPlus className="mr-2 h-4 w-4" />
                                     Davet Et
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={onStartGameClick}>
-                                    <Swords className="mr-2 h-4 w-4"/>
-                                    Oyun Başlat
-                                </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     )}
@@ -74,6 +80,12 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, onBa
             <InviteDialog
                 isOpen={isInviteOpen}
                 onOpenChange={setIsInviteOpen}
+                roomId={room.id}
+                roomName={room.name}
+            />
+            <OpenPortalDialog
+                isOpen={isPortalDialogOpen}
+                onOpenChange={setIsPortalDialogOpen}
                 roomId={room.id}
                 roomName={room.name}
             />
