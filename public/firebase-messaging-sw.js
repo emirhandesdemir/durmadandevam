@@ -1,11 +1,7 @@
-// public/firebase-messaging-sw.js
+// Scripts for firebase and firebase messaging
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
-// This file needs to be in the public directory
-// Make sure you have the correct firebase-app and firebase-messaging-sw js files
-import { initializeApp } from "firebase/app";
-import { getMessaging, onBackgroundMessage } from "firebase/messaging/sw";
-
-// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyBHLuoO7KM9ai0dMeCcGhmSHSVYCDO1rEo",
   authDomain: "yenidendeneme-ea9ed.firebaseapp.com",
@@ -16,47 +12,42 @@ const firebaseConfig = {
   measurementId: "G-J3EB02J0LN"
 };
 
+// Initialize the Firebase app in the service worker
+firebase.initializeApp(firebaseConfig);
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
+// Retrieve an instance of Firebase Messaging
+const messaging = firebase.messaging();
 
-onBackgroundMessage(messaging, (payload) => {
-  console.log("[firebase-messaging-sw.js] Received background message ", payload);
-  
-  // Customize notification here. We use the data payload for consistency.
+messaging.onBackgroundMessage(function(payload) {
+  console.log('Received background message ', payload);
+
   const notificationTitle = payload.data.title;
   const notificationOptions = {
     body: payload.data.body,
     icon: payload.data.icon || '/icons/icon-192x192.png',
     data: {
-        url: payload.data.link // Pass the URL to the 'notificationclick' event
+        link: payload.data.link || '/'
     }
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// Handle notification click to open the correct URL
-self.addEventListener('notificationclick', (event) => {
-    event.notification.close(); // Close the notification
+// Handle notification click
+self.addEventListener('notificationclick', function(event) {
+    event.notification.close();
+    const link = event.notification.data.link;
 
-    const urlToOpen = new URL(event.notification.data.url || '/', self.location.origin).href;
-
-    // This looks for an existing window and focuses it.
     event.waitUntil(
-        clients.matchAll({
-            type: "window",
-            includeUncontrolled: true
-        }).then((clientList) => {
+        clients.matchAll({ type: 'window' }).then(function(clientList) {
             for (let i = 0; i < clientList.length; i++) {
-                let client = clientList[i];
-                if (client.url === urlToOpen && 'focus' in client) {
+                const client = clientList[i];
+                if (client.url === link && 'focus' in client) {
                     return client.focus();
                 }
             }
             if (clients.openWindow) {
-                return clients.openWindow(urlToOpen);
+                return clients.openWindow(link);
             }
         })
     );
