@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import type { Notification } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Heart, MessageCircle, UserPlus, DoorOpen, Loader2, AtSign, Gem } from 'lucide-react';
+import { Heart, MessageCircle, UserPlus, DoorOpen, Loader2, AtSign, Gem, Repeat } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -49,6 +49,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
       case 'mention': return <AtSign className="h-5 w-5 text-indigo-500" />;
       case 'room_invite': return <DoorOpen className="h-5 w-5 text-green-500" />;
       case 'diamond_transfer': return <Gem className="h-5 w-5 text-cyan-400" />;
+      case 'retweet': return <Repeat className="h-5 w-5 text-green-500" />;
       default: return null;
     }
   };
@@ -62,6 +63,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
       case 'mention': return <> <span className="font-bold">{notification.senderUsername}</span> bir gönderide senden bahsetti.</>;
       case 'room_invite': return <> <span className="font-bold">{notification.senderUsername}</span> seni <span className="font-semibold">{notification.roomName}</span> odasına davet etti.</>;
       case 'diamond_transfer': return <> <span className="font-bold">{notification.senderUsername}</span> sana <strong className="text-cyan-400">{notification.diamondAmount} elmas</strong> gönderdi!</>;
+      case 'retweet': return <> <span className="font-bold">{notification.senderUsername}</span> gönderini retweetledi.</>;
       default: return 'Bilinmeyen bildirim';
     }
   }

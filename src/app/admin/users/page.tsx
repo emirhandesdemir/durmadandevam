@@ -16,6 +16,9 @@ export interface UserData {
     createdAt: Timestamp;
     photoURL?: string;
     diamonds?: number;
+    isBanned?: boolean;
+    reportCount?: number;
+    referralCount?: number;
 }
 
 /**

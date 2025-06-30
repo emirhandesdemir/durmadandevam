@@ -1,3 +1,4 @@
+// src/lib/actions/postActions.ts
 'use server';
 
 import { db, storage } from "@/lib/firebase";
@@ -194,4 +195,80 @@ export async function likePost(
     });
     revalidatePath('/home');
     revalidatePath(`/profile/*`);
+}
+
+
+export async function retweetPost(
+    originalPostId: string,
+    retweeter: { 
+        uid: string; 
+        username: string; 
+        userAvatar: string | null;
+        userAvatarFrame?: string;
+        userRole?: 'admin' | 'user';
+        userGender?: 'male' | 'female';
+    }
+) {
+    if (!originalPostId || !retweeter?.uid) throw new Error("Gerekli bilgiler eksik.");
+
+    const originalPostRef = doc(db, 'posts', originalPostId);
+    const retweeterUserRef = doc(db, 'users', retweeter.uid);
+    const newPostRef = doc(collection(db, 'posts'));
+
+    await runTransaction(db, async (transaction) => {
+        const originalPostDoc = await transaction.get(originalPostRef);
+        if (!originalPostDoc.exists()) throw new Error("Orijinal gönderi bulunamadı.");
+
+        const originalPostData = originalPostDoc.data();
+        if (originalPostData.uid === retweeter.uid) throw new Error("Kendi gönderinizi retweetleyemezsiniz.");
+        if (originalPostData.retweetOf) throw new Error("Bir retweet'i retweetleyemezsiniz.");
+
+        const retweetSnapshot = {
+            postId: originalPostId,
+            uid: originalPostData.uid,
+            username: originalPostData.username,
+            userAvatar: originalPostData.userAvatar,
+            userAvatarFrame: originalPostData.userAvatarFrame,
+            text: originalPostData.text,
+            imageUrl: originalPostData.imageUrl,
+            createdAt: originalPostData.createdAt,
+        };
+
+        const newPostData = {
+            uid: retweeter.uid,
+            username: retweeter.username,
+            userAvatar: retweeter.userAvatar,
+            userAvatarFrame: retweeter.userAvatarFrame,
+            userRole: retweeter.userRole,
+            userGender: retweeter.userGender,
+            text: '', // Retweet has no text of its own
+            imageUrl: '', // Retweet has no image of its own
+            createdAt: serverTimestamp(),
+            likes: [],
+            likeCount: 0,
+            commentCount: 0,
+            retweetOf: retweetSnapshot
+        };
+
+        transaction.set(newPostRef, newPostData);
+        transaction.update(retweeterUserRef, { postCount: increment(1) });
+    });
+    
+    // Notification for the original poster
+    const originalPostData = (await getDoc(originalPostRef)).data();
+    if(originalPostData) {
+        await createNotification({
+            recipientId: originalPostData.uid,
+            senderId: retweeter.uid,
+            senderUsername: retweeter.username,
+            senderAvatar: retweeter.userAvatar,
+            senderAvatarFrame: retweeter.userAvatarFrame,
+            type: 'retweet',
+            postId: newPostRef.id,
+        });
+    }
+
+
+    revalidatePath('/home');
+    revalidatePath(`/profile/${retweeter.uid}`);
 }

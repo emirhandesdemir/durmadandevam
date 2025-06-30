@@ -21,7 +21,8 @@ export async function creditReferrer(referrerId: string) {
                 return; // Silently fail if referrer doesn't exist
             }
             transaction.update(userRef, {
-                diamonds: increment(10)
+                diamonds: increment(10),
+                referralCount: increment(1)
             });
         });
     } catch (error) {

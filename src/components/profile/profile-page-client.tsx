@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, Lock, Eye, Camera, Settings, Gift, Copy } from "lucide-react";
+import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, Lock, Eye, Camera, Settings, Gift, Copy, Users } from "lucide-react";
 import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { useTheme } from "next-themes";
@@ -109,7 +109,7 @@ export default function ProfilePageClient() {
             }
             const reader = new FileReader();
             reader.onload = () => setImageToCrop(reader.result as string);
-            reader.readAsDataURL(file);
+            reader.readAsDataURL(e.target.files[0]);
         }
     };
     
@@ -213,7 +213,6 @@ export default function ProfilePageClient() {
                             </TooltipProvider>
                         )}
                     </div>
-                    <CardDescription>{user.email}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 px-6">
                     <div className="space-y-2">
@@ -263,6 +262,10 @@ export default function ProfilePageClient() {
                                 <p className="text-sm text-muted-foreground">
                                     Bu linki arkadaşlarınla paylaş. Senin linkinle kayıt olan her arkadaşın için <strong>10 elmas</strong> kazan!
                                 </p>
+                                 <div className="text-sm font-semibold p-2 bg-muted rounded-md text-center flex items-center justify-center gap-2">
+                                    <Users className="h-4 w-4"/>
+                                    <span>Bu linkle toplam <span className="text-primary">{userData.referralCount || 0}</span> kişi kayıt oldu.</span>
+                                </div>
                                 <div className="flex gap-2">
                                     <Input value={inviteLink} readOnly className="text-sm" />
                                     <Button onClick={copyToClipboard} variant="outline" size="icon"><Copy className="h-4 w-4" /></Button>

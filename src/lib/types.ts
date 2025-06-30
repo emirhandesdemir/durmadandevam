@@ -19,6 +19,7 @@ export interface UserProfile {
     followRequests: FollowRequest[];
     diamonds: number;
     referredBy?: string | null;
+    referralCount?: number;
     selectedBubble?: string;
     selectedAvatarFrame?: string;
     hasUnreadNotifications?: boolean;
@@ -63,7 +64,7 @@ export interface Notification {
     senderUsername: string;
     senderAvatar: string | null;
     senderAvatarFrame?: string;
-    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer';
+    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet';
     postId?: string | null;
     postImage?: string | null;
     commentText?: string;
@@ -90,6 +91,16 @@ export interface Post {
     likes: string[]; // Beğenen kullanıcıların UID'lerini tutan dizi
     likeCount: number;
     commentCount: number;
+    retweetOf?: {
+        postId: string;
+        uid: string;
+        username: string;
+        userAvatar?: string | null;
+        userAvatarFrame?: string;
+        text: string;
+        imageUrl?: string;
+        createdAt: Timestamp | { seconds: number; nanoseconds: number };
+    }
 }
 
 export interface Comment {
@@ -262,4 +273,33 @@ export interface AuditLog {
         displayName?: string;
     };
     details: string;
+}
+
+export interface ActiveGameSession {
+    id: string;
+    gameType: 'dice' | 'rps' | 'bottle';
+    gameName: string;
+    hostId: string;
+    players: { uid: string, username: string, photoURL: string | null }[];
+    moves: { [key: string]: string | number };
+    status: 'pending' | 'active' | 'finished';
+    turn?: string; // For turn-based games
+    winnerId?: string;
+    createdAt: Timestamp;
+}
+
+export interface GameInviteMessageData {
+    host: { uid: string, username: string, photoURL: string | null };
+    gameName: string;
+    gameType: string;
+    invitedPlayers: { uid: string, username: string, photoURL: string | null }[];
+    acceptedPlayers: { uid: string, username: string, photoURL: string | null }[];
+    declinedPlayers: { uid: string, username: string, photoURL: string | null }[];
+    status: 'pending' | 'accepted' | 'declined' | 'cancelled';
+}
+
+// Augment the existing Message interface
+export interface Message {
+  // ... existing fields
+  gameInviteData?: GameInviteMessageData;
 }
