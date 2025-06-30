@@ -6,7 +6,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { UserProfile, DirectMessage } from '@/lib/types';
-import { markMessagesAsRead } from '@/lib/actions/dmActions';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, Loader2, Video } from 'lucide-react';
@@ -31,13 +30,6 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-
-  useEffect(() => {
-    // Sohbet açıldığında okunmamış mesajları işaretle
-    if (user) {
-      markMessagesAsRead(chatId, user.uid);
-    }
-  }, [chatId, user, messages]); // `messages` bağımlılığı, yeni bir mesaj geldiğinde tekrar kontrol etmeyi sağlar.
 
   useEffect(() => {
     // Mesajları gerçek zamanlı olarak dinle

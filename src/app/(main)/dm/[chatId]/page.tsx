@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserProfile } from '@/lib/actions/userActions';
+import { markMessagesAsRead } from '@/lib/actions/dmActions';
 import type { UserProfile } from '@/lib/types';
 import DMChat from '@/components/dm/DMChat';
 import ChatList from '@/components/dm/ChatList';
@@ -26,6 +27,13 @@ export default function ChatPage() {
   
   const [partner, setPartner] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Sohbet açıldığında mesajları okundu olarak işaretle
+  useEffect(() => {
+    if (user && chatId) {
+      markMessagesAsRead(chatId, user.uid);
+    }
+  }, [chatId, user]);
 
   useEffect(() => {
     if (!user || !chatId) return;
