@@ -28,9 +28,9 @@ export default function Header() {
                     <Button variant="ghost" size="icon" className="rounded-full relative" onClick={() => router.push('/dm')}>
                         <Send className="h-5 w-5" />
                         {totalUnreadDms > 0 && (
-                            <span className="absolute top-2 right-2.5 flex h-2.5 w-2.5">
+                            <span className="absolute top-1.5 right-1.5 flex h-3 w-3">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-destructive"></span>
                             </span>
                         )}
                         <span className="sr-only">Mesajlar</span>
@@ -38,9 +38,9 @@ export default function Header() {
                     <Button variant="ghost" size="icon" className="rounded-full relative" onClick={() => router.push('/notifications')}>
                         <Bell className="h-5 w-5" />
                         {hasUnreadNotifications && (
-                            <span className="absolute top-2 right-2.5 flex h-2.5 w-2.5">
+                            <span className="absolute top-1.5 right-1.5 flex h-3 w-3">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-destructive"></span>
                             </span>
                         )}
                         <span className="sr-only">Bildirimler</span>
