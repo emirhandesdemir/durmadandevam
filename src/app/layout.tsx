@@ -5,6 +5,7 @@ import './globals.css';
 import { Inter } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/layout/ThemeProvider';
+import NetworkStatusNotifier from '@/components/common/NetworkStatusNotifier';
 
 const inter = Inter({ 
   subsets: ['latin'], 
@@ -62,6 +63,7 @@ export default function RootLayout({
           <AuthProvider>
             {children}
             <Toaster />
+            <NetworkStatusNotifier />
           </AuthProvider>
         </ThemeProvider>
       </body>
