@@ -5,7 +5,7 @@ import Header from "@/components/layout/Header";
 import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
 import PersistentVoiceBar from "@/components/voice/PersistentVoiceBar";
 import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
-import { motion, useScroll, useMotionValueEvent } from 'framer-motion';
+import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
 import { useState, useRef } from 'react';
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -37,6 +37,29 @@ export default function MainAppLayout({
     }
   });
 
+  const pageVariants = {
+    initial: {
+      opacity: 0,
+      x: 20,
+    },
+    animate: {
+      opacity: 1,
+      x: 0,
+      transition: {
+        type: "spring",
+        stiffness: 260,
+        damping: 30,
+      },
+    },
+    exit: {
+      opacity: 0,
+      x: -20,
+      transition: {
+        duration: 0.2,
+      },
+    },
+  };
+
   return (
     <VoiceChatProvider>
       <NotificationPermissionManager />
@@ -63,13 +86,21 @@ export default function MainAppLayout({
               </motion.header>
            )}
           
-           <div className={cn(
-             isFullPageLayout ? "flex-1 flex flex-col overflow-hidden" : "",
-             !isHomePage && !isFullPageLayout && "p-4"
-            )}
-           >
-            {children}
-           </div>
+           <AnimatePresence mode="wait">
+             <motion.div
+                key={pathname}
+                variants={pageVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                className={cn(
+                  isFullPageLayout ? "flex-1 flex flex-col overflow-hidden" : "",
+                  !isHomePage && !isFullPageLayout && "p-4"
+                )}
+             >
+              {children}
+             </motion.div>
+           </AnimatePresence>
         </main>
         
         <VoiceAudioPlayer />
