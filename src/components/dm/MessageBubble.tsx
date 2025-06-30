@@ -7,9 +7,8 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Check, CheckCheck, MoreHorizontal, Pencil, Trash2, Loader2, Smile } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuPortal, DropdownMenuSubContent } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { deleteMessage, editMessage, toggleReaction } from '@/lib/actions/dmActions';
@@ -98,27 +97,10 @@ export default function MessageBubble({ message, currentUserId, chatId }: Messag
   return (
     <>
       <div className={cn('flex flex-col gap-1', alignClass, hasReactions ? 'pb-4' : '')}>
-        <div className="flex items-end gap-2 max-w-[75%] group">
-          <div className={cn("flex items-center opacity-0 group-hover:opacity-100 transition-opacity", { "order-first": !isSender, "order-last": isSender })}>
+        <div className={cn('flex items-end gap-2 max-w-[75%] group', isSender ? 'flex-row-reverse' : '')}>
+
+          <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
             {!isDeleted && !isEditing && (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full">
-                    <Smile className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-1 rounded-full bg-card shadow-lg border">
-                  <div className="flex gap-1">
-                    {REACTION_EMOJIS.map(emoji => (
-                      <button key={emoji} onClick={() => handleReactionClick(emoji)} className="p-1.5 rounded-full hover:bg-accent transition-transform hover:scale-125">
-                        <span className="text-xl">{emoji}</span>
-                      </button>
-                    ))}
-                  </div>
-                </PopoverContent>
-              </Popover>
-            )}
-            {isSender && !isDeleted && !isEditing && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full">
@@ -126,16 +108,43 @@ export default function MessageBubble({ message, currentUserId, chatId }: Messag
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  {message.text && (
-                    <DropdownMenuItem onClick={handleEditClick}>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Düzenle
-                    </DropdownMenuItem>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <Smile className="mr-2 h-4 w-4" />
+                      <span>Tepki Ver</span>
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                      <DropdownMenuSubContent className="p-0">
+                          <div className="flex gap-1 p-1">
+                              {REACTION_EMOJIS.map(emoji => (
+                                  <DropdownMenuItem 
+                                      key={emoji} 
+                                      onClick={(e) => { e.preventDefault(); handleReactionClick(emoji); }}
+                                      className="p-1.5 rounded-full hover:bg-accent focus:bg-accent cursor-pointer h-auto w-auto"
+                                  >
+                                      <span className="text-xl">{emoji}</span>
+                                  </DropdownMenuItem>
+                              ))}
+                          </div>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                  </DropdownMenuSub>
+
+                  {isSender && (
+                    <>
+                      <DropdownMenuSeparator />
+                      {message.text && (
+                        <DropdownMenuItem onClick={handleEditClick}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Düzenle
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-destructive focus:text-destructive">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Sil
+                      </DropdownMenuItem>
+                    </>
                   )}
-                  <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-destructive focus:text-destructive">
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Sil
-                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
