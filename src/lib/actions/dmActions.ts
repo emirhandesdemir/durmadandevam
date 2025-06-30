@@ -40,10 +40,13 @@ export async function sendMessage(chatId: string, sender: UserInfo, receiver: Us
   const metadataDocRef = doc(db, 'directMessagesMetadata', chatId);
   
   await runTransaction(db, async (transaction) => {
+    // 1. Önce OKUMA işlemini yap.
+    const metadataDoc = await transaction.get(metadataDocRef);
+
+    // 2. YAZMA işlemlerini hazırla.
     const messagesColRef = collection(db, 'directMessages', chatId, 'messages');
     const newMessageRef = doc(messagesColRef);
 
-    // 1. Yeni mesajı oluştur
     const messageData: { [key: string]: any } = {
       senderId: sender.uid,
       receiverId: receiver.uid,
@@ -55,12 +58,12 @@ export async function sendMessage(chatId: string, sender: UserInfo, receiver: Us
     if (imageUrl) {
       messageData.imageUrl = imageUrl;
     }
+    
+    const lastMessageText = imageUrl ? '📷 Resim' : (text ? (text.length > 30 ? text.substring(0, 27) + '...' : text) : 'Mesaj');
+
+    // 3. Şimdi tüm YAZMA işlemlerini gerçekleştir.
     transaction.set(newMessageRef, messageData);
     
-    // 2. Metadata'yı oluştur veya güncelle
-    const lastMessageText = imageUrl ? '📷 Resim' : (text ? (text.length > 30 ? text.substring(0, 27) + '...' : text) : 'Mesaj');
-    const metadataDoc = await transaction.get(metadataDocRef);
-
     if (!metadataDoc.exists()) {
       // Create new metadata document if it doesn't exist
       const newMetadata = {
