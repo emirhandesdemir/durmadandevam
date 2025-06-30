@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Check, CheckCheck, MoreHorizontal, Pencil, Trash2, Loader2, Smile } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuPortal, DropdownMenuSubContent } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -98,57 +98,48 @@ export default function MessageBubble({ message, currentUserId, chatId }: Messag
     <>
       <div className={cn('flex flex-col gap-1', alignClass, hasReactions ? 'pb-4' : '')}>
         <div className={cn('flex items-end gap-2 max-w-[75%] group', isSender ? 'flex-row-reverse' : '')}>
-
-          <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-            {!isDeleted && !isEditing && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>
-                      <Smile className="mr-2 h-4 w-4" />
-                      <span>Tepki Ver</span>
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuPortal>
-                      <DropdownMenuSubContent side="top" align="center" className="p-0">
-                          <div className="flex gap-1 p-1">
-                              {REACTION_EMOJIS.map(emoji => (
-                                  <DropdownMenuItem 
-                                      key={emoji} 
-                                      onClick={(e) => { e.preventDefault(); handleReactionClick(emoji); }}
-                                      className="p-1.5 rounded-full hover:bg-accent focus:bg-accent cursor-pointer h-auto w-auto"
-                                  >
-                                      <span className="text-xl">{emoji}</span>
-                                  </DropdownMenuItem>
-                              ))}
-                          </div>
-                      </DropdownMenuSubContent>
-                    </DropdownMenuPortal>
-                  </DropdownMenuSub>
-
-                  {isSender && (
-                    <>
-                      <DropdownMenuSeparator />
-                      {message.text && (
-                        <DropdownMenuItem onClick={handleEditClick}>
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Düzenle
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-destructive focus:text-destructive">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Sil
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
+            {/* Fixed-size container to prevent layout shift */}
+            <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center">
+                {!isDeleted && !isEditing && (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align={isSender ? "end" : "start"}>
+                             {/* Reaction Picker directly in the menu */}
+                            <div className="flex gap-1 p-1">
+                                {REACTION_EMOJIS.map(emoji => (
+                                    <DropdownMenuItem 
+                                        key={emoji} 
+                                        onClick={(e) => { e.preventDefault(); handleReactionClick(emoji); }}
+                                        className="p-1.5 rounded-full hover:bg-accent focus:bg-accent cursor-pointer h-auto w-auto"
+                                    >
+                                        <span className="text-xl">{emoji}</span>
+                                    </DropdownMenuItem>
+                                ))}
+                            </div>
+                            
+                            {isSender && (
+                                <>
+                                    <DropdownMenuSeparator />
+                                    {message.text && (
+                                        <DropdownMenuItem onClick={handleEditClick}>
+                                            <Pencil className="mr-2 h-4 w-4" />
+                                            Düzenle
+                                        </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-destructive focus:text-destructive">
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Sil
+                                    </DropdownMenuItem>
+                                </>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                )}
+            </div>
 
           <div className="relative">
             <div className={cn('p-3 rounded-2xl', bubbleClass)}>
