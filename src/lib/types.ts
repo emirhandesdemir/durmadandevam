@@ -13,6 +13,7 @@ export interface UserProfile {
     createdAt: Timestamp;
     privateProfile: boolean;
     acceptsFollowRequests: boolean;
+    showOnlineStatus?: boolean;
     followers: string[];
     following: string[];
     followRequests: FollowRequest[];
@@ -175,7 +176,8 @@ export interface DirectMessage {
     id: string;
     senderId: string;
     receiverId: string;
-    text: string;
+    text?: string;
+    imageUrl?: string;
     createdAt: Timestamp;
     read: boolean;
     edited: boolean;
@@ -235,8 +237,14 @@ export interface RoomActivityDataPoint {
     rooms: number;
 }
 
-export interface HealthCheckResult {
-  service: string;
-  status: 'ok' | 'error';
-  details: string;
+export interface AuditLog {
+    id: string;
+    type: 'user_created' | 'user_deleted';
+    timestamp: Timestamp;
+    actor: {
+        uid: string;
+        email?: string;
+        displayName?: string;
+    };
+    details: string;
 }

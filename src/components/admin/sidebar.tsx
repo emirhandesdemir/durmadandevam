@@ -21,6 +21,7 @@ import {
   SlidersHorizontal,
   BarChart3,
   HeartPulse,
+  History,
 } from "lucide-react";
 import { Button } from "../ui/button";
 
@@ -34,6 +35,7 @@ const navItems = [
   { href: "/admin/posts", label: "Gönderiler", icon: FileText },
   { href: "/admin/questions", label: "Quiz Soruları", icon: Puzzle },
   { href: "/admin/features", label: "Özellik Yönetimi", icon: SlidersHorizontal },
+  { href: "/admin/logs", label: "Olay Kayıtları", icon: History },
   { href: "/admin/theme", label: "Tema Ayarları", icon: Palette },
   { href: "/admin/system", label: "Sistem Ayarları", icon: Settings },
 ];

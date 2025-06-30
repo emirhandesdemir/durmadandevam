@@ -29,7 +29,7 @@ import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import { doc, updateDoc } from "firebase/firestore";
-import { ref, uploadString, getDownloadURL, deleteObject } from "firebase/storage";
+import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import ProfileViewerList from "./ProfileViewerList";
 import { Textarea } from "../ui/textarea";
 import { useRouter } from 'next/navigation';
@@ -61,6 +61,7 @@ export default function ProfilePageClient() {
     const [bio, setBio] = useState("");
     const [privateProfile, setPrivateProfile] = useState(false);
     const [acceptsFollowRequests, setAcceptsFollowRequests] = useState(true);
+    const [showOnlineStatus, setShowOnlineStatus] = useState(true);
     const [newAvatar, setNewAvatar] = useState<string | null>(null);
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
     const [selectedBubble, setSelectedBubble] = useState("");
@@ -76,6 +77,7 @@ export default function ProfilePageClient() {
             setBio(userData.bio || "");
             setPrivateProfile(userData.privateProfile || false);
             setAcceptsFollowRequests(userData.acceptsFollowRequests ?? true);
+            setShowOnlineStatus(userData.showOnlineStatus ?? true);
             setSelectedBubble(userData.selectedBubble || "");
             setSelectedAvatarFrame(userData.selectedAvatarFrame || "");
         }
@@ -89,6 +91,7 @@ export default function ProfilePageClient() {
         bio !== (userData?.bio || "") ||
         privateProfile !== (userData?.privateProfile || false) || 
         acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true) ||
+        showOnlineStatus !== (userData?.showOnlineStatus ?? true) ||
         newAvatar !== null || 
         selectedBubble !== (userData?.selectedBubble || "") || 
         selectedAvatarFrame !== (userData?.selectedAvatarFrame || "");
@@ -130,13 +133,11 @@ export default function ProfilePageClient() {
                 authProfileUpdates.photoURL = finalPhotoURL;
             }
     
-            if (username !== userData?.username) {
-                updates.username = username;
-                authProfileUpdates.displayName = username;
-            }
+            if (username !== userData?.username) updates.username = username;
             if (bio !== userData?.bio) updates.bio = bio;
             if (privateProfile !== userData?.privateProfile) updates.privateProfile = privateProfile;
             if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) updates.acceptsFollowRequests = acceptsFollowRequests;
+            if (showOnlineStatus !== (userData?.showOnlineStatus ?? true)) updates.showOnlineStatus = showOnlineStatus;
             if (selectedBubble !== (userData?.selectedBubble || "")) updates.selectedBubble = selectedBubble;
             if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || "")) updates.selectedAvatarFrame = selectedAvatarFrame;
     
@@ -154,7 +155,7 @@ export default function ProfilePageClient() {
                 description: "Profiliniz başarıyla güncellendi.",
             });
             setNewAvatar(null); 
-            router.refresh(); // Sayfayı yenileyerek AuthContext'in güncel veriyi çekmesini sağla
+            router.refresh(); 
     
         } catch (error: any) {
             toast({
@@ -242,6 +243,13 @@ export default function ProfilePageClient() {
                                         <p className={cn("text-xs text-muted-foreground transition-colors", !privateProfile && "text-muted-foreground/50")}>Kapalıysa, kimse size takip isteği gönderemez.</p>
                                     </div>
                                     <Switch id="requests-mode" checked={acceptsFollowRequests} onCheckedChange={setAcceptsFollowRequests} disabled={!privateProfile}/>
+                                </div>
+                                <div className="flex items-center justify-between rounded-lg border p-3">
+                                    <div>
+                                        <Label htmlFor="online-status" className="font-semibold">Çevrimiçi Durumumu Göster</Label>
+                                        <p className="text-xs text-muted-foreground">Aktif olduğunda, diğer kullanıcılar çevrimiçi olduğunu görebilir.</p>
+                                    </div>
+                                    <Switch id="online-status" checked={showOnlineStatus} onCheckedChange={setShowOnlineStatus} />
                                 </div>
                             </AccordionContent>
                         </AccordionItem>

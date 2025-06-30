@@ -6,7 +6,7 @@ import type { DirectMessage } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Check, CheckCheck, MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Check, CheckCheck, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import EditMessageDialog from './EditMessageDialog';
 
@@ -49,7 +49,17 @@ export default function MessageBubble({ message, currentUserId, chatId }: Messag
 
           {/* Mesaj Baloncuğu */}
           <div className={cn('p-3 rounded-2xl relative', bubbleClass)}>
-            <p className="text-sm break-words whitespace-pre-wrap">{message.text}</p>
+            {message.imageUrl && (
+                <img 
+                    src={message.imageUrl} 
+                    alt="Gönderilen resim"
+                    className="rounded-lg max-w-xs max-h-64 object-cover cursor-pointer mb-2"
+                    onClick={() => window.open(message.imageUrl, '_blank')}
+                />
+            )}
+            {message.text && (
+                <p className="text-sm break-words whitespace-pre-wrap">{message.text}</p>
+            )}
           </div>
           
           {/* Mesajın sağ tarafındaki menü (gönderen için) */}
@@ -59,10 +69,12 @@ export default function MessageBubble({ message, currentUserId, chatId }: Messag
                     <button className="p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><MoreHorizontal className="h-4 w-4"/></button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Düzenle
-                    </DropdownMenuItem>
+                    {message.text && (
+                        <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Düzenle
+                        </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem disabled className="text-destructive focus:text-destructive">
                          <Trash2 className="mr-2 h-4 w-4" />
                          Sil

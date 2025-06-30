@@ -22,8 +22,8 @@ export default function MainAppLayout({
   const [hidden, setHidden] = useState(false);
   const pathname = usePathname();
 
-  const isHeaderlessPage = (pathname.startsWith('/rooms/') && pathname !== '/rooms') || (pathname.startsWith('/dm/') && pathname !== '/dm');
-  const isFullPageLayout = isHeaderlessPage;
+  const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/');
+  const isHeaderlessPage = isFullPageLayout;
   const isHomePage = pathname === '/home';
 
   useMotionValueEvent(scrollY, "change", (latest) => {

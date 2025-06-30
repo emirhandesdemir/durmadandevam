@@ -31,8 +31,8 @@ interface UserInfo {
  * @param receiver Alıcı kullanıcı bilgisi.
  * @param text Gönderilecek mesaj metni.
  */
-export async function sendMessage(chatId: string, sender: UserInfo, receiver: UserInfo, text: string) {
-  if (!text.trim()) throw new Error('Mesaj boş olamaz.');
+export async function sendMessage(chatId: string, sender: UserInfo, receiver: UserInfo, text?: string, imageUrl?: string) {
+  if (!text?.trim() && !imageUrl) throw new Error('Mesaj içeriği boş olamaz.');
 
   const messagesColRef = collection(db, 'directMessages', chatId, 'messages');
   const metadataDocRef = doc(db, 'directMessagesMetadata', chatId);
@@ -41,16 +41,23 @@ export async function sendMessage(chatId: string, sender: UserInfo, receiver: Us
   const batch = writeBatch(db);
 
   // 1. Yeni mesajı oluştur
-  batch.set(newMessageRef, {
+  const messageData: { [key: string]: any } = {
     senderId: sender.uid,
     receiverId: receiver.uid,
-    text: text,
     createdAt: serverTimestamp(),
     read: false,
     edited: false,
-  });
+    text: text || '',
+  };
+
+  if (imageUrl) {
+    messageData.imageUrl = imageUrl;
+  }
+  batch.set(newMessageRef, messageData);
 
   // 2. Metadata'yı oluştur veya güncelle
+  const lastMessageText = imageUrl ? '📷 Resim' : (text ? (text.length > 30 ? text.substring(0, 27) + '...' : text) : 'Mesaj');
+
   const metadataUpdate = {
     participantUids: [sender.uid, receiver.uid],
     participantInfo: {
@@ -58,7 +65,7 @@ export async function sendMessage(chatId: string, sender: UserInfo, receiver: Us
       [receiver.uid]: { username: receiver.username, photoURL: receiver.photoURL || null, selectedAvatarFrame: receiver.selectedAvatarFrame || '' },
     },
     lastMessage: {
-      text: text,
+      text: lastMessageText,
       senderId: sender.uid,
       timestamp: serverTimestamp(),
     },

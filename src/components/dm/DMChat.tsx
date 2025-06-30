@@ -9,11 +9,13 @@ import { UserProfile, DirectMessage } from '@/lib/types';
 import { markMessagesAsRead } from '@/lib/actions/dmActions';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Loader2 } from 'lucide-react';
+import { ChevronLeft, Loader2, Video } from 'lucide-react';
 import NewMessageInput from './NewMessageInput';
 import MessageBubble from './MessageBubble';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+
 
 interface DMChatProps {
   chatId: string;
@@ -28,6 +30,7 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     // Sohbet açıldığında okunmamış mesajları işaretle
@@ -80,6 +83,15 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
             </div>
             <h2 className="font-bold text-lg">{partner.username}</h2>
         </Link>
+        <div className="flex-1" />
+        <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full"
+            onClick={() => toast({ description: "Görüntülü ve sesli arama yakında geliyor!" })}
+        >
+            <Video className="h-5 w-5" />
+        </Button>
       </header>
 
       {/* Mesaj Alanı */}

@@ -2,13 +2,16 @@
 'use client'; // Bu sayfayı istemci bileşeni yapıyoruz
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserProfile } from '@/lib/actions/userActions';
 import type { UserProfile } from '@/lib/types';
 import DMChat from '@/components/dm/DMChat';
 import ChatList from '@/components/dm/ChatList';
 import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Video } from 'lucide-react';
 
 /**
  * Belirli bir sohbeti görüntülemek için dinamik sayfa.
@@ -17,6 +20,8 @@ import { Loader2 } from 'lucide-react';
 export default function ChatPage() {
   const { user } = useAuth();
   const params = useParams();
+  const router = useRouter();
+  const { toast } = useToast();
   const chatId = params.chatId as string;
   
   const [partner, setPartner] = useState<UserProfile | null>(null);
@@ -30,13 +35,18 @@ export default function ChatPage() {
     
     if (partnerId) {
       getUserProfile(partnerId).then(profile => {
-        setPartner(profile);
+        if (profile) {
+            setPartner(profile);
+        } else {
+             toast({ variant: 'destructive', description: "Sohbet partneri bulunamadı." });
+             router.replace('/dm');
+        }
         setLoading(false);
       });
     } else {
         setLoading(false);
     }
-  }, [chatId, user]);
+  }, [chatId, user, toast, router]);
 
   if (loading) {
     return (
@@ -52,9 +62,6 @@ export default function ChatPage() {
   }
 
   if (!partner) {
-    // Partner bulunamazsa veya bir hata oluşursa, kullanıcıyı DM ana sayfasına yönlendir.
-    // notFound() sunucu bileşenlerinde çalışır, istemcide router.push() daha uygundur.
-    // useRouter().push('/dm'); // veya bir hata mesajı göster
      return (
         <div className="flex h-full border-t">
             <div className="w-full md:w-1/3 lg:w-1/4 border-r">
