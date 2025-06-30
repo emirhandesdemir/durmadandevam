@@ -5,7 +5,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import PostsFeed from "@/components/posts/PostsFeed";
 import { Card, CardContent } from "@/components/ui/card";
 import { EyeOff } from "lucide-react";
-import NewPost from "@/components/home/NewPost";
 
 /**
  * Ana Sayfa (Home Page)
@@ -37,8 +36,7 @@ export default function HomePage() {
     // Sayfanın ana sarmalayıcısı, arka plan rengini ve minimum yüksekliği ayarlar.
     <div className="min-h-screen bg-background text-foreground">
       <main>
-        <div className="flex flex-col items-center gap-4 p-4 max-w-2xl mx-auto">
-          <NewPost />
+        <div className="flex flex-col items-center gap-8 p-4 max-w-2xl mx-auto">
           <PostsFeed />
         </div>
       </main>
