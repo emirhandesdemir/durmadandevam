@@ -1,3 +1,4 @@
+// src/lib/actions/userActions.ts
 'use server';
 
 import { db, storage } from '@/lib/firebase';
@@ -74,7 +75,7 @@ export async function updateOnboardingData({ userId, avatarDataUrl, bio, followi
     const updates: { [key: string]: any } = {};
 
     if (avatarDataUrl) {
-        const newAvatarRef = ref(storage, `upload/avatars/${userId}`);
+        const newAvatarRef = ref(storage, `upload/avatars/${userId}/avatar.jpg`);
         const snapshot = await uploadString(newAvatarRef, avatarDataUrl, 'data_url');
         updates.photoURL = await getDownloadURL(snapshot.ref);
     }

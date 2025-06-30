@@ -127,7 +127,7 @@ export default function ProfilePageClient() {
                         }
                     }
                 }
-                const newAvatarRef = ref(storage, `upload/avatars/${user.uid}`);
+                const newAvatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.jpg`);
                 const snapshot = await uploadString(newAvatarRef, newAvatar, 'data_url');
                 const finalPhotoURL = await getDownloadURL(snapshot.ref);
                 
