@@ -252,7 +252,7 @@ export interface Message {
   text?: string;
   imageUrl?: string;
   videoUrl?: string;
-  type?: 'system' | 'game' | 'portal' | 'user';
+  type?: 'system' | 'game' | 'portal' | 'user' | 'gameInvite';
   createdAt: Timestamp;
   selectedBubble?: string;
   selectedAvatarFrame?: string;

@@ -14,7 +14,7 @@ import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
 import RoomHeader from '@/components/rooms/RoomHeader';
 import { AnimatePresence, motion } from 'framer-motion';
 
-import type { Room, ActiveGame, GameSettings, Message } from '@/lib/types';
+import type { Room, ActiveGame, GameSettings, Message, ActiveGameSession } from '@/lib/types';
 import RoomFooter from '@/components/rooms/RoomFooter';
 import SpeakerLayout from '@/components/rooms/SpeakerLayout';
 import RoomInfoCards from '@/components/rooms/RoomInfoCards';
@@ -23,6 +23,9 @@ import GameCountdownCard from '@/components/game/GameCountdownCard';
 import RoomGameCard from '@/components/game/RoomGameCard';
 import { endGameWithoutWinner, submitAnswer } from '@/lib/actions/gameActions';
 import GameResultCard from '@/components/game/GameResultCard';
+import GameLobbyDialog from '@/components/game/GameLobbyDialog';
+import ActiveGameArea from '@/components/game/ActiveGameArea';
+import GameInviteMessage from '@/components/game/GameInviteMessage';
 
 export default function RoomPage() {
     const params = useParams();
@@ -47,6 +50,8 @@ export default function RoomPage() {
     const [activeQuiz, setActiveQuiz] = useState<ActiveGame | null>(null);
     const [quizCountdown, setQuizCountdown] = useState<number | null>(null);
     const [finishedGame, setFinishedGame] = useState<any>(null);
+    const [isGameLobbyOpen, setIsGameLobbyOpen] = useState(false);
+    const [activeGameSession, setActiveGameSession] = useState<ActiveGameSession | null>(null);
 
     const isHost = user?.uid === room?.createdBy.uid;
 
@@ -77,7 +82,18 @@ export default function RoomPage() {
             setMessagesLoading(false);
         });
         
-        return () => { roomUnsub(); messagesUnsub(); };
+        // Listener for active game sessions
+        const activeGameQuery = query(collection(db, 'rooms', roomId, 'game_sessions'), where('status', 'in', ['pending', 'active']), limit(1));
+        const gameSessionUnsub = onSnapshot(activeGameQuery, (snapshot) => {
+            if (!snapshot.empty) {
+                const gameDoc = snapshot.docs[0];
+                setActiveGameSession({ id: gameDoc.id, ...gameDoc.data() } as ActiveGameSession);
+            } else {
+                setActiveGameSession(null);
+            }
+        });
+        
+        return () => { roomUnsub(); messagesUnsub(); gameSessionUnsub(); };
     }, [roomId, router, toast]);
     
     // Finished game listener (to show results)
@@ -129,6 +145,9 @@ export default function RoomPage() {
     if (isLoading) return <div className="flex h-full items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
     
     const renderGameContent = () => {
+        if (activeGameSession && user) {
+            return <ActiveGameArea game={activeGameSession} roomId={roomId} currentUser={{uid: user.uid, username: user.displayName!}} />
+        }
         if (finishedGame) {
            return <GameResultCard game={finishedGame} />;
         }
@@ -179,10 +198,16 @@ export default function RoomPage() {
                     <TextChat messages={messages} loading={messagesLoading} room={room} />
                 </main>
 
-                <RoomFooter room={room} />
+                <RoomFooter room={room} onGameLobbyOpen={() => setIsGameLobbyOpen(true)} />
             </div>
 
             <ParticipantListSheet isOpen={isParticipantSheetOpen} onOpenChange={setIsParticipantSheetOpen} room={room} />
+            <GameLobbyDialog 
+                isOpen={isGameLobbyOpen} 
+                onOpenChange={setIsGameLobbyOpen} 
+                roomId={roomId} 
+                participants={room.participants} 
+            />
         </>
     );
 }
