@@ -1,3 +1,4 @@
+
 // Bu dosya, uygulamanın en dış katmanını oluşturan kök düzendir (root layout).
 // Tüm sayfalar bu düzenin içinde render edilir.
 // HTML ve BODY etiketlerini, temel fontları, tema ve kimlik doğrulama sağlayıcılarını içerir.
@@ -9,6 +10,7 @@ import { Inter } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/layout/ThemeProvider';
 import NetworkStatusNotifier from '@/components/common/NetworkStatusNotifier';
+import I18nProvider from '@/components/common/I18nProvider';
 
 // Google Fonts'tan Inter font ailesini yüklüyoruz.
 const inter = Inter({ 
@@ -69,9 +71,11 @@ export default function RootLayout({
         >
           {/* Kimlik Doğrulama Sağlayıcısı: Tüm alt bileşenlerin kullanıcı verisine erişmesini sağlar. */}
           <AuthProvider>
-            {children}
-            <Toaster /> {/* Bildirim (toast) bileşenlerini göstermek için. */}
-            <NetworkStatusNotifier /> {/* İnternet bağlantı durumunu kontrol eder ve kullanıcıyı bilgilendirir. */}
+             <I18nProvider>
+                {children}
+                <Toaster />
+                <NetworkStatusNotifier />
+            </I18nProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

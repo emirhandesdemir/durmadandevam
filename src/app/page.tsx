@@ -1,3 +1,4 @@
+
 // Bu dosya, uygulamanın ana giriş sayfasıdır (`/`).
 // Kullanıcı giriş yapmamışsa veya ilk kez ziyaret ediyorsa bu sayfa gösterilir.
 "use client";
@@ -9,10 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Users, Loader2 } from "lucide-react";
 import Link from "next/link";
 import PwaInstallButton from "@/components/common/PwaInstallButton";
+import { useTranslation } from "react-i18next";
 
 export default function Home() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { t } = useTranslation();
 
   // Kimlik doğrulama durumu kontrolü.
   useEffect(() => {
@@ -46,20 +49,19 @@ export default function Home() {
           <Users className="h-12 w-12" />
         </div>
         <h1 className="text-5xl font-bold tracking-tight text-foreground md:text-6xl">
-          HiweWalk
+          {t('welcome_to_hiwewalk')}
         </h1>
         <p className="max-w-md text-lg text-muted-foreground">
-          Herkese açık odalar oluşturun ve katılın. Düşüncelerinizi paylaşın, fikirler üzerinde işbirliği yapın ve başkalarıyla gerçek zamanlı olarak bağlantı kurun.
+          {t('app_description')}
         </p>
       </div>
       <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row">
         <Button asChild size="lg" className="transition-transform hover:scale-105">
-          <Link href="/login">Giriş Yap</Link>
+          <Link href="/login">{t('login')}</Link>
         </Button>
         <Button asChild size="lg" variant="outline" className="transition-transform hover:scale-105">
-          <Link href="/signup">Kayıt Ol</Link>
+          <Link href="/signup">{t('signup')}</Link>
         </Button>
-        {/* Kullanıcı uygulamayı ana ekranına ekleyebilsin diye PWA yükleme butonu. */}
         <PwaInstallButton />
       </div>
     </main>

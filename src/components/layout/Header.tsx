@@ -1,3 +1,4 @@
+
 // src/components/layout/Header.tsx
 "use client";
 
@@ -6,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Send, Users, Bell } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 
 /**
  * Ana uygulama için üst navigasyon çubuğu (Header).
@@ -14,6 +16,7 @@ import { useRouter } from "next/navigation";
 export default function Header() {
     const { userData, totalUnreadDms } = useAuth();
     const router = useRouter();
+    const { t } = useTranslation();
 
     const hasUnreadNotifications = userData?.hasUnreadNotifications;
 
@@ -33,7 +36,7 @@ export default function Header() {
                                 <span className="relative inline-flex rounded-full h-3 w-3 bg-destructive"></span>
                             </span>
                         )}
-                        <span className="sr-only">Mesajlar</span>
+                        <span className="sr-only">{t('messages')}</span>
                     </Button>
                     <Button variant="ghost" size="icon" className="rounded-full relative" onClick={() => router.push('/notifications')}>
                         <Bell className="h-5 w-5" />
@@ -43,7 +46,7 @@ export default function Header() {
                                 <span className="relative inline-flex rounded-full h-3 w-3 bg-destructive"></span>
                             </span>
                         )}
-                        <span className="sr-only">Bildirimler</span>
+                        <span className="sr-only">{t('notifications')}</span>
                     </Button>
                 </div>
             </div>

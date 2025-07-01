@@ -1,2 +1,3 @@
-// Bu dosya, `src/components/rooms/CreateRoomForm.tsx` dosyasının kullanılmayan bir kopyasıdır.
+// Bu dosya artık kullanılmamaktadır. Oda oluşturma mantığı
+// `src/components/rooms/CreateRoomForm.tsx` dosyasına taşınmıştır.
 // Karışıklığı önlemek için içeriği temizlenmiştir ve güvenle silinebilir.

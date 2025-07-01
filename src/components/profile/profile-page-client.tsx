@@ -1,3 +1,4 @@
+
 // src/components/profile/profile-page-client.tsx
 "use client";
 
@@ -16,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, Lock, Eye, Camera, Settings, Gift, Copy, Users } from "lucide-react";
+import { LogOut, Edit, Shield, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, Lock, Eye, Camera, Settings, Gift, Copy, Users, Globe } from "lucide-react";
 import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { useTheme } from "next-themes";
@@ -34,6 +35,8 @@ import ProfileViewerList from "./ProfileViewerList";
 import { Textarea } from "../ui/textarea";
 import { useRouter } from 'next/navigation';
 import { findUserByUsername } from "@/lib/actions/userActions";
+import { useTranslation } from "react-i18next";
+import LanguageSwitcher from "../common/LanguageSwitcher";
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -57,6 +60,7 @@ export default function ProfilePageClient() {
     const router = useRouter();
     const { toast } = useToast();
     const { theme, setTheme } = useTheme();
+    const { t } = useTranslation();
     
     const [username, setUsername] = useState("");
     const [bio, setBio] = useState("");
@@ -243,7 +247,7 @@ export default function ProfilePageClient() {
                     <Accordion type="single" collapsible className="w-full">
                          <AccordionItem value="privacy">
                             <AccordionTrigger>
-                                <div className="flex items-center gap-3"><Lock className="h-5 w-5 text-muted-foreground" /><span className="font-semibold">Gizlilik Ayarları</span></div>
+                                <div className="flex items-center gap-3"><Lock className="h-5 w-5 text-muted-foreground" /><span className="font-semibold">{t('privacy_settings')}</span></div>
                             </AccordionTrigger>
                             <AccordionContent className="space-y-4 pt-2">
                                 <div className="flex items-center justify-between rounded-lg border p-3">
@@ -271,7 +275,7 @@ export default function ProfilePageClient() {
                         </AccordionItem>
                         <AccordionItem value="invite">
                             <AccordionTrigger>
-                                <div className="flex items-center gap-3"><Gift className="h-5 w-5 text-muted-foreground" /><span className="font-semibold">Davet Sistemi</span></div>
+                                <div className="flex items-center gap-3"><Gift className="h-5 w-5 text-muted-foreground" /><span className="font-semibold">{t('invitation_system')}</span></div>
                             </AccordionTrigger>
                             <AccordionContent className="space-y-4 pt-2">
                                 <p className="text-sm text-muted-foreground">
@@ -289,15 +293,23 @@ export default function ProfilePageClient() {
                         </AccordionItem>
                         <AccordionItem value="viewers">
                             <AccordionTrigger>
-                                <div className="flex items-center gap-3"><Eye className="h-5 w-5 text-muted-foreground" /><span className="font-semibold">Profilime Bakanlar</span></div>
+                                <div className="flex items-center gap-3"><Eye className="h-5 w-5 text-muted-foreground" /><span className="font-semibold">{t('profile_viewers')}</span></div>
                             </AccordionTrigger>
                             <AccordionContent>
                                 <ProfileViewerList />
                             </AccordionContent>
                         </AccordionItem>
+                        <AccordionItem value="language">
+                            <AccordionTrigger>
+                                <div className="flex items-center gap-3"><Globe className="h-5 w-5 text-muted-foreground" /><span className="font-semibold">{t('language_settings')}</span></div>
+                            </AccordionTrigger>
+                            <AccordionContent className="flex justify-center pt-4">
+                               <LanguageSwitcher />
+                            </AccordionContent>
+                        </AccordionItem>
                         <AccordionItem value="appearance">
                             <AccordionTrigger>
-                                <div className="flex items-center gap-3"><Palette className="h-5 w-5 text-muted-foreground" /><span className="font-semibold">Görünüm Ayarları</span></div>
+                                <div className="flex items-center gap-3"><Palette className="h-5 w-5 text-muted-foreground" /><span className="font-semibold">{t('appearance_settings')}</span></div>
                             </AccordionTrigger>
                             <AccordionContent className="space-y-4 pt-2">
                                 <div>
@@ -349,13 +361,13 @@ export default function ProfilePageClient() {
                     </Accordion>
                 </CardContent>
                 <CardFooter className="flex flex-wrap justify-center gap-4 p-6 border-t mt-4">
-                    <Button onClick={handleLogout} variant="outline" className="w-full sm:w-auto rounded-full"><LogOut className="mr-2" />Çıkış Yap</Button>
+                    <Button onClick={handleLogout} variant="outline" className="w-full sm:w-auto rounded-full"><LogOut className="mr-2" />{t('logout')}</Button>
                     {isAdmin && (
-                        <Button asChild className="w-full sm:w-auto rounded-full bg-blue-600 hover:bg-blue-700"><Link href="/admin/dashboard"><Shield className="mr-2" />Yönetim Paneli</Link></Button>
+                        <Button asChild className="w-full sm:w-auto rounded-full bg-blue-600 hover:bg-blue-700"><Link href="/admin/dashboard"><Shield className="mr-2" />{t('admin_panel')}</Link></Button>
                     )}
                     <Button onClick={handleSaveChanges} className="w-full sm:w-auto rounded-full shadow-lg shadow-primary/30 transition-transform hover:scale-105" disabled={!hasChanges || isSaving}>
                         {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Değişiklikleri Kaydet
+                        {t('save_changes')}
                     </Button>
                 </CardFooter>
             </Card>
