@@ -24,12 +24,14 @@ import { Image as ImageIcon, Send, Loader2, X, Sparkles, RefreshCcw } from "luci
 import { ScrollArea } from "../ui/scroll-area";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
 import { Input } from "../ui/input";
+import { useTranslation } from "react-i18next";
 
 
 export default function NewPostForm() {
   const router = useRouter();
   const { user, userData, featureFlags } = useAuth();
   const { toast } = useToast();
+  const { i18n } = useTranslation();
   
   const [text, setText] = useState("");
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
@@ -217,6 +219,7 @@ export default function NewPostForm() {
             text: text,
             imageUrl: imageUrl || "",
             editedWithAI: wasEditedByAI,
+            language: i18n.language,
         });
 
         toast({ title: "Başarıyla Paylaşıldı!", description: "Gönderiniz ana sayfada görünecektir." });

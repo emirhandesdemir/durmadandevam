@@ -59,6 +59,7 @@ export async function createPost(postData: {
     text: string;
     imageUrl: string;
     editedWithAI?: boolean;
+    language: string;
 }) {
     const newPostRef = doc(collection(db, 'posts'));
     const userRef = doc(db, 'users', postData.uid);

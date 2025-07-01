@@ -8,9 +8,11 @@ import type { Post } from '@/lib/types';
 import PostCard from './PostCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 export default function PostsFeed() {
     const { user, userData, loading: authLoading } = useAuth();
+    const { i18n } = useTranslation();
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -34,11 +36,30 @@ export default function PostsFeed() {
             if (userData?.blockedUsers) {
                 postsData = postsData.filter(post => !userData.blockedUsers.includes(post.uid));
             }
+            
+            // Language-based sorting
+            const postsInUserLanguage = postsData.filter(p => p.language === i18n.language);
+            const otherLanguagePosts = postsData.filter(p => p.language !== i18n.language);
 
-            // Apply custom sorting if the user is male
+            let languageSortedFeed = [];
+            let langIndex = 0;
+            let otherIndex = 0;
+            while (langIndex < postsInUserLanguage.length || otherIndex < otherLanguagePosts.length) {
+                 // Add 3 posts from user's language
+                for (let i = 0; i < 3 && langIndex < postsInUserLanguage.length; i++) {
+                    languageSortedFeed.push(postsInUserLanguage[langIndex++]);
+                }
+                // Add 1 post from other languages
+                if (otherIndex < otherLanguagePosts.length) {
+                    languageSortedFeed.push(otherLanguagePosts[otherIndex++]);
+                }
+            }
+
+
+            // Apply gender-based sorting if the user is male
             if (userData?.gender === 'male') {
-                const femalePosts = postsData.filter(p => p.userGender === 'female');
-                const otherPosts = postsData.filter(p => p.userGender !== 'female');
+                const femalePosts = languageSortedFeed.filter(p => p.userGender === 'female');
+                const otherPosts = languageSortedFeed.filter(p => p.userGender !== 'female');
                 const finalFeed = [];
                 let fIndex = 0, oIndex = 0;
                 
@@ -49,6 +70,8 @@ export default function PostsFeed() {
                     if (oIndex < otherPosts.length) finalFeed.push(otherPosts[oIndex++]);
                 }
                 postsData = finalFeed;
+            } else {
+                postsData = languageSortedFeed;
             }
 
             setPosts(postsData);
@@ -59,7 +82,7 @@ export default function PostsFeed() {
         });
 
         return () => unsubscribe();
-    }, [user, authLoading, userData]);
+    }, [user, authLoading, userData, i18n.language]);
 
     if (loading) {
         return (

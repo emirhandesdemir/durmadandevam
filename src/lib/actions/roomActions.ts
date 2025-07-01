@@ -11,7 +11,7 @@ const voiceStatsRef = doc(db, 'config', 'voiceStats');
 
 export async function createRoom(
     userId: string,
-    roomData: Pick<Room, 'name' | 'description' | 'requestToSpeakEnabled'>,
+    roomData: Pick<Room, 'name' | 'description' | 'requestToSpeakEnabled' | 'language'>,
     creatorInfo: { username: string, photoURL: string | null, role: string, selectedAvatarFrame: string }
 ) {
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");

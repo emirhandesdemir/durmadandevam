@@ -30,6 +30,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Hand, Gem } from "lucide-react";
 import { Switch } from "../ui/switch";
+import { useTranslation } from "react-i18next";
 
 const formSchema = z.object({
   name: z.string().min(3, { message: "Ad en az 3 karakter olmalıdır." }).max(50, {message: "Ad en fazla 50 karakter olabilir."}),
@@ -41,6 +42,7 @@ export default function CreateRoomForm() {
     const { toast } = useToast();
     const router = useRouter();
     const { user, userData } = useAuth();
+    const { i18n } = useTranslation();
     const [isLoading, setIsLoading] = useState(false);
 
     const form = useForm<z.infer<typeof formSchema>>({
@@ -57,7 +59,7 @@ export default function CreateRoomForm() {
         setIsLoading(true);
 
         try {
-            const result = await createRoom(user.uid, values, {
+            const result = await createRoom(user.uid, { ...values, language: i18n.language }, {
                 username: userData.username,
                 photoURL: userData.photoURL || null,
                 role: userData.role || 'user',

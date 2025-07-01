@@ -1,7 +1,7 @@
 // src/components/rooms/RoomList.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { collection, query, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,6 +13,7 @@ import { Button } from "../ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { joinRoom } from "@/lib/actions/roomActions";
+import { useTranslation } from "react-i18next";
 
 interface RoomListProps {
   searchTerm: string;
@@ -22,6 +23,7 @@ export default function RoomList({ searchTerm }: RoomListProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
+  const { i18n } = useTranslation();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [isJoiningRandom, setIsJoiningRandom] = useState(false);
@@ -46,9 +48,19 @@ export default function RoomList({ searchTerm }: RoomListProps) {
     return () => unsubscribe();
   }, [user]);
 
-  const filteredRooms = rooms
-    .filter(room => !room.expiresAt || (room.expiresAt as Timestamp).toDate() > new Date())
-    .filter(room => room.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  const sortedAndFilteredRooms = useMemo(() => {
+    return rooms
+      .filter(room => !room.expiresAt || (room.expiresAt as Timestamp).toDate() > new Date())
+      .sort((a, b) => {
+          const langA = a.language === i18n.language;
+          const langB = b.language === i18n.language;
+          if (langA && !langB) return -1;
+          if (!langA && langB) return 1;
+          return 0; // Maintain original order if languages are the same or both are different
+      })
+      .filter(room => room.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [rooms, i18n.language, searchTerm]);
+
 
   const handleRandomJoin = async () => {
     if (!user) return;
@@ -110,8 +122,8 @@ export default function RoomList({ searchTerm }: RoomListProps) {
             </Button>
         </div>
          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredRooms.length > 0 ? (
-                filteredRooms.map((room) => (
+            {sortedAndFilteredRooms.length > 0 ? (
+                sortedAndFilteredRooms.map((room) => (
                     <RoomListItem key={room.id} room={room} />
                 ))
             ) : (

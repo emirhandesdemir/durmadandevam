@@ -96,6 +96,7 @@ export interface Post {
     likes: string[]; // Beğenen kullanıcıların UID'lerini tutan dizi
     likeCount: number;
     commentCount: number;
+    language?: string;
     retweetOf?: {
         postId: string;
         uid: string;
@@ -147,6 +148,7 @@ export interface Room {
     rules: string | null;
     welcomeMessage: string | null;
     pinnedMessageId: string | null;
+    language?: string;
 }
 
 export interface VoiceParticipant {
