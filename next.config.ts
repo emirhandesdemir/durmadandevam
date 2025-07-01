@@ -7,8 +7,9 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   dest: 'public', // PWA ile ilgili dosyaların oluşturulacağı klasör.
   register: true, // Servis çalışanını otomatik olarak kaydet.
   skipWaiting: true, // Yeni sürüm olduğunda eski servis çalışanını beklemeden aktifleştir.
-  disable: process.env.NODE_ENV === 'development', // Geliştirme ortamında PWA'yı devre dışı bırak.
   importScripts: ['/firebase-messaging-sw.js'], // Firebase anlık bildirimleri için gerekli servis çalışanı.
+  cacheOnFrontEndNav: true,
+  reloadOnOnline: true,
 });
 
 // Next.js için ana yapılandırma nesnesi.
