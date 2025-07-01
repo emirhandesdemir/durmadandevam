@@ -5,14 +5,22 @@ import { useState, useEffect, useCallback } from "react";
 import { collection, onSnapshot, doc, getCountFromServer, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import StatCard from "@/components/admin/stat-card";
-import { Users, MessageSquare, FileText, Puzzle, Headphones, BarChart3, SlidersHorizontal, Settings, HeartPulse, Mars, Venus, Gem } from "lucide-react";
+import { Users, MessageSquare, FileText, Puzzle, Headphones, BarChart3, SlidersHorizontal, Settings, HeartPulse, Mars, Venus } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import type { VoiceStats } from "@/lib/types";
 import TopDiamondHoldersCard from "@/components/admin/TopDiamondHoldersCard";
 
+/**
+ * Yönetim Paneli - Dashboard Sayfası
+ * 
+ * Uygulamanın genel durumunu özetleyen ana panel sayfası.
+ * Önemli istatistikleri (kullanıcı sayısı, oda sayısı vb.) ve
+ * diğer yönetim sayfalarına hızlı erişim bağlantılarını içerir.
+ */
 export default function DashboardPage() {
+  // İstatistikleri tutmak için state'ler.
   const [userCount, setUserCount] = useState(0);
   const [maleCount, setMaleCount] = useState(0);
   const [femaleCount, setFemaleCount] = useState(0);
@@ -22,7 +30,7 @@ export default function DashboardPage() {
   const [voiceUserCount, setVoiceUserCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Use a callback to fetch non-realtime counts for efficiency
+  // Performans için, sık değişmeyen verileri tek seferde çeken fonksiyon.
   const fetchCounts = useCallback(async () => {
     try {
       const usersRef = collection(db, "users");
@@ -34,6 +42,7 @@ export default function DashboardPage() {
         maleSnapshot,
         femaleSnapshot,
       ] = await Promise.all([
+        // getCountFromServer, tüm koleksiyonu indirmeden sadece doküman sayısını vererek verimlilik sağlar.
         getCountFromServer(usersRef),
         getCountFromServer(collection(db, "rooms")),
         getCountFromServer(collection(db, "posts")),
@@ -50,7 +59,7 @@ export default function DashboardPage() {
       setFemaleCount(femaleSnapshot.data().count);
       
     } catch (error) {
-        console.error("Error fetching counts:", error);
+        console.error("İstatistikler alınırken hata:", error);
     }
   }, []);
 
@@ -58,7 +67,7 @@ export default function DashboardPage() {
     setIsLoading(true);
     fetchCounts();
 
-    // Still use a listener for the live voice user count, as it's a single doc read
+    // Sadece sık değişen "sesli aktif kullanıcı" sayısını anlık olarak dinle.
     const voiceStatsUnsub = onSnapshot(doc(db, "config", "voiceStats"), (doc) => {
       if (doc.exists()) {
         setVoiceUserCount((doc.data() as VoiceStats).totalUsers || 0);
@@ -67,6 +76,7 @@ export default function DashboardPage() {
 
     setIsLoading(false);
 
+    // Component unmount olduğunda dinleyiciyi temizle.
     return () => {
       voiceStatsUnsub();
     };
@@ -94,6 +104,7 @@ export default function DashboardPage() {
        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2">
             <h2 className="text-xl font-semibold tracking-tight text-foreground mb-4">Yönetim Araçları</h2>
+            {/* Hızlı Erişim Kartları */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Card className="hover:shadow-lg transition-shadow">
                     <CardHeader>
@@ -242,6 +253,7 @@ export default function DashboardPage() {
             </div>
         </div>
         <div className="md:col-span-1">
+            {/* En çok elmasa sahip kullanıcıları gösteren kart. */}
              <TopDiamondHoldersCard />
         </div>
       </div>

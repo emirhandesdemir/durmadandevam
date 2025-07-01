@@ -1,3 +1,8 @@
+// Bu bileşen, bir odanın sağ panelinde yer alan sesli sohbet kontrol panelini temsil eder.
+// Bu bileşen şu anki yapıda kullanılmıyor gibi görünüyor. `VoiceChatProvider` ve
+// `PersistentVoiceBar` gibi bileşenler bu işlevi daha global bir şekilde yönetiyor.
+// Bu dosya ileride detaylı bir kontrol paneli için kullanılabilir veya temizlenebilir.
+// Şimdilik mevcut mantığı yorumluyorum.
 "use client";
 
 import { useState } from 'react';
@@ -10,6 +15,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 export default function VoiceChatPanel() {
   const { user: currentUser } = useAuth();
+  // State'ler, gerçek bir WebRTC bağlantısı olmadan sadece arayüzü simüle etmek için kullanılıyor.
   const [isMuted, setIsMuted] = useState(false);
   const [isDeafened, setIsDeafened] = useState(false);
   const [isInVoiceChannel, setIsInVoiceChannel] = useState(false);
@@ -17,7 +23,7 @@ export default function VoiceChatPanel() {
   const handleToggleMute = () => setIsMuted(!isMuted);
   const handleToggleDeafen = () => setIsDeafened(!isDeafened);
   const handleToggleVoiceChannel = () => {
-    // In a real app, this would trigger WebRTC connection logic via Firestore
+    // Gerçek bir uygulamada bu, Firestore üzerinden WebRTC bağlantı mantığını tetiklerdi.
     setIsInVoiceChannel(!isInVoiceChannel);
   };
   
@@ -25,7 +31,7 @@ export default function VoiceChatPanel() {
 
   const selfParticipant = { id: currentUser.uid, name: currentUser.displayName || 'Siz', avatar: currentUser.photoURL || '' };
   
-  // Only show real participants. In a real app, this list would be populated from Firestore.
+  // Katılımcı listesi, gerçekte Firestore'dan gelmeli.
   const allParticipants = isInVoiceChannel 
     ? [selfParticipant] 
     : [];
@@ -66,6 +72,7 @@ export default function VoiceChatPanel() {
             )}
         </div>
 
+        {/* Ses kontrol butonları */}
         {isInVoiceChannel ? (
             <div className="flex items-center justify-center gap-2 p-2 bg-secondary rounded-lg">
                  <TooltipProvider>

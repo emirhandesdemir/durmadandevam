@@ -1,4 +1,8 @@
 // src/components/home/PostsFeed.tsx
+// BU DOSYA ARTIK KULLANILMIYOR.
+// Bu bileşenin yerini, verileri Firestore'dan çeken `src/components/posts/PostsFeed.tsx` almıştır.
+// Bu dosya, projenin ilk aşamalarından kalma statik (dummy) veri içeren bir versiyondur.
+// Karışıklığı önlemek için silinmesi önerilir.
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -8,7 +12,6 @@ import { Heart, MessageCircle, MoreHorizontal } from "lucide-react";
 import Image from "next/image";
 
 // Gerçek bir uygulamada bu veriler API'den veya Firestore'dan gelecektir.
-// Bu kısım şimdilik temsili (dummy) verilerle doldurulmuştur.
 const posts = [
   {
     id: 1,
@@ -37,12 +40,10 @@ const posts = [
 ];
 
 /**
- * PostsFeed Bileşeni
+ * PostsFeed Bileşeni (Eski Versiyon)
  * 
  * Ana sayfada kullanıcıların gönderilerini listeleyen akış alanıdır.
- * - Her gönderi ayrı bir kart içinde gösterilir.
- * - Gönderiler kullanıcı avatarı, adı, zaman damgası, metin ve (varsa) resim içerir.
- * - Beğeni ve yorum gibi etkileşim butonları için yer tutucular bulunur.
+ * Bu versiyon, dinamik veri yerine statik (dummy) veri kullanmaktadır.
  */
 export default function PostsFeed() {
   return (

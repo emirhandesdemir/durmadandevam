@@ -1,8 +1,11 @@
+/* Tailwind CSS direktifleri */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Tema ve renk değişkenleri */
 @layer base {
+  /* Aydınlık tema değişkenleri */
   :root {
     --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
@@ -26,6 +29,7 @@
     --radius: 1rem;
   }
  
+  /* Karanlık tema değişkenleri */
   .dark {
     --background: 240 10% 3.9%;
     --foreground: 210 40% 98%;
@@ -49,12 +53,14 @@
   }
 }
  
+/* Temel stil tanımlamaları */
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border; /* Tüm elemanların kenarlık rengini tema değişkeninden al */
   }
   body {
     @apply bg-background text-foreground;
+    /* Kullanıcının metin seçmesini ve dokunma vurgusunu engelle (mobil uygulama hissi için) */
     -webkit-user-select: none; /* Safari */
     -moz-user-select: none;    /* Firefox */
     -ms-user-select: none;     /* IE10+/Edge */
@@ -62,6 +68,7 @@
     -webkit-touch-callout: none; /* iOS Safari */
     -webkit-tap-highlight-color: transparent;
   }
+  /* Giriş/Kayıt sayfaları için animasyonlu arkaplan */
   .auth-bg {
     background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
     background-size: 400% 400%;
@@ -75,7 +82,7 @@
   }
 }
 
-/* Chat Bubble Styles */
+/* Sohbet Baloncuğu Efektleri */
 @layer components {
   .bubble-wrapper {
     @apply absolute -inset-2 pointer-events-none;
@@ -85,42 +92,39 @@
     animation: float 6s ease-in-out infinite;
   }
 
-  /* Bubble Animation */
+  /* Baloncukların havada süzülme animasyonu */
   @keyframes float {
     0% { transform: translateY(0px) scale(1); opacity: 0.7; }
     50% { transform: translateY(-20px) scale(1.1); opacity: 1; }
     100% { transform: translateY(0px) scale(1); opacity: 0.7; }
   }
 
-  /* Style 1: Neon Party */
+  /* Farklı baloncuk stilleri (renk, boyut, pozisyon ve animasyon gecikmesi) */
   .bubble-style-1 .bubble:nth-child(1) { @apply bg-fuchsia-500 w-3 h-3 top-[5%] left-[75%]; animation-delay: 0s; }
   .bubble-style-1 .bubble:nth-child(2) { @apply bg-cyan-400 w-4 h-4 top-[70%] left-[5%]; animation-delay: 1.5s; }
   .bubble-style-1 .bubble:nth-child(3) { @apply bg-lime-400 w-2 h-2 top-[85%] left-[80%]; animation-delay: 3s; }
   .bubble-style-1 .bubble:nth-child(4) { @apply bg-rose-500 w-3 h-3 top-[30%] left-[10%]; animation-delay: 4.5s; }
   .bubble-style-1 .bubble:nth-child(5) { @apply bg-orange-400 w-2 h-2 top-[5%] left-[20%]; animation-delay: 2s; }
 
-  /* Style 2: Ocean Deep */
   .bubble-style-2 .bubble:nth-child(1) { @apply bg-blue-500 w-4 h-4 top-[5%] left-[15%]; animation-delay: 0s; }
   .bubble-style-2 .bubble:nth-child(2) { @apply bg-teal-400 w-3 h-3 top-[65%] left-[80%]; animation-delay: 1s; }
   .bubble-style-2 .bubble:nth-child(3) { @apply bg-sky-300 w-2 h-2 top-[90%] left-[15%]; animation-delay: 2s; }
   .bubble-style-2 .bubble:nth-child(4) { @apply bg-indigo-400 w-4 h-4 top-[30%] left-[70%]; animation-delay: 3s; }
   .bubble-style-2 .bubble:nth-child(5) { @apply bg-cyan-200 w-2 h-2 top-[50%] left-[5%]; animation-delay: 4s; }
 
-  /* Style 3: Sunset Glow */
   .bubble-style-3 .bubble:nth-child(1) { @apply bg-red-500 w-3 h-3 top-[85%] left-[75%]; animation-delay: 0s; }
   .bubble-style-3 .bubble:nth-child(2) { @apply bg-orange-500 w-4 h-4 top-[15%] left-[5%]; animation-delay: 0.5s; }
   .bubble-style-3 .bubble:nth-child(3) { @apply bg-amber-400 w-2 h-2 top-[50%] left-[80%]; animation-delay: 1s; }
   .bubble-style-3 .bubble:nth-child(4) { @apply bg-yellow-300 w-3 h-3 top-[85%] left-[20%]; animation-delay: 1.5s; }
   .bubble-style-3 .bubble:nth-child(5) { @apply bg-pink-400 w-2 h-2 top-[5%] left-[60%]; animation-delay: 2s; }
 
-  /* Style 4: Forest Whisper */
   .bubble-style-4 .bubble:nth-child(1) { @apply bg-green-600 w-3 h-3 top-[20%] left-[5%]; animation-delay: 0s; }
   .bubble-style-4 .bubble:nth-child(2) { @apply bg-emerald-500 w-4 h-4 top-[75%] left-[75%]; animation-delay: 1.2s; }
   .bubble-style-4 .bubble:nth-child(3) { @apply bg-lime-500 w-2 h-2 top-[90%] left-[5%]; animation-delay: 2.4s; }
   .bubble-style-4 .bubble:nth-child(4) { @apply bg-teal-400 w-3 h-3 top-[5%] left-[75%]; animation-delay: 3.6s; }
   .bubble-style-4 .bubble:nth-child(5) { @apply bg-green-300 w-2 h-2 top-[50%] left-[40%]; animation-delay: 4.8s; }
 
-  /* Style 5: Fiery */
+  /* Alev efekti için özel stil */
   .bubble-style-fire {
       filter: blur(0.5px);
   }
@@ -146,11 +150,12 @@
   }
 }
 
-/* Avatar Frame Styles */
+/* Avatar Çerçevesi Stilleri */
 @layer components {
   .avatar-frame-wrapper {
     position: relative;
   }
+  /* Pseudo-elemanlar (::before, ::after) ile çerçeveleri oluştur */
   .avatar-frame-angel::before, .avatar-frame-angel::after,
   .avatar-frame-devil::before, .avatar-frame-devil::after,
   .avatar-frame-snake::before,
@@ -183,6 +188,7 @@
     50% { transform: translateY(-50%) rotateZ(5deg) scale(1.05); }
   }
 
+  /* Farklı çerçeveler için SVG arkaplan resimleri ve animasyonlar */
   /* Angel Wings */
   .avatar-frame-angel::before {
     left: 0;
@@ -230,11 +236,11 @@
   }
 }
 
-/* NEW: Animated DM Input Border */
+/* Animasyonlu DM Giriş Alanı Kenarlığı */
 @layer components {
   .dm-input-glow {
     position: relative;
-    padding: 2px; /* Border width */
+    padding: 2px; /* Kenarlık genişliği */
     border-radius: 9999px; /* rounded-full */
     background: linear-gradient(90deg, #10b981, #8b5cf6, #ec4899);
     animation: dm-glow-anim 4s linear infinite;

@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase";
 import { MessageSquare, Loader2 } from "lucide-react";
 import RoomsTable from "@/components/admin/RoomsTable";
 
-// Oda verisinin arayüzünü tanımla
+// Yönetici panelinde gösterilecek oda verisi için arayüz.
 export interface AdminRoomData {
     id: string;
     name: string;
@@ -22,17 +22,21 @@ export interface AdminRoomData {
 }
 
 /**
- * Oda Yöneticisi Sayfası
+ * Yönetim Paneli - Oda Yöneticisi Sayfası
  * 
- * Firestore'daki tüm odaları listeler ve yönetmek için bir arayüz sağlar.
+ * Firestore'daki tüm aktif odaları listeler ve yöneticinin bu odaları
+ * izlemesi veya silmesi için bir arayüz sağlar.
  */
 export default function RoomManagerPage() {
     const [rooms, setRooms] = useState<AdminRoomData[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // Odaları en yeniden en eskiye doğru sıralayarak getir.
         const q = query(collection(db, "rooms"), orderBy("createdAt", "desc"));
         
+        // `onSnapshot` ile koleksiyonu dinle, böylece yeni odalar veya
+        // değişiklikler anında arayüze yansır.
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const roomsData = querySnapshot.docs.map(doc => ({
                 id: doc.id,
@@ -45,6 +49,7 @@ export default function RoomManagerPage() {
             setLoading(false);
         });
 
+        // Component unmount olduğunda dinleyiciyi temizle.
         return () => unsubscribe();
     }, []);
 

@@ -1,10 +1,13 @@
 // src/lib/server-utils.ts
+
+// Bu dosya, sunucu tarafında kullanılan yardımcı fonksiyonları içerir.
 import { Timestamp } from 'firebase/firestore';
 
 /**
  * Firestore'dan gelen ve `Timestamp` gibi serileştirilemeyen nesneler içeren
- * bir objeyi, istemci bileşenlerine güvenle aktarılabilen düz (plain) bir
- * JSON nesnesine dönüştürür.
+ * bir objeyi, istemci bileşenlerine (client components) prop olarak güvenle
+ * aktarılabilen düz (plain) bir JSON nesnesine dönüştürür.
+ * Next.js'te sunucu ve istemci arasında veri aktarımı için bu gereklidir.
  * @param obj Dönüştürülecek nesne veya değer.
  * @returns JSON uyumlu, serileştirilebilir yeni bir nesne.
  */
@@ -14,26 +17,26 @@ export function deepSerialize(obj: any): any {
     return obj;
   }
 
-  // Firestore Timestamp nesnesini kontrol et ve ISO string'e çevir.
+  // Firestore Timestamp nesnesini kontrol et ve ISO 8601 formatında bir string'e çevir.
   if (obj instanceof Timestamp) {
     return obj.toDate().toISOString();
   }
   
-  // Bazen Timestamp'lar `toJSON` ile düz objelere dönüşebilir. 
-  // Bu `{seconds, nanoseconds}` yapısındaki nesneleri de yakala.
+  // Bazen Timestamp'lar `toJSON` ile `{seconds, nanoseconds}` yapısındaki
+  // düz objelere dönüşebilir. Bu durumu da yakala ve string'e çevir.
   if (obj.seconds !== undefined && obj.nanoseconds !== undefined) {
     return new Timestamp(obj.seconds, obj.nanoseconds).toDate().toISOString();
   }
   
-  // Dizi ise, her elemanını özyineli olarak işle.
+  // Eğer bir dizi (array) ise, her elemanını özyineli (recursive) olarak işle.
   if (Array.isArray(obj)) {
     return obj.map(item => deepSerialize(item));
   }
 
-  // Nesne ise, her bir anahtar-değer çiftini özyineli olarak işle.
+  // Eğer bir nesne ise, her bir anahtar-değer çiftini özyineli olarak işle.
   const newObj: { [key: string]: any } = {};
   for (const key in obj) {
-    // Nesnenin kendi özelliğiyse devam et.
+    // Nesnenin kendi özelliğiyse devam et (prototip zincirindeki özellikleri alma).
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
       newObj[key] = deepSerialize(obj[key]);
     }

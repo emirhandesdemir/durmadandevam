@@ -11,16 +11,21 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
+// Madalya renkleri (Altın, Gümüş, Bronz)
 const medalColors = [
-    'text-yellow-500', // Gold
-    'text-slate-400',   // Silver
-    'text-orange-600' // Bronze
+    'text-yellow-500', 
+    'text-slate-400',   
+    'text-orange-600' 
 ];
 
+/**
+ * En çok elmasa sahip kullanıcıları gösteren bir liderlik tablosu kartı.
+ */
 export default function TopDiamondHoldersCard() {
     const [topUsers, setTopUsers] = useState<Partial<UserProfile>[]>([]);
     const [loading, setLoading] = useState(true);
 
+    // Bileşen yüklendiğinde veriyi sunucu eyleminden çek.
     useEffect(() => {
         getTopDiamondHolders().then(users => {
             setTopUsers(users);
@@ -38,6 +43,7 @@ export default function TopDiamondHoldersCard() {
             </CardHeader>
             <CardContent>
                 {loading ? (
+                    // Veri yüklenirken iskelet (skeleton) arayüzü göster.
                     <div className="space-y-4">
                         <Skeleton className="h-10 w-full" />
                         <Skeleton className="h-10 w-full" />
@@ -47,6 +53,7 @@ export default function TopDiamondHoldersCard() {
                     <div className="space-y-4">
                         {topUsers.map((user, index) => (
                             <div key={user.uid} className="flex items-center gap-4">
+                               {/* İlk üç kullanıcıya madalya ikonu ekle */}
                                <Crown className={cn("h-5 w-5", index < 3 ? medalColors[index] : 'text-muted-foreground')}/>
                                <Avatar className="h-9 w-9">
                                     <AvatarImage src={user.photoURL || ''} />

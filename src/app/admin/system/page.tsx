@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { getGameSettings, updateGameSettings } from "@/lib/actions/gameActions";
+import { updateGameSettings } from "@/lib/actions/gameActions";
 import { useToast } from "@/hooks/use-toast";
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -19,7 +19,7 @@ import { GameSettings as GameSettingsType } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 
-// Form validasyon şeması
+// Form alanlarının validasyonunu (doğrulamasını) yöneten Zod şeması.
 const settingsSchema = z.object({
   dailyDiamondLimit: z.coerce.number().min(0, "Limit 0'dan küçük olamaz."),
   gameIntervalMinutes: z.coerce.number().min(1, "Aralık en az 1 dakika olmalıdır."),
@@ -32,15 +32,21 @@ const settingsSchema = z.object({
   videoBitrate: z.coerce.number().min(100, "Bit hızı en az 100 olmalı").max(2000, "Bit hızı en fazla 2000 olabilir"),
 });
 
-
+/**
+ * Yönetim Paneli - Sistem Ayarları Sayfası
+ * 
+ * Uygulamanın genel işleyişini (oyun kuralları, zaman aşımları, kalite ayarları vb.)
+ * yönetmek için bir form arayüzü sunar.
+ */
 export default function SystemSettingsPage() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
+    // react-hook-form kullanarak form yönetimini kolaylaştır.
     const form = useForm<z.infer<typeof settingsSchema>>({
         resolver: zodResolver(settingsSchema),
-        defaultValues: {
+        defaultValues: { // Veri yüklenemezse kullanılacak varsayılan değerler.
             dailyDiamondLimit: 50,
             gameIntervalMinutes: 5,
             questionTimerSeconds: 15,
@@ -53,13 +59,13 @@ export default function SystemSettingsPage() {
         },
     });
 
-    // Ayarları Firestore'dan çek ve formu doldur
+    // Ayarları Firestore'dan anlık olarak çek ve formu doldur.
     useEffect(() => {
         const settingsRef = doc(db, 'config', 'gameSettings');
         const unsubscribe = onSnapshot(settingsRef, (docSnap) => {
             if (docSnap.exists()) {
                 const settings = docSnap.data() as GameSettingsType;
-                form.reset(settings); // Formu gelen veriyle güncelle
+                form.reset(settings); // Formu gelen veriyle güncelle.
             }
             setLoading(false);
         });
@@ -68,7 +74,7 @@ export default function SystemSettingsPage() {
     }, [form]);
 
 
-    // Formu gönderme fonksiyonu
+    // Form gönderildiğinde çalışacak fonksiyon.
     const onSubmit = async (values: z.infer<typeof settingsSchema>) => {
         setSaving(true);
         try {
@@ -106,6 +112,7 @@ export default function SystemSettingsPage() {
         <form onSubmit={form.handleSubmit(onSubmit)}>
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mt-8">
                 <div className="space-y-8">
+                     {/* Quiz Oyunu Ayarları Kartı */}
                      <Card>
                         <CardHeader>
                             <div className="flex items-center gap-3">
@@ -142,6 +149,7 @@ export default function SystemSettingsPage() {
                             )}
                         </CardContent>
                     </Card>
+                    {/* Sesli Sohbet Ayarları Kartı */}
                     <Card>
                         <CardHeader>
                             <div className="flex items-center gap-3">
@@ -160,6 +168,7 @@ export default function SystemSettingsPage() {
                     </Card>
                 </div>
                 <div className="space-y-8">
+                     {/* Yükleme Ayarları Kartı */}
                      <Card>
                         <CardHeader>
                             <div className="flex items-center gap-3">
@@ -179,6 +188,7 @@ export default function SystemSettingsPage() {
                             )}
                         </CardContent>
                     </Card>
+                    {/* WebRTC Kalite Ayarları Kartı */}
                     <Card>
                         <CardHeader>
                             <div className="flex items-center gap-3">

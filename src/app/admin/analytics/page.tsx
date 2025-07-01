@@ -4,9 +4,16 @@
 import { BarChart3 } from "lucide-react";
 import AnalyticsCharts from "@/components/admin/AnalyticsCharts";
 
+/**
+ * Yönetim Paneli - İstatistikler Sayfası
+ * 
+ * Bu sayfa, uygulama kullanım verilerini ve büyüme trendlerini
+ * görselleştiren grafikleri içerir.
+ */
 export default function AnalyticsPage() {
   return (
     <div>
+      {/* Sayfa başlığı ve açıklaması */}
       <div className="flex items-center gap-4">
         <BarChart3 className="h-8 w-8 text-primary" />
         <div>
@@ -16,6 +23,8 @@ export default function AnalyticsPage() {
           </p>
         </div>
       </div>
+      
+      {/* Grafiklerin bulunduğu ana bileşen */}
       <div className="mt-8">
         <AnalyticsCharts />
       </div>

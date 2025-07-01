@@ -10,21 +10,27 @@ import type { UserGrowthDataPoint, ContentDataPoint, RoomActivityDataPoint } fro
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2 } from "lucide-react";
 
-
+/**
+ * Yönetim panelindeki istatistik grafikleri bileşeni.
+ * Kullanıcı büyümesi, içerik üretimi ve oda aktivitesi gibi
+ * verileri `recharts` kütüphanesi kullanarak görselleştirir.
+ */
 export default function AnalyticsCharts() {
-    const { resolvedTheme } = useTheme();
+    const { resolvedTheme } = useTheme(); // Mevcut temayı al (aydınlık/karanlık)
     
+    // Grafikler için veri state'leri
     const [userGrowth, setUserGrowth] = useState<UserGrowthDataPoint[]>([]);
     const [contentCreation, setContentCreation] = useState<ContentDataPoint[]>([]);
     const [roomActivity, setRoomActivity] = useState<RoomActivityDataPoint[]>([]);
     const [contentByGender, setContentByGender] = useState<{name: string, gönderi: number}[]>([]);
 
-    
+    // Yükleme durumları için state'ler
     const [loadingGrowth, setLoadingGrowth] = useState(true);
     const [loadingContent, setLoadingContent] = useState(true);
     const [loadingRooms, setLoadingRooms] = useState(true);
     const [loadingGender, setLoadingGender] = useState(true);
 
+    // Bileşen yüklendiğinde sunucu eylemlerini çağırarak verileri çek.
     useEffect(() => {
         getUserGrowthData().then(data => {
             setUserGrowth(data);
@@ -44,15 +50,18 @@ export default function AnalyticsCharts() {
         });
     }, []);
 
+    // Grafiklerin tema ile uyumlu görünmesi için renk ayarları.
     const tickColor = resolvedTheme === 'dark' ? '#888' : '#aaa';
     const strokeColor = resolvedTheme === 'dark' ? '#555' : '#ddd';
 
+    // Yükleniyor durumunda gösterilecek bileşen.
     const renderLoading = () => (
         <div className="flex items-center justify-center h-[300px]">
             <Loader2 className="h-8 w-8 animate-spin text-primary"/>
         </div>
     );
     
+    // Veri olmadığında gösterilecek bileşen.
     const renderNoData = (message: string) => (
          <div className="flex items-center justify-center h-[300px]">
             <p className="text-muted-foreground">{message}</p>
@@ -61,6 +70,7 @@ export default function AnalyticsCharts() {
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Kullanıcı Büyümesi Grafiği */}
             <Card>
                 <CardHeader>
                     <CardTitle>Kullanıcı Büyümesi</CardTitle>
@@ -93,6 +103,7 @@ export default function AnalyticsCharts() {
                 </CardContent>
             </Card>
 
+             {/* İçerik Üretimi Grafiği (Haftalık) */}
              <Card>
                 <CardHeader>
                     <CardTitle>İçerik Üretimi (Haftalık)</CardTitle>
@@ -121,6 +132,7 @@ export default function AnalyticsCharts() {
                 </CardContent>
             </Card>
 
+             {/* İçerik Üretimi Grafiği (Cinsiyete Göre) */}
              <Card>
                 <CardHeader>
                     <CardTitle>İçerik Üretimi (Cinsiyete Göre)</CardTitle>
@@ -147,6 +159,7 @@ export default function AnalyticsCharts() {
                 </CardContent>
             </Card>
 
+             {/* Oda Aktivitesi Grafiği (24 Saat) */}
              <Card>
                 <CardHeader>
                     <CardTitle>Oda Aktivitesi (24 Saat)</CardTitle>

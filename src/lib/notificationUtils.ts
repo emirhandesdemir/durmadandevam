@@ -1,3 +1,6 @@
+// Bu dosya, kullanıcıdan anlık bildirim izni isteme ve
+// alınan jetonu (token) veritabanına kaydetme mantığını içerir.
+// İstemci tarafında çalışması gerektiği için 'use client' direktifi kullanılır.
 'use client';
 
 import { toast } from "@/hooks/use-toast";
@@ -6,6 +9,7 @@ import { getToken } from "firebase/messaging";
 import { messaging } from "./firebase";
 
 export async function requestNotificationPermission(userId: string): Promise<boolean> {
+  // Tarayıcının bildirimleri destekleyip desteklemediğini kontrol et.
   if (!messaging || !('Notification' in window) || !('serviceWorker' in navigator)) {
     toast({
       variant: 'destructive',
@@ -16,20 +20,19 @@ export async function requestNotificationPermission(userId: string): Promise<boo
   }
   
   try {
+    // Kullanıcıdan bildirim izni iste.
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
       // ÖNEMLİ: Bu alana, Firebase projenizin "Cloud Messaging" ayarlarından aldığınız
       // "Web Push sertifikaları" bölümündeki VAPID anahtar çiftini yapıştırmalısınız.
-      // 
-      // 1. Firebase Konsolu'na gidin (Proje ID: yenidendeneme-ea9ed)
-      // 2. Proje Ayarları > Cloud Messaging sekmesi
-      // 3. Web Push sertifikaları > "Anahtar çifti oluştur"
-      // 4. Üretilen anahtarı kopyalayıp aşağıdaki tırnak işaretleri arasına yapıştırın.
+      // Bu anahtar, tarayıcı ile Firebase arasında güvenli bir iletişim kanalı kurar.
       const vapidKey="BEv3RhiBuZQ8cDg2SAQf41tY_ijOEBJyCDLUY648St78CRgE57v8HWYUDBu6huI_kxzF_gKyelZi3Qbfgs8PMaE";
       
+      // Firebase'den bu cihaza özel bildirim jetonunu al.
       const currentToken = await getToken(messaging, { vapidKey });
       
       if (currentToken) {
+        // Alınan jetonu kullanıcının veritabanı kaydına ekle.
         await saveFCMToken(userId, currentToken);
         return true;
       } else {
@@ -40,7 +43,7 @@ export async function requestNotificationPermission(userId: string): Promise<boo
         return false;
       }
     } else {
-      return false;
+      return false; // Kullanıcı izin vermediyse.
     }
   } catch (error: any) {
     console.error('Bildirim izni istenirken hata:', error);

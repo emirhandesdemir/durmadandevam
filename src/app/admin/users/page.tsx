@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase";
 import { Users, Loader2 } from "lucide-react";
 import UsersTable from "@/components/admin/UsersTable";
 
-// Kullanıcı verisinin arayüzü
+// Yönetici panelinde gösterilecek kullanıcı verisi için arayüz.
 export interface UserData {
     uid: string;
     username: string;
@@ -22,23 +22,25 @@ export interface UserData {
 }
 
 /**
- * Kullanıcı Yöneticisi Sayfası
+ * Yönetim Paneli - Kullanıcı Yöneticisi Sayfası
  * 
  * Bu sayfa, Firestore'daki tüm kullanıcıları gerçek zamanlı olarak listeler
- * ve onları bir tablo içinde yönetmek için arayüz sağlar.
+ * ve yöneticinin kullanıcıları bir tablo içinde yönetmesine olanak tanır.
  */
 export default function UserManagerPage() {
     const [users, setUsers] = useState<UserData[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // 'users' koleksiyonunu dinlemek için bir sorgu oluştur, oluşturulma tarihine göre sırala
+        // 'users' koleksiyonunu dinlemek için bir sorgu oluştur, oluşturulma tarihine göre sırala.
         const q = query(collection(db, "users"), orderBy("createdAt", "desc"));
         
+        // Firestore dinleyicisi: `users` koleksiyonunda bir değişiklik olduğunda
+        // (yeni kullanıcı, veri güncellemesi vb.) bu fonksiyon tekrar çalışır ve state'i günceller.
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const usersData = querySnapshot.docs.map(doc => ({
                 ...doc.data(),
-                uid: doc.id, // doküman ID'sini uid olarak ata
+                uid: doc.id, // doküman ID'sini uid olarak ekle.
             } as UserData));
             setUsers(usersData);
             setLoading(false);
@@ -47,7 +49,8 @@ export default function UserManagerPage() {
             setLoading(false);
         });
 
-        // Component unmount olduğunda dinleyiciyi temizle
+        // Component DOM'dan kaldırıldığında (unmount) dinleyiciyi temizle.
+        // Bu, hafıza sızıntılarını önler.
         return () => unsubscribe();
     }, []);
 

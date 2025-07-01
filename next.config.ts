@@ -1,39 +1,45 @@
-
+// Bu dosya, Next.js projesinin temel yapılandırmasını içerir.
+// PWA ayarları, TypeScript ve ESLint kuralları, ve harici resim kaynakları burada tanımlanır.
 import type {NextConfig} from 'next';
 
+// PWA (Progresif Web Uygulaması) özelliklerini etkinleştiren eklenti.
 const withPWA = require('@ducanh2912/next-pwa').default({
-  dest: 'public',
-  register: true,
-  skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development',
-  importScripts: ['/firebase-messaging-sw.js'],
+  dest: 'public', // PWA ile ilgili dosyaların oluşturulacağı klasör.
+  register: true, // Servis çalışanını otomatik olarak kaydet.
+  skipWaiting: true, // Yeni sürüm olduğunda eski servis çalışanını beklemeden aktifleştir.
+  disable: process.env.NODE_ENV === 'development', // Geliştirme ortamında PWA'yı devre dışı bırak.
+  importScripts: ['/firebase-messaging-sw.js'], // Firebase anlık bildirimleri için gerekli servis çalışanı.
 });
 
+// Next.js için ana yapılandırma nesnesi.
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Derleme sırasında TypeScript hatalarını yoksay.
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Derleme sırasında ESLint hatalarını yoksay.
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Harici resim kaynaklarını güvenli olarak tanımla.
+  // Next.js'in Image bileşeni sadece burada tanımlanan domain'lerden resim optimize eder.
   images: {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'placehold.co',
+        hostname: 'placehold.co', // Yer tutucu resimler için.
         port: '',
         pathname: '/**',
       },
       {
         protocol: 'https',
-        hostname: 'firebasestorage.googleapis.com',
+        hostname: 'firebasestorage.googleapis.com', // Firebase Storage'dan gelen resimler için.
         port: '',
         pathname: '/**',
       },
       {
         protocol: 'https',
-        hostname: 'res.cloudinary.com',
+        hostname: 'res.cloudinary.com', // İleride kullanılabilecek başka bir resim servisi için.
         port: '',
         pathname: '/**',
       },
@@ -41,4 +47,5 @@ const nextConfig: NextConfig = {
   },
 };
 
+// PWA yapılandırmasını Next.js yapılandırması ile birleştirip dışa aktar.
 export default withPWA(nextConfig);

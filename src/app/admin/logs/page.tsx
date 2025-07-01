@@ -8,13 +8,21 @@ import { History, Loader2 } from "lucide-react";
 import LogsTable from "@/components/admin/LogsTable";
 import type { AuditLog } from "@/lib/types";
 
+/**
+ * Yönetim Paneli - Olay Kayıtları Sayfası
+ * 
+ * Sistemdeki önemli olayların (kullanıcı kaydı, silme vb.) kaydını gösterir.
+ * Bu kayıtlar, `auditLogs` koleksiyonundan gerçek zamanlı olarak alınır.
+ */
 export default function LogsPage() {
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // Olay kayıtlarını en yeniden en eskiye doğru sıralayarak getir.
         const q = query(collection(db, "auditLogs"), orderBy("timestamp", "desc"));
         
+        // Firestore dinleyicisi: Koleksiyonda bir değişiklik olduğunda otomatik olarak güncellenir.
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const logsData = querySnapshot.docs.map(doc => ({
                 id: doc.id,
@@ -27,6 +35,7 @@ export default function LogsPage() {
             setLoading(false);
         });
 
+        // Component unmount olduğunda dinleyiciyi temizle.
         return () => unsubscribe();
     }, []);
 

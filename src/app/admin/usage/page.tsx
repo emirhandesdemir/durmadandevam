@@ -5,10 +5,10 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from "@/components/ui/button";
 import { ArrowUpRight, Database, HardDrive, Server } from "lucide-react";
 
-// Project ID'yi firebase.ts'den almak yerine doğrudan burada tanımlayabiliriz.
-// Gerçek bir uygulamada bu bir ortam değişkeninden gelebilirdi.
+// Project ID, Firebase Konsolu linklerini dinamik olarak oluşturmak için kullanılır.
 const projectId = "yenidendeneme-ea9ed";
 
+// Firebase Konsolu'ndaki ilgili kullanım sayfalarına yönlendiren linklerin listesi.
 const usageLinks = [
   {
     title: "Firestore Veritabanı Kullanımı",
@@ -30,6 +30,12 @@ const usageLinks = [
   },
 ];
 
+/**
+ * Yönetim Paneli - Kullanım & Trafik Sayfası
+ * 
+ * Bu sayfa, Firebase projesinin kaynak kullanımını (veritabanı, depolama, hosting)
+ * ve maliyetlerini takip etmek için Firebase Konsolu'na hızlı erişim linkleri sunar.
+ */
 export default function UsagePage() {
   return (
     <div>

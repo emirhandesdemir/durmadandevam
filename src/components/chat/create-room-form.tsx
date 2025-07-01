@@ -1,3 +1,7 @@
+// Bu bileşen, /create-room sayfasında gösterilen oda oluşturma formunu içerir.
+// Bu dosyanın adı `CreateRoomForm.tsx` olarak değiştirilip `src/components/rooms` altına taşınabilir
+// çünkü mantık olarak oda ile ilgili bir bileşendir ve mevcut `CreateRoomForm.tsx` ile birleştirilebilir.
+// Şimdilik olduğu gibi bırakıp yorumluyorum.
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,6 +33,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
+// Form alanlarının validasyonunu (doğrulamasını) yöneten Zod şeması.
 const formSchema = z.object({
   roomName: z.string().min(3, { message: "Oda adı en az 3 karakter olmalıdır." }),
   topic: z.string().min(3, { message: "Konu en az 3 karakter olmalıdır." }),
@@ -40,6 +45,7 @@ export default function CreateRoomForm() {
     const { user, loading: authLoading } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
 
+    // Kullanıcı giriş yapmamışsa, onu giriş sayfasına yönlendir.
     useEffect(() => {
         if (!authLoading && !user) {
             toast({
@@ -59,6 +65,7 @@ export default function CreateRoomForm() {
         },
     });
 
+    // Form gönderildiğinde çalışacak fonksiyon.
     async function onSubmit(values: z.infer<typeof formSchema>) {
         if (!user) {
             toast({
@@ -71,6 +78,7 @@ export default function CreateRoomForm() {
 
         setIsLoading(true);
         try {
+            // Firestore'da yeni bir oda dokümanı oluştur.
             await addDoc(collection(db, "rooms"), {
                 name: values.roomName,
                 topic: values.topic,
@@ -83,9 +91,9 @@ export default function CreateRoomForm() {
                 title: "Oda Oluşturuldu!",
                 description: `"${values.roomName}" odası başarıyla oluşturuldu.`,
             });
-            router.push('/home');
+            router.push('/home'); // Başarılı olursa ana sayfaya yönlendir.
         } catch (error) {
-            console.error("Error creating room: ", error);
+            console.error("Oda oluşturulurken hata: ", error);
             toast({
                 title: "Hata",
                 description: "Oda oluşturulurken bir hata oluştu.",
@@ -96,6 +104,7 @@ export default function CreateRoomForm() {
         }
     }
     
+    // Auth durumu yüklenirken bir yükleme göstergesi göster.
     if (authLoading) {
         return (
              <Card className="w-full max-w-lg">
@@ -114,6 +123,7 @@ export default function CreateRoomForm() {
         );
     }
     
+    // Kullanıcı yoksa (ve yönlendirme bekleniyorsa) hiçbir şey render etme.
     if (!user) {
          return null;
     }

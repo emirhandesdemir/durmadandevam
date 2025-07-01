@@ -1,10 +1,9 @@
-// src/app/admin/page.tsx
-// Bu sayfa, /admin rotasına gelen kullanıcıları otomatik olarak
+// Bu sayfa, /admin kök dizinine gelen kullanıcıları otomatik olarak
 // /admin/dashboard sayfasına yönlendirmek için kullanılır.
-
+// Bu, kullanıcıların boş bir sayfa görmesini engeller.
 import { redirect } from 'next/navigation';
 
 export default function AdminRootPage() {
-  // Kullanıcıyı varsayılan admin sayfasına yönlendir
+  // Kullanıcıyı varsayılan admin sayfasına yönlendir.
   redirect('/admin/dashboard');
 }

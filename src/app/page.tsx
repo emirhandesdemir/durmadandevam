@@ -1,3 +1,5 @@
+// Bu dosya, uygulamanın ana giriş sayfasıdır (`/`).
+// Kullanıcı giriş yapmamışsa veya ilk kez ziyaret ediyorsa bu sayfa gösterilir.
 "use client";
 
 import { useEffect } from "react";
@@ -12,13 +14,17 @@ export default function Home() {
   const router = useRouter();
   const { user, loading } = useAuth();
 
+  // Kimlik doğrulama durumu kontrolü.
   useEffect(() => {
+    // Eğer yükleme bittiyse ve kullanıcı giriş yapmışsa,
+    // onu doğrudan ana sayfaya (/home) yönlendir.
     if (!loading && user) {
       router.replace('/home');
     }
   }, [user, loading, router]);
 
   // Auth durumu belirlenirken bir yükleme animasyonu göster.
+  // Bu, sayfanın aniden değişmesini önler ve daha akıcı bir deneyim sunar.
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -27,7 +33,7 @@ export default function Home() {
     );
   }
   
-  // Kullanıcı giriş yapmışsa, yönlendirme yapılırken null döndürmek sorun değil.
+  // Kullanıcı giriş yapmışsa, yönlendirme gerçekleşirken bu component null döndürür.
   if (user) {
     return null;
   }
@@ -53,6 +59,7 @@ export default function Home() {
         <Button asChild size="lg" variant="outline" className="transition-transform hover:scale-105">
           <Link href="/signup">Kayıt Ol</Link>
         </Button>
+        {/* Kullanıcı uygulamayı ana ekranına ekleyebilsin diye PWA yükleme butonu. */}
         <PwaInstallButton />
       </div>
     </main>

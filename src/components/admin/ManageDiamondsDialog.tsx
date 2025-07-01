@@ -27,10 +27,15 @@ interface ManageDiamondsDialogProps {
   user: UserData | null;
 }
 
+// Form validasyon şeması.
 const formSchema = z.object({
   amount: z.coerce.number().int("Sadece tam sayılar girilebilir."),
 });
 
+/**
+ * Bir kullanıcının elmas miktarını yönetmek için kullanılan dialog bileşeni.
+ * Pozitif sayılar ekler, negatif sayılar çıkarır.
+ */
 export default function ManageDiamondsDialog({ isOpen, setIsOpen, user }: ManageDiamondsDialogProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,6 +45,7 @@ export default function ManageDiamondsDialog({ isOpen, setIsOpen, user }: Manage
 
   if (!user) return null;
 
+  // Form gönderildiğinde çalışacak fonksiyon.
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
     try {

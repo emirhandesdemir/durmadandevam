@@ -13,12 +13,19 @@ import { Label } from "@/components/ui/label";
 import { SlidersHorizontal, Loader2, Gamepad2, Newspaper, FileLock2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
+/**
+ * Yönetim Paneli - Özellik Yönetimi Sayfası
+ * 
+ * Bu sayfa, yöneticinin uygulamadaki ana modülleri (oyunlar, gönderi akışı vb.)
+ * gerçek zamanlı olarak açıp kapatmasına olanak tanır.
+ */
 export default function FeatureManagementPage() {
     const { toast } = useToast();
     const [flags, setFlags] = useState<FeatureFlags | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
+    // Sayfa yüklendiğinde mevcut özellik ayarlarını Firestore'dan çek.
     useEffect(() => {
         getFeatureFlags().then(data => {
             setFlags(data);
@@ -26,14 +33,17 @@ export default function FeatureManagementPage() {
         });
     }, []);
 
+    // Bir özellik ayarı değiştirildiğinde bu fonksiyon çalışır.
     const handleFlagChange = async (flagName: keyof FeatureFlags, value: boolean) => {
         if (!flags) return;
         
+        // Optimistic UI: Arayüzü anında güncelle.
         const newFlags = { ...flags, [flagName]: value };
         setFlags(newFlags);
         setSaving(true);
         
         try {
+            // Sunucu eylemini çağırarak değişikliği veritabanına kaydet.
             const result = await updateFeatureFlags({ [flagName]: value });
             if (result.success) {
                 toast({
@@ -49,13 +59,14 @@ export default function FeatureManagementPage() {
                 title: "Hata",
                 description: `Ayar güncellenirken bir hata oluştu: ${error.message}`,
             });
-            // Ayarı geri al
+            // Hata durumunda arayüzü eski haline geri döndür.
             setFlags(flags);
         } finally {
             setSaving(false);
         }
     };
     
+    // Ayarlar yüklenirken iskelet (skeleton) arayüzü göster.
     if (loading) {
         return (
             <div>
@@ -82,6 +93,7 @@ export default function FeatureManagementPage() {
             </div>
 
             <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Quiz Oyunu Kartı */}
                 <Card>
                     <CardHeader>
                         <div className="flex items-center gap-3">
@@ -109,6 +121,7 @@ export default function FeatureManagementPage() {
                         </div>
                     </CardContent>
                 </Card>
+                {/* Gönderi Akışı Kartı */}
                 <Card>
                     <CardHeader>
                         <div className="flex items-center gap-3">
@@ -136,6 +149,7 @@ export default function FeatureManagementPage() {
                         </div>
                     </CardContent>
                 </Card>
+                 {/* İçerik Moderasyon Kartı */}
                  <Card>
                     <CardHeader>
                         <div className="flex items-center gap-3">
@@ -164,6 +178,7 @@ export default function FeatureManagementPage() {
                     </CardContent>
                 </Card>
             </div>
+            {/* Kaydediliyor göstergesi */}
             {saving && (
                 <div className="fixed bottom-5 right-5 flex items-center gap-2 rounded-lg bg-secondary p-3 text-secondary-foreground shadow-lg">
                     <Loader2 className="h-5 w-5 animate-spin" />

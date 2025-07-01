@@ -41,16 +41,20 @@ interface RoomsTableProps {
 }
 
 /**
- * Odaları listeleyen ve yönetme eylemlerini içeren tablo bileşeni.
+ * Odaları listeleyen ve yönetme (görüntüleme, silme) eylemlerini içeren tablo bileşeni.
  */
 export default function RoomsTable({ rooms }: RoomsTableProps) {
     const { toast } = useToast();
+    // Hangi odanın işlendiğini tutar (örn: silinirken yükleme animasyonu göstermek için).
     const [isProcessing, setIsProcessing] = useState<string | null>(null);
+    // Silme onayı dialogunu göstermek için seçilen odayı tutar.
     const [showDeleteConfirm, setShowDeleteConfirm] = useState<AdminRoomData | null>(null);
 
+    // Odayı silme fonksiyonu.
     const handleDeleteRoom = async (room: AdminRoomData) => {
         setIsProcessing(room.id);
         try {
+            // Bu yardımcı fonksiyon, oda dokümanını ve tüm alt koleksiyonlarını (mesajlar vb.) siler.
             await deleteRoomWithSubcollections(room.id);
             toast({ title: "Başarılı", description: `"${room.name}" odası ve tüm içeriği silindi.` });
         } catch (error) {

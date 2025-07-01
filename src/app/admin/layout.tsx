@@ -2,7 +2,6 @@
 // Bu, tüm /admin rotaları için ana iskelet (layout) bileşenidir.
 // Kimlik doğrulama ve yetkilendirme kontrollerini burada yapar.
 // Sidebar ve Header gibi admin paneline özgü UI bileşenlerini içerir.
-
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,15 +24,17 @@ export default function AdminLayout({
 
   // Yetkilendirme kontrolü
   useEffect(() => {
+    // Veri yüklenmesi bittiğinde kontrol et.
     if (!loading) {
       if (!user) {
-        // Kullanıcı giriş yapmamışsa login sayfasına yönlendir
+        // Kullanıcı giriş yapmamışsa, login sayfasına yönlendir.
+        // Nereden geldiğini belirtmek için redirect parametresi ekle.
         router.replace("/login?redirect=/admin/dashboard");
       }
     }
   }, [user, loading, router]);
   
-  // Yükleme ekranı
+  // Yükleme ekranı: Kullanıcı ve yetki verileri gelene kadar gösterilir.
   if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -43,7 +44,7 @@ export default function AdminLayout({
     );
   }
 
-  // Yetkisiz erişim ekranı
+  // Yetkisiz erişim ekranı: Giriş yapmış ama 'admin' rolü olmayan kullanıcılar için.
   if (!user || userData?.role !== 'admin') {
       return (
           <div className="flex h-screen w-full flex-col items-center justify-center bg-background p-4 text-center">
@@ -65,17 +66,17 @@ export default function AdminLayout({
       )
   }
 
-  // Yetkili kullanıcılar için admin paneli
+  // Yetkili kullanıcılar için admin paneli düzeni
   return (
     <div className="flex h-screen bg-muted/40">
-      {/* Yan Menü */}
+      {/* Yan Menü (Sidebar) */}
       <Sidebar isSidebarOpen={isSidebarOpen} setSidebarOpen={setSidebarOpen} />
       
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Üst Başlık (Mobil için menü butonu içerir) */}
+        {/* Üst Başlık (Header), mobil için menü butonu içerir */}
         <Header setSidebarOpen={setSidebarOpen} />
         
-        {/* Ana İçerik Alanı */}
+        {/* Ana İçerik Alanı: children prop'u ile gelen sayfa içeriği burada render edilir. */}
         <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
           {children}
         </main>

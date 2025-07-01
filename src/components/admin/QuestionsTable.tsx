@@ -42,13 +42,16 @@ interface QuestionsTableProps {
 }
 
 /**
- * Quiz sorularını listeleyen ve yönetme eylemlerini içeren tablo bileşeni.
+ * Quiz sorularını listeleyen ve yönetme (düzenleme, silme) eylemlerini içeren tablo bileşeni.
  */
 export default function QuestionsTable({ questions, onEdit }: QuestionsTableProps) {
     const { toast } = useToast();
+    // Hangi sorunun işlendiğini tutar (örn: silinirken yükleme animasyonu göstermek için).
     const [isProcessing, setIsProcessing] = useState<string | null>(null);
+    // Silme onayı dialogunu göstermek için seçilen soruyu tutar.
     const [showDeleteConfirm, setShowDeleteConfirm] = useState<GameQuestion | null>(null);
 
+    // Soruyu silme fonksiyonu.
     const handleDelete = async (questionId: string) => {
         setIsProcessing(questionId);
         try {

@@ -1,3 +1,5 @@
+// Bu sayfa, kullanıcıların yeni bir sohbet odası oluşturması için kullanılır.
+// Oda oluşturma formunu içerir ve ana sayfaya geri dönme bağlantısı sunar.
 import CreateRoomForm from "@/components/rooms/CreateRoomForm";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
@@ -6,6 +8,7 @@ import { Button } from "@/components/ui/button";
 export default function CreateRoomPage() {
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center p-4 bg-background">
+      {/* Geri Dön Butonu */}
       <Button
         asChild
         variant="ghost"
@@ -16,6 +19,7 @@ export default function CreateRoomPage() {
           Geri Dön
         </Link>
       </Button>
+      {/* Oda Oluşturma Formu Bileşeni */}
       <div className="w-full animate-in zoom-in-95 duration-500">
         <CreateRoomForm />
       </div>

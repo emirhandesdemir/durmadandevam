@@ -1,125 +1,118 @@
+// Firestore Güvenlik Kuralları
+// Bu kurallar, veritabanına kimin, ne koşullarda erişebileceğini tanımlar.
+// "güvenli başlangıç" prensibiyle, varsayılan olarak tüm erişimler engellenmiştir.
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // --- Helper Functions ---
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    function isUser(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
-    // Gets the data for the currently authenticated user.
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-    
-    // Checks if the currently authenticated user is an admin.
-    function isAdmin() {
-      // Use `exists` to prevent errors if the user doc doesn't exist yet.
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) 
-             && getUserData().role == 'admin';
+  
+    // Hız Sınırlayıcı Fonksiyonu: Kullanıcıların belirli eylemleri
+    // çok sık yapmasını engelleyerek spam ve kötüye kullanımı önler.
+    function isRateLimited(userId, cooldownSeconds) {
+      let lastAction = get(/databases/$(database)/documents/users/$(userId)).data.lastActionTimestamp;
+      // Eğer kullanıcı daha önce hiç işlem yapmadıysa, izin ver.
+      if (!lastAction) {
+        return false;
+      }
+      // Son işlem ile şu anki zaman arasındaki fark, bekleme süresinden büyükse izin ver.
+      return request.time > lastAction + duration.value(cooldownSeconds, "s");
     }
 
-    // Rate limiting function to prevent abuse from a single user.
-    function isNotRateLimited(interval) {
-        // Admins are not rate limited.
-        if (isAdmin()) {
-            return true;
-        }
-        let userProfile = getUserData();
-        // If the user has no last action timestamp, they are not rate-limited.
-        if (!('lastActionTimestamp' in userProfile)) {
-            return true;
-        }
-        // Allow if the request time is after the cooldown period has passed.
-        return request.time > userProfile.lastActionTimestamp + interval;
-    }
-
-    // --- Collections Rules ---
-
+    // Kullanıcılar (users) koleksiyonu için kurallar
     match /users/{userId} {
-      // Any user can read any profile.
+      // Herkes kullanıcı profillerini okuyabilir.
       allow read: if true;
-      // Anyone can create a user document (signup).
-      allow create;
-      // Users can only update their own document.
-      allow update: if isUser(userId);
-      // Only admins can delete users.
-      allow delete: if isAdmin();
-    }
-    
-    match /posts/{postId} {
-      allow read: if true;
-      // Allow post creation if authenticated and not rate-limited (10s cooldown).
-      allow create: if isAuthenticated() && isNotRateLimited(duration.value(10, 's'));
-      // Allow post update/delete only by owner or an admin.
-      allow update, delete: if isAuthenticated() && (isUser(resource.data.uid) || isAdmin());
-      
-      match /comments/{commentId} {
-          allow read: if true;
-          // Allow comment creation if authenticated and not rate-limited (3s cooldown).
-          allow create: if isAuthenticated() && isNotRateLimited(duration.value(3, 's'));
-          // Only comment owner can delete it.
-          allow delete: if isAuthenticated() && isUser(resource.data.uid);
+      // Sadece kimliği doğrulanmış kullanıcılar profil oluşturabilir.
+      allow create: if request.auth != null;
+      // Bir kullanıcı sadece kendi profilini güncelleyebilir.
+      // Kritik alanların (rol, elmas) değiştirilmesi engellenmiştir.
+      allow update: if request.auth.uid == userId
+                    && !("role" in request.resource.data)
+                    && !("diamonds" in request.resource.data);
+      // Kullanıcı silme işlemi şimdilik kapalı, sadece admin paneli üzerinden yapılabilir.
+      allow delete: if false;
+
+      // Kullanıcının alt koleksiyonları için kurallar
+      match /{subcollection}/{docId} {
+        // Bir kullanıcı sadece kendi alt koleksiyonlarına (bildirimler vb.) erişebilir.
+        allow read, write: if request.auth.uid == userId;
       }
     }
     
-    match /rooms/{roomId} {
-        allow read: if true;
-        // Allow room creation if authenticated and not rate-limited (2 min cooldown).
-        allow create: if isAuthenticated() && isNotRateLimited(duration.value(120, 's'));
-        // Updates are handled by server actions, checked there.
-        allow update: if isAuthenticated();
-        // Deletion by owner or admin.
-        allow delete: if isAuthenticated() && (isUser(resource.data.createdBy.uid) || isAdmin());
-
-        match /messages/{messageId} {
-            allow read: if isAuthenticated();
-            // Rate limit message creation (2s cooldown).
-            allow create: if isAuthenticated() && isNotRateLimited(duration.value(2, 's'));
-            allow update, delete: if isAuthenticated() && (isUser(resource.data.uid) || isAdmin());
-        }
-        match /{subcollection}/{docId} 
-            where subcollection in ['voiceParticipants', 'signals', 'games'] {
-            // Allow participants to perform actions in these subcollections
-            allow read, write: if isAuthenticated();
-        }
-    }
-
-    // Helper function to check if the current user is part of a DM chat.
-    function isParticipant(chatId) {
-        return get(/databases/$(database)/documents/directMessagesMetadata/$(chatId)).data.participantUids.hasAny([request.auth.uid]);
-    }
-
-    match /directMessagesMetadata/{chatId} {
-        // Only participants can read/write metadata
-        allow read, write: if isAuthenticated() && isParticipant(chatId);
-    }
-    match /directMessages/{chatId}/messages/{messageId} {
-        allow read: if isAuthenticated() && isParticipant(chatId);
-        // Rate limit DM creation (1s cooldown).
-        allow create: if isAuthenticated() && isParticipant(chatId) && isNotRateLimited(duration.value(1, 's'));
-        allow update, delete: if isAuthenticated() && isUser(resource.data.senderId);
-    }
-    
+    // config koleksiyonu: Sadece adminler okuyabilir, yazma işlemi kapalı.
     match /config/{docId} {
+      allow read: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow write: if false; 
+    }
+
+    // Gönderiler (posts) koleksiyonu için kurallar
+    match /posts/{postId} {
+      // Herkes gönderileri okuyabilir.
+      allow read: if true;
+      // Sadece kimliği doğrulanmış ve hız limitine takılmayan kullanıcılar gönderi oluşturabilir.
+      allow create: if request.auth != null && !isRateLimited(request.auth.uid, 10);
+      // Bir kullanıcı sadece kendi gönderisini güncelleyebilir veya silebilir.
+      allow update, delete: if resource.data.uid == request.auth.uid;
+
+      // Yorumlar (comments) alt koleksiyonu için kurallar
+      match /comments/{commentId} {
+        // Herkes yorumları okuyabilir.
         allow read: if true;
-        allow write: if isAdmin();
+        // Kimliği doğrulanmış ve hız limitine takılmayan kullanıcılar yorum yapabilir.
+        allow create: if request.auth != null && !isRateLimited(request.auth.uid, 2);
+        // Kullanıcı sadece kendi yorumunu silebilir.
+        allow delete: if get(/databases/$(database)/documents/posts/$(postId)/comments/$(commentId)).data.uid == request.auth.uid;
+      }
     }
     
+    // Odalar (rooms) koleksiyonu için kurallar
+    match /rooms/{roomId} {
+        // Herkes odaların bilgilerini okuyabilir.
+        allow read: if true;
+        // Kimliği doğrulanmış kullanıcılar oda oluşturabilir.
+        allow create: if request.auth != null;
+        // Sadece oda sahibi güncelleyebilir.
+        allow update: if resource.data.createdBy.uid == request.auth.uid;
+        // Sadece oda sahibi odayı silebilir.
+        allow delete: if resource.data.createdBy.uid == request.auth.uid;
+
+        // Odaların alt koleksiyonları
+        match /{subcollection}/{docId} {
+           // Mesajlar, sinyaller gibi alt koleksiyonlara sadece kimliği doğrulanmış kullanıcılar erişebilir.
+           allow read, write, delete: if request.auth != null;
+        }
+    }
+    
+    // Direkt Mesajlar (directMessages) için kurallar
+    match /directMessages/{chatId}/{messages}/{messageId} {
+        // Bir mesajı sadece o sohbetin katılımcıları okuyabilir, yazabilir veya silebilir.
+        allow read, write, delete: if request.auth.uid in get(/databases/$(database)/documents/directMessagesMetadata/$(chatId)).data.participantUids;
+    }
+    
+    // Direkt Mesaj Metadatası (directMessagesMetadata) için kurallar
+    match /directMessagesMetadata/{chatId} {
+        // Metadata'yı sadece sohbetin katılımcıları okuyabilir ve güncelleyebilir.
+        allow read, update: if request.auth.uid in resource.data.participantUids;
+        // Yeni bir sohbet (metadata) sadece katılımcılardan biri tarafından oluşturulabilir.
+        allow create: if request.auth.uid in request.resource.data.participantUids;
+    }
+    
+    // Raporlar (reports) koleksiyonu
+    match /reports/{reportId} {
+        // Kimliği doğrulanmış kullanıcılar rapor oluşturabilir.
+        allow create: if request.auth != null;
+        // Raporları sadece adminler okuyabilir.
+        allow read: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        // Raporlar silinemez.
+        allow write, delete: if false;
+    }
+    
+     // Denetim Kayıtları (auditLogs) koleksiyonu
     match /auditLogs/{logId} {
-        allow read: if isAdmin();
-        allow write: if false; // Only written by backend functions
-    }
-    
-     match /reports/{reportId} {
-        allow read: if isAdmin();
-        // Rate limit reports (1 min cooldown).
-        allow create: if isAuthenticated() && isNotRateLimited(duration.value(60, 's'));
+      // Sadece adminler denetim kayıtlarını okuyabilir.
+      allow read: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      // Yazma işlemi Cloud Function'lar tarafından yapılır, kullanıcılar tarafından değil.
+      allow write: if false;
     }
   }
 }

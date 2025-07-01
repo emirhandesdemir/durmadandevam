@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Image as ImageIcon } from "lucide-react";
 
 /**
- * NewPost Bileşeni
+ * Yeni Gönderi Giriş Noktası
  * 
  * Ana sayfada, kullanıcıyı yeni bir gönderi oluşturma sayfasına yönlendiren
  * bir giriş noktası (entry-point) olarak hizmet verir. Tıklanabilir bir karttır.
@@ -17,7 +17,7 @@ import { Image as ImageIcon } from "lucide-react";
 export default function NewPost() {
   const { user } = useAuth();
 
-  // Kullanıcı giriş yapmamışsa bu bileşeni gösterme
+  // Kullanıcı giriş yapmamışsa bu bileşeni gösterme.
   if (!user) {
     return null;
   }

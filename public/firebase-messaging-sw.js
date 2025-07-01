@@ -1,7 +1,11 @@
-// Scripts for firebase and firebase messaging
-importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
+// Bu dosya, Firebase Cloud Messaging için arka plan servis çalışanıdır.
+// Uygulama kapalıyken veya arka plandayken gelen anlık bildirimleri yönetir.
 
+// Gerekli Firebase SDK'larını import et.
+importScripts("https://www.gstatic.com/firebasejs/9.2.0/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/9.2.0/firebase-messaging-compat.js");
+
+// Firebase yapılandırma bilgileri (bu bilgiler herkese açıktır).
 const firebaseConfig = {
   apiKey: "AIzaSyBHLuoO7KM9ai0dMeCcGhmSHSVYCDO1rEo",
   authDomain: "yenidendeneme-ea9ed.firebaseapp.com",
@@ -12,43 +16,44 @@ const firebaseConfig = {
   measurementId: "G-J3EB02J0LN"
 };
 
-// Initialize the Firebase app in the service worker
+// Firebase uygulamasını başlat.
 firebase.initializeApp(firebaseConfig);
 
-// Retrieve an instance of Firebase Messaging
+// Messaging servisini al.
 const messaging = firebase.messaging();
 
-messaging.onBackgroundMessage(function(payload) {
-  console.log('Received background message ', payload);
+// Arka planda bir bildirim alındığında ne yapılacağını belirle.
+messaging.onBackgroundMessage((payload) => {
+  console.log(
+    "[firebase-messaging-sw.js] Arka planda bildirim alındı: ",
+    payload
+  );
 
+  // Bildirim verilerini ayıkla.
   const notificationTitle = payload.data.title;
   const notificationOptions = {
     body: payload.data.body,
-    icon: payload.data.icon || '/icons/icon-192x192.png',
+    icon: payload.data.icon,
     data: {
-        link: payload.data.link || '/'
+        // Tıklanınca açılacak linki 'data' objesine ekle.
+        link: payload.data.link
     }
   };
 
+  // Kullanıcıya bildirimi göster.
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// Handle notification click
-self.addEventListener('notificationclick', function(event) {
+// Bildirime tıklandığında ne olacağını belirleyen olay dinleyici.
+self.addEventListener('notificationclick', (event) => {
+    // Bildirim penceresini kapat.
     event.notification.close();
+    
+    // Bildirim verisindeki linki al.
     const link = event.notification.data.link;
 
-    event.waitUntil(
-        clients.matchAll({ type: 'window' }).then(function(clientList) {
-            for (let i = 0; i < clientList.length; i++) {
-                const client = clientList[i];
-                if (client.url === link && 'focus' in client) {
-                    return client.focus();
-                }
-            }
-            if (clients.openWindow) {
-                return clients.openWindow(link);
-            }
-        })
-    );
+    // Eğer bir link varsa, o linki yeni bir sekmede açmaya çalış.
+    if (link) {
+        event.waitUntil(clients.openWindow(link));
+    }
 });

@@ -1,4 +1,4 @@
-
+// Bu bileşen, kullanıcı giriş formunu ve ilgili tüm mantığı içerir.
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,6 +30,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff, Swords } from "lucide-react";
 
+// Form alanlarının validasyonunu (doğrulamasını) yöneten Zod şeması.
 const formSchema = z.object({
   email: z.string().email({ message: "Geçersiz e-posta adresi." }),
   password: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır." }),
@@ -42,6 +43,7 @@ export default function LoginForm() {
     const [isResetting, setIsResetting] = useState(false); 
     const [showPassword, setShowPassword] = useState(false);
 
+    // react-hook-form ile form yönetimi.
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -50,13 +52,14 @@ export default function LoginForm() {
         },
     });
 
+    // Form gönderildiğinde çalışacak fonksiyon.
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsLoading(true);
         try {
             await signInWithEmailAndPassword(auth, values.email, values.password);
-            router.push('/home');
+            router.push('/home'); // Başarılı girişte ana sayfaya yönlendir.
         } catch (error: any) {
-            console.error("Login error", error);
+            console.error("Giriş hatası", error);
             let errorMessage = "Giriş yapılırken bir hata oluştu.";
             if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password" || error.code === "auth/invalid-credential") {
                 errorMessage = "E-posta veya şifre hatalı.";
@@ -71,6 +74,7 @@ export default function LoginForm() {
         }
     }
 
+    // Şifre sıfırlama e-postası gönderme fonksiyonu.
     async function handlePasswordReset() {
         const email = form.getValues("email"); 
         if (!email) {
@@ -90,7 +94,7 @@ export default function LoginForm() {
                 description: "Şifrenizi sıfırlamak için e-posta kutunuzu kontrol edin."
             });
         } catch (error: any) {
-            console.error("Password reset error", error);
+            console.error("Şifre sıfırlama hatası", error);
             let errorMessage = "Şifre sıfırlama e-postası gönderilirken bir hata oluştu.";
             if (error.code === 'auth/user-not-found') {
                 errorMessage = "Bu e-posta adresiyle kayıtlı bir kullanıcı bulunamadı.";

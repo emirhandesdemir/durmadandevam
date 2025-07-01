@@ -6,10 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Copy, Server, AlertTriangle, CloudUpload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+/**
+ * Yönetim Paneli - Dağıtımlar Sayfası
+ * 
+ * Bu sayfa, yöneticiye sunucu tarafı fonksiyonlarının (örn: anlık bildirim servisi)
+ * nasıl dağıtılacağı (deploy edileceği) konusunda bilgi ve talimatlar sunar.
+ */
 export default function DeployPage() {
     const { toast } = useToast();
     const command = "firebase deploy --only functions";
 
+    // Komutu panoya kopyalama fonksiyonu.
     const copyCommand = () => {
         navigator.clipboard.writeText(command);
         toast({
@@ -19,6 +26,7 @@ export default function DeployPage() {
 
     return (
         <div>
+            {/* Sayfa Başlığı */}
             <div className="flex items-center gap-4">
                 <CloudUpload className="h-8 w-8 text-primary" />
                 <div>
@@ -29,6 +37,7 @@ export default function DeployPage() {
                 </div>
             </div>
 
+            {/* Uyarı Kartı */}
             <Card className="mt-8 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
                 <CardHeader className="flex-row items-start gap-4">
                     <AlertTriangle className="h-6 w-6 text-yellow-600 dark:text-yellow-400 mt-1" />
@@ -41,6 +50,7 @@ export default function DeployPage() {
                 </CardHeader>
             </Card>
 
+            {/* Anlık Bildirim Servisi Kartı */}
             <Card className="mt-8">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-3">
@@ -57,6 +67,7 @@ export default function DeployPage() {
                             <p className="font-semibold">Durum: <span className="text-orange-500">Dağıtım Bekleniyor</span></p>
                             <p className="text-sm text-muted-foreground mt-1">Bu servisi aktif etmek için aşağıdaki komutu terminalde çalıştırın.</p>
                         </div>
+                        {/* Kopyalanabilir komut alanı */}
                         <div className="flex items-center gap-2 rounded-md bg-background p-2 pl-4 border font-mono text-sm">
                             <span>{command}</span>
                             <Button variant="ghost" size="icon" onClick={copyCommand}>

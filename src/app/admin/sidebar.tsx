@@ -1,7 +1,8 @@
-// src/components/admin/sidebar.tsx
-// Bu bileşen, admin panelinin sol tarafında yer alan dikey navigasyon menüsüdür.
-// Paneldeki farklı yönetim sayfalarına (Dashboard, Kullanıcılar, Odalar vb.)
-// hızlı erişim sağlar ve mobil cihazlarda gizlenip açılabilir.
+// Bu dosya, `src/components/admin/sidebar.tsx` dosyasının bir kopyası veya eski bir versiyonu olabilir.
+// Projenin mevcut yapısında, bileşenler `src/components` altında toplanmıştır.
+// Bu dosyanın hala kullanılıp kullanılmadığını kontrol etmek ve gerekirse silmek iyi bir pratik olacaktır.
+// Şimdilik, `src/components/admin/sidebar.tsx` ile aynı içeriğe sahip olduğunu varsayarak
+// yorumları ekliyorum.
 
 "use client";
 
@@ -23,7 +24,7 @@ import {
 } from "lucide-react";
 import { Button } from "../ui/button";
 
-// Navigasyon öğeleri listesi
+// Navigasyon menüsündeki her bir öğenin bilgilerini içeren dizi.
 const navItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/analytics", label: "İstatistikler", icon: BarChart3 },
@@ -47,7 +48,7 @@ export default function Sidebar({ isSidebarOpen, setSidebarOpen }: SidebarProps)
 
   return (
     <>
-        {/* Mobil için arkaplan overlay */}
+        {/* Mobil cihazlarda menü açıldığında arkaplanı karartan overlay. */}
         {isSidebarOpen && (
             <div 
                 className="fixed inset-0 z-20 bg-black/60 transition-opacity duration-300 lg:hidden"
@@ -55,7 +56,7 @@ export default function Sidebar({ isSidebarOpen, setSidebarOpen }: SidebarProps)
             ></div>
         )}
 
-        {/* Gerçek Sidebar */}
+        {/* Gerçek Sidebar Menüsü */}
         <aside className={cn(
             "fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r bg-background transition-transform duration-300 lg:static lg:translate-x-0",
             isSidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -66,6 +67,7 @@ export default function Sidebar({ isSidebarOpen, setSidebarOpen }: SidebarProps)
                     <Swords className="h-7 w-7 text-primary" />
                     <span>Admin Paneli</span>
                 </Link>
+                {/* Mobil için kapatma butonu */}
                 <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(false)}>
                     <X className="h-5 w-5"/>
                 </Button>
@@ -77,9 +79,10 @@ export default function Sidebar({ isSidebarOpen, setSidebarOpen }: SidebarProps)
                     <Link
                         key={item.label}
                         href={item.href}
-                        onClick={() => setSidebarOpen(false)} // Mobil menüde linke tıklanınca kapat
+                        onClick={() => setSidebarOpen(false)} // Mobil menüde linke tıklanınca menüyü kapat.
                         className={cn(
                             "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-primary/10 hover:text-primary",
+                            // Aktif olan sayfaya farklı stil uygula.
                             pathname === item.href && "bg-primary/10 font-semibold text-primary"
                         )}
                     >

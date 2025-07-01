@@ -9,8 +9,10 @@ import { checkSystemHealth, type HealthCheckResult } from '@/lib/actions/healthA
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 
+// Firebase projesinin ID'si. Bu, Firebase Konsolu linklerini oluşturmak için kullanılır.
 const projectId = "yenidendeneme-ea9ed";
 
+// Firebase Konsolu'ndaki ilgili sayfalara hızlı erişim linkleri.
 const deepDiveLinks = [
   {
     title: "Performans İzleme (APM)",
@@ -38,10 +40,18 @@ const deepDiveLinks = [
   },
 ];
 
+/**
+ * Yönetim Paneli - Sistem Durumu Sayfası
+ * 
+ * Bu sayfa, temel Firebase servislerinin (Firestore gibi) anlık durumunu
+ * kontrol eder ve yöneticilere daha detaylı analiz için Firebase Konsolu'na
+ * linkler sunar.
+ */
 export default function StatusPage() {
   const [healthStatus, setHealthStatus] = useState<HealthCheckResult[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Sunucu eylemini çağırarak sistem sağlık kontrolünü çalıştırır.
   const runHealthCheck = () => {
     setLoading(true);
     checkSystemHealth().then(results => {
@@ -50,6 +60,7 @@ export default function StatusPage() {
     });
   };
 
+  // Sayfa yüklendiğinde sağlık kontrolünü otomatik olarak çalıştır.
   useEffect(() => {
     runHealthCheck();
   }, []);
@@ -66,6 +77,7 @@ export default function StatusPage() {
         </div>
       </div>
       
+      {/* Canlı Servis Kontrolü Kartı */}
       <Card className="mt-8">
         <CardHeader className="flex flex-row items-center justify-between">
             <div>
@@ -113,6 +125,7 @@ export default function StatusPage() {
 
       <Separator className="my-8" />
       
+      {/* Detaylı Analiz Kartları */}
       <div>
          <h2 className="text-2xl font-bold tracking-tight">Detaylı Analiz & Kullanım</h2>
           <p className="text-muted-foreground mt-1">

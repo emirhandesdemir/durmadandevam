@@ -1,3 +1,5 @@
+// Bu dosya, projenin kodlama standartlarını ve kurallarını belirleyen ESLint yapılandırmasıdır.
+// Kodun tutarlı ve hatasız olmasını sağlamaya yardımcı olur.
 module.exports = {
   root: true,
   env: {
@@ -18,16 +20,16 @@ module.exports = {
     sourceType: "module",
   },
   ignorePatterns: [
-    "/lib/**/*", // Ignore built files.
-    "/generated/**/*", // Ignore generated files.
+    "/lib/**/*", // Derlenmiş dosyaları yoksay.
+    "/generated/**/*", // Otomatik oluşturulmuş dosyaları yoksay.
   ],
   plugins: [
     "@typescript-eslint",
     "import",
   ],
   rules: {
-    "quotes": ["error", "double"],
-    "import/no-unresolved": 0,
-    "indent": ["error", 2],
+    "quotes": ["error", "double"], // String'ler için çift tırnak kullanımını zorunlu kıl.
+    "import/no-unresolved": 0, // Çözümlenmemiş import hatalarını gösterme.
+    "indent": ["error", 2], // 2 boşluklu girintileme kullan.
   },
 };

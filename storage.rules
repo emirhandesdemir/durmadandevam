@@ -1,43 +1,55 @@
+// Firebase Storage Güvenlik Kuralları
+// Bu kurallar, dosya depolama alanına kimin, hangi dosyaları,
+// ne koşullarda yükleyebileceğini ve okuyabileceğini belirler.
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    
-    // --- Profile Avatars ---
-    // Users can only write to their own avatar path. Avatars are public to read.
-    match /upload/avatars/{userId}/{fileName} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId
-                   && request.resource.size < 5 * 1024 * 1024 // Max 5MB
-                   && request.resource.contentType.matches('image/.*');
+  
+    // Genel Kural: Varsayılan olarak tüm okuma ve yazma işlemlerini reddet.
+    match /{allPaths=**} {
+      allow read, write: if false;
     }
 
-    // --- Post Images ---
-    // Users can only write to their own posts folder. Post images are public to read.
+    // Avatar Yüklemeleri:
+    // Kullanıcılar sadece kendi avatar dosyalarını güncelleyebilir.
+    // Sadece belirli boyutta (5MB) ve türde (resim) dosyalara izin verilir.
+    match /upload/avatars/{userId}/{fileName} {
+      allow read: if true; // Herkes profil resimlerini görebilir.
+      allow write: if request.auth != null 
+                    && request.auth.uid == userId
+                    && request.resource.size < 5 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+    }
+
+    // Gönderi Resimleri:
+    // Kimliği doğrulanmış kullanıcılar resim yükleyebilir.
+    // Dosya boyutu 10MB ile sınırlıdır.
     match /upload/posts/{userId}/{fileName} {
-        allow read: if true;
-        allow write: if request.auth != null && request.auth.uid == userId
-                     && request.resource.size < 10 * 1024 * 1024 // Max 10MB
-                     && request.resource.contentType.matches('image/.*');
+      allow read: if true; // Herkes gönderi resimlerini görebilir.
+      allow write: if request.auth != null 
+                    && request.auth.uid == userId
+                    && request.resource.size < 10 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
     }
     
-    // --- Room Media (Images/Videos) ---
-    // Any authenticated user can upload to a room's folder.
-    // We restrict by file size and type.
-    match /upload/rooms/{roomId}/{folder}/{fileName} {
-        allow read: if true;
-        allow write: if request.auth != null
-                     && request.resource.size < 25 * 1024 * 1024 // Max 25MB
+    // Oda Resimleri (Sohbet içinde gönderilenler):
+    // Kimliği doğrulanmış kullanıcılar resim veya video yükleyebilir.
+    // Dosya boyutu 25MB ile sınırlıdır.
+    match /upload/rooms/{roomId}/{mediaType}/{fileName} {
+       allow read: if true;
+       allow write: if request.auth != null
+                     && request.resource.size < 25 * 1024 * 1024
                      && (request.resource.contentType.matches('image/.*') || request.resource.contentType.matches('video/.*'));
     }
-
-    // --- Direct Messages (Images/Audio) ---
-    // Only participants in the chat can read/write files for that chat.
-    // The chatId is composed of "uid1_uid2".
-    match /dms/{chatId}/{folder}/{fileName} {
-      allow read, write: if request.auth != null && request.auth.uid in chatId.split('_')
-                         && request.resource.size < 10 * 1024 * 1024 // Max 10MB
-                         && (request.resource.contentType.matches('image/.*') || request.resource.contentType.matches('audio/.*'));
+    
+    // Direkt Mesaj Dosyaları:
+    // Kimliği doğrulanmış kullanıcılar resim, video veya ses dosyası yükleyebilir.
+    // Dosya boyutu 25MB ile sınırlıdır.
+    match /dms/{chatId}/{mediaType}/{fileName} {
+       allow read, write: if request.auth != null
+                          && request.resource.size < 25 * 1024 * 1024
+                          && (request.resource.contentType.matches('image/.*') || request.resource.contentType.matches('video/.*') || request.resource.contentType.matches('audio/.*'));
     }
   }
 }

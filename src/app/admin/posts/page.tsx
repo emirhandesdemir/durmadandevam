@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase";
 import { FileText, Loader2 } from "lucide-react";
 import PostsTable from "@/components/admin/PostsTable";
 
-// Post verisi için arayüz
+// Yönetici panelinde gösterilecek gönderi verisi için arayüz.
 export interface AdminPostData {
     id: string;
     uid: string;
@@ -20,17 +20,21 @@ export interface AdminPostData {
 }
 
 /**
- * Gönderi Yöneticisi Sayfası
+ * Yönetim Paneli - Gönderi Yöneticisi Sayfası
  * 
- * Firestore'daki tüm gönderileri listeler ve yönetmek için arayüz sağlar.
+ * Firestore'daki tüm gönderileri listeler ve yöneticinin bu gönderileri
+ * görüntülemesi ve silmesi için bir arayüz sağlar.
  */
 export default function PostManagerPage() {
     const [posts, setPosts] = useState<AdminPostData[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // Gönderileri en yeniden en eskiye doğru sıralayarak getir.
         const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
         
+        // `onSnapshot` ile koleksiyonu dinle, böylece yeni gönderiler veya
+        // değişiklikler anında arayüze yansır.
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const postsData = querySnapshot.docs.map(doc => ({
                 id: doc.id,
@@ -43,6 +47,7 @@ export default function PostManagerPage() {
             setLoading(false);
         });
 
+        // Component unmount olduğunda dinleyiciyi temizle.
         return () => unsubscribe();
     }, []);
 

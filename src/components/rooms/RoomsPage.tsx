@@ -1,4 +1,6 @@
-// src/app/(main)/rooms/page.tsx
+// Bu dosya, /src/app/(main)/rooms/page.tsx'in eski bir kopyasıdır.
+// Yönlendirme ve sayfa mantığı artık app router'daki page.tsx dosyasında yönetilmektedir.
+// Karışıklığı önlemek için bu dosyanın silinmesi önerilir.
 'use client';
 
 import { useState } from "react";
@@ -16,9 +18,7 @@ export default function RoomsPage() {
       <main className="container mx-auto max-w-7xl px-4 py-6 md:py-8">
         <div className="flex flex-col gap-8">
           <CreateRoomCard />
-
           <LeadershipBoard />
-          
           <div className="space-y-4">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <h2 className="text-2xl font-bold tracking-tight">Aktif Sohbet Odaları</h2>
@@ -33,7 +33,6 @@ export default function RoomsPage() {
               </div>
             </div>
           </div>
-
           <RoomList searchTerm={searchTerm} />
         </div>
       </main>

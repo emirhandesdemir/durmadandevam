@@ -1,8 +1,7 @@
 // src/components/admin/header.tsx
 // Bu bileşen, admin panelinin üst kısmında yer alan başlık çubuğudur.
 // Özellikle mobil cihazlarda yan menüyü (sidebar) açmak için kullanılan
-// hamburger menü butonunu içerir.
-
+// hamburger menü butonunu ve kullanıcı menüsünü içerir.
 "use client";
 
 import { Menu, User } from "lucide-react";
@@ -22,11 +21,11 @@ interface HeaderProps {
 }
 
 export default function Header({ setSidebarOpen }: HeaderProps) {
-    const { user, handleLogout } = useAuth(); // handleLogout'u AuthContext'ten alıyoruz.
+    const { user, handleLogout } = useAuth(); // AuthContext'ten kullanıcı bilgisi ve çıkış fonksiyonunu al.
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-background px-4 md:px-6 lg:justify-end">
-      {/* Mobil Menü Butonu (Sadece mobil ve tabletlerde görünür) */}
+      {/* Mobil Menü Butonu (Sadece 'lg' breakpoint'inden küçük ekranlarda görünür) */}
       <Button
         variant="ghost"
         size="icon"
@@ -37,7 +36,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
         <span className="sr-only">Menüyü Aç</span>
       </Button>
 
-      {/* Kullanıcı Menüsü */}
+      {/* Kullanıcı Menüsü (sağ üst köşe) */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="rounded-full">

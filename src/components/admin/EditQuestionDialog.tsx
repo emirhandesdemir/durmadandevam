@@ -27,10 +27,10 @@ import { Loader2 } from "lucide-react";
 interface EditQuestionDialogProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  question: GameQuestion | null;
+  question: GameQuestion | null; // Düzenlenecek soru. Null ise yeni soru eklenir.
 }
 
-// Form validasyon şeması
+// Form alanlarının validasyonunu (doğrulamasını) yöneten Zod şeması.
 const questionSchema = z.object({
   question: z.string().min(10, "Soru en az 10 karakter olmalıdır."),
   options: z.array(z.string().min(1, "Seçenek boş olamaz.")).length(4, "Tam olarak 4 seçenek olmalıdır."),
@@ -38,13 +38,14 @@ const questionSchema = z.object({
 });
 
 /**
- * Quiz sorusu eklemek veya düzenlemek için kullanılan dialog bileşeni.
+ * Quiz sorusu eklemek veya düzenlemek için kullanılan dialog (modal) bileşeni.
  */
 export default function EditQuestionDialog({ isOpen, setIsOpen, question }: EditQuestionDialogProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const isEditMode = !!question;
+  const isEditMode = !!question; // `question` prop'u varsa düzenleme modundayız.
 
+  // react-hook-form ile form yönetimi.
   const form = useForm<z.infer<typeof questionSchema>>({
     resolver: zodResolver(questionSchema),
     defaultValues: {
@@ -54,12 +55,13 @@ export default function EditQuestionDialog({ isOpen, setIsOpen, question }: Edit
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  // Seçenekleri dinamik olarak yönetmek için `useFieldArray`.
+  const { fields } = useFieldArray({
       control: form.control,
       name: "options"
   });
 
-  // Düzenleme modunda, dialog açıldığında formu doldur
+  // Düzenleme modunda, dialog açıldığında formu mevcut soru verileriyle doldur.
   useEffect(() => {
     if (isOpen && question) {
       form.reset({
@@ -68,21 +70,24 @@ export default function EditQuestionDialog({ isOpen, setIsOpen, question }: Edit
         correctOptionIndex: question.correctOptionIndex,
       });
     } else if (isOpen && !question) {
-      form.reset(); // Yeni soru eklerken formu sıfırla
+      form.reset(); // Yeni soru eklerken formu sıfırla.
     }
   }, [isOpen, question, form]);
 
+  // Form gönderildiğinde çalışacak fonksiyon.
   const onSubmit = async (data: z.infer<typeof questionSchema>) => {
     setIsSubmitting(true);
     try {
       if (isEditMode && question) {
+        // Düzenleme modundaysa güncelleme işlemini yap.
         await updateQuestion(question.id, data);
         toast({ title: "Başarılı", description: "Soru güncellendi." });
       } else {
+        // Ekleme modundaysa yeni soru oluştur.
         await addQuestion(data);
         toast({ title: "Başarılı", description: "Yeni soru eklendi." });
       }
-      setIsOpen(false);
+      setIsOpen(false); // İşlem sonrası dialogu kapat.
     } catch (error) {
       console.error("Soru kaydedilirken hata:", error);
       toast({ title: "Hata", description: "İşlem sırasında bir hata oluştu.", variant: "destructive" });

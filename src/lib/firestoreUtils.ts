@@ -1,5 +1,6 @@
 /**
- * @fileOverview Utility functions for interacting with Firestore.
+ * @fileOverview Firestore ile ilgili genel yardımcı fonksiyonları içerir.
+ * Özellikle toplu silme işlemleri için kullanılır.
  */
 'use server';
 
@@ -8,74 +9,80 @@ import { db, storage } from './firebase';
 import { ref, listAll, deleteObject } from 'firebase/storage';
 
 /**
- * Deletes all files within a specified folder in Firebase Storage, including subfolders.
- * @param folderPath The path to the folder to delete (e.g., 'upload/rooms/roomId123').
+ * Belirtilen bir klasördeki tüm dosyaları (alt klasörler dahil) Firebase Storage'dan siler.
+ * @param folderPath Silinecek klasörün yolu (örn: 'upload/rooms/roomId123').
  */
 async function deleteStorageFolder(folderPath: string) {
     const folderRef = ref(storage, folderPath);
     try {
         const res = await listAll(folderRef);
         
-        // Delete all files in the current folder
+        // Mevcut klasördeki tüm dosyaları sil.
         const deleteFilePromises = res.items.map((itemRef) => deleteObject(itemRef));
         await Promise.all(deleteFilePromises);
 
-        // Recursively delete all subfolders
+        // Tüm alt klasörleri özyineli (recursive) olarak sil.
         const deleteFolderPromises = res.prefixes.map((subfolderRef) => deleteStorageFolder(subfolderRef.fullPath));
         await Promise.all(deleteFolderPromises);
 
     } catch (error: any) {
+        // Eğer klasör zaten yoksa hata verme, bu beklenen bir durum olabilir.
         if (error.code === 'storage/object-not-found') {
-            // It's okay if the folder doesn't exist.
             return;
         }
-        console.error(`Error deleting folder ${folderPath}:`, error);
-        // We don't re-throw the error to allow the Firestore deletion to proceed.
+        console.error(`Klasör silinirken hata oluştu: ${folderPath}:`, error);
+        // Firestore silme işleminin devam etmesi için hatayı yeniden fırlatmıyoruz.
     }
 }
 
 
 /**
- * Deletes a collection in batches to avoid out-of-memory errors.
- * @param collectionRef The reference to the collection to delete.
- * @param batchSize The number of documents to delete in each batch.
+ * Bir koleksiyonu toplu (batch) olarak silerek bellek aşımlarını ve
+ * performans sorunlarını önler. Firestore'un tek seferde silebileceği
+ * doküman sayısı limitlidir, bu fonksiyon bu limiti aşar.
+ * @param collectionRef Silinecek koleksiyonun referansı.
+ * @param batchSize Her bir toplu işlemde silinecek doküman sayısı.
  */
 async function deleteCollection(collectionRef: any, batchSize: number) {
     const q = query(collectionRef, limit(batchSize));
     const snapshot = await getDocs(q);
 
+    // Koleksiyon boşsa işlemi bitir.
     if (snapshot.size === 0) {
         return;
     }
 
+    // Toplu yazma işlemi başlat.
     const batch = writeBatch(db);
     snapshot.docs.forEach((doc) => {
         batch.delete(doc.ref);
     });
     await batch.commit();
 
+    // Eğer silinecek daha fazla doküman varsa, fonksiyonu tekrar çağır.
     if (snapshot.size >= batchSize) {
         await deleteCollection(collectionRef, batchSize);
     }
 }
 
 /**
- * Deletes a room document, all of its subcollections, and all associated files in Firebase Storage.
- * @param roomId The ID of the room to delete.
+ * Bir oda dokümanını, tüm alt koleksiyonlarını (mesajlar, katılımcılar vb.)
+ * ve o odayla ilişkili tüm dosyaları Firebase Storage'dan tamamen siler.
+ * @param roomId Silinecek odanın ID'si.
  */
 export async function deleteRoomWithSubcollections(roomId: string) {
     const roomRef = doc(db, 'rooms', roomId);
 
-    // Delete Firestore subcollections
+    // Firestore alt koleksiyonlarını sil.
     const subcollections = ['messages', 'voiceParticipants', 'signals', 'games'];
     for (const sub of subcollections) {
         await deleteCollection(collection(roomRef, sub), 50);
     }
 
-    // Delete associated files from Storage
+    // Storage'daki ilgili dosyaları sil.
     const roomStoragePath = `upload/rooms/${roomId}`;
     await deleteStorageFolder(roomStoragePath);
 
-    // Delete the main room document
+    // Ana oda dokümanını sil.
     await deleteDoc(roomRef);
 }

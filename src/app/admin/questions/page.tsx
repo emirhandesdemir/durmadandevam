@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, onSnapshot, query, orderBy, Timestamp } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Puzzle, Loader2, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,18 +11,21 @@ import EditQuestionDialog from "@/components/admin/EditQuestionDialog";
 import { GameQuestion } from "@/lib/types";
 
 /**
- * Quiz Soru Yöneticisi Sayfası
+ * Yönetim Paneli - Quiz Soru Yöneticisi Sayfası
  * 
  * Firestore'daki `game_questions` koleksiyonunu yönetir.
- * Soruları listeler, yeni soru eklemeye ve mevcutları düzenleyip silmeye olanak tanır.
+ * Yöneticinin soruları listelemesine, yeni soru eklemesine,
+ * mevcutları düzenlemesine ve silmesine olanak tanır.
  */
 export default function QuestionManagerPage() {
     const [questions, setQuestions] = useState<GameQuestion[]>([]);
     const [loading, setLoading] = useState(true);
+    // Dialog penceresinin açık/kapalı durumunu yönetir.
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    // Düzenlenmek üzere seçilen soruyu tutar. Null ise yeni soru eklenir.
     const [selectedQuestion, setSelectedQuestion] = useState<GameQuestion | null>(null);
 
-    // Soruları Firestore'dan dinle
+    // Soruları Firestore'dan anlık olarak dinle.
     useEffect(() => {
         const q = query(collection(db, "game_questions"), orderBy("createdAt", "desc"));
         
@@ -41,11 +44,13 @@ export default function QuestionManagerPage() {
         return () => unsubscribe();
     }, []);
 
+    // Yeni soru ekleme dialogunu açar.
     const handleAddNew = () => {
         setSelectedQuestion(null);
         setIsDialogOpen(true);
     };
 
+    // Mevcut bir soruyu düzenleme dialogunu açar.
     const handleEdit = (question: GameQuestion) => {
         setSelectedQuestion(question);
         setIsDialogOpen(true);

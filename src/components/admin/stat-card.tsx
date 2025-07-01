@@ -1,7 +1,6 @@
 // src/components/admin/stat-card.tsx
 // Bu, admin panelinin dashboard sayfasında kullanılan yeniden kullanılabilir bir istatistik kartı bileşenidir.
 // Bir başlık (örn: "Toplam Kullanıcı"), bir değer (örn: "1,234") ve bir ikon gösterir.
-
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { type LucideIcon } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
@@ -23,6 +22,7 @@ export default function StatCard({ title, value, icon: Icon, isLoading }: StatCa
         <Icon className="h-5 w-5 text-muted-foreground" />
       </CardHeader>
       <CardContent>
+        {/* Veri yüklenirken bir iskelet (skeleton) göster */}
         {isLoading ? (
             <Skeleton className="h-8 w-3/4" />
         ) : (

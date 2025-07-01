@@ -21,7 +21,12 @@ interface LogsTableProps {
   logs: AuditLog[];
 }
 
+/**
+ * Denetim kayıtlarını (audit logs) bir tablo içinde gösteren bileşen.
+ */
 export default function LogsTable({ logs }: LogsTableProps) {
+    
+    // Log türüne göre ikon ve renk belirleyen yardımcı fonksiyon.
     const getLogIconAndStyle = (type: AuditLog['type']) => {
         switch(type) {
             case 'user_created':
@@ -57,6 +62,7 @@ export default function LogsTable({ logs }: LogsTableProps) {
                             <TableCell className="font-medium">{log.details}</TableCell>
                             <TableCell>{log.actor.displayName || log.actor.email}</TableCell>
                             <TableCell>
+                                {/* Tarihi okunabilir bir formata çevir. */}
                                 {log.timestamp ? format(log.timestamp.toDate(), 'PPpp', { locale: tr }) : 'Bilinmiyor'}
                             </TableCell>
                         </TableRow>
