@@ -99,7 +99,7 @@ export const sendPushNotification = functions
             data: {
                 title: title,
                 body: body,
-                icon: "/icons/icon-192x192.png",
+                icon: "/icons/icon.svg",
                 link: link,
             },
             webpush: {

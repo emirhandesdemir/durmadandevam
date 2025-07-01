@@ -25,8 +25,8 @@ export const metadata: Metadata = {
   description: 'Herkese açık odalar oluşturun ve katılın.',
   manifest: '/manifest.json', // PWA manifest dosyası.
   icons: {
-    icon: '/icons/icon-512x512.png',
-    apple: '/icons/icon-512x512.png', // Apple cihazlar için ikon.
+    icon: '/icons/icon.svg',
+    apple: '/icons/icon.svg', // Apple cihazlar için ikon.
   },
   applicationName: "HiweWalk",
   appleWebApp: {
