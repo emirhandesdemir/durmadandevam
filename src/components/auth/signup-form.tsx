@@ -11,6 +11,7 @@ import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { creditReferrer } from "@/lib/actions/diamondActions";
+import { findUserByUsername } from "@/lib/actions/userActions";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -34,7 +35,10 @@ import { Loader2, Eye, EyeOff, Swords } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 
 const formSchema = z.object({
-  username: z.string().min(3, { message: "Kullanıcı adı en az 3 karakter olmalıdır." }).max(20, { message: "Kullanıcı adı en fazla 20 karakter olabilir."}),
+  username: z.string()
+    .min(4, { message: "Kullanıcı adı '@' dahil en az 4 karakter olmalıdır." })
+    .max(21, { message: "Kullanıcı adı '@' dahil en fazla 21 karakter olabilir."})
+    .regex(/^@\w+$/, { message: "Kullanıcı adı '@' ile başlamalı ve sadece harf, rakam veya alt çizgi içermelidir." }),
   email: z.string().email({ message: "Geçersiz e-posta adresi." }),
   password: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır." }),
   gender: z.enum(['male', 'female'], { required_error: "Cinsiyet seçimi zorunludur." }),
@@ -83,7 +87,7 @@ export default function SignUpForm() {
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            username: "",
+            username: "@",
             email: "",
             password: "",
         },
@@ -92,6 +96,21 @@ export default function SignUpForm() {
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsLoading(true);
         try {
+            const existingUser = await findUserByUsername(values.username);
+            if (existingUser) {
+                toast({
+                    title: "Kullanıcı Adı Alınmış",
+                    description: "Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor. Lütfen farklı bir tane seçin.",
+                    variant: "destructive",
+                });
+                 form.setError("username", {
+                    type: "manual",
+                    message: "Bu kullanıcı adı zaten alınmış.",
+                });
+                setIsLoading(false);
+                return;
+            }
+
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const user = userCredential.user;
             
@@ -192,7 +211,7 @@ export default function SignUpForm() {
                                 <FormItem>
                                     <FormLabel>Kullanıcı Adı</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="hiwewalker" {...field} />
+                                        <Input placeholder="@kullaniciadi" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

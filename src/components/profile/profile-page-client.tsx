@@ -33,6 +33,7 @@ import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import ProfileViewerList from "./ProfileViewerList";
 import { Textarea } from "../ui/textarea";
 import { useRouter } from 'next/navigation';
+import { findUserByUsername } from "@/lib/actions/userActions";
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -135,7 +136,21 @@ export default function ProfilePageClient() {
                 authProfileUpdates.photoURL = finalPhotoURL;
             }
     
-            if (username !== userData?.username) updates.username = username;
+            if (username !== userData?.username) {
+                 if (!username.startsWith('@') || !/^@\w+$/.test(username)) {
+                    toast({ variant: "destructive", title: "Geçersiz Kullanıcı Adı", description: "Kullanıcı adı '@' ile başlamalı ve sadece harf, rakam veya alt çizgi içermelidir." });
+                    setIsSaving(false);
+                    return;
+                }
+                const existingUser = await findUserByUsername(username);
+                if (existingUser && existingUser.uid !== user.uid) {
+                    toast({ variant: "destructive", title: "Kullanıcı Adı Alınmış", description: "Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor." });
+                    setIsSaving(false);
+                    return;
+                }
+                updates.username = username;
+                authProfileUpdates.displayName = username;
+            }
             if (bio !== userData?.bio) updates.bio = bio;
             if (privateProfile !== userData?.privateProfile) updates.privateProfile = privateProfile;
             if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) updates.acceptsFollowRequests = acceptsFollowRequests;

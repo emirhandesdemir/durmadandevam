@@ -95,7 +95,7 @@ export default function NewPostForm() {
 
     const prefix = value.substring(0, startIndex);
     const suffix = value.substring(cursorPos);
-    const newText = `${prefix}@${username} ${suffix}`;
+    const newText = `${prefix}${username} ${suffix}`;
     
     setText(newText);
     setMentionQuery(null);

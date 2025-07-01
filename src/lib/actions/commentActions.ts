@@ -1,3 +1,4 @@
+// src/lib/actions/commentActions.ts
 'use server';
 
 import { db } from "@/lib/firebase";
@@ -30,11 +31,11 @@ interface AddCommentArgs {
 }
 
 async function handleMentions(text: string, postId: string, sender: { uid: string, displayName: string | null, photoURL: string | null, selectedAvatarFrame?: string }) {
-    const mentionRegex = /@(\w+)/g;
+    const mentionRegex = /(?<!\S)@\w+/g;
     const mentions = text.match(mentionRegex);
 
     if (mentions) {
-        const usernames = new Set(mentions.map(m => m.substring(1)));
+        const usernames = new Set(mentions);
         for (const username of usernames) {
             const mentionedUser = await findUserByUsername(username);
             if (mentionedUser && mentionedUser.uid !== sender.uid) {

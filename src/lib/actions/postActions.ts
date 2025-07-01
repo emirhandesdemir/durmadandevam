@@ -22,11 +22,11 @@ import { findUserByUsername } from "./userActions";
 
 async function handlePostMentions(postId: string, text: string, sender: { uid: string; displayName: string | null; photoURL: string | null; selectedAvatarFrame?: string }) {
     if (!text) return;
-    const mentionRegex = /@(\w+)/g;
+    const mentionRegex = /(?<!\S)@\w+/g;
     const mentions = text.match(mentionRegex);
 
     if (mentions) {
-        const mentionedUsernames = new Set(mentions.map(m => m.substring(1)));
+        const mentionedUsernames = new Set(mentions);
 
         for (const username of mentionedUsernames) {
             const mentionedUser = await findUserByUsername(username);
