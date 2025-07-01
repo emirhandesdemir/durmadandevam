@@ -267,10 +267,14 @@ export async function extendRoomTime(roomId: string, userId: string) {
         
         const roomData = roomDoc.data();
         const userData = userDoc.data();
+        
+        const isHost = roomData.createdBy.uid === userId;
+        const isModerator = roomData.moderators?.includes(userId);
 
-        if (roomData.createdBy.uid !== userId) {
+        if (!isHost && !isModerator) {
             throw new Error("Bu işlemi yapma yetkiniz yok.");
         }
+
         if ((userData.diamonds || 0) < cost) {
             throw new Error(`Süre uzatmak için ${cost} elmasa ihtiyacınız var.`);
         }
@@ -335,6 +339,11 @@ export async function openPortalForRoom(roomId: string, userId: string) {
         if (!userDoc.exists() || !roomDoc.exists()) throw new Error("Kullanıcı veya oda bulunamadı.");
 
         const userData = userDoc.data();
+        const roomData = roomDoc.data();
+        
+        if (roomData.portalExpiresAt && (roomData.portalExpiresAt as Timestamp).toMillis() > Date.now()) {
+            throw new Error("Bu oda için zaten aktif bir portal var.");
+        }
         // if (userData.diamonds < cost) throw new Error("Yeterli elmasınız yok.");
 
         const fiveMinutesInMs = 5 * 60 * 1000;

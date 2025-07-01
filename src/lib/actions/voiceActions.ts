@@ -32,7 +32,7 @@ const voiceStatsRef = doc(db, 'config', 'voiceStats');
 /**
  * Kullanıcının bir odanın sesli sohbetine katılması için sunucu eylemi.
  */
-export async function joinVoiceChat(roomId: string, user: UserInfo) {
+export async function joinVoiceChat(roomId: string, user: UserInfo, options?: { initialMuteState?: boolean }) {
     if (!user || !user.uid) throw new Error("Yetkilendirme hatası: Giriş yapmalısınız.");
 
     const roomRef = doc(db, 'rooms', roomId);
@@ -60,7 +60,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo) {
                 uid: user.uid,
                 username: user.displayName || 'Anonim',
                 photoURL: user.photoURL,
-                isMuted: false,
+                isMuted: options?.initialMuteState ?? false,
                 isSharingScreen: false,
                 canSpeak: false,
                 joinedAt: serverTimestamp() as Timestamp,

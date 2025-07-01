@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, onSnapshot, collection, query, orderBy, limit, where } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -18,7 +18,7 @@ import type { Room, ActiveGame, GameSettings, Message, ActiveGameSession } from 
 import RoomFooter from '@/components/rooms/RoomFooter';
 import SpeakerLayout from '@/components/rooms/SpeakerLayout';
 import RoomInfoCards from '@/components/rooms/RoomInfoCards';
-import { getGameSettings } from '@/lib/actions/gameActions';
+import { getGameSettings, startGameInRoom } from '@/lib/actions/gameActions';
 import GameCountdownCard from '@/components/game/GameCountdownCard';
 import RoomGameCard from '@/components/game/RoomGameCard';
 import { endGameWithoutWinner, submitAnswer, deleteMatchRoom } from '@/lib/actions/gameActions';
@@ -35,8 +35,8 @@ export default function RoomPage() {
     const roomId = params.id as string;
     
     // --- Auth & Contexts ---
-    const { user, loading: authLoading } = useAuth();
-    const { setActiveRoomId } = useVoiceChat();
+    const { user, userData, featureFlags, loading: authLoading } = useAuth();
+    const { setActiveRoomId, joinRoom, isConnected, isConnecting } = useVoiceChat();
 
     // --- Component State ---
     const [room, setRoom] = useState<Room | null>(null);
@@ -61,7 +61,31 @@ export default function RoomPage() {
         if (roomId) setActiveRoomId(roomId);
         return () => setActiveRoomId(null);
     }, [roomId, setActiveRoomId]);
+
+    // Auto-join voice chat in listen-only mode
+    useEffect(() => {
+        if (user && roomId && !isConnected && !isConnecting) {
+            joinRoom({ muted: true });
+        }
+    }, [user, roomId, isConnected, isConnecting, joinRoom]);
     
+    // Auto-start quiz game if host is present
+    useEffect(() => {
+        if (!isHost || !room || !featureFlags?.quizGameEnabled) return;
+
+        const checkAndStartGame = async () => {
+            if (!room?.id) return;
+            const now = Timestamp.now();
+            const nextGameTime = room.nextGameTimestamp as Timestamp | undefined;
+            if (!nextGameTime || now.toMillis() > nextGameTime.toMillis()) {
+                await startGameInRoom(room.id);
+            }
+        };
+        const interval = setInterval(checkAndStartGame, 30000); // Check every 30 seconds
+        checkAndStartGame();
+        return () => clearInterval(interval);
+    }, [isHost, room, featureFlags?.quizGameEnabled]);
+
     useEffect(() => {
         roomRef.current = room;
     }, [room]);

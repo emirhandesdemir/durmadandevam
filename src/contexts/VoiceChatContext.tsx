@@ -34,7 +34,7 @@ interface VoiceChatContextType {
     setActiveRoomId: (id: string | null) => void;
     startScreenShare: () => Promise<void>;
     stopScreenShare: () => Promise<void>;
-    joinRoom: () => Promise<void>;
+    joinRoom: (options?: { muted: boolean }) => Promise<void>;
     leaveRoom: () => Promise<void>;
     toggleSelfMute: () => Promise<void>;
 }
@@ -200,7 +200,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         return () => signalsUnsub();
     }, [participants, isConnected, user, connectedRoomId, handleSignal, createPeerConnection]);
     
-    const joinRoom = useCallback(async () => {
+    const joinRoom = useCallback(async (options?: { muted: boolean }) => {
         if (!user || !activeRoomId || isConnected || isConnecting) return;
         
         setIsConnecting(true);
@@ -208,7 +208,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000 }, video: false });
             setLocalStream(stream);
             
-            const result = await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL });
+            const result = await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL }, { initialMuteState: options?.muted });
             if (!result.success) {
                 throw new Error(result.error || 'Sesli sohbete katılamadınız.');
             }
