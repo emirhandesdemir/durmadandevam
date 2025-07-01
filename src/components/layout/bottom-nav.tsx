@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, MessageSquare, PlusSquare, Compass } from 'lucide-react';
+import { Home, MessageSquare, PlusSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -27,13 +27,6 @@ export default function BottomNav() {
       href: '/home',
       icon: Home,
       label: 'Anasayfa',
-    },
-     {
-      id: 'explore',
-      isActive: pathname === '/explore',
-      href: '/explore',
-      icon: Compass,
-      label: 'Keşfet',
     },
     {
       id: 'create-post',
