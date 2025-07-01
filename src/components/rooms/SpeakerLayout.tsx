@@ -27,11 +27,10 @@ export default function SpeakerLayout({ room }: SpeakerLayoutProps) {
 
     const maxVisible = 8;
     const visibleParticipants = sortedParticipants.slice(0, maxVisible);
-    const emptySlots = Array(Math.max(0, maxVisible - visibleParticipants.length)).fill(null);
-
+    
     return (
         <div className="flex justify-center p-3 border-b">
-            <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
+            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
                 {visibleParticipants.map((participant) => (
                     <VoiceUserIcon
                         key={participant.uid}
@@ -42,15 +41,6 @@ export default function SpeakerLayout({ room }: SpeakerLayoutProps) {
                         currentUserId={user!.uid}
                         size="sm"
                     />
-                ))}
-                {emptySlots.map((_, index) => (
-                     <div key={`placeholder-${index}`} className="flex flex-col items-center gap-2 w-16">
-                        <div className="w-16 h-16 bg-card/20 rounded-full flex items-center justify-center border-2 border-dashed border-muted-foreground/30 opacity-50">
-                            <Plus className="text-muted-foreground/50" />
-                        </div>
-                         {/* Placeholder for name to keep alignment */}
-                        <div className="h-3.5 w-10 bg-transparent rounded-full" />
-                    </div>
                 ))}
             </div>
         </div>

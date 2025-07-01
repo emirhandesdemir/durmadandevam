@@ -11,6 +11,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import NotificationPermissionManager from "@/components/common/NotificationPermissionManager";
 import PwaInstallBar from "@/components/common/PwaInstallBar";
+import InAppNotificationHandler from "@/components/common/InAppNotificationHandler";
 
 /**
  * Ana Uygulama Düzeni (Main App Layout)
@@ -57,6 +58,7 @@ export default function MainAppLayout({
     <VoiceChatProvider>
       {/* Bildirim izni ve PWA yükleme gibi genel işlemleri yöneten bileşenler. */}
       <NotificationPermissionManager />
+      <InAppNotificationHandler />
       
       <div className="relative flex h-dvh w-full flex-col bg-background overflow-hidden">
         {/* PWA yükleme çubuğu */}

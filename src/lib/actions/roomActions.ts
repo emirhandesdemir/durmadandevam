@@ -331,43 +331,41 @@ export async function openPortalForRoom(roomId: string, userId: string) {
 
     const userRef = doc(db, 'users', userId);
     const roomRef = doc(db, 'rooms', roomId);
-    
+    const portalRef = doc(db, 'portals', roomId);
+
     await runTransaction(db, async (transaction) => {
         const userDoc = await transaction.get(userRef);
         const roomDoc = await transaction.get(roomRef);
+        const portalDoc = await transaction.get(portalRef);
 
         if (!userDoc.exists() || !roomDoc.exists()) throw new Error("Kullanıcı veya oda bulunamadı.");
 
         const userData = userDoc.data();
         const roomData = roomDoc.data();
         
-        if (roomData.portalExpiresAt && (roomData.portalExpiresAt as Timestamp).toMillis() > Date.now()) {
+        if (portalDoc.exists() && (portalDoc.data().expiresAt as Timestamp).toMillis() > Date.now()) {
             throw new Error("Bu oda için zaten aktif bir portal var.");
         }
-        // if (userData.diamonds < cost) throw new Error("Yeterli elmasınız yok.");
-
+        
         const fiveMinutesInMs = 5 * 60 * 1000;
         const newExpiresAt = Timestamp.fromMillis(Date.now() + fiveMinutesInMs);
         
-        // transaction.update(userRef, { diamonds: increment(-cost) });
-        transaction.update(roomRef, { portalExpiresAt: newExpiresAt });
+        transaction.set(portalRef, {
+            roomId: roomId,
+            roomName: roomData.name,
+            hostUid: userId,
+            hostUsername: userData.username,
+            createdAt: serverTimestamp(),
+            expiresAt: newExpiresAt,
+        });
 
-        const systemMessage = {
-            type: 'portal',
-            text: `✨ ${roomDoc.data().createdBy.username}, "${roomDoc.data().name}" odasına bir portal açtı!`,
+        const currentRoomMessagesRef = collection(db, "rooms", roomId, "messages");
+        transaction.set(doc(currentRoomMessagesRef), {
+            type: 'system',
+            text: `✨ Bu odaya bir portal açıldı! 5 dakika boyunca tüm odalarda duyurulacak.`,
             createdAt: serverTimestamp(),
             uid: 'system',
             username: 'System',
-            portalRoomId: roomId,
-            portalRoomName: roomDoc.data().name
-        };
-        
-        const allRoomsQuery = query(collection(db, 'rooms'), where('id', '!=', roomId));
-        const allRoomsSnapshot = await getDocs(allRoomsQuery);
-
-        allRoomsSnapshot.forEach(doc => {
-            const messagesRef = collection(db, "rooms", doc.id, "messages");
-            transaction.set(doc(messagesRef), systemMessage);
         });
 
     });

@@ -144,7 +144,6 @@ export interface Room {
     moderators: string[]; // List of moderator UIDs
     createdAt: Timestamp;
     expiresAt?: Timestamp; // Only for rooms
-    portalExpiresAt?: Timestamp; // For boosted rooms
     participants: { uid: string, username: string, photoURL?: string | null }[];
     maxParticipants: number;
     nextGameTimestamp?: Timestamp;
