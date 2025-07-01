@@ -3,11 +3,12 @@
 
 import { Button } from '@/components/ui/button';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
-import { Mic, MicOff, Settings, AppWindow, LogOut, Loader2, ScreenShareOff, ScreenShare } from 'lucide-react';
+import { Mic, MicOff, Settings, LogOut, Loader2, ScreenShareOff, ScreenShare, Music, Music4 } from 'lucide-react';
 import ChatMessageInput from '../chat/ChatMessageInput';
 import type { Room } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { useRef } from 'react';
 
 interface RoomFooterProps {
     room: Room;
@@ -24,8 +25,13 @@ export default function RoomFooter({ room }: RoomFooterProps) {
         toggleSelfMute,
         isSharingScreen,
         startScreenShare,
-        stopScreenShare
+        stopScreenShare,
+        isMusicPlaying,
+        startMusic,
+        stopMusic,
     } = useVoiceChat();
+
+    const musicInputRef = useRef<HTMLInputElement>(null);
     
     const isParticipant = room.participants.some(p => p.uid === user?.uid);
 
@@ -45,6 +51,23 @@ export default function RoomFooter({ room }: RoomFooterProps) {
         }
     };
 
+    const handleMusicButtonClick = () => {
+        if (isMusicPlaying) {
+            stopMusic();
+        } else {
+            musicInputRef.current?.click();
+        }
+    };
+
+    const handleMusicFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            startMusic(file);
+        }
+        if (event.target) {
+            event.target.value = "";
+        }
+    };
 
     return (
         <footer className="sticky bottom-0 left-0 right-0 z-10 bg-background/80 backdrop-blur-sm border-t p-2">
@@ -67,6 +90,16 @@ export default function RoomFooter({ room }: RoomFooterProps) {
                             </Button>
                             <Button onClick={handleScreenShare} variant="ghost" size="icon" className="rounded-full" disabled={!isConnected}>
                                {isSharingScreen ? <ScreenShareOff className="text-destructive"/> : <ScreenShare />}
+                            </Button>
+                            <input
+                                type="file"
+                                ref={musicInputRef}
+                                onChange={handleMusicFileChange}
+                                accept="audio/*"
+                                className="hidden"
+                            />
+                            <Button onClick={handleMusicButtonClick} variant="ghost" size="icon" className="rounded-full" disabled={!isConnected}>
+                               {isMusicPlaying ? <Music4 className="text-primary"/> : <Music />}
                             </Button>
                         </div>
                     </PopoverContent>

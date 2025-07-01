@@ -37,6 +37,9 @@ interface VoiceChatContextType {
     joinRoom: (options?: { muted: boolean }) => Promise<void>;
     leaveRoom: () => Promise<void>;
     toggleSelfMute: () => Promise<void>;
+    isMusicPlaying: boolean;
+    startMusic: (file: File) => Promise<void>;
+    stopMusic: () => Promise<void>;
 }
 
 const VoiceChatContext = createContext<VoiceChatContextType | undefined>(undefined);
@@ -59,16 +62,48 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const [localScreenStream, setLocalScreenStream] = useState<MediaStream | null>(null);
     const [remoteAudioStreams, setRemoteAudioStreams] = useState<Record<string, MediaStream>>({});
     const [remoteScreenStreams, setRemoteScreenStreams] = useState<Record<string, MediaStream>>({});
+    const [isMusicPlaying, setIsMusicPlaying] = useState(false);
 
     const peerConnections = useRef<Record<string, RTCPeerConnection>>({});
     const screenSenderRef = useRef<Record<string, RTCRtpSender>>({});
     const audioAnalysers = useRef<Record<string, { analyser: AnalyserNode, dataArray: Uint8Array, context: AudioContext }>>({});
     const animationFrameId = useRef<number>();
     const lastActiveUpdateTimestamp = useRef<number>(0);
+    const musicAudioRef = useRef<HTMLAudioElement | null>(null);
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const originalMicTrackRef = useRef<MediaStreamTrack | null>(null);
+    const mixedStreamDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null);
 
     const self = useMemo(() => participants.find(p => p.uid === user?.uid) || null, [participants, user?.uid]);
     const isConnected = !!self && !!connectedRoomId;
     const isSharingScreen = !!localScreenStream;
+
+     const stopMusic = useCallback(async () => {
+        if (!originalMicTrackRef.current) return;
+
+        if (musicAudioRef.current) {
+            musicAudioRef.current.pause();
+            musicAudioRef.current.src = "";
+            URL.revokeObjectURL(musicAudioRef.current.src);
+            musicAudioRef.current = null;
+        }
+
+        for (const peerId in peerConnections.current) {
+            const sender = peerConnections.current[peerId].getSenders().find(s => s.track?.kind === 'audio');
+            if (sender) {
+                await sender.replaceTrack(originalMicTrackRef.current);
+            }
+        }
+        
+        if (audioContextRef.current) {
+            await audioContextRef.current.close();
+            audioContextRef.current = null;
+        }
+
+        mixedStreamDestinationRef.current = null;
+        originalMicTrackRef.current = null;
+        setIsMusicPlaying(false);
+    }, []);
 
     const _cleanupAndResetState = useCallback(() => {
         Object.values(peerConnections.current).forEach(pc => pc.close());
@@ -88,7 +123,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         screenSenderRef.current = {};
         setConnectedRoomId(null);
         setIsConnecting(false);
-    }, [localStream, localScreenStream]);
+        stopMusic();
+    }, [localStream, localScreenStream, stopMusic]);
     
     const sendSignal = useCallback(async (to: string, type: string, data: any) => {
         if (!connectedRoomId || !user) return;
@@ -227,6 +263,55 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         await leaveVoiceChat(connectedRoomId, user.uid);
         _cleanupAndResetState();
     }, [user, connectedRoomId, _cleanupAndResetState]);
+
+    const startMusic = useCallback(async (file: File) => {
+        if (!isConnected || !localStream || isMusicPlaying) {
+             toast({ variant: 'destructive', description: "Müzik başlatılamadı. Sesli sohbete bağlı olduğunuzdan emin olun." });
+             return;
+        }
+        
+        await stopMusic(); // Stop any previous music first
+
+        try {
+            const context = new AudioContext();
+            audioContextRef.current = context;
+
+            const micSource = context.createMediaStreamSource(localStream);
+            originalMicTrackRef.current = localStream.getAudioTracks()[0];
+
+            const musicElement = new Audio();
+            musicAudioRef.current = musicElement;
+            musicElement.src = URL.createObjectURL(file);
+            musicElement.onended = stopMusic;
+            
+            const musicSource = context.createMediaElementSource(musicElement);
+
+            const destination = context.createMediaStreamDestination();
+            mixedStreamDestinationRef.current = destination;
+
+            micSource.connect(destination);
+            musicSource.connect(destination);
+
+            const mixedTrack = destination.stream.getAudioTracks()[0];
+
+            for (const peerId in peerConnections.current) {
+                const sender = peerConnections.current[peerId].getSenders().find(s => s.track?.kind === 'audio');
+                if (sender) {
+                    await sender.replaceTrack(mixedTrack);
+                }
+            }
+
+            await musicElement.play();
+            setIsMusicPlaying(true);
+            toast({ description: "Müzik çalmaya başladı." });
+
+        } catch (error: any) {
+             console.error("Müzik başlatılırken hata:", error);
+             toast({ variant: 'destructive', description: "Müzik başlatılamadı: " + error.message });
+             await stopMusic();
+        }
+
+    }, [isConnected, localStream, isMusicPlaying, stopMusic, toast]);
     
     const stopScreenShare = useCallback(async () => {
         if (!user || !connectedRoomId || !localScreenStream) return;
@@ -374,7 +459,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     
     const value = {
         activeRoom, participants: memoizedParticipants, self, isConnecting, isConnected, remoteAudioStreams, remoteScreenStreams, isSharingScreen, localScreenStream,
-        setActiveRoomId, joinRoom, leaveRoom, toggleSelfMute, startScreenShare, stopScreenShare,
+        setActiveRoomId, joinRoom, leaveRoom, toggleSelfMute, startScreenShare, stopScreenShare, isMusicPlaying, startMusic, stopMusic
     };
 
     return <VoiceChatContext.Provider value={value}>{children}</VoiceChatContext.Provider>;

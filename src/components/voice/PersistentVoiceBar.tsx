@@ -32,7 +32,7 @@ export default function PersistentVoiceBar() {
         <motion.div
             drag
             dragMomentum={false}
-            className="fixed bottom-24 right-4 z-50 cursor-grab active:cursor-grabbing"
+            className="fixed bottom-24 right-4 z-50 cursor-grab"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
             whileTap={{ scale: 1.1, cursor: "grabbing" }}
