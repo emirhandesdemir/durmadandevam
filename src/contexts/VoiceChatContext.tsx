@@ -276,7 +276,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             stream.getVideoTracks()[0].enabled = false;
             setLocalStream(stream);
             
-            const result = await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL }, { initialMuteState: options?.muted });
+            const result = await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL }, { initialMuteState: options?.muted ?? false });
             if (!result.success) {
                 throw new Error(result.error || 'Sesli sohbete katılamadınız.');
             }
@@ -302,7 +302,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
              return;
         }
         
-        await stopMusic(); // Stop any previous music first
+        await stopMusic();
 
         try {
             const context = new AudioContext();
@@ -314,6 +314,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             const musicElement = new Audio();
             musicAudioRef.current = musicElement;
             musicElement.src = URL.createObjectURL(file);
+            musicElement.loop = false; // Don't loop music
             musicElement.onended = stopMusic;
             
             const musicSource = context.createMediaElementSource(musicElement);
@@ -322,18 +323,22 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             mixedStreamDestinationRef.current = destination;
 
             const gainNode = context.createGain();
-            gainNode.gain.value = musicVolume;
+            gainNode.gain.value = musicVolume; // Set initial volume
             musicGainNodeRef.current = gainNode;
 
-            micSource.connect(destination); // Mic -> Destination
-            musicSource.connect(gainNode).connect(destination); // Music -> Gain -> Destination (for others)
-            musicSource.connect(context.destination); // Music -> Local Speakers (for self)
+            // Connect mic to destination for others
+            micSource.connect(destination);
+
+            // Connect music to gain node, then to both local output and destination for others
+            musicSource.connect(gainNode);
+            gainNode.connect(context.destination); // For self
+            gainNode.connect(destination); // For others
 
             const mixedTrack = destination.stream.getAudioTracks()[0];
 
             for (const peerId in peerConnections.current) {
                 const sender = peerConnections.current[peerId].getSenders().find(s => s.track?.kind === 'audio');
-                if (sender) {
+                if (sender && sender.track?.id !== mixedTrack.id) {
                     await sender.replaceTrack(mixedTrack);
                 }
             }

@@ -58,9 +58,9 @@ export default function RoomInfoCards({ room, isOwner }: RoomInfoCardsProps) {
     }
 
     return (
-        <div className="px-4 space-y-3 my-4">
+        <div className="px-4 space-y-3">
             {!loading && pinnedMessage && (
-                 <Card className="bg-primary/10 border-primary/30 shadow-md">
+                 <Card className="bg-primary/10 border-primary/30 shadow-md max-w-md mr-auto">
                     <CardHeader className="p-3 flex flex-row items-center justify-between">
                         <CardTitle className="flex items-center gap-2 text-sm text-primary font-bold">
                             <Pin className="h-4 w-4" />

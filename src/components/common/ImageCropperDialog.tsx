@@ -117,7 +117,7 @@ export default function ImageCropperDialog({
       makeAspectCrop(
         {
           unit: "%",
-          width: 90,
+          width: 60, // Use a smaller default crop width
         },
         aspect || width / height,
         width,

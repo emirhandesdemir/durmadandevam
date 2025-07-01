@@ -48,10 +48,11 @@ export async function createRoom(
             },
             moderators: [userId],
             createdAt: serverTimestamp() as Timestamp,
+            expiresAt: Timestamp.fromMillis(Date.now() + fifteenMinutesInMs),
             participants: [{ uid: userId, username: creatorInfo.username, photoURL: creatorInfo.photoURL }],
             maxParticipants: 9,
             voiceParticipantsCount: 0,
-            expiresAt: Timestamp.fromMillis(Date.now() + fifteenMinutesInMs),
+            nextGameTimestamp: serverTimestamp() as Timestamp, // Start game timer on creation
             rules: null,
             welcomeMessage: null,
             pinnedMessageId: null,
@@ -287,7 +288,7 @@ export async function extendRoomTime(roomId: string, userId: string) {
         transaction.update(roomRef, { expiresAt: newExpiresAt });
     });
     
-    await addSystemMessage(roomId, `⏰ Oda sahibi, oda süresini 20 dakika uzattı! Bu işlem ${cost} elmasa mal oldu.`);
+    await addSystemMessage(roomId, `⏰ Oda süresi 20 dakika uzatıldı! Bu işlem ${cost} elmasa mal oldu.`);
     return { success: true };
 }
 
@@ -358,6 +359,8 @@ export async function openPortalForRoom(roomId: string, userId: string) {
             createdAt: serverTimestamp(),
             expiresAt: newExpiresAt,
         });
+
+        transaction.update(roomRef, { portalExpiresAt: newExpiresAt });
 
         const currentRoomMessagesRef = collection(db, "rooms", roomId, "messages");
         transaction.set(doc(currentRoomMessagesRef), {

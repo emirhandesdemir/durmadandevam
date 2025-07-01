@@ -177,7 +177,7 @@ export default function VoiceUserIcon({
            <div className={cn("avatar-frame-wrapper w-full h-full", participant.selectedAvatarFrame)}>
               {avatarContent}
           </div>
-          <div className={cn("absolute bg-card/70 backdrop-blur-sm rounded-full shadow-md", iconBadgePos)}>
+          <div className={cn("absolute bg-card/70 backdrop-blur-sm rounded-full shadow-md z-10", iconBadgePos)}>
             {hasRequestedSpeak && !canActuallySpeak ? (
               <Hand className={cn(iconSize, "text-yellow-400 animate-pulse")} />
             ) : (participant.isMuted || !canActuallySpeak) ? (

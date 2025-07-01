@@ -207,22 +207,41 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
     }
 
     const postsRef = collection(db, 'posts');
-    const q = query(postsRef, where('uid', '==', uid));
-    
-    try {
-        const snapshot = await getDocs(q);
-        if (snapshot.empty) return;
-        
-        const batch = writeBatch(db);
-        snapshot.docs.forEach(doc => {
-            batch.update(doc.ref, updates);
+    const writePromises = [];
+
+    // Update user's own posts
+    const userPostsQuery = query(postsRef, where('uid', '==', uid));
+    const userPostsSnap = await getDocs(userPostsQuery);
+    if (!userPostsSnap.empty) {
+        const batch1 = writeBatch(db);
+        userPostsSnap.docs.forEach(doc => {
+            batch1.update(doc.ref, updates);
         });
-        
-        await batch.commit();
-        
+        writePromises.push(batch1.commit());
+    }
+
+    // Update user's appearance in retweets
+    const retweetUpdates: { [key: string]: any } = {};
+    if (updates.username) retweetUpdates['retweetOf.username'] = updates.username;
+    if (updates.userAvatar) retweetUpdates['retweetOf.userAvatar'] = updates.userAvatar;
+    if (updates.userAvatarFrame) retweetUpdates['retweetOf.userAvatarFrame'] = updates.userAvatarFrame;
+    
+    if (Object.keys(retweetUpdates).length > 0) {
+        const retweetsQuery = query(postsRef, where('retweetOf.uid', '==', uid));
+        const retweetsSnap = await getDocs(retweetsQuery);
+        if (!retweetsSnap.empty) {
+            const batch2 = writeBatch(db);
+            retweetsSnap.docs.forEach(doc => {
+                batch2.update(doc.ref, retweetUpdates);
+            });
+            writePromises.push(batch2.commit());
+        }
+    }
+
+    try {
+        await Promise.all(writePromises);
         revalidatePath('/home');
         revalidatePath(`/profile/${uid}`);
-
     } catch (error) {
         console.error("Kullanıcı gönderileri güncellenirken hata:", error);
     }
