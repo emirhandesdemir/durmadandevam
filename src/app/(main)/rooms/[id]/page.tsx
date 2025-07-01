@@ -27,7 +27,6 @@ import GameLobbyDialog from '@/components/game/GameLobbyDialog';
 import ActiveGameArea from '@/components/game/ActiveGameArea';
 import GameInviteMessage from '@/components/game/GameInviteMessage';
 import MatchConfirmationControls from '@/components/rooms/MatchConfirmationControls';
-import { getChatId } from '@/lib/utils';
 
 export default function RoomPage() {
     const params = useParams();
@@ -105,7 +104,8 @@ export default function RoomPage() {
             roomUnsub(); 
             messagesUnsub(); 
             gameSessionUnsub();
-            if (roomRef.current?.type === 'match' && roomRef.current?.status === 'closed_declined') {
+            // Cleanup: delete converted/declined match rooms after leaving
+            if (roomRef.current && (roomRef.current.status === 'closed_declined' || roomRef.current.status === 'converted_to_dm')) {
                 deleteMatchRoom(roomId);
             }
         };
@@ -115,11 +115,9 @@ export default function RoomPage() {
     useEffect(() => {
         if (!room || room.type !== 'match' || !user) return;
 
-        if (room.status === 'converted_to_dm') {
-            const partner = room.participants.find(p => p.uid !== user.uid);
-            if (partner) {
-                router.push(`/dm/${getChatId(user.uid, partner.uid)}`);
-            }
+        if (room.status === 'converted_to_dm' && room.finalChatId) {
+            toast({ title: "Harika!", description: "Sohbetiniz kalıcı hale getirildi. Kaldığınız yerden devam edebilirsiniz." });
+            router.push(`/dm/${room.finalChatId}`);
         } else if (room.status === 'closed_declined') {
             toast({ variant: 'destructive', description: "Eşleşme sonlandırıldı." });
             router.push('/matchmaking');
@@ -221,7 +219,7 @@ export default function RoomPage() {
                 </AnimatePresence>
 
                 <main ref={chatScrollRef} className="flex-1 flex flex-col overflow-y-auto">
-                     {isMatchRoom && room.status === 'open' && user && (
+                     {isMatchRoom && (room.status === 'open' || room.status === 'converting') && user && (
                         <MatchConfirmationControls room={room} currentUserId={user.uid} />
                     )}
                     {gameContent && (

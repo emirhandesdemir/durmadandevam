@@ -67,7 +67,14 @@ export default function MatchConfirmationControls({ room, currentUserId }: Match
     
     let content;
     
-    if (userStatus === 'pending') {
+    if (room.status === 'converting') {
+        content = (
+            <div className="flex flex-col items-center text-center gap-2 text-muted-foreground">
+                <Loader2 className="h-6 w-6 animate-spin" />
+                <p className="font-semibold">Sohbetiniz kalıcı hale getiriliyor...</p>
+            </div>
+        )
+    } else if (userStatus === 'pending') {
         content = (
              <div className="flex gap-4">
                 <Button onClick={() => handleResponse(true)} disabled={isResponding} size="lg" className="rounded-full bg-green-500 hover:bg-green-600 flex-1">

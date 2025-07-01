@@ -16,10 +16,14 @@ import {
   runTransaction,
   getDoc,
   deleteDoc,
+  orderBy,
 } from 'firebase/firestore';
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { revalidatePath } from 'next/cache';
 import { v4 as uuidv4 } from 'uuid';
+import { getChatId } from '../utils';
+import type { Message, Room } from '../types';
+import { deleteRoomWithSubcollections } from '../firestoreUtils';
 
 interface UserInfo {
   uid: string;
@@ -281,4 +285,68 @@ export async function toggleReaction(chatId: string, messageId: string, emoji: s
     console.error("Reaksiyon değiştirilirken hata oluştu:", error);
     return { success: false, error: "Reaksiyon güncellenemedi." };
   }
+}
+
+/**
+ * Geçici bir eşleşme odasındaki mesajları kalıcı bir DM sohbetine taşır.
+ */
+export async function createDmFromMatchRoom(roomId: string) {
+  const roomRef = doc(db, 'rooms', roomId);
+  const roomSnap = await getDoc(roomRef);
+  if (!roomSnap.exists()) throw new Error("Kaynak oda bulunamadı.");
+  const roomData = roomSnap.data() as Room;
+
+  if (roomData.participants.length !== 2) throw new Error("Eşleşme odasında geçersiz katılımcı sayısı.");
+  const [user1, user2] = roomData.participants;
+  const chatId = getChatId(user1.uid, user2.uid);
+
+  const sourceMessagesRef = collection(db, 'rooms', roomId, 'messages');
+  const targetMessagesRef = collection(db, 'directMessages', chatId, 'messages');
+  const metadataRef = doc(db, 'directMessagesMetadata', chatId);
+
+  const sourceMessagesSnap = await getDocs(query(sourceMessagesRef, orderBy('createdAt', 'asc')));
+
+  const batch = writeBatch(db);
+  let lastMessage: any = null;
+
+  sourceMessagesSnap.forEach(docSnap => {
+    const data = docSnap.data() as Message;
+    // Sadece kullanıcı mesajlarını taşı, sistem mesajlarını değil.
+    if (data.type === 'user') {
+      const dmMessage = {
+        senderId: data.uid,
+        receiverId: data.uid === user1.uid ? user2.uid : user1.uid,
+        text: data.text,
+        imageUrl: data.imageUrl || null,
+        createdAt: data.createdAt,
+        read: true, // Herkes odada olduğu için okundu kabul edelim
+        edited: false,
+        deleted: false,
+        reactions: {},
+      };
+      batch.set(doc(targetMessagesRef, docSnap.id), dmMessage);
+      lastMessage = dmMessage;
+    }
+  });
+
+  const lastMessageForMeta = lastMessage ? {
+    text: lastMessage.text || '📷 Fotoğraf',
+    senderId: lastMessage.senderId,
+    timestamp: lastMessage.createdAt,
+    read: true,
+  } : null;
+
+  batch.set(metadataRef, {
+    participantUids: [user1.uid, user2.uid],
+    participantInfo: {
+      [user1.uid]: { username: user1.username, photoURL: user1.photoURL || null },
+      [user2.uid]: { username: user2.username, photoURL: user2.photoURL || null },
+    },
+    lastMessage: lastMessageForMeta,
+    unreadCounts: { [user1.uid]: 0, [user2.uid]: 0 },
+  }, { merge: true });
+
+  await batch.commit();
+
+  return chatId;
 }

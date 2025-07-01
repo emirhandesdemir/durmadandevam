@@ -6,6 +6,7 @@ import { deleteRoomWithSubcollections } from '@/lib/firestoreUtils';
 import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch, arrayUnion, arrayRemove, updateDoc, runTransaction, increment } from 'firebase/firestore';
 import { createNotification } from './notificationActions';
 import type { Room } from '../types';
+import { createDmFromMatchRoom } from './dmActions';
 
 const voiceStatsRef = doc(db, 'config', 'voiceStats');
 
@@ -64,6 +65,12 @@ export async function createRoom(
         
         return { success: true, roomId: newRoomRef.id };
     });
+}
+
+interface UserInfo {
+    uid: string;
+    username: string;
+    photoURL?: string | null;
 }
 
 export async function createPrivateMatchRoom(user1: UserInfo, user2: UserInfo) {
@@ -182,12 +189,6 @@ export async function deleteExpiredRoom(roomId: string) {
         console.error("Süresi dolan oda silinirken hata:", error);
         return { success: false, error: error.message };
     }
-}
-
-interface UserInfo {
-    uid: string;
-    username: string | null;
-    photoURL: string | null;
 }
 
 export async function joinRoom(roomId: string, userInfo: UserInfo) {
@@ -469,35 +470,49 @@ export async function kickFromVoice(roomId: string, currentUserId: string, targe
 }
 
 export async function handleMatchConfirmation(roomId: string, userId: string, accepted: boolean) {
-    const roomRef = doc(db, 'rooms', roomId);
+  const roomRef = doc(db, 'rooms', roomId);
 
-    await runTransaction(db, async (transaction) => {
-        const roomDoc = await transaction.get(roomRef);
-        if (!roomDoc.exists()) throw new Error("Eşleşme odası bulunamadı.");
-        
-        const roomData = roomDoc.data() as Room;
-        if (roomData.status !== 'open') throw new Error("Bu eşleşme odası artık aktif değil.");
-        
-        const currentConfirmation = roomData.matchConfirmation?.[userId];
-        if (currentConfirmation !== 'pending') throw new Error("Zaten bir seçim yaptınız.");
-        
-        const partnerId = roomData.participants.find(p => p.uid !== userId)?.uid;
-        if (!partnerId) throw new Error("Eşleşme partneri bulunamadı.");
+  // Use a transaction to safely update the confirmation status
+  const shouldConvert = await runTransaction(db, async (transaction) => {
+    const roomDoc = await transaction.get(roomRef);
+    if (!roomDoc.exists()) throw new Error("Eşleşme odası bulunamadı.");
+    const roomData = roomDoc.data() as Room;
 
-        const newConfirmationState = accepted ? 'accepted' : 'declined';
-        transaction.update(roomRef, { [`matchConfirmation.${userId}`]: newConfirmationState });
+    if (roomData.status !== 'open') throw new Error("Bu eşleşme odası artık aktif değil.");
+    if (roomData.matchConfirmation?.[userId] !== 'pending') throw new Error("Zaten bir seçim yaptınız.");
 
-        if (!accepted) {
-            transaction.update(roomRef, { status: 'closed_declined' });
-            return;
-        }
+    const partnerId = roomData.participants.find(p => p.uid !== userId)!.uid;
+    const partnerStatus = roomData.matchConfirmation?.[partnerId];
 
-        const partnerStatus = roomData.matchConfirmation?.[partnerId];
-        if (partnerStatus === 'accepted') {
-            transaction.update(roomRef, { status: 'converted_to_dm' });
-        } else if (partnerStatus === 'declined') {
-            transaction.update(roomRef, { status: 'closed_declined' });
-        }
-        // if partner is 'pending', do nothing and wait for them.
-    });
+    if (!accepted) {
+      transaction.update(roomRef, { status: 'closed_declined', [`matchConfirmation.${userId}`]: 'declined' });
+      return false;
+    }
+
+    if (partnerStatus === 'accepted') {
+      transaction.update(roomRef, { status: 'converting', [`matchConfirmation.${userId}`]: 'accepted' });
+      return true; // Signal to convert
+    } else {
+      transaction.update(roomRef, { [`matchConfirmation.${userId}`]: 'accepted' });
+      return false; // Wait for partner
+    }
+  });
+
+  if (shouldConvert) {
+    try {
+      // Perform the migration outside the transaction
+      const newChatId = await createDmFromMatchRoom(roomId);
+      // Final update to signal redirection to clients
+      await updateDoc(roomRef, {
+        status: 'converted_to_dm',
+        finalChatId: newChatId,
+      });
+    } catch (error) {
+      console.error("Failed to convert match room:", error);
+      await updateDoc(roomRef, { status: 'open' }); // Revert on failure
+      throw new Error("Sohbet oluşturulurken bir hata oluştu.");
+    }
+  }
+
+  return { success: true };
 }
