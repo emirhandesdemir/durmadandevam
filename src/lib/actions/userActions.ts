@@ -3,7 +3,7 @@
 
 import { db, storage } from '@/lib/firebase';
 import type { Report, UserProfile } from '@/lib/types';
-import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, orderBy } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, orderBy, setDoc } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
@@ -38,9 +38,11 @@ export async function saveFCMToken(userId: string, token: string) {
   }
   const userRef = doc(db, 'users', userId);
   try {
-    await updateDoc(userRef, {
+    // Use setDoc with merge to avoid "No document to update" error
+    // if the user document is not yet created.
+    await setDoc(userRef, {
       fcmTokens: arrayUnion(token),
-    });
+    }, { merge: true });
     return { success: true };
   } catch (error: any) {
     console.error('FCM jetonu kaydedilirken hata:', error);
