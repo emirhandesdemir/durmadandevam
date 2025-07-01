@@ -78,6 +78,8 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
         }
         
         const isCurrentUser = msg.uid === currentUser.uid;
+        const isHostOrMod = msg.uid === room.createdBy.uid || room.moderators?.includes(msg.uid);
+        
         return (
           <div key={msg.id} className={cn("flex items-end gap-3 w-full animate-in fade-in slide-in-from-bottom-4 duration-500 group", isCurrentUser && "flex-row-reverse")}>
              {isHost && !isCurrentUser && (
@@ -106,7 +108,7 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
 
             <div className={cn("flex flex-col gap-1 max-w-[70%]", isCurrentUser && "items-end")}>
                 <div className={cn("flex items-center gap-2", isCurrentUser && "flex-row-reverse")}>
-                   <p className="font-bold text-sm text-foreground">{isCurrentUser ? "Siz" : msg.username}</p>
+                   <p className={cn("font-bold text-sm", isHostOrMod && !isCurrentUser ? "text-amber-500" : "text-foreground")}>{isCurrentUser ? "Siz" : msg.username}</p>
                    <p className="text-xs text-muted-foreground">
                      {msg.createdAt ? format((msg.createdAt as Timestamp).toDate(), 'p', { locale: tr }) : ''}
                    </p>
@@ -118,7 +120,14 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
                             {Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}
                         </div>
                     )}
-                    <div className={cn("p-2 rounded-2xl relative", isCurrentUser ? "bg-primary text-primary-foreground rounded-br-none" : "bg-card rounded-bl-none text-foreground")}>
+                    <div className={cn(
+                        "p-2 rounded-2xl relative", 
+                        isCurrentUser 
+                            ? "bg-primary text-primary-foreground rounded-br-none" 
+                            : (isHostOrMod 
+                                ? "bg-card border-2 border-amber-400/50 rounded-bl-none text-foreground" 
+                                : "bg-card rounded-bl-none text-foreground")
+                    )}>
                         {msg.imageUrl && (
                             <Image 
                                 src={msg.imageUrl} 

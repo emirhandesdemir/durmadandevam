@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 
 export default function PersistentVoiceBar() {
     const { user } = useAuth();
@@ -28,7 +29,14 @@ export default function PersistentVoiceBar() {
     const isSpeaking = self?.isSpeaker && !self?.isMuted;
 
     return (
-        <div className="fixed bottom-20 right-4 z-50 animate-in slide-in-from-right-5 duration-300">
+        <motion.div
+            drag
+            dragMomentum={false}
+            className="fixed bottom-24 right-4 z-50 cursor-grab active:cursor-grabbing"
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            whileTap={{ scale: 1.1, cursor: "grabbing" }}
+        >
             <div className="relative group">
                 {/* Main clickable area to go back to the room */}
                 <Link href={`/rooms/${activeRoom.id}`} className={cn(
@@ -58,6 +66,6 @@ export default function PersistentVoiceBar() {
                     <span className="sr-only">Sesli Sohbetten Ayrıl</span>
                 </Button>
             </div>
-        </div>
+        </motion.div>
     );
 }

@@ -78,7 +78,7 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, onBa
                     )}
 
                     <div>
-                        <h1 className="text-md font-bold truncate max-w-[120px] sm:max-w-[180px]">{room.name}</h1>
+                        <h1 className="text-md font-bold truncate max-w-[120px] sm:max-w-[180px] text-primary shadow-primary/50 [text-shadow:_0_0_8px_var(--tw-shadow-color)]">{room.name}</h1>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <span>ID: {room.id.substring(0, 10)}</span>
                              {timeLeft !== null && room.expiresAt && (
