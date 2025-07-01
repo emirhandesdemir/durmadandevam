@@ -65,6 +65,7 @@ export default function ProfilePageClient() {
     const [bio, setBio] = useState("");
     const [age, setAge] = useState<number | undefined>(undefined);
     const [city, setCity] = useState("");
+    const [country, setCountry] = useState("");
     const [privateProfile, setPrivateProfile] = useState(false);
     const [acceptsFollowRequests, setAcceptsFollowRequests] = useState(true);
     const [showOnlineStatus, setShowOnlineStatus] = useState(true);
@@ -83,6 +84,7 @@ export default function ProfilePageClient() {
             setBio(userData.bio || "");
             setAge(userData.age);
             setCity(userData.city || "");
+            setCountry(userData.country || "");
             setPrivateProfile(userData.privateProfile || false);
             setAcceptsFollowRequests(userData.acceptsFollowRequests ?? true);
             setShowOnlineStatus(userData.showOnlineStatus ?? true);
@@ -101,6 +103,7 @@ export default function ProfilePageClient() {
         bio !== (userData?.bio || "") ||
         age !== (userData?.age || undefined) ||
         city !== (userData?.city || "") ||
+        country !== (userData?.country || "") ||
         privateProfile !== (userData?.privateProfile || false) || 
         acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true) ||
         showOnlineStatus !== (userData?.showOnlineStatus ?? true) ||
@@ -163,6 +166,7 @@ export default function ProfilePageClient() {
             if (bio !== userData?.bio) updates.bio = bio;
             if (age !== userData?.age) updates.age = Number(age);
             if (city !== userData?.city) updates.city = city;
+            if (country !== userData?.country) updates.country = country;
             if (privateProfile !== userData?.privateProfile) updates.privateProfile = privateProfile;
             if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) updates.acceptsFollowRequests = acceptsFollowRequests;
             if (showOnlineStatus !== (userData?.showOnlineStatus ?? true)) updates.showOnlineStatus = showOnlineStatus;
@@ -251,16 +255,20 @@ export default function ProfilePageClient() {
                                     <Label htmlFor="username">Kullanıcı Adı</Label>
                                     <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} />
                                 </div>
-                                 <div className="grid grid-cols-2 gap-4">
-                                     <div className="space-y-2">
-                                        <Label htmlFor="age">Yaş</Label>
-                                        <Input id="age" type="number" value={age || ''} onChange={(e) => setAge(Number(e.target.value))} />
-                                    </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="age">Yaş</Label>
+                                    <Input id="age" type="number" value={age || ''} onChange={(e) => setAge(Number(e.target.value))} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="city">Şehir</Label>
                                         <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} />
                                     </div>
-                                 </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="country">Ülke</Label>
+                                        <Input id="country" value={country} onChange={(e) => setCountry(e.target.value)} />
+                                    </div>
+                                </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="bio">Biyografi</Label>
                                     <Textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Kendini anlat..." className="rounded-xl" />

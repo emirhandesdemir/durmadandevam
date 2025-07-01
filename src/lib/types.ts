@@ -12,6 +12,7 @@ export interface UserProfile {
     gender?: 'male' | 'female';
     age?: number;
     city?: string;
+    country?: string;
     createdAt: Timestamp;
     lastActionTimestamp?: Timestamp; // For rate limiting
     privateProfile: boolean;
