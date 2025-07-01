@@ -62,6 +62,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo, options?: { 
                 photoURL: user.photoURL,
                 isMuted: options?.initialMuteState ?? false,
                 isSharingScreen: false,
+                isSharingVideo: false,
                 canSpeak: false,
                 joinedAt: serverTimestamp() as Timestamp,
                 lastActiveAt: serverTimestamp() as Timestamp,
@@ -138,6 +139,22 @@ export async function toggleSelfMute(roomId: string, userId: string, isMuted: bo
         return { success: true };
     } catch (error: any) { return { success: false, error: error.message }; }
 }
+
+/**
+ * Kullanıcının video durumunu günceller.
+ */
+export async function toggleVideo(roomId: string, userId: string, isSharing: boolean) {
+    if (!userId) throw new Error("Yetkilendirme hatası.");
+    const userVoiceRef = doc(db, 'rooms', roomId, 'voiceParticipants', userId);
+    try {
+        await updateDoc(userVoiceRef, { 
+            isSharingVideo: isSharing,
+            lastActiveAt: serverTimestamp()
+        });
+        return { success: true };
+    } catch (error: any) { return { success: false, error: error.message }; }
+}
+
 
 /**
  * Kullanıcının ekran paylaşım durumunu günceller.

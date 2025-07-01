@@ -170,6 +170,7 @@ export interface VoiceParticipant {
     isMuted: boolean;
     canSpeak: boolean; // Permission to speak in request-to-speak mode
     isSharingScreen: boolean;
+    isSharingVideo: boolean;
     joinedAt: Timestamp;
     lastActiveAt?: Timestamp;
     selectedBubble?: string;

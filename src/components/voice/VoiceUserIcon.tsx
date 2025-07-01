@@ -28,9 +28,10 @@ import {
   UserX,
   Hand,
 } from "lucide-react";
-import { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useRouter } from "next/navigation";
+import { useVoiceChat } from "@/contexts/VoiceChatContext";
 
 
 interface VoiceUserIconProps {
@@ -41,6 +42,18 @@ interface VoiceUserIconProps {
   currentUserId: string;
   size?: 'sm' | 'lg';
 }
+
+const VideoView = React.memo(({ stream }: { stream: MediaStream | null }) => {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    useEffect(() => {
+        if (videoRef.current && stream) {
+            videoRef.current.srcObject = stream;
+        }
+    }, [stream]);
+    return <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />;
+});
+VideoView.displayName = 'VideoView';
+
 
 export default function VoiceUserIcon({
   participant,
@@ -53,6 +66,7 @@ export default function VoiceUserIcon({
   const { toast } = useToast();
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
+  const { localStream, remoteVideoStreams } = useVoiceChat();
 
   const isSelf = participant.uid === currentUserId;
   const isParticipantHost = participant.uid === room.createdBy.uid;
@@ -60,6 +74,10 @@ export default function VoiceUserIcon({
   const hasRequestedSpeak = room.speakRequests?.includes(participant.uid);
 
   const canModerate = isHost || isModerator;
+  
+  const videoStream = participant.isSharingVideo
+    ? (isSelf ? localStream : remoteVideoStreams[participant.uid] || null)
+    : null;
 
   const handleKick = async () => {
     if (!canModerate) return;
@@ -135,23 +153,29 @@ export default function VoiceUserIcon({
   const speakingRing = participant.isSpeaker && !participant.isMuted;
   const canActuallySpeak = !room.requestToSpeakEnabled || participant.canSpeak || isHost || isModerator;
 
+  const avatarContent = (
+    <div className={cn("relative z-[1] border-2 transition-all duration-300 w-full h-full rounded-full overflow-hidden",
+        speakingRing ? "border-green-500 shadow-lg shadow-green-500/50 ring-4 ring-green-500/30" : "border-transparent",
+    )}>
+        {videoStream ? (
+            <VideoView stream={videoStream} />
+        ) : (
+            <Avatar className="w-full h-full">
+                <AvatarImage src={participant.photoURL || undefined} />
+                <AvatarFallback className={cn("bg-muted text-muted-foreground", fallbackTextSize)}>
+                {participant.username?.charAt(0).toUpperCase()}
+                </AvatarFallback>
+            </Avatar>
+        )}
+    </div>
+  );
+
+
   const avatar = (
     <div className="relative flex flex-col items-center gap-2">
        <div className={cn("relative", avatarSize)}>
            <div className={cn("avatar-frame-wrapper w-full h-full", participant.selectedAvatarFrame)}>
-              <Avatar
-                className={cn(
-                  "relative z-[1] border-2 transition-all duration-300 w-full h-full",
-                  speakingRing
-                    ? "border-green-500 shadow-lg shadow-green-500/50 ring-4 ring-green-500/30"
-                    : "border-transparent",
-                )}
-              >
-                <AvatarImage src={participant.photoURL || undefined} />
-                <AvatarFallback className={cn("bg-muted text-muted-foreground", fallbackTextSize)}>
-                  {participant.username?.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              {avatarContent}
           </div>
           <div className={cn("absolute bg-card/70 backdrop-blur-sm rounded-full shadow-md", iconBadgePos)}>
             {hasRequestedSpeak && !canActuallySpeak ? (

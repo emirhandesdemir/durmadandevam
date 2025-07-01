@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { collection, onSnapshot, doc, addDoc, query, where, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Room, VoiceParticipant } from '../types';
-import { joinVoiceChat, leaveVoiceChat, updateLastActive, toggleSelfMute as toggleMuteAction, toggleScreenShare as toggleScreenShareAction } from '@/lib/actions/voiceActions';
+import { joinVoiceChat, leaveVoiceChat, toggleSelfMute as toggleMuteAction, toggleScreenShare as toggleScreenShareAction, toggleVideo as toggleVideoAction } from '@/lib/actions/voiceActions';
 import { useToast } from '@/hooks/use-toast';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -29,11 +29,15 @@ interface VoiceChatContextType {
     isConnected: boolean;
     remoteAudioStreams: Record<string, MediaStream>;
     remoteScreenStreams: Record<string, MediaStream>;
-    localScreenStream: MediaStream | null;
+    remoteVideoStreams: Record<string, MediaStream>;
+    localStream: MediaStream | null;
     isSharingScreen: boolean;
+    isSharingVideo: boolean;
     setActiveRoomId: (id: string | null) => void;
     startScreenShare: () => Promise<void>;
     stopScreenShare: () => Promise<void>;
+    startVideo: () => Promise<void>;
+    stopVideo: () => Promise<void>;
     joinRoom: (options?: { muted: boolean }) => Promise<void>;
     leaveRoom: () => Promise<void>;
     toggleSelfMute: () => Promise<void>;
@@ -59,13 +63,16 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const [isConnecting, setIsConnecting] = useState(false);
     
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+    const [isSharingVideo, setIsSharingVideo] = useState(false);
     const [localScreenStream, setLocalScreenStream] = useState<MediaStream | null>(null);
     const [remoteAudioStreams, setRemoteAudioStreams] = useState<Record<string, MediaStream>>({});
+    const [remoteVideoStreams, setRemoteVideoStreams] = useState<Record<string, MediaStream>>({});
     const [remoteScreenStreams, setRemoteScreenStreams] = useState<Record<string, MediaStream>>({});
     const [isMusicPlaying, setIsMusicPlaying] = useState(false);
 
     const peerConnections = useRef<Record<string, RTCPeerConnection>>({});
     const screenSenderRef = useRef<Record<string, RTCRtpSender>>({});
+    const videoSenderRef = useRef<Record<string, RTCRtpSender>>({});
     const audioAnalysers = useRef<Record<string, { analyser: AnalyserNode, dataArray: Uint8Array, context: AudioContext }>>({});
     const animationFrameId = useRef<number>();
     const lastActiveUpdateTimestamp = useRef<number>(0);
@@ -113,6 +120,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         localScreenStream?.getTracks().forEach(track => track.stop());
         setLocalStream(null);
         setLocalScreenStream(null);
+        setIsSharingVideo(false);
+
 
         Object.values(audioAnalysers.current).forEach(({ context }) => context.close());
         audioAnalysers.current = {};
@@ -120,7 +129,9 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
         setRemoteAudioStreams({});
         setRemoteScreenStreams({});
+        setRemoteVideoStreams({});
         screenSenderRef.current = {};
+        videoSenderRef.current = {};
         setConnectedRoomId(null);
         setIsConnecting(false);
         stopMusic();
@@ -137,9 +148,16 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
         const pc = new RTCPeerConnection(ICE_SERVERS);
         peerConnections.current[otherUid] = pc;
-        localStream.getAudioTracks().forEach(track => pc.addTrack(track, localStream));
+        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
 
-        pc.ontrack = e => e.track.kind === 'audio' ? setRemoteAudioStreams(p => ({ ...p, [otherUid]: e.streams[0] })) : setRemoteScreenStreams(p => ({ ...p, [otherUid]: e.streams[0] }));
+        pc.ontrack = e => {
+            if (e.track.kind === 'audio') {
+                 setRemoteAudioStreams(p => ({ ...p, [otherUid]: e.streams[0] }));
+            } else if (e.track.kind === 'video') {
+                 // Differentiate between camera and screen share streams if needed
+                 setRemoteVideoStreams(p => ({ ...p, [otherUid]: e.streams[0] }));
+            }
+        };
         pc.onicecandidate = e => e.candidate && sendSignal(otherUid, 'ice-candidate', e.candidate.toJSON());
         
         if (user.uid > otherUid) {
@@ -230,6 +248,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 delete peerConnections.current[uid];
                 setRemoteAudioStreams(p => { const s = {...p}; delete s[uid]; return s; });
                 setRemoteScreenStreams(p => { const s = {...p}; delete s[uid]; return s; });
+                setRemoteVideoStreams(p => { const s = {...p}; delete s[uid]; return s; });
             }
         });
         
@@ -241,7 +260,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         
         setIsConnecting(true);
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000 }, video: false });
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000 }, video: true });
+            stream.getVideoTracks()[0].enabled = false;
             setLocalStream(stream);
             
             const result = await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL }, { initialMuteState: options?.muted });
@@ -407,6 +427,27 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         }
     }, [self, connectedRoomId, localStream, user]);
 
+     const startVideo = useCallback(async () => {
+        if (!self || !connectedRoomId || !localStream || isSharingVideo) return;
+        const videoTrack = localStream.getVideoTracks()[0];
+        if (videoTrack) {
+            videoTrack.enabled = true;
+            setIsSharingVideo(true);
+            await toggleVideoAction(connectedRoomId, self.uid, true);
+        }
+    }, [self, connectedRoomId, localStream, isSharingVideo]);
+
+    const stopVideo = useCallback(async () => {
+        if (!self || !connectedRoomId || !localStream || !isSharingVideo) return;
+        const videoTrack = localStream.getVideoTracks()[0];
+        if (videoTrack) {
+            videoTrack.enabled = false;
+            setIsSharingVideo(false);
+            await toggleVideoAction(connectedRoomId, self.uid, false);
+        }
+    }, [self, connectedRoomId, localStream, isSharingVideo]);
+
+
     useEffect(() => {
         const setupAnalyser = (stream: MediaStream, uid: string) => {
             if (!audioAnalysers.current[uid]) {
@@ -458,8 +499,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     }, [participants, speakingStates]);
     
     const value = {
-        activeRoom, participants: memoizedParticipants, self, isConnecting, isConnected, remoteAudioStreams, remoteScreenStreams, isSharingScreen, localScreenStream,
-        setActiveRoomId, joinRoom, leaveRoom, toggleSelfMute, startScreenShare, stopScreenShare, isMusicPlaying, startMusic, stopMusic
+        activeRoom, participants: memoizedParticipants, self, isConnecting, isConnected, remoteAudioStreams, remoteScreenStreams, remoteVideoStreams, localStream, isSharingScreen, isSharingVideo,
+        setActiveRoomId, joinRoom, leaveRoom, toggleSelfMute, startScreenShare, stopScreenShare, startVideo, stopVideo, isMusicPlaying, startMusic, stopMusic
     };
 
     return <VoiceChatContext.Provider value={value}>{children}</VoiceChatContext.Provider>;

@@ -3,7 +3,7 @@
 
 import { Button } from '@/components/ui/button';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
-import { Mic, MicOff, Settings, LogOut, Loader2, ScreenShareOff, ScreenShare, Music, Music4 } from 'lucide-react';
+import { Mic, MicOff, Settings, LogOut, Loader2, ScreenShareOff, ScreenShare, Music, Music4, Camera, CameraOff } from 'lucide-react';
 import ChatMessageInput from '../chat/ChatMessageInput';
 import type { Room } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,9 +12,10 @@ import { useRef } from 'react';
 
 interface RoomFooterProps {
     room: Room;
+    onGameLobbyOpen: () => void;
 }
 
-export default function RoomFooter({ room }: RoomFooterProps) {
+export default function RoomFooter({ room, onGameLobbyOpen }: RoomFooterProps) {
     const { user } = useAuth();
     const { 
         isConnected, 
@@ -26,6 +27,9 @@ export default function RoomFooter({ room }: RoomFooterProps) {
         isSharingScreen,
         startScreenShare,
         stopScreenShare,
+        isSharingVideo,
+        startVideo,
+        stopVideo,
         isMusicPlaying,
         startMusic,
         stopMusic,
@@ -50,6 +54,14 @@ export default function RoomFooter({ room }: RoomFooterProps) {
             startScreenShare();
         }
     };
+
+    const handleVideoToggle = () => {
+        if (isSharingVideo) {
+            stopVideo();
+        } else {
+            startVideo();
+        }
+    }
 
     const handleMusicButtonClick = () => {
         if (isMusicPlaying) {
@@ -87,6 +99,9 @@ export default function RoomFooter({ room }: RoomFooterProps) {
                             </Button>
                             <Button onClick={toggleSelfMute} variant="ghost" size="icon" className="rounded-full" disabled={!isConnected}>
                                 {self?.isMuted ? <MicOff className="text-destructive"/> : <Mic />}
+                            </Button>
+                            <Button onClick={handleVideoToggle} variant="ghost" size="icon" className="rounded-full" disabled={!isConnected}>
+                               {isSharingVideo ? <CameraOff className="text-destructive"/> : <Camera />}
                             </Button>
                             <Button onClick={handleScreenShare} variant="ghost" size="icon" className="rounded-full" disabled={!isConnected}>
                                {isSharingScreen ? <ScreenShareOff className="text-destructive"/> : <ScreenShare />}
