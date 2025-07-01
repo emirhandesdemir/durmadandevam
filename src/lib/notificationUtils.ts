@@ -26,7 +26,8 @@ export async function requestNotificationPermission(userId: string): Promise<boo
       // ÖNEMLİ: Bu alana, Firebase projenizin "Cloud Messaging" ayarlarından aldığınız
       // "Web Push sertifikaları" bölümündeki VAPID anahtar çiftini yapıştırmalısınız.
       // Bu anahtar, tarayıcı ile Firebase arasında güvenli bir iletişim kanalı kurar.
-      const vapidKey="BEv3RhiBuZQ8cDg2SAQf41tY_ijOEBJyCDLUY648St78CRgE57v8HWYUDBu6huI_kxzF_gKyelZi3Qbfgs8PMaE";
+      // Firebase Console > Project Settings > Cloud Messaging > Web configuration > Web Push certificates
+      const vapidKey="BEv3RhiBuZQ8cDg2SAQf41tY_ijOEBJyCDLUY648St78CRgE57v8HWYUDBu6huI_kxzF_gKyelZi3Qbfgs8PMaE"; // <---- BURAYI KONTROL ET / CHECK THIS KEY
       
       // Firebase'den bu cihaza özel bildirim jetonunu al.
       const currentToken = await getToken(messaging, { vapidKey });
