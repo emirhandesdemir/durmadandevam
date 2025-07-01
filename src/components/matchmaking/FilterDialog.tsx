@@ -35,8 +35,14 @@ interface FilterDialogProps {
 const filterSchema = z.object({
   gender: z.enum(['male', 'female', 'any']).default('any'),
   city: z.string().optional(),
-  minAge: z.coerce.number().min(18).optional(),
-  maxAge: z.coerce.number().max(99).optional(),
+  minAge: z.preprocess(
+    (val) => val === '' || val === null ? undefined : Number(val),
+    z.number().min(18, 'Yaş en az 18 olmalıdır.').optional()
+  ),
+  maxAge: z.preprocess(
+    (val) => val === '' || val === null ? undefined : Number(val),
+    z.number().max(99, 'Yaş en fazla 99 olabilir.').optional()
+  ),
 }).refine(data => !data.minAge || !data.maxAge || data.maxAge >= data.minAge, {
     message: "Maksimum yaş minimum yaştan küçük olamaz.",
     path: ["maxAge"],
@@ -50,8 +56,8 @@ export default function FilterDialog({ isOpen, onOpenChange, currentFilters, onA
     defaultValues: {
         gender: currentFilters?.gender || 'any',
         city: currentFilters?.city || '',
-        minAge: currentFilters?.ageRange[0] || 18,
-        maxAge: currentFilters?.ageRange[1] || 99,
+        minAge: currentFilters?.ageRange[0] || undefined,
+        maxAge: currentFilters?.ageRange[1] || undefined,
     },
   });
 
@@ -66,7 +72,7 @@ export default function FilterDialog({ isOpen, onOpenChange, currentFilters, onA
 
   const handleClearFilters = () => {
     onApplyFilters(null);
-    reset({ gender: 'any', city: '', minAge: 18, maxAge: 99 });
+    reset({ gender: 'any', city: '', minAge: undefined, maxAge: undefined });
     onOpenChange(false);
   }
 
@@ -76,7 +82,7 @@ export default function FilterDialog({ isOpen, onOpenChange, currentFilters, onA
         <DialogHeader>
           <DialogTitle>Eşleşme Filtreleri</DialogTitle>
           <DialogDescription>
-            Aramanı özelleştir. Filtreli arama <strong className="text-primary flex items-center gap-1">5 <Gem className="h-4 w-4"/></strong> gerektirir.
+            Aramanı belirli kriterlere göre özelleştir. Bu işlem ücretsizdir.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

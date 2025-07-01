@@ -25,6 +25,36 @@ export default function MatchmakingPage() {
   const [filters, setFilters] = useState<AppliedFilters | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isBuying, setIsBuying] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Load filters from localStorage on initial render
+  useEffect(() => {
+    try {
+      const savedFilters = localStorage.getItem('matchmakingFilters');
+      if (savedFilters) {
+        setFilters(JSON.parse(savedFilters));
+      }
+    } catch (error) {
+      console.error("Filtreler localStorage'dan yüklenemedi", error);
+      setFilters(null);
+    }
+    setIsInitialized(true);
+  }, []);
+
+  // Save filters to localStorage whenever they change
+  useEffect(() => {
+    if (!isInitialized) return;
+    try {
+      if (filters) {
+        localStorage.setItem('matchmakingFilters', JSON.stringify(filters));
+      } else {
+        localStorage.removeItem('matchmakingFilters');
+      }
+    } catch (error) {
+      console.error("Filtreler localStorage'a kaydedilemedi", error);
+    }
+  }, [filters, isInitialized]);
+
 
   const matchmakingRights = userData?.matchmakingRights || 0;
 
@@ -159,7 +189,7 @@ export default function MatchmakingPage() {
                 </Button>
               )}
                <Button variant="outline" onClick={() => setIsFilterOpen(true)}>
-                    <Filter className="mr-2 h-4 w-4" /> Filtrele (5 Elmas)
+                    <Filter className="mr-2 h-4 w-4" /> Filtrele
                 </Button>
                {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
             </CardContent>

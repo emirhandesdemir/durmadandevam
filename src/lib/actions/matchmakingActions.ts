@@ -12,7 +12,9 @@ import {
   writeBatch,
   serverTimestamp,
   runTransaction,
-  increment
+  increment,
+  setDoc,
+  updateDoc
 } from 'firebase/firestore';
 import { createPrivateMatchRoom } from './roomActions';
 import { UserProfile } from '../types';
@@ -56,13 +58,6 @@ export async function enterMatchmakingQueue(userId: string, userGender: 'male' |
 
     if ((currentData.matchmakingRights || 0) <= 0) {
         throw new Error("Eşleşme hakkınız kalmadı.");
-    }
-    if (filters) {
-        const filterCost = 5;
-        if ((currentData.diamonds || 0) < filterCost) {
-            throw new Error(`Filtreleme için ${filterCost} elmasa ihtiyacınız var.`);
-        }
-        transaction.update(userRef, { diamonds: increment(-filterCost) });
     }
     
     transaction.update(userRef, { 
