@@ -80,17 +80,17 @@ export async function createPost(postData: {
         };
         transaction.set(newPostRef, newPostData);
         
+        const userUpdates: { [key: string]: any } = {
+            lastActionTimestamp: serverTimestamp(),
+            postCount: increment(1)
+        };
+
         if (postCount === 0) {
             // First post, give 90 more diamonds (10 already given at signup)
-            transaction.update(userRef, {
-                diamonds: increment(90),
-                postCount: increment(1)
-            });
-        } else {
-            transaction.update(userRef, {
-                postCount: increment(1)
-            });
+            userUpdates.diamonds = increment(90);
         }
+        
+        transaction.update(userRef, userUpdates);
     });
 
     await handlePostMentions(finalPostId, postData.text, {
@@ -252,7 +252,10 @@ export async function retweetPost(
         };
 
         transaction.set(newPostRef, newPostData);
-        transaction.update(retweeterUserRef, { postCount: increment(1) });
+        transaction.update(retweeterUserRef, { 
+            postCount: increment(1),
+            lastActionTimestamp: serverTimestamp()
+        });
     });
     
     // Notification for the original poster

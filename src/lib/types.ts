@@ -11,6 +11,7 @@ export interface UserProfile {
     role: 'admin' | 'user';
     gender?: 'male' | 'female';
     createdAt: Timestamp;
+    lastActionTimestamp?: Timestamp; // For rate limiting
     privateProfile: boolean;
     acceptsFollowRequests: boolean;
     showOnlineStatus?: boolean;

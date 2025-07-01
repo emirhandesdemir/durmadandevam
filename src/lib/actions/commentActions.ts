@@ -59,6 +59,7 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
     if (!text.trim()) throw new Error("Yorum metni boş olamaz.");
 
     const postRef = doc(db, "posts", postId);
+    const userRef = doc(db, "users", user.uid);
     const commentsColRef = collection(postRef, "comments");
 
     const batch = writeBatch(db);
@@ -78,6 +79,9 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
         commentCount: increment(1)
     });
     
+    // Set last action timestamp for rate limiting
+    batch.update(userRef, { lastActionTimestamp: serverTimestamp() });
+
     const postSnap = await getDoc(postRef);
     const postData = postSnap.data();
 

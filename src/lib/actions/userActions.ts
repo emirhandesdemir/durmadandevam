@@ -181,6 +181,7 @@ export async function submitReport(reportData: ReportData) {
     
     const reportsRef = collection(db, 'reports');
     const reportedUserRef = doc(db, 'users', reportData.reportedUserId);
+    const reporterUserRef = doc(db, 'users', reportData.reporterId);
     
     try {
         const batch = writeBatch(db);
@@ -191,6 +192,9 @@ export async function submitReport(reportData: ReportData) {
         
         // Increment report count on user's profile
         batch.update(reportedUserRef, { reportCount: increment(1) });
+        
+        // Update reporter's last action timestamp for rate limiting
+        batch.update(reporterUserRef, { lastActionTimestamp: serverTimestamp() });
         
         await batch.commit();
         

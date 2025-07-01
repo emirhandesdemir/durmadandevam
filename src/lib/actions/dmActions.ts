@@ -45,6 +45,7 @@ export async function sendMessage(
   }
 
   const metadataDocRef = doc(db, 'directMessagesMetadata', chatId);
+  const senderUserRef = doc(db, 'users', sender.uid);
   
   let finalImageUrl: string | undefined;
   if (imageUrl) {
@@ -94,6 +95,9 @@ export async function sendMessage(
     else lastMessageText = text ? (text.length > 30 ? text.substring(0, 27) + '...' : text) : 'Mesaj';
 
     transaction.set(newMessageRef, messageData);
+    
+    // Update sender's last action timestamp for rate limiting
+    transaction.update(senderUserRef, { lastActionTimestamp: serverTimestamp() });
     
     if (!metadataDoc.exists()) {
       transaction.set(metadataDocRef, {

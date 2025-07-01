@@ -49,7 +49,10 @@ export async function createRoom(
         };
 
         transaction.set(newRoomRef, newRoom);
-        transaction.update(userRef, { diamonds: increment(-roomCost) });
+        transaction.update(userRef, { 
+            diamonds: increment(-roomCost),
+            lastActionTimestamp: serverTimestamp()
+        });
         
         return { success: true, roomId: newRoomRef.id };
     });
@@ -61,13 +64,22 @@ export async function addSystemMessage(roomId: string, text: string) {
 
     try {
         const messagesRef = collection(db, 'rooms', roomId, 'messages');
-        await addDoc(messagesRef, {
+        const userRef = doc(db, 'users', 'system'); // Assuming a system user
+
+        const batch = writeBatch(db);
+        batch.set(doc(messagesRef), {
             type: 'system',
             text,
             createdAt: serverTimestamp(),
             uid: 'system',
             username: 'System',
         });
+        
+        // Update a "system" user's timestamp if needed, or just skip for system messages
+        // batch.update(userRef, { lastActionTimestamp: serverTimestamp() });
+
+        await batch.commit();
+
         return { success: true };
     } catch (error: any) {
         console.error("Sistem mesajı gönderilirken hata:", error);
