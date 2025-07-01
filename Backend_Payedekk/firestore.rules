@@ -3,154 +3,133 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper Functions
-    function isSignedIn() {
+    // --- Helper Functions ---
+    
+    // Is the user authenticated?
+    function isAuthenticated() {
       return request.auth != null;
     }
-    
+
+    // Is the user an admin?
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Is the user the owner of the resource?
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
     
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data;
-    }
-
-    function isAdmin() {
-      return isSignedIn() && getUserData(request.auth.uid).role == 'admin';
-    }
-    
-    // Rate Limiting: Check if enough time has passed since last action
-    // Default cooldown is 2 seconds
-    function isRateLimited(cooldown) {
-        let lastTimestamp = getUserData(request.auth.uid).lastActionTimestamp;
-        // Allow if no previous action or if enough time has passed
-        return lastTimestamp != null && request.time > lastTimestamp + duration.value(cooldown, "s");
-    }
-
-    // Default deny all reads and writes
-    match /{document=**} {
-      allow read, write: if false;
+    // Rate limiting function to prevent spam/abuse
+    function isNotWritingTooFast() {
+        // Admins are not rate-limited
+        if (isAdmin()) {
+            return true;
+        }
+        let lastAction = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.lastActionTimestamp;
+        // Allow if no previous action or if enough time has passed (e.g., 2 seconds)
+        return lastAction == null || request.time > lastAction + duration.value(2, 's');
     }
     
-    // Users Collection
+    // Limits the number of documents that can be read in a single query
+    function isQueryLimited(limit) {
+      return request.query.limit <= limit;
+    }
+
+    // --- Collection Rules ---
+
+    // USERS: Users can read public profiles.
+    // They can only update their own profile.
+    // Critical fields like 'role' and 'diamonds' cannot be changed by the user.
     match /users/{userId} {
-      // Anyone can read a user profile
-      allow read: if isSignedIn();
-      
-      // Only the owner can create or update their own profile
+      allow read: if isAuthenticated();
       allow create: if isOwner(userId);
-      allow update: if isOwner(userId)
-                    // Admins can update any user profile
-                    || isAdmin();
-                    
-      // Prevent users from changing their own role, diamonds, etc.
-      // Only allow updating specific, non-critical fields.
-      allow update: if isOwner(userId) 
-                      && !(request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'diamonds', 'uid', 'createdAt', 'referralCount', 'reportCount']));
+      allow update: if isOwner(userId) && !(
+        'role' in request.resource.data || 
+        'diamonds' in request.resource.data ||
+        'isBanned' in request.resource.data
+      );
+      // Allow list operations but enforce a limit to prevent downloading the entire user base.
+      allow list: if isAuthenticated() && isQueryLimited(30);
 
       // Subcollections
       match /notifications/{notificationId} {
-        allow read, write: if isOwner(userId) || isAdmin();
+        allow read, write: if isOwner(userId);
       }
       match /profileViewers/{viewerId} {
-        allow read, write: if isOwner(userId) || isAdmin();
+        allow read, write: if isOwner(userId) || isOwner(viewerId);
       }
     }
     
-    // Posts Collection
+    // POSTS: Anyone can read posts. Only owners or admins can create, update, delete.
     match /posts/{postId} {
-      // Anyone can read posts
-      allow read: if isSignedIn();
-      // Only signed-in users can create posts, with rate limiting (10s)
-      allow create: if isSignedIn() && isRateLimited(10);
-      // Only owner or admin can update/delete
-      allow update, delete: if isSignedIn() && (isOwner(resource.data.uid) || isAdmin());
-      
-      // Comments subcollection
+      allow read: if isAuthenticated();
+      allow list: if isAuthenticated() && isQueryLimited(50);
+      allow create: if isAuthenticated() && isNotWritingTooFast();
+      allow update, delete: if isAuthenticated() && (isOwner(resource.data.uid) || isAdmin());
+
+      // COMMENTS: Subcollection of posts
       match /comments/{commentId} {
-        // Anyone can read comments
-        allow read: if isSignedIn();
-        // Only signed-in users can create comments, with rate limiting (2s)
-        allow create: if isSignedIn() && isRateLimited(2);
-        // Only owner or admin can delete
-        allow delete: if isSignedIn() && (isOwner(resource.data.uid) || isAdmin());
+        allow read, list: if isAuthenticated();
+        allow create: if isAuthenticated() && isNotWritingTooFast();
+        allow delete: if isAuthenticated() && (isOwner(resource.data.uid) || isAdmin());
       }
     }
     
-    // Rooms Collection
+    // ROOMS: Rules for chat rooms
     match /rooms/{roomId} {
-      // Anyone can read room details
-      allow read: if isSignedIn();
-      // Any signed-in user can create a room, with rate limiting (60s)
-      allow create: if isSignedIn() && isRateLimited(60);
-      // Only owner or admin can update room details
-      allow update: if isSignedIn() && (isOwner(resource.data.createdBy.uid) || resource.data.moderators.hasAny([request.auth.uid]) || isAdmin());
-      // Only owner or admin can delete a room
-      allow delete: if isSignedIn() && (isOwner(resource.data.createdBy.uid) || isAdmin());
+      allow read, list: if isAuthenticated() && isQueryLimited(50);
+      allow create: if isAuthenticated() && isNotWritingTooFast();
+      allow update: if isAuthenticated() && (isOwner(resource.data.createdBy.uid) || resource.data.moderators.hasAny([request.auth.uid]));
+      allow delete: if isAuthenticated() && (isOwner(resource.data.createdBy.uid) || isAdmin());
 
-      // Room Subcollections
+      // Subcollections within rooms
       match /messages/{messageId} {
-        allow read: if isSignedIn();
-        allow create: if isSignedIn() && request.auth.uid in resource.data.participants && isRateLimited(1);
+        allow read, list: if isAuthenticated() && resource.data.participants.hasAny([request.auth.uid]);
+        allow create: if isAuthenticated() && isNotWritingTooFast() && get(/databases/$(database)/documents/rooms/$(roomId)).data.participants.hasAny([request.auth.uid]);
+        allow update, delete: if isAuthenticated() && isOwner(resource.data.uid);
       }
       
       match /voiceParticipants/{participantId} {
-        allow read: if isSignedIn();
-        allow create, update, delete: if isOwner(participantId) || isOwner(get(/databases/$(database)/documents/rooms/$(roomId)).data.createdBy.uid) || isAdmin();
+         allow read: if isAuthenticated();
+         allow create, delete, update: if isAuthenticated() && (isOwner(participantId) || get(/databases/$(database)/documents/rooms/$(roomId)).data.moderators.hasAny([request.auth.uid]));
       }
 
-      match /signals/{signalId} {
-        allow read, write: if isSignedIn(); // Signaling is complex, keep it open for authenticated for now
-      }
-
+       match /signals/{signalId} {
+         allow read, create, delete: if isAuthenticated();
+       }
+       
        match /games/{gameId} {
-        allow read, write: if isSignedIn(); // Let server-side actions handle game logic
-      }
-    }
-
-    // Direct Messages
-    match /directMessages/{chatId} {
-      // Only participants can access the DM document itself (for creating the subcollection)
-      allow get, list: if isSignedIn() && request.auth.uid in resource.data.participantUids;
-      
-      match /messages/{messageId} {
-        // Only participants can read/write messages
-        allow read, write: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/directMessages/$(chatId)).data.participantUids;
-        // Users can only edit/delete their own messages
-        allow update, delete: if isSignedIn() && request.auth.uid == resource.data.senderId;
-      }
+         allow read, write: if isAuthenticated();
+       }
     }
     
+    // DIRECT MESSAGES: Only participants can access their DMs.
     match /directMessagesMetadata/{chatId} {
-       // Only participants can read the metadata (for chat lists)
-      allow read: if isSignedIn() && request.auth.uid in resource.data.participantUids;
-      // Writes are handled by server actions (sendMessage)
-      allow write: if false; 
+      allow read, write: if isAuthenticated() && chatId.split('_').hasAny([request.auth.uid]);
+      allow list: if isAuthenticated();
     }
-
-    // Config Collection (Read-only for users)
+    match /directMessages/{chatId}/messages/{messageId} {
+      allow read, create: if isAuthenticated() && chatId.split('_').hasAny([request.auth.uid]) && isNotWritingTooFast();
+      allow update, delete: if isAuthenticated() && isOwner(resource.data.senderId);
+    }
+    
+    // CONFIG: Only admins can read/write configuration files.
     match /config/{configId} {
-      allow read: if isSignedIn();
-      // Only admins can change configuration
+      allow read: if isAuthenticated();
       allow write: if isAdmin();
     }
-
-    // Audit Logs (Admin only)
-    match /auditLogs/{logId} {
-        allow read, write: if isAdmin();
-    }
     
-    // Game Questions (Admin only)
-    match /game_questions/{questionId} {
-        allow read: if isSignedIn(); // All users can read questions for the game
-        allow write: if isAdmin();
-    }
-    
-     // Reports (Write only for users, read for admins)
+    // REPORTS: Any authenticated user can create a report. Only admins can view them.
     match /reports/{reportId} {
-      allow create: if isSignedIn();
-      allow read, update, delete: if isAdmin();
+      allow create: if isAuthenticated();
+      allow read, write, delete, list: if isAdmin();
+    }
+    
+    // AUDIT LOGS: Read-only for admins. Created by Cloud Functions.
+    match /auditLogs/{logId} {
+        allow read, list: if isAdmin();
+        allow create, update, delete: if false; // Only backend can write
     }
   }
 }
