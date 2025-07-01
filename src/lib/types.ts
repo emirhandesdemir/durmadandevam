@@ -10,6 +10,8 @@ export interface UserProfile {
     postCount?: number;
     role: 'admin' | 'user';
     gender?: 'male' | 'female';
+    age?: number;
+    city?: string;
     createdAt: Timestamp;
     lastActionTimestamp?: Timestamp; // For rate limiting
     privateProfile: boolean;
@@ -32,6 +34,7 @@ export interface UserProfile {
     lastSeen?: Timestamp;
     matchmakingStatus?: 'idle' | 'searching' | 'matched';
     matchRoomId?: string | null;
+    matchmakingRights?: number;
 }
 
 export interface ProfileViewer {

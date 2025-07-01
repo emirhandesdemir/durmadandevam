@@ -6,12 +6,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { enterMatchmakingQueue, leaveMatchmakingQueue } from '@/lib/actions/matchmakingActions';
+import { enterMatchmakingQueue, leaveMatchmakingQueue, purchaseMatchmakingRights } from '@/lib/actions/matchmakingActions';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Swords, Loader2 } from 'lucide-react';
+import { Swords, Loader2, Filter, Gem, Star } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AnimatePresence, motion } from 'framer-motion';
+import FilterDialog, { type AppliedFilters } from '@/components/matchmaking/FilterDialog';
 
 type MatchmakingStatus = 'idle' | 'searching' | 'matched';
 
@@ -21,6 +22,11 @@ export default function MatchmakingPage() {
   const { toast } = useToast();
   const [status, setStatus] = useState<MatchmakingStatus>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<AppliedFilters | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isBuying, setIsBuying] = useState(false);
+
+  const matchmakingRights = userData?.matchmakingRights || 0;
 
   // Listen for match result from Firestore real-time updates
   useEffect(() => {
@@ -46,13 +52,17 @@ export default function MatchmakingPage() {
 
   const handleStartSearch = useCallback(async () => {
     if (!user || !userData?.gender) {
-        toast({ variant: 'destructive', description: "Eşleşme için profil bilgileriniz (cinsiyet) eksik." });
+        toast({ variant: 'destructive', description: "Eşleşme için profil bilgileriniz (cinsiyet, yaş, şehir) eksik." });
+        return;
+    }
+     if (matchmakingRights <= 0) {
+        toast({ variant: 'destructive', description: "Eşleşme hakkınız kalmadı. Lütfen satın alın." });
         return;
     }
     setStatus('searching');
     setError(null);
     try {
-        const result = await enterMatchmakingQueue(user.uid, userData.gender);
+        const result = await enterMatchmakingQueue(user.uid, userData.gender, filters);
         if (result.status === 'error') {
             throw new Error(result.message);
         }
@@ -61,7 +71,7 @@ export default function MatchmakingPage() {
         setError(e.message || "Arama başlatılamadı.");
         toast({ variant: 'destructive', title: "Hata", description: e.message });
     }
-  }, [user, userData, toast]);
+  }, [user, userData, toast, matchmakingRights, filters]);
 
   const handleCancelSearch = useCallback(async () => {
     if (!user) return;
@@ -74,6 +84,24 @@ export default function MatchmakingPage() {
         toast({ variant: 'destructive', title: "Hata", description: "Arama iptal edilemedi." });
     }
   }, [user, toast]);
+
+  const handleBuyRights = async () => {
+    if (!user) return;
+    setIsBuying(true);
+    try {
+        const result = await purchaseMatchmakingRights(user.uid);
+        if (result.success) {
+            toast({ description: "10 eşleşme hakkı satın aldınız!" });
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (e: any) {
+        toast({ variant: 'destructive', title: 'Hata', description: e.message });
+    } finally {
+        setIsBuying(false);
+    }
+  }
+
 
   const renderContent = () => {
     switch (status) {
@@ -113,10 +141,26 @@ export default function MatchmakingPage() {
                 Rastgele bir kullanıcıyla tanış ve 1 saatlik özel bir odada sohbete başla!
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Button size="lg" className="rounded-full px-12 py-7 text-lg shadow-lg shadow-primary/30" onClick={handleStartSearch}>
-                Aramayı Başlat
-              </Button>
+            <CardContent className="flex flex-col items-center gap-4">
+              <div className="flex items-center gap-2 font-semibold">
+                <Star className="h-5 w-5 text-yellow-400" />
+                <span>Kalan Eşleşme Hakkı:</span>
+                <span className="text-xl text-primary">{matchmakingRights}</span>
+              </div>
+              
+              {matchmakingRights > 0 ? (
+                 <Button size="lg" className="rounded-full px-12 py-7 text-lg shadow-lg shadow-primary/30" onClick={handleStartSearch}>
+                    Aramayı Başlat
+                </Button>
+              ) : (
+                <Button size="lg" className="rounded-full px-8 py-7 text-lg" onClick={handleBuyRights} disabled={isBuying}>
+                  {isBuying ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Gem className="mr-2 h-5 w-5" />}
+                  10 Hak Satın Al (5 Elmas)
+                </Button>
+              )}
+               <Button variant="outline" onClick={() => setIsFilterOpen(true)}>
+                    <Filter className="mr-2 h-4 w-4" /> Filtrele (5 Elmas)
+                </Button>
                {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
             </CardContent>
           </motion.div>
@@ -125,12 +169,20 @@ export default function MatchmakingPage() {
   };
 
   return (
-    <div className="flex h-full items-center justify-center p-4">
-      <Card className="w-full max-w-md border-0 bg-transparent">
-        <AnimatePresence mode="wait">
-          {renderContent()}
-        </AnimatePresence>
-      </Card>
-    </div>
+    <>
+      <div className="flex h-full items-center justify-center p-4">
+        <Card className="w-full max-w-md border-0 bg-transparent">
+          <AnimatePresence mode="wait">
+            {renderContent()}
+          </AnimatePresence>
+        </Card>
+      </div>
+      <FilterDialog
+        isOpen={isFilterOpen}
+        onOpenChange={setIsFilterOpen}
+        onApplyFilters={setFilters}
+        currentFilters={filters}
+      />
+    </>
   );
 }

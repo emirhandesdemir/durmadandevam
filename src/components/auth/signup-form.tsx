@@ -42,6 +42,8 @@ const formSchema = z.object({
   email: z.string().email({ message: "Geçersiz e-posta adresi." }),
   password: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır." }),
   gender: z.enum(['male', 'female'], { required_error: "Cinsiyet seçimi zorunludur." }),
+  age: z.coerce.number().min(18, { message: "18 yaşından büyük olmalısınız." }).max(99, { message: "Yaş geçerli değil." }),
+  city: z.string().min(2, { message: "Şehir adı en az 2 karakter olmalıdır." }),
 });
 
 const generateDefaultAvatar = (username: string) => {
@@ -90,6 +92,7 @@ export default function SignUpForm() {
             username: "@",
             email: "",
             password: "",
+            city: "",
         },
     });
 
@@ -145,8 +148,11 @@ export default function SignUpForm() {
                 bio: "",
                 role: userRole,
                 gender: values.gender,
+                age: values.age,
+                city: values.city,
                 createdAt: serverTimestamp(),
                 diamonds: 10, // Start with 10 diamonds
+                matchmakingRights: 0,
                 referredBy: ref || null,
                 postCount: 0,
                 followers: [],
@@ -217,6 +223,22 @@ export default function SignUpForm() {
                                 </FormItem>
                             )}
                         />
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField control={form.control} name="age" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Yaş</FormLabel>
+                                    <FormControl><Input type="number" placeholder="25" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                             )} />
+                             <FormField control={form.control} name="city" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Şehir</FormLabel>
+                                    <FormControl><Input placeholder="İstanbul" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                             )} />
+                        </div>
                         <FormField
                             control={form.control}
                             name="email"

@@ -1,4 +1,3 @@
-
 // src/components/profile/profile-page-client.tsx
 "use client";
 
@@ -64,6 +63,8 @@ export default function ProfilePageClient() {
     
     const [username, setUsername] = useState("");
     const [bio, setBio] = useState("");
+    const [age, setAge] = useState<number | undefined>(undefined);
+    const [city, setCity] = useState("");
     const [privateProfile, setPrivateProfile] = useState(false);
     const [acceptsFollowRequests, setAcceptsFollowRequests] = useState(true);
     const [showOnlineStatus, setShowOnlineStatus] = useState(true);
@@ -80,6 +81,8 @@ export default function ProfilePageClient() {
         if (userData) {
             setUsername(userData.username || "");
             setBio(userData.bio || "");
+            setAge(userData.age);
+            setCity(userData.city || "");
             setPrivateProfile(userData.privateProfile || false);
             setAcceptsFollowRequests(userData.acceptsFollowRequests ?? true);
             setShowOnlineStatus(userData.showOnlineStatus ?? true);
@@ -96,6 +99,8 @@ export default function ProfilePageClient() {
     const hasChanges = 
         username !== (userData?.username || "") || 
         bio !== (userData?.bio || "") ||
+        age !== (userData?.age || undefined) ||
+        city !== (userData?.city || "") ||
         privateProfile !== (userData?.privateProfile || false) || 
         acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true) ||
         showOnlineStatus !== (userData?.showOnlineStatus ?? true) ||
@@ -156,6 +161,8 @@ export default function ProfilePageClient() {
                 authProfileUpdates.displayName = username;
             }
             if (bio !== userData?.bio) updates.bio = bio;
+            if (age !== userData?.age) updates.age = Number(age);
+            if (city !== userData?.city) updates.city = city;
             if (privateProfile !== userData?.privateProfile) updates.privateProfile = privateProfile;
             if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) updates.acceptsFollowRequests = acceptsFollowRequests;
             if (showOnlineStatus !== (userData?.showOnlineStatus ?? true)) updates.showOnlineStatus = showOnlineStatus;
@@ -234,17 +241,32 @@ export default function ProfilePageClient() {
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-4 px-6">
-                    <div className="space-y-2">
-                        <Label htmlFor="username">Kullanıcı Adı</Label>
-                        <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} className="rounded-full" />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="bio">Biyografi</Label>
-                        <Textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Kendini anlat..." className="rounded-xl" />
-                    </div>
-                    <Separator />
-                    
                     <Accordion type="single" collapsible className="w-full">
+                         <AccordionItem value="profile">
+                            <AccordionTrigger>
+                                <div className="flex items-center gap-3"><Users className="h-5 w-5 text-muted-foreground" /><span className="font-semibold">Profil Bilgileri</span></div>
+                            </AccordionTrigger>
+                            <AccordionContent className="space-y-4 pt-2">
+                                <div className="space-y-2">
+                                    <Label htmlFor="username">Kullanıcı Adı</Label>
+                                    <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} />
+                                </div>
+                                 <div className="grid grid-cols-2 gap-4">
+                                     <div className="space-y-2">
+                                        <Label htmlFor="age">Yaş</Label>
+                                        <Input id="age" type="number" value={age || ''} onChange={(e) => setAge(Number(e.target.value))} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="city">Şehir</Label>
+                                        <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} />
+                                    </div>
+                                 </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="bio">Biyografi</Label>
+                                    <Textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Kendini anlat..." className="rounded-xl" />
+                                </div>
+                            </AccordionContent>
+                        </AccordionItem>
                          <AccordionItem value="privacy">
                             <AccordionTrigger>
                                 <div className="flex items-center gap-3"><Lock className="h-5 w-5 text-muted-foreground" /><span className="font-semibold">{t('privacy_settings')}</span></div>
