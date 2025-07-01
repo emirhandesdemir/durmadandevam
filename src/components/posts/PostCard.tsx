@@ -118,6 +118,13 @@ export default function PostCard({ post, isStandalone = false }: PostCardProps) 
             toast({ variant: "destructive", description: "Beğenirken bir hata oluştu." });
         }
     };
+    
+    const handleDoubleClick = () => {
+        if (!currentUser) return;
+        if (!optimisticLiked) {
+            handleLike();
+        }
+    };
 
     const handleDelete = async () => {
         if (!isOwner) return;
@@ -174,7 +181,10 @@ export default function PostCard({ post, isStandalone = false }: PostCardProps) 
 
         return (
              <>
-                <div className={cn("flex gap-3 p-4 transition-colors hover:bg-muted/50", !isStandalone && "border-b")}>
+                <div 
+                    className={cn("flex gap-3 p-4 transition-colors hover:bg-muted/50", !isStandalone && "border-b")}
+                    onDoubleClick={handleDoubleClick}
+                >
                     {/* Retweeter Avatar Column */}
                     <div>
                         <Link href={`/profile/${post.uid}`}>
@@ -222,7 +232,13 @@ export default function PostCard({ post, isStandalone = false }: PostCardProps) 
                             
                             {originalPost.imageUrl && (
                                 <div className="relative mt-2 h-auto w-full overflow-hidden rounded-lg border">
-                                    <Image src={originalPost.imageUrl} alt="Retweeted post" width={800} height={800} className="h-auto w-full max-h-[500px] object-cover" />
+                                    <Image 
+                                        src={originalPost.imageUrl} 
+                                        alt="Retweeted post" 
+                                        width={800} height={800} 
+                                        className="h-auto w-full max-h-[500px] object-cover"
+                                        onContextMenu={(e) => e.preventDefault()}
+                                    />
                                 </div>
                             )}
                         </div>
@@ -256,7 +272,10 @@ export default function PostCard({ post, isStandalone = false }: PostCardProps) 
     
     return (
         <>
-           <div className={cn("flex gap-3 p-4 transition-colors hover:bg-muted/50", !isStandalone && "border-b")}>
+           <div 
+                className={cn("flex gap-3 p-4 transition-colors hover:bg-muted/50", !isStandalone && "border-b")}
+                onDoubleClick={handleDoubleClick}
+            >
                 {/* Avatar Column */}
                 <div>
                     <Link href={`/profile/${post.uid}`}>
@@ -357,6 +376,7 @@ export default function PostCard({ post, isStandalone = false }: PostCardProps) 
                                 width={800}
                                 height={800}
                                 className="h-auto w-full max-h-[600px] object-cover"
+                                onContextMenu={(e) => e.preventDefault()}
                             />
                         </div>
                     )}

@@ -33,7 +33,7 @@ import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import ProfileViewerList from "./ProfileViewerList";
 import { Textarea } from "../ui/textarea";
 import { useRouter } from 'next/navigation';
-import { findUserByUsername } from "@/lib/actions/userActions";
+import { findUserByUsername, updateUserPosts } from "@/lib/actions/userActions";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../common/LanguageSwitcher";
 
@@ -139,51 +139,60 @@ export default function ProfilePageClient() {
     
         setIsSaving(true);
         try {
-            const updates: { [key: string]: any } = {};
+            const userDocUpdates: { [key: string]: any } = {};
             const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
+            const postUpdates: { [key: string]: any } = {};
     
             if (newAvatar) {
                 const newAvatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.png`);
                 const snapshot = await uploadString(newAvatarRef, newAvatar, 'data_url');
                 const finalPhotoURL = await getDownloadURL(snapshot.ref);
-                
-                updates.photoURL = finalPhotoURL;
+                userDocUpdates.photoURL = finalPhotoURL;
                 authProfileUpdates.photoURL = finalPhotoURL;
+                postUpdates.userAvatar = finalPhotoURL;
             }
     
             if (username !== userData?.username) {
                  if (!username.startsWith('@') || !/^@\w+$/.test(username)) {
                     toast({ variant: "destructive", title: "Geçersiz Kullanıcı Adı", description: "Kullanıcı adı '@' ile başlamalı ve sadece harf, rakam veya alt çizgi içermelidir." });
-                    setIsSaving(false);
-                    return;
+                    setIsSaving(false); return;
                 }
                 const existingUser = await findUserByUsername(username);
                 if (existingUser && existingUser.uid !== user.uid) {
                     toast({ variant: "destructive", title: "Kullanıcı Adı Alınmış", description: "Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor." });
-                    setIsSaving(false);
-                    return;
+                    setIsSaving(false); return;
                 }
-                updates.username = username;
+                userDocUpdates.username = username;
                 authProfileUpdates.displayName = username;
+                postUpdates.username = username;
             }
-            if (bio !== userData?.bio) updates.bio = bio;
-            if (age !== userData?.age) updates.age = Number(age);
-            if (city !== userData?.city) updates.city = city;
-            if (country !== userData?.country) updates.country = country;
-            if (gender !== userData?.gender) updates.gender = gender;
-            if (privateProfile !== userData?.privateProfile) updates.privateProfile = privateProfile;
-            if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) updates.acceptsFollowRequests = acceptsFollowRequests;
-            if (showOnlineStatus !== (userData?.showOnlineStatus ?? true)) updates.showOnlineStatus = showOnlineStatus;
-            if (selectedBubble !== (userData?.selectedBubble || "")) updates.selectedBubble = selectedBubble;
-            if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || "")) updates.selectedAvatarFrame = selectedAvatarFrame;
-    
-            if (Object.keys(updates).length > 0) {
+
+            if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || "")) {
+                userDocUpdates.selectedAvatarFrame = selectedAvatarFrame;
+                postUpdates.userAvatarFrame = selectedAvatarFrame;
+            }
+
+            if (bio !== userData?.bio) userDocUpdates.bio = bio;
+            if (age !== userData?.age) userDocUpdates.age = Number(age);
+            if (city !== userData?.city) userDocUpdates.city = city;
+            if (country !== userData?.country) userDocUpdates.country = country;
+            if (gender !== userData?.gender) userDocUpdates.gender = gender;
+            if (privateProfile !== userData?.privateProfile) userDocUpdates.privateProfile = privateProfile;
+            if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) userDocUpdates.acceptsFollowRequests = acceptsFollowRequests;
+            if (showOnlineStatus !== (userData?.showOnlineStatus ?? true)) userDocUpdates.showOnlineStatus = showOnlineStatus;
+            if (selectedBubble !== (userData?.selectedBubble || "")) userDocUpdates.selectedBubble = selectedBubble;
+
+            if (Object.keys(userDocUpdates).length > 0) {
                 const userDocRef = doc(db, 'users', user.uid);
-                await updateDoc(userDocRef, updates);
+                await updateDoc(userDocRef, userDocUpdates);
             }
     
             if (Object.keys(authProfileUpdates).length > 0) {
                  await updateProfile(auth.currentUser, authProfileUpdates);
+            }
+
+            if (Object.keys(postUpdates).length > 0) {
+                await updateUserPosts(user.uid, postUpdates);
             }
 
             toast({

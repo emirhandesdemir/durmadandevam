@@ -200,3 +200,30 @@ export async function submitReport(reportData: Omit<Report, 'id' | 'timestamp'>)
         return { success: false, error: "Rapor gönderilirken bir hata oluştu." };
     }
 }
+
+export async function updateUserPosts(uid: string, updates: { [key: string]: any }) {
+    if (!uid || !updates || Object.keys(updates).length === 0) {
+        return;
+    }
+
+    const postsRef = collection(db, 'posts');
+    const q = query(postsRef, where('uid', '==', uid));
+    
+    try {
+        const snapshot = await getDocs(q);
+        if (snapshot.empty) return;
+        
+        const batch = writeBatch(db);
+        snapshot.docs.forEach(doc => {
+            batch.update(doc.ref, updates);
+        });
+        
+        await batch.commit();
+        
+        revalidatePath('/home');
+        revalidatePath(`/profile/${uid}`);
+
+    } catch (error) {
+        console.error("Kullanıcı gönderileri güncellenirken hata:", error);
+    }
+}

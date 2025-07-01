@@ -101,6 +101,7 @@ export default function ProfilePosts({ userId, profileUser }: ProfilePostsProps)
                                 alt="Kullanıcı gönderisi"
                                 fill
                                 className="object-cover"
+                                onContextMenu={(e) => e.preventDefault()}
                             />
                         ) : (
                         <div className="flex flex-col items-center justify-center h-full p-2 text-center">
