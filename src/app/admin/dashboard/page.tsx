@@ -2,14 +2,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { collection, onSnapshot, doc, getCountFromServer, query, where } from "firebase/firestore";
+import { collection, doc, getCountFromServer, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import StatCard from "@/components/admin/stat-card";
 import { Users, MessageSquare, FileText, Puzzle, Headphones, BarChart3, SlidersHorizontal, Settings, HeartPulse, Mars, Venus } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import type { VoiceStats } from "@/lib/types";
 import TopDiamondHoldersCard from "@/components/admin/TopDiamondHoldersCard";
 
 /**
@@ -34,6 +33,7 @@ export default function DashboardPage() {
   const fetchCounts = useCallback(async () => {
     try {
       const usersRef = collection(db, "users");
+      const roomsRef = collection(db, "rooms");
       const [
         userSnapshot,
         roomSnapshot,
@@ -41,14 +41,16 @@ export default function DashboardPage() {
         questionSnapshot,
         maleSnapshot,
         femaleSnapshot,
+        roomsDocsSnapshot
       ] = await Promise.all([
         // getCountFromServer, tüm koleksiyonu indirmeden sadece doküman sayısını vererek verimlilik sağlar.
         getCountFromServer(usersRef),
-        getCountFromServer(collection(db, "rooms")),
+        getCountFromServer(roomsRef),
         getCountFromServer(collection(db, "posts")),
         getCountFromServer(collection(db, "game_questions")),
         getCountFromServer(query(usersRef, where("gender", "==", "male"))),
         getCountFromServer(query(usersRef, where("gender", "==", "female"))),
+        getDocs(roomsRef) // Get all room docs to sum voice participants
       ]);
 
       setUserCount(userSnapshot.data().count);
@@ -57,6 +59,13 @@ export default function DashboardPage() {
       setQuestionCount(questionSnapshot.data().count);
       setMaleCount(maleSnapshot.data().count);
       setFemaleCount(femaleSnapshot.data().count);
+
+      // Calculate total voice users by summing up counts from each room for accuracy
+      let totalVoiceUsers = 0;
+      roomsDocsSnapshot.forEach(doc => {
+          totalVoiceUsers += doc.data().voiceParticipantsCount || 0;
+      });
+      setVoiceUserCount(totalVoiceUsers);
       
     } catch (error) {
         console.error("İstatistikler alınırken hata:", error);
@@ -65,21 +74,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setIsLoading(true);
-    fetchCounts();
-
-    // Sadece sık değişen "sesli aktif kullanıcı" sayısını anlık olarak dinle.
-    const voiceStatsUnsub = onSnapshot(doc(db, "config", "voiceStats"), (doc) => {
-      if (doc.exists()) {
-        setVoiceUserCount((doc.data() as VoiceStats).totalUsers || 0);
-      }
-    });
-
-    setIsLoading(false);
-
-    // Component unmount olduğunda dinleyiciyi temizle.
-    return () => {
-      voiceStatsUnsub();
-    };
+    fetchCounts().finally(() => setIsLoading(false));
   }, [fetchCounts]);
 
   return (

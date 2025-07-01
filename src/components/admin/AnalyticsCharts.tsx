@@ -7,7 +7,6 @@ import { AreaChart, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Area
 import { useTheme } from "next-themes";
 import { getUserGrowthData, getContentCreationData, getRoomActivityData, getContentCreationByGenderData } from "@/lib/actions/analyticsActions";
 import type { UserGrowthDataPoint, ContentDataPoint, RoomActivityDataPoint } from "@/lib/types";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2 } from "lucide-react";
 
 /**
