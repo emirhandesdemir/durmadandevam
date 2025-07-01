@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { collection, query, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
+import { collection, query, onSnapshot, orderBy, Timestamp, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import RoomListItem from "./RoomListItem";
@@ -33,7 +33,7 @@ export default function RoomList({ searchTerm }: RoomListProps) {
       setLoading(false);
       return;
     }
-    const q = query(collection(db, "rooms"), orderBy("createdAt", "desc"));
+    const q = query(collection(db, "rooms"), where('type', '!=', 'match'), orderBy("type"), orderBy("createdAt", "desc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const roomsData: Room[] = [];
       querySnapshot.forEach((doc) => {
@@ -56,7 +56,7 @@ export default function RoomList({ searchTerm }: RoomListProps) {
           const langB = b.language === i18n.language;
           if (langA && !langB) return -1;
           if (!langA && langB) return 1;
-          return 0; // Maintain original order if languages are the same or both are different
+          return 0;
       })
       .filter(room => room.name.toLowerCase().includes(searchTerm.toLowerCase()));
   }, [rooms, i18n.language, searchTerm]);

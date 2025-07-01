@@ -31,8 +31,12 @@ export async function createRoom(
         const newRoomRef = doc(collection(db, 'rooms'));
         const fifteenMinutesInMs = 15 * 60 * 1000;
         
-        const newRoom = {
-            ...roomData,
+        const newRoom: Omit<Room, 'id'> = {
+            name: roomData.name,
+            description: roomData.description,
+            language: roomData.language,
+            type: 'public',
+            requestToSpeakEnabled: roomData.requestToSpeakEnabled,
             createdBy: {
                 uid: userId,
                 username: creatorInfo.username,
@@ -41,11 +45,14 @@ export async function createRoom(
                 selectedAvatarFrame: creatorInfo.selectedAvatarFrame,
             },
             moderators: [userId],
-            createdAt: serverTimestamp(),
+            createdAt: serverTimestamp() as Timestamp,
             participants: [{ uid: userId, username: creatorInfo.username, photoURL: creatorInfo.photoURL }],
             maxParticipants: 9,
             voiceParticipantsCount: 0,
             expiresAt: Timestamp.fromMillis(Date.now() + fifteenMinutesInMs),
+            rules: null,
+            welcomeMessage: null,
+            pinnedMessageId: null,
         };
 
         transaction.set(newRoomRef, newRoom);
@@ -56,6 +63,34 @@ export async function createRoom(
         
         return { success: true, roomId: newRoomRef.id };
     });
+}
+
+export async function createPrivateMatchRoom(user1: UserInfo, user2: UserInfo) {
+    const newRoomRef = doc(collection(db, 'rooms'));
+    const oneHourInMs = 60 * 60 * 1000;
+
+    const newRoom: Omit<Room, 'id'> = {
+        name: `${user1.username} & ${user2.username}`,
+        description: 'Özel eşleşme odası.',
+        type: 'match',
+        createdBy: { uid: user1.uid, username: user1.username, photoURL: user1.photoURL },
+        moderators: [user1.uid, user2.uid],
+        createdAt: serverTimestamp() as Timestamp,
+        participants: [
+            { uid: user1.uid, username: user1.username, photoURL: user1.photoURL },
+            { uid: user2.uid, username: user2.username, photoURL: user2.photoURL }
+        ],
+        maxParticipants: 2,
+        voiceParticipantsCount: 0,
+        expiresAt: Timestamp.fromMillis(Date.now() + oneHourInMs),
+        requestToSpeakEnabled: false,
+        rules: null,
+        welcomeMessage: `Hoş geldiniz! Eşleşme odanız oluşturuldu. Sohbetin tadını çıkarın.`,
+        pinnedMessageId: null,
+    };
+    
+    await setDoc(newRoomRef, newRoom);
+    return newRoomRef.id;
 }
 
 
@@ -75,9 +110,6 @@ export async function addSystemMessage(roomId: string, text: string) {
             username: 'System',
         });
         
-        // Update a "system" user's timestamp if needed, or just skip for system messages
-        // batch.update(userRef, { lastActionTimestamp: serverTimestamp() });
-
         await batch.commit();
 
         return { success: true };
@@ -307,10 +339,6 @@ export async function openPortalForRoom(roomId: string, userId: string) {
             portalRoomName: roomDoc.data().name
         };
         
-        // Bu mesajı tüm diğer aktif odalara gönder (Burası karmaşıklaşabilir)
-        // Şimdilik sadece bu odaya ve belki ana akışa bir bildirim olarak ekleyebiliriz.
-        // Bu örnekte, diğer odalara yayma kısmını basitleştiriyoruz ve sadece mevcut odaya bilgi veriyoruz.
-        // Gerçek bir senaryoda, bu bir Cloud Function ile tüm odaları gezerek yapılmalıdır.
         const messagesRef = collection(db, "rooms", roomId, "messages");
         transaction.set(doc(messagesRef), systemMessage);
     });
@@ -382,13 +410,6 @@ export async function manageSpeakingPermission(roomId: string, targetUserId: str
     return { success: true };
 }
 
-/**
- * Kicks a user from the voice chat of a room by the host or a moderator.
- * This action only removes them from the voice subcollection, not the main participants list.
- * @param roomId The ID of the room.
- * @param currentUserId The ID of the user performing the action (host/moderator).
- * @param targetUserId The ID of the user to be kicked.
- */
 export async function kickFromVoice(roomId: string, currentUserId: string, targetUserId:string) {
     if (!currentUserId || !targetUserId || currentUserId === targetUserId) {
         throw new Error("Invalid operation.");
@@ -415,19 +436,15 @@ export async function kickFromVoice(roomId: string, currentUserId: string, targe
             
             const targetUserDoc = await transaction.get(targetUserVoiceRef);
             if (!targetUserDoc.exists()) {
-                // User is already gone, nothing to do.
                 return;
             }
             
-            // Delete the user from voice participants
             transaction.delete(targetUserVoiceRef);
 
-            // Decrement the voice participant count
             transaction.update(roomRef, { 
                 voiceParticipantsCount: increment(-1) 
             });
 
-            // Decrement the global voice stats
             transaction.set(voiceStatsRef, { 
                 totalUsers: increment(-1) 
             }, { merge: true });

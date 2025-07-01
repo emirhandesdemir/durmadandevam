@@ -14,12 +14,12 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Settings, Loader2, Gamepad2, UserX, Database, Signal } from "lucide-react";
+import { Settings, Loader2, Gamepad2, UserX, Database, Signal, Swords } from "lucide-react";
 import { GameSettings as GameSettingsType } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 
-// Form alanlarının validasyonunu (doğrulamasını) yöneten Zod şeması.
+// Form validasyon şeması
 const settingsSchema = z.object({
   dailyDiamondLimit: z.coerce.number().min(0, "Limit 0'dan küçük olamaz."),
   gameIntervalMinutes: z.coerce.number().min(1, "Aralık en az 1 dakika olmalıdır."),
@@ -30,23 +30,18 @@ const settingsSchema = z.object({
   imageUploadQuality: z.coerce.number().min(0.1, "Kalite en az 0.1 olmalı").max(1, "Kalite en fazla 1 olabilir"),
   audioBitrate: z.coerce.number().min(16, "Bit hızı en az 16 olmalı").max(128, "Bit hızı en fazla 128 olabilir"),
   videoBitrate: z.coerce.number().min(100, "Bit hızı en az 100 olmalı").max(2000, "Bit hızı en fazla 2000 olabilir"),
+  matchmakingCost: z.coerce.number().min(0, "Maliyet 0'dan küçük olamaz."),
 });
 
-/**
- * Yönetim Paneli - Sistem Ayarları Sayfası
- * 
- * Uygulamanın genel işleyişini (oyun kuralları, zaman aşımları, kalite ayarları vb.)
- * yönetmek için bir form arayüzü sunar.
- */
+
 export default function SystemSettingsPage() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
-    // react-hook-form kullanarak form yönetimini kolaylaştır.
     const form = useForm<z.infer<typeof settingsSchema>>({
         resolver: zodResolver(settingsSchema),
-        defaultValues: { // Veri yüklenemezse kullanılacak varsayılan değerler.
+        defaultValues: {
             dailyDiamondLimit: 50,
             gameIntervalMinutes: 5,
             questionTimerSeconds: 15,
@@ -56,16 +51,17 @@ export default function SystemSettingsPage() {
             imageUploadQuality: 0.9,
             audioBitrate: 64,
             videoBitrate: 1000,
+            matchmakingCost: 5,
         },
     });
 
-    // Ayarları Firestore'dan anlık olarak çek ve formu doldur.
+    // Ayarları Firestore'dan çek ve formu doldur
     useEffect(() => {
         const settingsRef = doc(db, 'config', 'gameSettings');
         const unsubscribe = onSnapshot(settingsRef, (docSnap) => {
             if (docSnap.exists()) {
                 const settings = docSnap.data() as GameSettingsType;
-                form.reset(settings); // Formu gelen veriyle güncelle.
+                form.reset(settings); // Formu gelen veriyle güncelle
             }
             setLoading(false);
         });
@@ -74,7 +70,7 @@ export default function SystemSettingsPage() {
     }, [form]);
 
 
-    // Form gönderildiğinde çalışacak fonksiyon.
+    // Formu gönderme fonksiyonu
     const onSubmit = async (values: z.infer<typeof settingsSchema>) => {
         setSaving(true);
         try {
@@ -112,7 +108,6 @@ export default function SystemSettingsPage() {
         <form onSubmit={form.handleSubmit(onSubmit)}>
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mt-8">
                 <div className="space-y-8">
-                     {/* Quiz Oyunu Ayarları Kartı */}
                      <Card>
                         <CardHeader>
                             <div className="flex items-center gap-3">
@@ -149,26 +144,24 @@ export default function SystemSettingsPage() {
                             )}
                         </CardContent>
                     </Card>
-                    {/* Sesli Sohbet Ayarları Kartı */}
                     <Card>
                         <CardHeader>
                             <div className="flex items-center gap-3">
-                                <UserX className="h-6 w-6 text-muted-foreground" />
-                                <CardTitle>Sesli Sohbet Ayarları</CardTitle>
+                                <Swords className="h-6 w-6 text-muted-foreground" />
+                                <CardTitle>Eşleşme Ayarları</CardTitle>
                             </div>
-                            <CardDescription>Sesli sohbet odalarının işleyişiyle ilgili kuralları belirleyin.</CardDescription>
+                             <CardDescription>1v1 eşleşme sisteminin maliyetini belirleyin.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             {loading ? <Skeleton className="h-16 w-full" /> : (
-                                <FormField control={form.control} name="afkTimeoutMinutes" render={({ field }) => (
-                                    <FormItem><FormLabel>AFK Zaman Aşımı (Dakika)</FormLabel><FormControl><Input type="number" {...field} className="max-w-sm" /></FormControl><FormMessage /></FormItem>
+                                <FormField control={form.control} name="matchmakingCost" render={({ field }) => (
+                                    <FormItem><FormLabel>Eşleşme Maliyeti (Elmas)</FormLabel><FormControl><Input type="number" {...field} className="max-w-sm" /></FormControl><FormMessage /></FormItem>
                                 )} />
                             )}
                         </CardContent>
                     </Card>
                 </div>
                 <div className="space-y-8">
-                     {/* Yükleme Ayarları Kartı */}
                      <Card>
                         <CardHeader>
                             <div className="flex items-center gap-3">
@@ -188,7 +181,6 @@ export default function SystemSettingsPage() {
                             )}
                         </CardContent>
                     </Card>
-                    {/* WebRTC Kalite Ayarları Kartı */}
                     <Card>
                         <CardHeader>
                             <div className="flex items-center gap-3">
@@ -217,6 +209,22 @@ export default function SystemSettingsPage() {
                                         </FormItem>
                                     )} />
                                 </>
+                            )}
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <div className="flex items-center gap-3">
+                                <UserX className="h-6 w-6 text-muted-foreground" />
+                                <CardTitle>Sesli Sohbet Ayarları</CardTitle>
+                            </div>
+                            <CardDescription>Sesli sohbet odalarının işleyişiyle ilgili kuralları belirleyin.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {loading ? <Skeleton className="h-16 w-full" /> : (
+                                <FormField control={form.control} name="afkTimeoutMinutes" render={({ field }) => (
+                                    <FormItem><FormLabel>AFK Zaman Aşımı (Dakika)</FormLabel><FormControl><Input type="number" {...field} className="max-w-sm" /></FormControl><FormMessage /></FormItem>
+                                )} />
                             )}
                         </CardContent>
                     </Card>

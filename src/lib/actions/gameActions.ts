@@ -41,6 +41,7 @@ export async function getGameSettings(): Promise<GameSettings> {
             imageUploadQuality: 0.9,
             audioBitrate: 64,
             videoBitrate: 1000,
+            matchmakingCost: 5,
             ...firestoreData
         } as GameSettings;
     }
@@ -54,6 +55,7 @@ export async function getGameSettings(): Promise<GameSettings> {
         imageUploadQuality: 0.9,
         audioBitrate: 64,
         videoBitrate: 1000,
+        matchmakingCost: 5,
     };
 }
 
@@ -243,4 +245,74 @@ export async function endGameWithoutWinner(roomId: string, gameId: string) {
     } catch (error) {
         console.error("Oyun bitirilirken hata:", error);
     }
+}
+
+
+export async function initiateGameInvite(
+    roomId: string, 
+    host: { uid: string, username: string, photoURL: string | null }, 
+    gameType: string,
+    gameName: string,
+    invitedPlayers: { uid: string, username: string, photoURL: string | null }[]
+) {
+    const messagesRef = collection(db, "rooms", roomId, "messages");
+    const gameInviteMessage = {
+        type: 'gameInvite',
+        createdAt: serverTimestamp(),
+        uid: 'system',
+        username: 'System',
+        gameInviteData: {
+            host,
+            gameName,
+            gameType,
+            invitedPlayers: [host, ...invitedPlayers],
+            acceptedPlayers: [host], // Host auto-accepts
+            declinedPlayers: [],
+            status: 'pending',
+        }
+    };
+    await addDoc(messagesRef, gameInviteMessage);
+    return { success: true };
+}
+
+
+export async function respondToGameInvite(
+    roomId: string,
+    messageId: string,
+    player: { uid: string, username: string, photoURL: string | null },
+    accepted: boolean
+) {
+    const messageRef = doc(db, 'rooms', roomId, 'messages', messageId);
+    
+    await runTransaction(db, async (transaction) => {
+        const messageDoc = await transaction.get(messageRef);
+        if (!messageDoc.exists()) throw new Error("Davet mesajı bulunamadı.");
+        
+        const inviteData = messageDoc.data().gameInviteData;
+        if (inviteData.status !== 'pending') throw new Error("Bu davet artık geçerli değil.");
+        
+        if (accepted) {
+            transaction.update(messageRef, {
+                'gameInviteData.acceptedPlayers': arrayUnion(player)
+            });
+        } else {
+            transaction.update(messageRef, {
+                'gameInviteData.declinedPlayers': arrayUnion(player),
+                'gameInviteData.status': 'declined'
+            });
+        }
+    });
+}
+
+
+export async function playGameMove(
+    roomId: string,
+    gameSessionId: string,
+    playerId: string,
+    move: string | number
+) {
+    const gameSessionRef = doc(db, 'rooms', roomId, 'game_sessions', gameSessionId);
+    await updateDoc(gameSessionRef, {
+        [`moves.${playerId}`]: move
+    });
 }
