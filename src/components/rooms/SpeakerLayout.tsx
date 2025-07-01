@@ -13,45 +13,45 @@ interface SpeakerLayoutProps {
 export default function SpeakerLayout({ room }: SpeakerLayoutProps) {
     const { user } = useAuth();
     const { participants } = useVoiceChat();
+
     const host = participants.find(p => p.uid === room.createdBy.uid);
-    const otherParticipants = participants.filter(p => p.uid !== room.createdBy.uid);
-    const slots = Array(8).fill(null);
+    const moderators = participants.filter(p => room.moderators.includes(p.uid) && p.uid !== room.createdBy.uid);
+    const otherParticipants = participants.filter(p => !room.moderators.includes(p.uid) && p.uid !== room.createdBy.uid);
+
+    // Sort participants: Host -> Moderators -> Others
+    const sortedParticipants = [
+        ...(host ? [host] : []),
+        ...moderators,
+        ...otherParticipants
+    ];
+
+    const maxVisible = 8;
+    const visibleParticipants = sortedParticipants.slice(0, maxVisible);
+    const emptySlots = Array(Math.max(0, maxVisible - visibleParticipants.length)).fill(null);
 
     return (
-        <div className="flex flex-col items-center gap-4 py-6 px-4">
-            {host && (
-                <VoiceUserIcon 
-                    participant={host} 
-                    room={room} 
-                    isHost={true} 
-                    isModerator={true} 
-                    currentUserId={user!.uid} 
-                    size="lg" 
-                />
-            )}
-            
-            <div className="grid grid-cols-4 gap-4 w-full max-w-sm mt-4">
-                {slots.map((_, index) => {
-                    const participant = otherParticipants[index];
-                    return (
-                        <div key={index} className="aspect-square flex items-center justify-center">
-                            {participant ? (
-                                <VoiceUserIcon 
-                                    participant={participant} 
-                                    room={room} 
-                                    isHost={participant.uid === room.createdBy.uid} 
-                                    isModerator={room.moderators.includes(participant.uid)} 
-                                    currentUserId={user!.uid} 
-                                    size="sm"
-                                />
-                            ) : (
-                                <div className="w-16 h-16 bg-card/20 rounded-full flex items-center justify-center border-2 border-dashed border-muted-foreground/30">
-                                    <Plus className="text-muted-foreground/50" />
-                                </div>
-                            )}
+        <div className="flex justify-center p-3 border-b">
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
+                {visibleParticipants.map((participant) => (
+                    <VoiceUserIcon
+                        key={participant.uid}
+                        participant={participant}
+                        room={room}
+                        isHost={participant.uid === room.createdBy.uid}
+                        isModerator={room.moderators.includes(participant.uid)}
+                        currentUserId={user!.uid}
+                        size="sm"
+                    />
+                ))}
+                {emptySlots.map((_, index) => (
+                     <div key={`placeholder-${index}`} className="flex flex-col items-center gap-2 w-16">
+                        <div className="w-16 h-16 bg-card/20 rounded-full flex items-center justify-center border-2 border-dashed border-muted-foreground/30 opacity-50">
+                            <Plus className="text-muted-foreground/50" />
                         </div>
-                    )
-                })}
+                         {/* Placeholder for name to keep alignment */}
+                        <div className="h-3.5 w-10 bg-transparent rounded-full" />
+                    </div>
+                ))}
             </div>
         </div>
     );

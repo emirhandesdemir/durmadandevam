@@ -48,11 +48,16 @@ export async function joinVoiceChat(roomId: string, user: UserInfo, options?: { 
             ]);
 
             if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
-            if (userVoiceDoc.exists()) return;
             if (!userDbDoc.exists()) throw new Error("Kullanıcı profili bulunamadı.");
-            
-            const userData = userDbDoc.data();
+
             const roomData = roomDoc.data() as Room;
+            const isExpired = roomData.expiresAt && (roomData.expiresAt as Timestamp).toDate() < new Date();
+            if(isExpired) throw new Error("Bu odanın süresi dolmuş.");
+            
+            const isAlreadyInVoice = userVoiceDoc.exists();
+            if (isAlreadyInVoice) return;
+
+            const userData = userDbDoc.data();
             const voiceCount = roomData.voiceParticipantsCount || 0;
             if (voiceCount >= roomData.maxParticipants) throw new Error("Sesli sohbet dolu.");
 
@@ -74,12 +79,23 @@ export async function joinVoiceChat(roomId: string, user: UserInfo, options?: { 
 
             const isAlreadyParticipant = roomData.participants?.some(p => p.uid === user.uid);
             const roomUpdates: { [key: string]: any } = { voiceParticipantsCount: increment(1) };
+            const newParticipantData = {
+                uid: user.uid,
+                username: user.displayName || 'Anonim',
+                photoURL: user.photoURL || null
+            };
+
             if (!isAlreadyParticipant) {
-                roomUpdates.participants = arrayUnion({
-                    uid: user.uid,
-                    username: user.displayName || 'Anonim',
-                    photoURL: user.photoURL,
-                });
+                roomUpdates.participants = arrayUnion(newParticipantData);
+                const messagesRef = collection(db, 'rooms', roomId, 'messages');
+                const joinMessage = {
+                    type: 'system',
+                    text: `👋 ${newParticipantData.username} odaya katıldı.`,
+                    createdAt: serverTimestamp(),
+                    uid: 'system',
+                    username: 'System',
+                };
+                transaction.set(doc(messagesRef), joinMessage);
             }
 
             transaction.update(roomRef, roomUpdates);
@@ -103,19 +119,37 @@ export async function leaveVoiceChat(roomId: string, userId: string) {
     const roomRef = doc(db, 'rooms', roomId);
     const userVoiceRef = doc(db, 'rooms', roomId, 'voiceParticipants', userId);
 
-     try {
+    try {
         await runTransaction(db, async (transaction) => {
-            const [roomDoc, userVoiceDoc] = await Promise.all([
-                transaction.get(roomRef),
-                transaction.get(userVoiceRef)
-            ]);
-            
+            const roomDoc = await transaction.get(roomRef);
+            const userVoiceDoc = await transaction.get(userVoiceRef);
+
+            if (!roomDoc.exists()) return; // Oda silinmiş olabilir, sessizce çık.
+            const roomData = roomDoc.data() as Room;
+
+            // Eğer sesli sohbetteyse, çıkar.
             if (userVoiceDoc.exists()) {
                 transaction.delete(userVoiceRef);
-                if (roomDoc.exists()) {
-                    transaction.update(roomRef, { voiceParticipantsCount: increment(-1) });
-                }
+                transaction.update(roomRef, { voiceParticipantsCount: increment(-1) });
                 transaction.set(voiceStatsRef, { totalUsers: increment(-1) }, { merge: true });
+            }
+
+            // Ayrıca ana katılımcı listesinden çıkar ve sistem mesajı gönder.
+            const participantToRemove = roomData.participants?.find(p => p.uid === userId);
+            if (participantToRemove) {
+                transaction.update(roomRef, {
+                    participants: arrayRemove(participantToRemove)
+                });
+                
+                const messagesRef = collection(db, 'rooms', roomId, 'messages');
+                const leaveMessage = {
+                    type: 'system',
+                    text: `🏃 ${participantToRemove.username || 'Bir kullanıcı'} odadan ayrıldı.`,
+                    createdAt: serverTimestamp(),
+                    uid: 'system',
+                    username: 'System',
+                };
+                transaction.set(doc(messagesRef), leaveMessage);
             }
         });
         return { success: true };
@@ -124,6 +158,7 @@ export async function leaveVoiceChat(roomId: string, userId: string) {
         return { success: false, error: error.message };
     }
 }
+
 
 /**
  * Kullanıcının kendi mikrofon durumunu günceller.

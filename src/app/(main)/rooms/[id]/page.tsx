@@ -62,10 +62,10 @@ export default function RoomPage() {
         return () => setActiveRoomId(null);
     }, [roomId, setActiveRoomId]);
 
-    // Auto-join voice chat in listen-only mode
+    // Auto-join voice chat with mic ON
     useEffect(() => {
         if (user && roomId && !isConnected && !isConnecting) {
-            joinRoom({ muted: true });
+            joinRoom({ muted: false });
         }
     }, [user, roomId, isConnected, isConnecting, joinRoom]);
     
@@ -241,17 +241,17 @@ export default function RoomPage() {
                         </motion.div>
                     )}
                 </AnimatePresence>
-
-                <main ref={chatScrollRef} className="flex-1 flex flex-col overflow-y-auto">
+                
+                 {/* Sticky top content */}
+                <div className="p-4 space-y-4 shrink-0">
                      {isMatchRoom && (room.status === 'open' || room.status === 'converting') && user && (
                         <MatchConfirmationControls room={room} currentUserId={user.uid} />
                     )}
-                    {gameContent && (
-                        <div className="p-4">
-                            {gameContent}
-                        </div>
-                    )}
+                    {gameContent}
                     <RoomInfoCards room={room} isOwner={isHost} />
+                </div>
+
+                <main ref={chatScrollRef} className="flex-1 flex flex-col overflow-y-auto">
                     <TextChat messages={messages} loading={messagesLoading} room={room} />
                 </main>
 
