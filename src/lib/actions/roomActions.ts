@@ -36,6 +36,7 @@ export async function createRoom(
             description: roomData.description,
             language: roomData.language,
             type: 'public',
+            status: 'open',
             requestToSpeakEnabled: roomData.requestToSpeakEnabled,
             createdBy: {
                 uid: userId,
@@ -68,11 +69,13 @@ export async function createRoom(
 export async function createPrivateMatchRoom(user1: UserInfo, user2: UserInfo) {
     const newRoomRef = doc(collection(db, 'rooms'));
     const oneHourInMs = 60 * 60 * 1000;
+    const fiveMinutesInMs = 5 * 60 * 1000;
 
     const newRoom: Omit<Room, 'id'> = {
         name: `${user1.username} & ${user2.username}`,
         description: 'Özel eşleşme odası.',
         type: 'match',
+        status: 'open',
         createdBy: { uid: user1.uid, username: user1.username, photoURL: user1.photoURL },
         moderators: [user1.uid, user2.uid],
         createdAt: serverTimestamp() as Timestamp,
@@ -83,9 +86,14 @@ export async function createPrivateMatchRoom(user1: UserInfo, user2: UserInfo) {
         maxParticipants: 2,
         voiceParticipantsCount: 0,
         expiresAt: Timestamp.fromMillis(Date.now() + oneHourInMs),
+        confirmationExpiresAt: Timestamp.fromMillis(Date.now() + fiveMinutesInMs),
+        matchConfirmation: {
+            [user1.uid]: 'pending',
+            [user2.uid]: 'pending'
+        },
         requestToSpeakEnabled: false,
         rules: null,
-        welcomeMessage: `Hoş geldiniz! Eşleşme odanız oluşturuldu. Sohbetin tadını çıkarın.`,
+        welcomeMessage: `Hoş geldiniz! Eşleşme odanız oluşturuldu. Birbirinizi tanımak için 5 dakikanız var.`,
         pinnedMessageId: null,
     };
     
@@ -143,6 +151,11 @@ export async function deleteRoomAsOwner(roomId: string, userId: string) {
         return { success: false, error: error.message };
     }
 }
+
+export async function deleteMatchRoom(roomId: string) {
+    await deleteRoomWithSubcollections(roomId);
+}
+
 
 export async function deleteExpiredRoom(roomId: string) {
     if (!roomId) throw new Error("Oda ID'si gereklidir.");
@@ -453,4 +466,38 @@ export async function kickFromVoice(roomId: string, currentUserId: string, targe
         console.error("Error kicking user from voice:", error);
         throw new Error(error.message || "Could not kick user from voice.");
     }
+}
+
+export async function handleMatchConfirmation(roomId: string, userId: string, accepted: boolean) {
+    const roomRef = doc(db, 'rooms', roomId);
+
+    await runTransaction(db, async (transaction) => {
+        const roomDoc = await transaction.get(roomRef);
+        if (!roomDoc.exists()) throw new Error("Eşleşme odası bulunamadı.");
+        
+        const roomData = roomDoc.data() as Room;
+        if (roomData.status !== 'open') throw new Error("Bu eşleşme odası artık aktif değil.");
+        
+        const currentConfirmation = roomData.matchConfirmation?.[userId];
+        if (currentConfirmation !== 'pending') throw new Error("Zaten bir seçim yaptınız.");
+        
+        const partnerId = roomData.participants.find(p => p.uid !== userId)?.uid;
+        if (!partnerId) throw new Error("Eşleşme partneri bulunamadı.");
+
+        const newConfirmationState = accepted ? 'accepted' : 'declined';
+        transaction.update(roomRef, { [`matchConfirmation.${userId}`]: newConfirmationState });
+
+        if (!accepted) {
+            transaction.update(roomRef, { status: 'closed_declined' });
+            return;
+        }
+
+        const partnerStatus = roomData.matchConfirmation?.[partnerId];
+        if (partnerStatus === 'accepted') {
+            transaction.update(roomRef, { status: 'converted_to_dm' });
+        } else if (partnerStatus === 'declined') {
+            transaction.update(roomRef, { status: 'closed_declined' });
+        }
+        // if partner is 'pending', do nothing and wait for them.
+    });
 }

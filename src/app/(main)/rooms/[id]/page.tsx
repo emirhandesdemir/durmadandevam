@@ -21,11 +21,13 @@ import RoomInfoCards from '@/components/rooms/RoomInfoCards';
 import { getGameSettings } from '@/lib/actions/gameActions';
 import GameCountdownCard from '@/components/game/GameCountdownCard';
 import RoomGameCard from '@/components/game/RoomGameCard';
-import { endGameWithoutWinner, submitAnswer } from '@/lib/actions/gameActions';
+import { endGameWithoutWinner, submitAnswer, deleteMatchRoom } from '@/lib/actions/gameActions';
 import GameResultCard from '@/components/game/GameResultCard';
 import GameLobbyDialog from '@/components/game/GameLobbyDialog';
 import ActiveGameArea from '@/components/game/ActiveGameArea';
 import GameInviteMessage from '@/components/game/GameInviteMessage';
+import MatchConfirmationControls from '@/components/rooms/MatchConfirmationControls';
+import { getChatId } from '@/lib/utils';
 
 export default function RoomPage() {
     const params = useParams();
@@ -44,6 +46,7 @@ export default function RoomPage() {
     const [isParticipantSheetOpen, setIsParticipantSheetOpen] = useState(false);
     const [isSpeakerLayoutCollapsed, setIsSpeakerLayoutCollapsed] = useState(false);
     const chatScrollRef = useRef<HTMLDivElement>(null);
+    const roomRef = useRef<Room | null>(null);
 
     // --- Game State ---
     const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
@@ -59,6 +62,11 @@ export default function RoomPage() {
         if (roomId) setActiveRoomId(roomId);
         return () => setActiveRoomId(null);
     }, [roomId, setActiveRoomId]);
+    
+    useEffect(() => {
+        roomRef.current = room;
+    }, [room]);
+
 
     // Room, messages, and game settings listener
     useEffect(() => {
@@ -93,8 +101,30 @@ export default function RoomPage() {
             }
         });
         
-        return () => { roomUnsub(); messagesUnsub(); gameSessionUnsub(); };
+        return () => { 
+            roomUnsub(); 
+            messagesUnsub(); 
+            gameSessionUnsub();
+            if (roomRef.current?.type === 'match' && roomRef.current?.status === 'closed_declined') {
+                deleteMatchRoom(roomId);
+            }
+        };
     }, [roomId, router, toast]);
+
+    // Handle room status changes for matchmaking
+    useEffect(() => {
+        if (!room || room.type !== 'match' || !user) return;
+
+        if (room.status === 'converted_to_dm') {
+            const partner = room.participants.find(p => p.uid !== user.uid);
+            if (partner) {
+                router.push(`/dm/${getChatId(user.uid, partner.uid)}`);
+            }
+        } else if (room.status === 'closed_declined') {
+            toast({ variant: 'destructive', description: "Eşleşme sonlandırıldı." });
+            router.push('/matchmaking');
+        }
+    }, [room, user, router, toast]);
     
     // Finished game listener (to show results)
     useEffect(() => {
@@ -144,6 +174,8 @@ export default function RoomPage() {
     const isLoading = authLoading || !room;
     if (isLoading) return <div className="flex h-full items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
     
+    const isMatchRoom = room?.type === 'match';
+
     const renderGameContent = () => {
         if (activeGameSession && user) {
             return <ActiveGameArea game={activeGameSession} roomId={roomId} currentUser={{uid: user.uid, username: user.displayName!}} />
@@ -189,6 +221,9 @@ export default function RoomPage() {
                 </AnimatePresence>
 
                 <main ref={chatScrollRef} className="flex-1 flex flex-col overflow-y-auto">
+                     {isMatchRoom && room.status === 'open' && user && (
+                        <MatchConfirmationControls room={room} currentUserId={user.uid} />
+                    )}
                     {gameContent && (
                         <div className="p-4">
                             {gameContent}

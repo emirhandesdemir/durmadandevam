@@ -156,6 +156,9 @@ export interface Room {
     pinnedMessageId: string | null;
     language?: string;
     type?: 'public' | 'match' | 'private';
+    status?: 'open' | 'closed_declined' | 'converted_to_dm' | 'expired';
+    confirmationExpiresAt?: Timestamp;
+    matchConfirmation?: { [uid: string]: 'pending' | 'accepted' | 'declined' };
 }
 
 export interface VoiceParticipant {
