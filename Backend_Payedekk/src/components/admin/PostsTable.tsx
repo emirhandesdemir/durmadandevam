@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { tr } from 'date-fns/locale';
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
-import { deletePost } from "@/lib/actions/postActions"; // I can reuse this action
+import { deletePost } from "@/lib/actions/postActions";
 import { MoreHorizontal, Trash2, Loader2, Heart, MessageCircle, ImageIcon } from "lucide-react";
 
 import {
@@ -41,17 +41,20 @@ interface PostsTableProps {
 }
 
 /**
- * Gönderileri listeleyen ve yönetme eylemlerini içeren tablo bileşeni.
+ * Gönderileri listeleyen ve yönetme eylemlerini (silme) içeren tablo bileşeni.
  */
 export default function PostsTable({ posts }: PostsTableProps) {
     const { toast } = useToast();
+    // Hangi gönderinin işlendiğini tutar (örn: silinirken yükleme animasyonu göstermek için).
     const [isProcessing, setIsProcessing] = useState<string | null>(null);
+    // Silme onayı dialogunu göstermek için seçilen gönderiyi tutar.
     const [showDeleteConfirm, setShowDeleteConfirm] = useState<AdminPostData | null>(null);
 
+    // Gönderiyi silme fonksiyonu.
     const handleDeletePost = async (post: AdminPostData) => {
         setIsProcessing(post.id);
         try {
-            await deletePost(post.id, post.imageUrl);
+            await deletePost(post.id);
             toast({ title: "Başarılı", description: "Gönderi başarıyla silindi." });
         } catch (error) {
             console.error("Gönderi silinirken hata:", error);
@@ -82,6 +85,7 @@ export default function PostsTable({ posts }: PostsTableProps) {
                                  {post.imageUrl ? (
                                     <Image src={post.imageUrl} alt="Gönderi resmi" width={50} height={50} className="rounded-md object-cover aspect-square"/>
                                  ) : (
+                                    // Resmi olmayan gönderiler için bir yer tutucu ikon göster.
                                     <div className="flex h-[50px] w-[50px] items-center justify-center rounded-md bg-secondary">
                                         <ImageIcon className="h-6 w-6 text-muted-foreground"/>
                                     </div>
