@@ -1,34 +1,43 @@
-
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Default to denying access
-    // allow read, write: if false;
-
-    // Allow authenticated users to read public content
-    match /upload/{path=**} {
-      allow read: if request.auth != null;
+    
+    // --- Profile Avatars ---
+    // Users can only write to their own avatar path. Avatars are public to read.
+    match /upload/avatars/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId
+                   && request.resource.size < 5 * 1024 * 1024 // Max 5MB
+                   && request.resource.contentType.matches('image/.*');
     }
 
-    // Allow users to upload their own avatar
-    match /upload/avatars/{userId}/avatar.png {
-      allow write: if request.auth != null && request.auth.uid == userId;
+    // --- Post Images ---
+    // Users can only write to their own posts folder. Post images are public to read.
+    match /upload/posts/{userId}/{fileName} {
+        allow read: if true;
+        allow write: if request.auth != null && request.auth.uid == userId
+                     && request.resource.size < 10 * 1024 * 1024 // Max 10MB
+                     && request.resource.contentType.matches('image/.*');
+    }
+    
+    // --- Room Media (Images/Videos) ---
+    // Any authenticated user can upload to a room's folder.
+    // We restrict by file size and type.
+    match /upload/rooms/{roomId}/{folder}/{fileName} {
+        allow read: if true;
+        allow write: if request.auth != null
+                     && request.resource.size < 25 * 1024 * 1024 // Max 25MB
+                     && (request.resource.contentType.matches('image/.*') || request.resource.contentType.matches('video/.*'));
     }
 
-    // Allow users to upload images for their posts
-    match /upload/posts/{userId}/{postId} {
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Allow authenticated users to upload files to rooms
-    match /upload/rooms/{roomId}/{allPaths=**} {
-      allow read, write: if request.auth != null;
-    }
-
-    // Allow authenticated users to upload files to DMs
-    match /dms/{chatId}/{allPaths=**} {
-      allow read, write: if request.auth != null;
+    // --- Direct Messages (Images/Audio) ---
+    // Only participants in the chat can read/write files for that chat.
+    // The chatId is composed of "uid1_uid2".
+    match /dms/{chatId}/{folder}/{fileName} {
+      allow read, write: if request.auth != null && request.auth.uid in chatId.split('_')
+                         && request.resource.size < 10 * 1024 * 1024 // Max 10MB
+                         && (request.resource.contentType.matches('image/.*') || request.resource.contentType.matches('audio/.*'));
     }
   }
 }
