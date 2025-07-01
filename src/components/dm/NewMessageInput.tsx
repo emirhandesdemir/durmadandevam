@@ -71,7 +71,9 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
     const [recordingDuration, setRecordingDuration] = useState(0);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-    const recordingStartTime = useRef<number>(0);
+    
+    // Güvenilir durum takibi için ref
+    const isHeldDown = useRef(false);
   
     const textValue = watch('text');
     const showMic = !textValue?.trim() && !file;
@@ -86,11 +88,26 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
         return () => URL.revokeObjectURL(objectUrl);
     }, [file]);
   
-    // Kaydı başlatma fonksiyonu
+    const sendAudioMessage = async (blob: Blob, duration: number) => {
+         const reader = new FileReader();
+         reader.readAsDataURL(blob);
+         reader.onloadend = async () => {
+            const base64Audio = reader.result as string;
+            await sendMessage(chatId, sender, receiver, { audio: { dataUrl: base64Audio, duration } });
+         };
+    };
+
     const startRecording = async () => {
+        isHeldDown.current = true;
         if (isRecording) return;
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+            if (!isHeldDown.current) {
+                stream.getTracks().forEach(track => track.stop());
+                return;
+            }
+
             mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
             const chunks: Blob[] = [];
             
@@ -100,18 +117,18 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
             
             mediaRecorderRef.current.onstop = () => {
                 stream.getTracks().forEach(track => track.stop());
-                const duration = (Date.now() - recordingStartTime.current) / 1000;
+                const duration = recordingDuration;
                 if (duration < 1) {
                     toast({ variant: 'destructive', description: "Sesli mesaj göndermek için basılı tutun." });
                     return;
                 }
                 const audioBlob = new Blob(chunks, { type: 'audio/webm' });
                 sendAudioMessage(audioBlob, duration);
+                mediaRecorderRef.current = null;
             };
             
             mediaRecorderRef.current.start();
             setIsRecording(true);
-            recordingStartTime.current = Date.now();
             setRecordingDuration(0);
             recordingIntervalRef.current = setInterval(() => {
                 setRecordingDuration(prev => prev + 1);
@@ -119,26 +136,20 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
             
         } catch (err) {
             toast({ variant: 'destructive', description: "Mikrofon erişimi reddedildi veya bulunamadı." });
+            isHeldDown.current = false;
         }
     };
     
-    // Kaydı durdurma ve gönderme fonksiyonu
     const stopRecording = () => {
-        if (mediaRecorderRef.current && isRecording) {
+        isHeldDown.current = false;
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
             mediaRecorderRef.current.stop();
         }
-        if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+        if (recordingIntervalRef.current) {
+            clearInterval(recordingIntervalRef.current);
+            recordingIntervalRef.current = null;
+        }
         setIsRecording(false);
-    };
-
-    // Sesli mesajı eyleme gönderme
-    const sendAudioMessage = async (blob: Blob, duration: number) => {
-         const reader = new FileReader();
-         reader.readAsDataURL(blob);
-         reader.onloadend = async () => {
-            const base64Audio = reader.result as string;
-            await sendMessage(chatId, sender, receiver, { audio: { dataUrl: base64Audio, duration } });
-         };
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -238,8 +249,9 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
                     type={showMic ? 'button' : 'submit'}
                     onMouseDown={showMic ? startRecording : undefined}
                     onMouseUp={showMic ? stopRecording : undefined}
-                    onTouchStart={showMic ? startRecording : undefined}
-                    onTouchEnd={showMic ? stopRecording : undefined}
+                    onMouseLeave={showMic ? stopRecording : undefined}
+                    onTouchStart={showMic ? (e) => { e.preventDefault(); startRecording(); } : undefined}
+                    onTouchEnd={showMic ? (e) => { e.preventDefault(); stopRecording(); } : undefined}
                     size="icon" 
                     disabled={!showMic && (!textValue?.trim() && !file) || isLoading} 
                     className="rounded-full flex-shrink-0 h-10 w-10"
