@@ -3,12 +3,75 @@
 // anlık bildirim gönderme gibi işlemleri gerçekleştirir.
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import { roomBotFlow } from "./flows/roomBotFlow";
 
 // Firebase Admin SDK'sını başlat. Bu, sunucu tarafında Firebase servislerine erişim sağlar.
 admin.initializeApp();
 
 // Firestore veritabanı örneğini al.
 const db = admin.firestore();
+
+const BOT_UID = "ai-bot-walk";
+
+/**
+ * Yeni bir mesaj oluşturulduğunda tetiklenir ve AI botunun cevap verip vermeyeceğini kontrol eder.
+ */
+export const onMessageCreate = functions.region("us-central1")
+    .firestore.document("rooms/{roomId}/messages/{messageId}")
+    .onCreate(async (snapshot, context) => {
+        const messageData = snapshot.data();
+        const { roomId } = context.params;
+
+        // Bota veya sisteme ait mesajları veya metin içermeyen mesajları yoksay
+        if (!messageData || messageData.uid === BOT_UID || messageData.uid === "system" || !messageData.text) {
+            return null;
+        }
+
+        // Eğer mesajda "@Walk" geçmiyorsa, işlem yapma
+        if (!messageData.text.includes("@Walk")) {
+            return null;
+        }
+
+        try {
+            // Sohbet geçmişini al
+            const historySnapshot = await db.collection(`rooms/${roomId}/messages`)
+                .orderBy("createdAt", "desc")
+                .limit(10) // Son 10 mesajı al
+                .get();
+            
+            const history = historySnapshot.docs.reverse().map(doc => {
+                const data = doc.data();
+                return {
+                    author: data.uid === BOT_UID ? 'model' : 'user',
+                    content: data.text,
+                };
+            });
+
+            // Yapay zeka akışını çağır
+            const botResponse = await roomBotFlow({
+                history: history,
+                currentMessage: messageData.text,
+            });
+
+            if (botResponse) {
+                // Botun cevabını yeni bir mesaj olarak ekle
+                const botMessage = {
+                    uid: BOT_UID,
+                    username: "Walk",
+                    photoURL: `data:image/svg+xml;base64,${btoa(`<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="50" fill="url(#bot-grad)"/><rect x="25" y="45" width="50" height="20" rx="10" fill="white" fill-opacity="0.8"/><circle cx="50" cy="40" r="15" fill="white"/><circle cx="50" cy="40" r="10" fill="url(#eye-grad)"/><path d="M35 70 Q 50 80, 65 70" stroke="white" stroke-width="4" stroke-linecap="round" fill="none"/><defs><linearGradient id="bot-grad" x1="0" y1="0" x2="100" y2="100"><stop stop-color="#8b5cf6"/><stop offset="1" stop-color="#3b82f6"/></linearGradient><radialGradient id="eye-grad"><stop offset="20%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#2563eb"/></radialGradient></defs></svg>`)}`,
+                    selectedAvatarFrame: 'avatar-frame-tech',
+                    text: botResponse,
+                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                    type: 'user',
+                };
+                await db.collection(`rooms/${roomId}/messages`).add(botMessage);
+            }
+        } catch (error) {
+            console.error("AI bot flow error:", error);
+        }
+        return null;
+    });
+
 
 /**
  * Yeni bir bildirim dokümanı oluşturulduğunda tetiklenir.
@@ -114,7 +177,7 @@ export const sendPushNotification = functions
 
         // Geçersiz veya süresi dolmuş jetonları temizle.
         const tokensToRemove: string[] = [];
-        response.results.forEach((result: admin.messaging.MessagingDeviceResult, index: number) => {
+        response.results.forEach((result, index) => {
             const error = result.error;
             if (error) {
                 console.error(

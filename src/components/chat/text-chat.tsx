@@ -10,7 +10,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, Pin, Trash2 } from 'lucide-react';
+import { Loader2, Pin, Trash2, Bot } from 'lucide-react';
 import type { Message, Room } from '@/lib/types';
 import PortalMessageCard from './PortalMessageCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
@@ -25,6 +25,8 @@ interface TextChatProps {
   loading: boolean;
   room: Room;
 }
+
+const BOT_UID = "ai-bot-walk";
 
 export default function TextChat({ messages, loading, room }: TextChatProps) {
   const { user: currentUser } = useAuth();
@@ -88,13 +90,14 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
         }
         
         const isCurrentUser = msg.uid === currentUser.uid;
+        const isBot = msg.uid === BOT_UID;
         const isParticipantHost = msg.uid === room.createdBy.uid;
         const isParticipantModerator = room.moderators?.includes(msg.uid);
         const isPrivileged = isParticipantHost || isParticipantModerator;
         
         return (
           <div key={msg.id} className={cn("flex items-end gap-3 w-full animate-in fade-in slide-in-from-bottom-4 duration-500 group", isCurrentUser && "flex-row-reverse")}>
-             {isHost && (
+             {isHost && !isBot && (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
@@ -115,7 +118,7 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
                     </DropdownMenuContent>
                 </DropdownMenu>
              )}
-            <Link href={`/profile/${msg.uid}`}>
+            <Link href={!isBot ? `/profile/${msg.uid}` : '#'}>
                 <div className={cn("avatar-frame-wrapper", msg.selectedAvatarFrame)}>
                     <Avatar className="relative z-[1] h-8 w-8">
                         <AvatarImage src={msg.photoURL || undefined} />
@@ -126,14 +129,14 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
 
             <div className={cn("flex flex-col gap-1 max-w-[70%]", isCurrentUser && "items-end")}>
                 <div className={cn("flex items-center gap-2", isCurrentUser && "flex-row-reverse")}>
-                   <p className={cn("font-bold text-sm", isPrivileged && !isCurrentUser ? "text-amber-500" : "text-foreground")}>{isCurrentUser ? "Siz" : msg.username}</p>
+                   <p className={cn("font-bold text-sm", isPrivileged && !isCurrentUser ? "text-amber-500" : "text-foreground", isBot && "text-blue-400")}>{isCurrentUser ? "Siz" : msg.username}</p>
                    <p className="text-xs text-muted-foreground">
                      {msg.createdAt ? format((msg.createdAt as Timestamp).toDate(), 'p', { locale: tr }) : ''}
                    </p>
                 </div>
 
                 <div className="relative">
-                    {msg.selectedBubble && (
+                    {msg.selectedBubble && !isBot && (
                         <div className={`bubble-wrapper ${msg.selectedBubble}`}>
                             {Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}
                         </div>
@@ -144,8 +147,11 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
                             ? "bg-primary text-primary-foreground rounded-br-none" 
                             : (isPrivileged
                                 ? "bg-card border-2 border-amber-400/50 rounded-bl-none text-foreground" 
-                                : "bg-card rounded-bl-none text-foreground")
+                                : isBot 
+                                    ? "bg-blue-500/10 border border-blue-500/30 rounded-bl-none text-foreground"
+                                    : "bg-card rounded-bl-none text-foreground")
                     )}>
+                        {isBot && <Bot className="absolute -top-2 -left-2 h-5 w-5 text-blue-400 p-1 bg-background rounded-full" />}
                         {msg.imageUrl && (
                             <Image 
                                 src={msg.imageUrl} 
