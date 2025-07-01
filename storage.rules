@@ -3,53 +3,32 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    
-    // Helper function to check max file size and image type.
-    function isImage(maxSizeMB) {
-      return request.resource.size < maxSizeMB * 1024 * 1024
-          && request.resource.contentType.matches('image/.*');
+    // Default to denying access
+    // allow read, write: if false;
+
+    // Allow authenticated users to read public content
+    match /upload/{path=**} {
+      allow read: if request.auth != null;
     }
 
-    // Helper function to check for supported audio types.
-    function isAudio() {
-        return (request.resource.contentType.matches('audio/webm') || 
-                request.resource.contentType.matches('audio/mp4') ||
-                request.resource.contentType.matches('audio/mpeg'))
-               && request.resource.size < 10 * 1024 * 1024; // Max 10MB for audio
-    }
-    
-    // Helper function to check for supported video types.
-    function isVideo() {
-        return request.resource.contentType.matches('video/.*')
-               && request.resource.size < 25 * 1024 * 1024; // Max 25MB for video
+    // Allow users to upload their own avatar
+    match /upload/avatars/{userId}/avatar.png {
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // User Avatars: Publicly readable, but only the user can write. Max 5MB.
-    match /upload/avatars/{userId}/{fileName} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId && isImage(5);
-    }
-    
-    // Post Images: Publicly readable, only owner can write. Max 10MB.
-    match /upload/posts/{userId}/{fileName} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId && isImage(10);
+    // Allow users to upload images for their posts
+    match /upload/posts/{userId}/{postId} {
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Room message files: Publicly readable, only authenticated users can write.
-    // Server actions should validate if the user is a participant.
-    match /upload/rooms/{roomId}/{fileType}/{fileName} {
-        allow read: if true;
-        allow write: if request.auth != null && (isImage(25) || isVideo());
-    }
-    
-    // DM files: Only participants of the chat can read/write.
-    // The chat ID contains both user UIDs, so we can check if the user's UID is in the path.
-    match /dms/{chatId}/{fileType}/{fileName} {
-      allow read, write: if request.auth != null && 
-                          chatId.matches('.*' + request.auth.uid + '.*') && 
-                          (isImage(5) || isAudio());
+    // Allow authenticated users to upload files to rooms
+    match /upload/rooms/{roomId}/{allPaths=**} {
+      allow read, write: if request.auth != null;
     }
 
+    // Allow authenticated users to upload files to DMs
+    match /dms/{chatId}/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
   }
 }
