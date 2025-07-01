@@ -202,54 +202,38 @@ export async function submitReport(reportData: Omit<Report, 'id' | 'timestamp'>)
 
 export async function getExploreProfiles(currentUserId: string): Promise<UserProfile[]> {
   try {
-    // 1. Find all posts with an image
-    const postsWithImagesQuery = query(
-      collection(db, "posts"),
-      where("imageUrl", "!=", ""),
-      orderBy("imageUrl"), // Firestore requires an orderBy when using a not-equals filter
-      orderBy("createdAt", "desc"),
-      limit(100) // Get the latest 100 posts with images as a pool
+    // 1. Find users who have a profile picture set. This is more reliable than querying
+    // the posts collection, which requires a composite index that might not exist.
+    const usersQuery = query(
+      collection(db, 'users'),
+      where('photoURL', '!=', null), // Find users where photoURL is not null.
+      limit(100) // Limit the initial pool of users.
     );
-    const postsSnapshot = await getDocs(postsWithImagesQuery);
-
-    if (postsSnapshot.empty) {
-      return [];
-    }
-
-    // 2. Get unique user IDs from these posts, excluding the current user
-    const userIdsWithPhotos = new Set<string>();
-    postsSnapshot.forEach(doc => {
-      const post = doc.data();
-      if (post.uid !== currentUserId) {
-        userIdsWithPhotos.add(post.uid);
-      }
-    });
-
-    const uniqueUserIds = Array.from(userIdsWithPhotos);
-
-    if (uniqueUserIds.length === 0) {
-      return [];
-    }
-
-    // 3. Shuffle the array to make the feed feel different on each load
-    for (let i = uniqueUserIds.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [uniqueUserIds[i], uniqueUserIds[j]] = [uniqueUserIds[j], uniqueUserIds[i]];
-    }
-
-    // 4. Fetch the full user profiles for a batch of these users
-    // Firestore's 'in' query is limited to 30 items
-    const userIdsToFetch = uniqueUserIds.slice(0, 30);
-    
-    const usersQuery = query(collection(db, 'users'), where('uid', 'in', userIdsToFetch));
     const usersSnapshot = await getDocs(usersQuery);
 
-    const profiles = usersSnapshot.docs.map(doc => doc.data() as UserProfile);
+    if (usersSnapshot.empty) {
+      return [];
+    }
 
-    // 5. Serialize the data to make it safe for client components
+    // 2. Filter out the current user and ensure the photoURL is a non-empty string.
+    let profiles = usersSnapshot.docs
+      .map(doc => doc.data() as UserProfile)
+      .filter(profile => profile.uid !== currentUserId && profile.photoURL);
+
+    if (profiles.length === 0) {
+      return [];
+    }
+
+    // 3. Shuffle the array to make the feed feel different on each load.
+    for (let i = profiles.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [profiles[i], profiles[j]] = [profiles[j], profiles[i]];
+    }
+    
+    // 4. Serialize the data to make it safe for client components.
     return deepSerialize(profiles);
   } catch (error) {
     console.error("Error fetching explore profiles:", error);
-    return []; // Return an empty array on error
+    return []; // Return an empty array on error.
   }
 }
