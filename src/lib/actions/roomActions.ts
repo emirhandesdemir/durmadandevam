@@ -71,7 +71,7 @@ export async function createRoom(
 
         transaction.set(newRoomRef, newRoom);
         transaction.update(userRef, { 
-            diamonds: increment(-cost),
+            diamonds: increment(-roomCost),
             lastActionTimestamp: serverTimestamp()
         });
 
