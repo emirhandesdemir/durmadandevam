@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase";
 import { Users, Loader2 } from "lucide-react";
 import UsersTable from "@/components/admin/UsersTable";
 
-// Yönetici panelinde gösterilecek kullanıcı verisi için arayüz.
+// Kullanıcı verisinin arayüzü
 export interface UserData {
     uid: string;
     username: string;
@@ -16,16 +16,17 @@ export interface UserData {
     createdAt: Timestamp;
     photoURL?: string;
     diamonds?: number;
+    matchmakingRights?: number;
     isBanned?: boolean;
     reportCount?: number;
     referralCount?: number;
 }
 
 /**
- * Yönetim Paneli - Kullanıcı Yöneticisi Sayfası
+ * Kullanıcı Yöneticisi Sayfası
  * 
  * Bu sayfa, Firestore'daki tüm kullanıcıları gerçek zamanlı olarak listeler
- * ve yöneticinin kullanıcıları bir tablo içinde yönetmesine olanak tanır.
+ * ve onları bir tablo içinde yönetmek için arayüz sağlar.
  */
 export default function UserManagerPage() {
     const [users, setUsers] = useState<UserData[]>([]);
