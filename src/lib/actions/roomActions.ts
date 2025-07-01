@@ -541,3 +541,31 @@ export async function handleMatchConfirmation(roomId: string, userId: string, ac
 
   return { success: true };
 }
+
+export async function deleteMessageByHost(roomId: string, messageId: string, hostId: string) {
+    if (!roomId || !messageId || !hostId) {
+        throw new Error("Gerekli parametreler eksik.");
+    }
+
+    const roomRef = doc(db, 'rooms', roomId);
+    const messageRef = doc(db, 'rooms', roomId, 'messages', messageId);
+
+    return runTransaction(db, async (transaction) => {
+        const roomDoc = await transaction.get(roomRef);
+        if (!roomDoc.exists()) {
+            throw new Error("Oda bulunamadı.");
+        }
+
+        const roomData = roomDoc.data();
+        if (roomData.createdBy.uid !== hostId) {
+            throw new Error("Bu işlemi yapma yetkiniz yok.");
+        }
+
+        const messageDoc = await transaction.get(messageRef);
+        if (messageDoc.exists()) {
+            transaction.delete(messageRef);
+        }
+
+        return { success: true };
+    });
+}

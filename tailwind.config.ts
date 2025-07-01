@@ -70,10 +70,17 @@ export default {
             height: '0',
           },
         },
+        'like-pop': {
+            '0%': { opacity: '0', transform: 'scale(0.5)' },
+            '30%': { opacity: '0.9', transform: 'scale(1.2)' },
+            '60%': { opacity: '0.9', transform: 'scale(1)' },
+            '100%': { opacity: '0', transform: 'scale(1)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'like-pop': 'like-pop 0.6s ease-in-out forwards',
       },
     },
   },

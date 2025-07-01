@@ -10,13 +10,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, Pin } from 'lucide-react';
+import { Loader2, Pin, Trash2 } from 'lucide-react';
 import type { Message, Room } from '@/lib/types';
 import PortalMessageCard from './PortalMessageCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { Button } from '../ui/button';
 import { MoreHorizontal } from 'lucide-react';
-import { pinMessage } from '@/lib/actions/roomActions';
+import { pinMessage, deleteMessageByHost } from '@/lib/actions/roomActions';
 import { useToast } from '@/hooks/use-toast';
 import GameInviteMessage from '../game/GameInviteMessage';
 
@@ -40,6 +40,16 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
         toast({ variant: 'destructive', description: e.message });
     }
   }
+
+  const handleDeleteByHost = async (messageId: string) => {
+    if (!isHost) return;
+    try {
+      await deleteMessageByHost(room.id, messageId, currentUser!.uid);
+      toast({ description: "Mesaj oda sahibi tarafından silindi." });
+    } catch (e: any) {
+      toast({ variant: 'destructive', description: e.message });
+    }
+  };
 
   if (!currentUser) return null;
 
@@ -78,11 +88,13 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
         }
         
         const isCurrentUser = msg.uid === currentUser.uid;
-        const isHostOrMod = msg.uid === room.createdBy.uid || room.moderators?.includes(msg.uid);
+        const isParticipantHost = msg.uid === room.createdBy.uid;
+        const isParticipantModerator = room.moderators?.includes(msg.uid);
+        const isPrivileged = isParticipantHost || isParticipantModerator;
         
         return (
           <div key={msg.id} className={cn("flex items-end gap-3 w-full animate-in fade-in slide-in-from-bottom-4 duration-500 group", isCurrentUser && "flex-row-reverse")}>
-             {isHost && !isCurrentUser && (
+             {isHost && (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
@@ -94,6 +106,12 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
                             <Pin className="mr-2 h-4 w-4" />
                             <span>Sabitle</span>
                         </DropdownMenuItem>
+                         {!isCurrentUser && (
+                             <DropdownMenuItem onClick={() => handleDeleteByHost(msg.id)} className="text-destructive focus:text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4"/>
+                                <span>Mesajı Sil</span>
+                            </DropdownMenuItem>
+                         )}
                     </DropdownMenuContent>
                 </DropdownMenu>
              )}
@@ -108,7 +126,7 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
 
             <div className={cn("flex flex-col gap-1 max-w-[70%]", isCurrentUser && "items-end")}>
                 <div className={cn("flex items-center gap-2", isCurrentUser && "flex-row-reverse")}>
-                   <p className={cn("font-bold text-sm", isHostOrMod && !isCurrentUser ? "text-amber-500" : "text-foreground")}>{isCurrentUser ? "Siz" : msg.username}</p>
+                   <p className={cn("font-bold text-sm", isPrivileged && !isCurrentUser ? "text-amber-500" : "text-foreground")}>{isCurrentUser ? "Siz" : msg.username}</p>
                    <p className="text-xs text-muted-foreground">
                      {msg.createdAt ? format((msg.createdAt as Timestamp).toDate(), 'p', { locale: tr }) : ''}
                    </p>
@@ -124,7 +142,7 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
                         "p-2 rounded-2xl relative", 
                         isCurrentUser 
                             ? "bg-primary text-primary-foreground rounded-br-none" 
-                            : (isHostOrMod 
+                            : (isPrivileged
                                 ? "bg-card border-2 border-amber-400/50 rounded-bl-none text-foreground" 
                                 : "bg-card rounded-bl-none text-foreground")
                     )}>
@@ -146,21 +164,6 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
                     </div>
                 </div>
             </div>
-             {isHost && isCurrentUser && (
-                 <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                            <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                        <DropdownMenuItem onClick={() => handlePinMessage(msg.id)}>
-                            <Pin className="mr-2 h-4 w-4" />
-                            <span>Sabitle</span>
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-             )}
           </div>
         );
       })}

@@ -59,6 +59,7 @@ export default function PostCard({ post, isStandalone = false }: PostCardProps) 
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showComments, setShowComments] = useState(false);
     const [postToRetweet, setPostToRetweet] = useState<Post | null>(null);
+    const [showLikeAnimation, setShowLikeAnimation] = useState(false);
 
 
     // Sync optimistic state with props
@@ -121,6 +122,10 @@ export default function PostCard({ post, isStandalone = false }: PostCardProps) 
     
     const handleDoubleClick = () => {
         if (!currentUser) return;
+        setShowLikeAnimation(true);
+        setTimeout(() => {
+            setShowLikeAnimation(false);
+        }, 600);
         if (!optimisticLiked) {
             handleLike();
         }
@@ -182,9 +187,14 @@ export default function PostCard({ post, isStandalone = false }: PostCardProps) 
         return (
              <>
                 <div 
-                    className={cn("flex gap-3 p-4 transition-colors hover:bg-muted/50", !isStandalone && "border-b")}
+                    className={cn("relative flex gap-3 p-4 transition-colors hover:bg-muted/50", !isStandalone && "border-b")}
                     onDoubleClick={handleDoubleClick}
                 >
+                     {showLikeAnimation && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                            <Heart className="text-white h-20 w-20 drop-shadow-lg animate-like-pop" fill="currentColor" />
+                        </div>
+                    )}
                     {/* Retweeter Avatar Column */}
                     <div>
                         <Link href={`/profile/${post.uid}`}>
@@ -273,9 +283,14 @@ export default function PostCard({ post, isStandalone = false }: PostCardProps) 
     return (
         <>
            <div 
-                className={cn("flex gap-3 p-4 transition-colors hover:bg-muted/50", !isStandalone && "border-b")}
+                className={cn("relative flex gap-3 p-4 transition-colors hover:bg-muted/50", !isStandalone && "border-b")}
                 onDoubleClick={handleDoubleClick}
             >
+                {showLikeAnimation && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                        <Heart className="text-white h-20 w-20 drop-shadow-lg animate-like-pop" fill="currentColor" />
+                    </div>
+                )}
                 {/* Avatar Column */}
                 <div>
                     <Link href={`/profile/${post.uid}`}>
