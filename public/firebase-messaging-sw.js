@@ -1,13 +1,8 @@
-// Bu dosya, PWA anlık bildirimlerinin çalışması için zorunludur.
-// Arka planda gelen mesajları dinler ve bildirim olarak gösterir.
+// Scripts for firebase and firebase messaging
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
-// Firebase'in uyumluluk (compat) kütüphanelerini içe aktar.
-// Service Worker ortamında bu yöntem daha güvenilirdir.
-importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
-
-// Firebase yapılandırma bilgileri.
-// Bu bilgiler `src/lib/firebase.ts` dosyasıyla aynı olmalıdır.
+// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyBHLuoO7KM9ai0dMeCcGhmSHSVYCDO1rEo",
   authDomain: "yenidendeneme-ea9ed.firebaseapp.com",
@@ -18,57 +13,34 @@ const firebaseConfig = {
   measurementId: "G-J3EB02J0LN"
 };
 
-// Firebase uygulamasını başlat.
-firebase.initializeApp(firebaseConfig);
+// Initialize Firebase
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
 
+// Retrieve an instance of Firebase Messaging so that it can handle background
+// messages.
 const messaging = firebase.messaging();
 
-// Arka planda bir mesaj geldiğinde çalışacak olan dinleyici.
 messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Arka plan mesajı alındı: ', payload);
-
-  // Gelen veriden bildirim başlığını ve seçeneklerini oluştur.
+  console.log('[firebase-messaging-sw.js] Received background message ', payload);
+  
   const notificationTitle = payload.data.title;
   const notificationOptions = {
     body: payload.data.body,
-    icon: payload.data.icon,
+    icon: payload.data.icon || '/icons/icon.svg',
     data: {
-      url: payload.data.link, // Tıklanınca açılacak URL'yi veriye ekle.
-    },
+        link: payload.data.link
+    }
   };
 
-  // Bildirimi kullanıcıya göster.
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// Kullanıcı bildirime tıkladığında çalışacak olan dinleyici.
 self.addEventListener('notificationclick', (event) => {
-  event.notification.close(); // Bildirimi kapat.
-
-  // Tıklanınca açılacak olan URL'yi al.
-  const urlToOpen = new URL(event.notification.data.url, self.location.origin).href;
-
-  // Mevcut bir sekme varsa ona odaklan, yoksa yeni bir sekme aç.
-  const promiseChain = clients.matchAll({
-    type: 'window',
-    includeUncontrolled: true
-  }).then((windowClients) => {
-    let matchingClient = null;
-
-    for (let i = 0; i < windowClients.length; i++) {
-      const windowClient = windowClients[i];
-      if (windowClient.url === urlToOpen) {
-        matchingClient = windowClient;
-        break;
-      }
+    event.notification.close();
+    const link = event.notification.data.link;
+    if (link) {
+        event.waitUntil(clients.openWindow(link));
     }
-
-    if (matchingClient) {
-      return matchingClient.focus();
-    } else {
-      return clients.openWindow(urlToOpen);
-    }
-  });
-
-  event.waitUntil(promiseChain);
 });
