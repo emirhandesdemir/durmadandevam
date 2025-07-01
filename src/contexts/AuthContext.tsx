@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { doc, onSnapshot, DocumentData, collection, query, where, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot, DocumentData, collection, query, where, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -42,10 +42,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
         if (user) { // Ensure user exists before trying to update status
             const userStatusRef = doc(db, 'users', user.uid);
-            await updateDoc(userStatusRef, {
+            // Use setDoc with merge to prevent error if doc is deleted from admin panel
+            await setDoc(userStatusRef, {
                 isOnline: false,
                 lastSeen: serverTimestamp()
-            });
+            }, { merge: true });
         }
         await signOut(auth);
         toast({
@@ -79,10 +80,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userStatusRef = doc(db, 'users', user.uid);
 
     const updateStatus = (online: boolean) => {
-        updateDoc(userStatusRef, {
+        // Use setDoc with merge: true. This prevents an error if the user document
+        // hasn't been created yet (e.g., during signup race condition).
+        setDoc(userStatusRef, {
             isOnline: online,
             lastSeen: serverTimestamp()
-        }).catch(err => console.error("Presence update failed:", err));
+        }, { merge: true }).catch(err => console.error("Presence update failed:", err));
     };
     
     // Go online when connected
