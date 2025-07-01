@@ -17,7 +17,7 @@ import type { UserProfile } from "@/lib/types";
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
 import { Image as ImageIcon, Send, Loader2, X, Sparkles, RefreshCcw } from "lucide-react";

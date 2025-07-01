@@ -362,8 +362,14 @@ export async function openPortalForRoom(roomId: string, userId: string) {
             portalRoomName: roomDoc.data().name
         };
         
-        const messagesRef = collection(db, "rooms", roomId, "messages");
-        transaction.set(doc(messagesRef), systemMessage);
+        const allRoomsQuery = query(collection(db, 'rooms'), where('id', '!=', roomId));
+        const allRoomsSnapshot = await getDocs(allRoomsQuery);
+
+        allRoomsSnapshot.forEach(doc => {
+            const messagesRef = collection(db, "rooms", doc.id, "messages");
+            transaction.set(doc(messagesRef), systemMessage);
+        });
+
     });
 
     return { success: true };
