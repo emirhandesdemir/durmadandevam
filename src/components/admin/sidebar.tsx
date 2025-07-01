@@ -22,15 +22,17 @@ import {
   HeartPulse,
   History,
   CloudUpload,
+  ShieldAlert,
 } from "lucide-react";
 import { Button } from "../ui/button";
 
-// Navigasyon menüsündeki her bir öğenin bilgilerini (link, etiket, ikon) içeren dizi.
+// Navigasyon öğeleri listesi
 const navItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/analytics", label: "İstatistikler", icon: BarChart3 },
   { href: "/admin/status", label: "Sistem Durumu", icon: HeartPulse },
   { href: "/admin/users", label: "Kullanıcılar", icon: Users },
+  { href: "/admin/reports", label: "Şikayetler", icon: ShieldAlert },
   { href: "/admin/rooms", label: "Odalar", icon: MessageSquare },
   { href: "/admin/posts", label: "Gönderiler", icon: FileText },
   { href: "/admin/questions", label: "Quiz Soruları", icon: Puzzle },
@@ -48,11 +50,11 @@ interface SidebarProps {
 
 
 export default function Sidebar({ isSidebarOpen, setSidebarOpen }: SidebarProps) {
-  const pathname = usePathname(); // Mevcut sayfanın URL'sini alarak aktif linki belirlemek için kullanılır.
+  const pathname = usePathname();
 
   return (
     <>
-        {/* Mobil cihazlarda menü açıldığında arkaplanı karartan overlay. */}
+        {/* Mobil için arkaplan overlay */}
         {isSidebarOpen && (
             <div 
                 className="fixed inset-0 z-20 bg-black/60 transition-opacity duration-300 lg:hidden"
@@ -60,7 +62,7 @@ export default function Sidebar({ isSidebarOpen, setSidebarOpen }: SidebarProps)
             ></div>
         )}
 
-        {/* Gerçek Sidebar Menüsü */}
+        {/* Gerçek Sidebar */}
         <aside className={cn(
             "fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r bg-background transition-transform duration-300 lg:static lg:translate-x-0",
             isSidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -71,7 +73,6 @@ export default function Sidebar({ isSidebarOpen, setSidebarOpen }: SidebarProps)
                     <Swords className="h-7 w-7 text-primary" />
                     <span>Admin Paneli</span>
                 </Link>
-                {/* Sadece mobil için görünen kapatma butonu */}
                 <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(false)}>
                     <X className="h-5 w-5"/>
                 </Button>
@@ -83,7 +84,7 @@ export default function Sidebar({ isSidebarOpen, setSidebarOpen }: SidebarProps)
                     <Link
                         key={item.label}
                         href={item.href}
-                        onClick={() => setSidebarOpen(false)} // Mobil menüde linke tıklanınca menüyü kapat.
+                        onClick={() => setSidebarOpen(false)} // Mobil menüde linke tıklanınca kapat
                         className={cn(
                             "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-primary/10 hover:text-primary",
                             // Aktif olan sayfaya farklı stil uygula.

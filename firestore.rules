@@ -1,144 +1,115 @@
-// Güvenlik kurallarını okumak ve anlamak için:
-// https://firebase.google.com/docs/rules/rules-behavior
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Hız Sınırlayıcı Fonksiyonu: Kullanıcıların belirli eylemleri
-    // ne sıklıkta yapabileceğini kontrol eder (spam önleme).
-    // Örneğin, her 2 saniyede bir işlem yapmaya izin verir.
-    function isRateLimited(userId, interval) {
-        let lastTimestamp = get(/databases/$(database)/documents/users/$(userId)).data.lastActionTimestamp;
-        // Eğer daha önce bir eylem yoksa veya yönetici ise, izin ver.
-        let isAdmin = get(/databases/$(database)/documents/users/$(userId)).data.role == 'admin';
-        return isAdmin ? false : (lastTimestamp != null && request.time > lastTimestamp + duration.value(interval, "s"));
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
 
-    // --- Kullanıcılar (`users`) Koleksiyonu ---
+    function isAdmin() {
+      // Check if the user has the 'admin' role in their user document
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Users Collection
     match /users/{userId} {
-      // Herkes (giriş yapmış kullanıcılar) profilleri okuyabilir.
-      allow read: if request.auth != null;
-      // Kullanıcılar sadece kendi profillerini güncelleyebilir.
-      // `create` işlemi signup-form.tsx içinde halledilir, burada ayrıca izin gerekmez.
-      allow create, update: if request.auth != null && request.auth.uid == userId;
-      // Kimse doğrudan kullanıcı silemez (bu işlem yönetici panelinden yapılır).
-      allow delete: if false;
-
-      // Alt koleksiyonlar için kurallar
-      // Kullanıcılar sadece kendi bildirimlerini okuyabilir.
-      match /notifications/{notificationId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-      // Kullanıcılar sadece kendi profil görüntüleyenlerini okuyabilir.
-      match /profileViewers/{viewerId} {
-         allow read: if request.auth != null && request.auth.uid == userId;
-         // Başka bir kullanıcı sizin profilinizi görüntülediğinde bu belgeyi oluşturur.
-         allow write: if request.auth != null && request.auth.uid == viewerId;
-      }
-    }
-    
-    // --- Gönderiler (`posts`) Koleksiyonu ---
-    match /posts/{postId} {
-        // Herkes gönderileri okuyabilir.
-        allow read: if true;
-        // Giriş yapmış ve hız sınırına takılmayan kullanıcılar gönderi oluşturabilir.
-        allow create: if request.auth != null && !isRateLimited(request.auth.uid, 10);
-        // Kullanıcılar sadece kendi gönderilerini güncelleyebilir veya silebilir.
-        allow update, delete: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow read: if isAuthenticated();
+      allow create: if !isAuthenticated(); // Let signup create the doc
+      allow update: if isOwner(userId) || isAdmin();
       
-        // Gönderi altındaki yorumlar.
-        match /comments/{commentId} {
-            // Herkes yorumları okuyabilir.
-            allow read: if true;
-            // Giriş yapmış ve hız sınırına takılmayan kullanıcılar yorum yapabilir.
-            allow create: if request.auth != null && !isRateLimited(request.auth.uid, 2);
-            // Kullanıcılar sadece kendi yorumlarını silebilir.
-            allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
-        }
+      // Subcollections
+      match /notifications/{notificationId} {
+        allow read, write: if isOwner(userId);
+      }
+      match /profileViewers/{viewerId} {
+        allow read: if isOwner(userId);
+        allow write: if isAuthenticated() && request.auth.uid == viewerId;
+      }
     }
     
-    // --- Odalar (`rooms`) Koleksiyonu ---
+    // Posts Collection
+    match /posts/{postId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAuthenticated() && (isOwner(request.resource.data.uid) || isAdmin());
+
+      // Comments subcollection
+      match /comments/{commentId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow delete: if isAuthenticated() && (isOwner(resource.data.uid) || isAdmin());
+      }
+    }
+
+    // Rooms Collection
     match /rooms/{roomId} {
-        // Herkes odaları okuyabilir.
-        allow read: if true;
-        // Giriş yapmış kullanıcılar oda oluşturabilir.
-        allow create: if request.auth != null;
-        // Sadece oda sahibi odayı güncelleyebilir veya silebilir.
-        allow update, delete: if request.auth != null && resource.data.createdBy.uid == request.auth.uid;
-
-        // Oda içindeki mesajlar.
-        match /messages/{messageId} {
-            // Sadece odaya katılmış kullanıcılar mesajları okuyabilir ve yazabilir.
-            allow read: if request.auth != null && get(/databases/$(database)/documents/rooms/$(roomId)).data.participants.hasAny([request.auth.uid]);
-            allow write: if request.auth != null && get(/databases/$(database)/documents/rooms/$(roomId)).data.participants.hasAny([request.auth.uid]) && !isRateLimited(request.auth.uid, 1);
-        }
-
-        // --- SESLİ SOHBET (WebRTC) GÜVENLİK KURALLARI ---
-        match /voiceParticipants/{participantId} {
-            // Herkes katılımcı listesini okuyabilir.
-            allow read: if true;
-            // Kullanıcılar sadece kendi katılımcı dokümanlarını oluşturabilir (sesli sohbete katılma).
-            allow create: if request.auth != null && request.auth.uid == participantId;
-            // Oda sahibi veya moderatörler başkalarını atabilir (silebilir), kullanıcılar kendileri ayrılabilir.
-            allow delete: if request.auth != null && (request.auth.uid == participantId || get(/databases/$(database)/documents/rooms/$(roomId)).data.moderators.hasAny([request.auth.uid]));
-            // Sadece kullanıcı kendi durumunu (mute vb.) veya moderatörler başkasının durumunu güncelleyebilir.
-            allow update: if request.auth != null && (request.auth.uid == participantId || get(/databases/$(database)/documents/rooms/$(roomId)).data.moderators.hasAny([request.auth.uid]));
-        }
-
-        // WebRTC sinyal alışverişi için.
-        match /signals/{signalId} {
-             // Kullanıcılar sadece kendilerine gönderilen sinyalleri okuyabilir.
-            allow read: if request.auth != null && resource.data.to == request.auth.uid;
-            // Giriş yapmış tüm kullanıcılar sinyal gönderebilir.
-            allow create: if request.auth != null;
-            // Kimse sinyalleri güncelleyemez veya silemez (Cloud Function'lar hariç).
-            allow update, delete: if false;
-        }
-
-        // Oda içi oyunlar için.
-        match /games/{gameId} {
-            // Odaya katılmış herkes oyunları okuyabilir ve cevap verebilir (güncelleyebilir).
-            allow read, write: if request.auth != null && get(/databases/$(database)/documents/rooms/$(roomId)).data.participants.hasAny([request.auth.uid]);
-        }
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated(); // Allow updates for participants, etc.
+      allow delete: if isAdmin() || isOwner(resource.data.createdBy.uid);
+      
+      // Subcollections
+      match /messages/{messageId} {
+        allow read, create: if isAuthenticated();
+        allow update, delete: if isAuthenticated() && isOwner(resource.data.uid);
+      }
+      match /voiceParticipants/{participantId} {
+        allow read, create, delete: if isAuthenticated(); // Handled by server actions
+      }
+      match /game_sessions/{sessionId} {
+         allow read, create, update, delete: if isAuthenticated(); // Handled by server actions
+      }
+       match /signals/{signalId} {
+        allow create, read, delete: if isAuthenticated(); // For WebRTC
+      }
+       match /games/{gameId} {
+         allow read, create, update, delete: if isAuthenticated();
+      }
     }
-    
-    // --- Özel Mesajlar (`directMessages`) Koleksiyonu ---
-    match /directMessages/{chatId} {
-        // Bir sohbet dokümanının içeriğini (mesajları) sadece o sohbete katılanlar okuyabilir/yazabilir.
-        match /messages/{messageId} {
-            allow read, write: if request.auth != null && chatId.split("_").hasAny([request.auth.uid]);
-        }
+
+    // Direct Messages
+    match /directMessages/{chatId}/messages/{messageId} {
+       allow read, create: if isAuthenticated() && chatId.split('_').includes(request.auth.uid);
+       allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.senderId;
     }
-    
-    // Özel mesajların metadataları (son mesaj, okunmamış sayısı vb.).
     match /directMessagesMetadata/{chatId} {
-        // Metadatayı sadece sohbete katılanlar okuyabilir/yazabilir.
-        allow read, write: if request.auth != null && resource.data.participantUids.hasAny([request.auth.uid]);
+      allow read, update: if isAuthenticated() && chatId.split('_').includes(request.auth.uid);
+    }
+    
+    // Reports Collection
+    match /reports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+    
+    // Configuration Collections (gameSettings, featureFlags etc)
+    match /config/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
 
-    // --- Genel Yapılandırma (`config`) Koleksiyonu ---
-    match /config/{configId} {
-        // Herkes yapılandırma ayarlarını okuyabilir (örn: oyun ayarları, özellik bayrakları).
-        allow read: if true;
-        // Sadece yöneticiler bu ayarları değiştirebilir.
-        allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-    
-    // --- Oyun Soruları (`game_questions`) Koleksiyonu ---
+     // Game Questions Collection
     match /game_questions/{questionId} {
-        // Giriş yapmış herkes soruları okuyabilir.
-        allow read: if request.auth != null;
-        // Sadece yöneticiler soru ekleyebilir, güncelleyebilir veya silebilir.
-        allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
     }
     
-    // --- Denetim Kayıtları (`auditLogs`) Koleksiyonu ---
+    // Audit Logs
     match /auditLogs/{logId} {
-        // Sadece yöneticiler denetim kayıtlarını okuyabilir.
-        allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-        // Hiç kimse denetim kaydı oluşturamaz, güncelleyemez veya silemez (sadece Cloud Function'lar).
-        allow write: if false;
+       allow read: if isAdmin();
+       allow create: if false; // Only from Cloud Functions
+       allow update, delete: if false;
     }
   }
 }

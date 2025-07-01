@@ -48,6 +48,8 @@ export interface Report {
     reportedUsername: string;
     reason: string;
     details: string;
+    targetId: string; // Can be userId or postId
+    targetType: 'user' | 'post';
     timestamp: Timestamp;
 }
 

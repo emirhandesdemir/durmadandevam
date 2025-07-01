@@ -2,7 +2,7 @@
 'use server';
 
 import { db, storage } from '@/lib/firebase';
-import type { UserProfile } from '@/lib/types';
+import type { Report, UserProfile } from '@/lib/types';
 import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
@@ -165,16 +165,7 @@ export async function unblockUser(blockerId: string, targetId: string) {
 }
 
 
-interface ReportData {
-    reporterId: string;
-    reporterUsername: string;
-    reportedUserId: string;
-    reportedUsername: string;
-    reason: string;
-    details: string;
-}
-
-export async function submitReport(reportData: ReportData) {
+export async function submitReport(reportData: Omit<Report, 'id' | 'timestamp'>) {
     if (!reportData.reporterId || !reportData.reportedUserId) {
         throw new Error("Raporlayan ve raporlanan kullanıcı ID'leri gereklidir.");
     }
