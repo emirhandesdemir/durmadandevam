@@ -95,6 +95,7 @@ export default function SignUpForm() {
             password: "",
             city: "",
             country: "",
+            age: undefined,
         },
     });
 
@@ -229,7 +230,7 @@ export default function SignUpForm() {
                         <FormField control={form.control} name="age" render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Yaş</FormLabel>
-                                <FormControl><Input type="number" placeholder="25" {...field} /></FormControl>
+                                <FormControl><Input type="number" placeholder="25" {...field} value={field.value ?? ''} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )} />
