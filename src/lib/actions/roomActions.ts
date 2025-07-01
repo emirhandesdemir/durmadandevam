@@ -3,9 +3,9 @@
 
 import { db } from '@/lib/firebase';
 import { deleteRoomWithSubcollections } from '@/lib/firestoreUtils';
-import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch, arrayUnion, arrayRemove, updateDoc, runTransaction, increment } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch, arrayUnion, arrayRemove, updateDoc, runTransaction, increment, setDoc, query, where, getDocs } from 'firebase/firestore';
 import { createNotification } from './notificationActions';
-import type { Room } from '../types';
+import type { Room, Message } from '../types';
 import { createDmFromMatchRoom } from './dmActions';
 
 const voiceStatsRef = doc(db, 'config', 'voiceStats');
@@ -393,6 +393,15 @@ export async function pinMessage(roomId: string, messageId: string, userId: stri
     return { success: true };
 }
 
+export async function unpinMessage(roomId: string, userId: string) {
+    const roomRef = doc(db, 'rooms', roomId);
+    const roomDoc = await getDoc(roomRef);
+    if (!roomDoc.exists() || roomDoc.data().createdBy.uid !== userId) {
+        throw new Error("Bu işlemi yapma yetkiniz yok.");
+    }
+    await updateDoc(roomRef, { pinnedMessageId: null });
+    return { success: true };
+}
 
 export async function updateRoomSettings(roomId: string, settings: { requestToSpeakEnabled: boolean }) {
     if (!roomId) throw new Error("Oda ID'si gerekli.");

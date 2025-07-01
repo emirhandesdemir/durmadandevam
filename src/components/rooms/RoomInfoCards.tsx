@@ -2,11 +2,13 @@
 'use client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Edit2, Pin } from 'lucide-react';
+import { Edit2, Pin, X, Loader2 } from 'lucide-react';
 import type { Room, Message } from '@/lib/types';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useEffect, useState } from 'react';
+import { unpinMessage } from '@/lib/actions/roomActions';
+import { useToast } from '@/hooks/use-toast';
 
 interface RoomInfoCardsProps {
   room: Room;
@@ -14,8 +16,10 @@ interface RoomInfoCardsProps {
 }
 
 export default function RoomInfoCards({ room, isOwner }: RoomInfoCardsProps) {
+    const { toast } = useToast();
     const [pinnedMessage, setPinnedMessage] = useState<Message | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isUnpinning, setIsUnpinning] = useState(false);
 
     useEffect(() => {
         if (!room.pinnedMessageId) {
@@ -35,10 +39,19 @@ export default function RoomInfoCards({ room, isOwner }: RoomInfoCardsProps) {
         return () => unsub();
     }, [room.pinnedMessageId, room.id]);
 
+    const handleUnpin = async () => {
+        if (!isOwner || !room.id) return;
+        setIsUnpinning(true);
+        try {
+            await unpinMessage(room.id, room.createdBy.uid);
+            toast({ description: "Sabitlenmiş mesaj kaldırıldı." });
+        } catch (e: any) {
+            toast({ variant: 'destructive', description: e.message });
+        } finally {
+            setIsUnpinning(false);
+        }
+    }
 
-    // TODO: Add edit dialogs for rules and welcome message
-    const handleEditRules = () => {};
-    const handleEditWelcome = () => {};
 
     if (!room.rules && !room.welcomeMessage && !pinnedMessage && !loading) {
         return null;
@@ -47,12 +60,17 @@ export default function RoomInfoCards({ room, isOwner }: RoomInfoCardsProps) {
     return (
         <div className="px-4 space-y-3 my-4">
             {!loading && pinnedMessage && (
-                 <Card className="bg-card/30 border-primary/20">
-                    <CardHeader className="p-3">
-                        <CardTitle className="flex items-center gap-2 text-sm text-primary">
+                 <Card className="bg-primary/10 border-primary/30 shadow-md">
+                    <CardHeader className="p-3 flex flex-row items-center justify-between">
+                        <CardTitle className="flex items-center gap-2 text-sm text-primary font-bold">
                             <Pin className="h-4 w-4" />
                             Sabitlenmiş Mesaj
                         </CardTitle>
+                        {isOwner && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleUnpin} disabled={isUnpinning}>
+                                {isUnpinning ? <Loader2 className="h-4 w-4 animate-spin"/> : <X className="h-4 w-4" />}
+                            </Button>
+                        )}
                     </CardHeader>
                     <CardContent className="p-3 pt-0 text-sm">
                         <strong className="text-muted-foreground">{pinnedMessage.username}:</strong> {pinnedMessage.text}
