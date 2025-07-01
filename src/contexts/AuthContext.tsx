@@ -4,10 +4,11 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { doc, onSnapshot, DocumentData, collection, query, where, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { auth, db, messaging } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import type { FeatureFlags, UserProfile } from '@/lib/types';
+import { onMessage } from 'firebase/messaging';
 
 
 interface AuthContextType {
@@ -72,6 +73,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     return () => unsubscribe();
   }, []);
+
+  // Foreground notification handler
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && messaging && user) {
+        const unsubscribeOnMessage = onMessage(messaging, (payload) => {
+            console.log('Foreground message received.', payload);
+            toast({
+                title: payload.data?.title,
+                description: payload.data?.body,
+            });
+        });
+
+        return () => {
+            unsubscribeOnMessage();
+        };
+    }
+  }, [user, toast]);
 
   // Presence management
   useEffect(() => {

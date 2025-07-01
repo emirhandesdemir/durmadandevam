@@ -95,15 +95,7 @@ export const sendPushNotification = functions
                 break;
         }
 
-        // Gönderilecek bildirim yükünü (payload) hazırla.
         const payload: admin.messaging.MessagingPayload = {
-            // Uygulama ön plandayken gösterilecek bildirim.
-            notification: {
-                title: title,
-                body: body,
-                icon: "/icons/icon-192x192.png",
-            },
-            // Arka plandaki servis çalışanına gönderilecek ek veri.
             data: {
                 title: title,
                 body: body,
@@ -112,7 +104,7 @@ export const sendPushNotification = functions
             },
             webpush: {
                 fcmOptions: {
-                    link: link, // Tıklanınca açılacak URL.
+                    link: link, 
                 },
             },
         };
