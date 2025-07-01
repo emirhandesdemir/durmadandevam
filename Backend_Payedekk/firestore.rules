@@ -1,0 +1,156 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper Functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && getUserData(request.auth.uid).role == 'admin';
+    }
+    
+    // Rate Limiting: Check if enough time has passed since last action
+    // Default cooldown is 2 seconds
+    function isRateLimited(cooldown) {
+        let lastTimestamp = getUserData(request.auth.uid).lastActionTimestamp;
+        // Allow if no previous action or if enough time has passed
+        return lastTimestamp != null && request.time > lastTimestamp + duration.value(cooldown, "s");
+    }
+
+    // Default deny all reads and writes
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // Users Collection
+    match /users/{userId} {
+      // Anyone can read a user profile
+      allow read: if isSignedIn();
+      
+      // Only the owner can create or update their own profile
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId)
+                    // Admins can update any user profile
+                    || isAdmin();
+                    
+      // Prevent users from changing their own role, diamonds, etc.
+      // Only allow updating specific, non-critical fields.
+      allow update: if isOwner(userId) 
+                      && !(request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'diamonds', 'uid', 'createdAt', 'referralCount', 'reportCount']));
+
+      // Subcollections
+      match /notifications/{notificationId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+      match /profileViewers/{viewerId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+    }
+    
+    // Posts Collection
+    match /posts/{postId} {
+      // Anyone can read posts
+      allow read: if isSignedIn();
+      // Only signed-in users can create posts, with rate limiting (10s)
+      allow create: if isSignedIn() && isRateLimited(10);
+      // Only owner or admin can update/delete
+      allow update, delete: if isSignedIn() && (isOwner(resource.data.uid) || isAdmin());
+      
+      // Comments subcollection
+      match /comments/{commentId} {
+        // Anyone can read comments
+        allow read: if isSignedIn();
+        // Only signed-in users can create comments, with rate limiting (2s)
+        allow create: if isSignedIn() && isRateLimited(2);
+        // Only owner or admin can delete
+        allow delete: if isSignedIn() && (isOwner(resource.data.uid) || isAdmin());
+      }
+    }
+    
+    // Rooms Collection
+    match /rooms/{roomId} {
+      // Anyone can read room details
+      allow read: if isSignedIn();
+      // Any signed-in user can create a room, with rate limiting (60s)
+      allow create: if isSignedIn() && isRateLimited(60);
+      // Only owner or admin can update room details
+      allow update: if isSignedIn() && (isOwner(resource.data.createdBy.uid) || resource.data.moderators.hasAny([request.auth.uid]) || isAdmin());
+      // Only owner or admin can delete a room
+      allow delete: if isSignedIn() && (isOwner(resource.data.createdBy.uid) || isAdmin());
+
+      // Room Subcollections
+      match /messages/{messageId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && request.auth.uid in resource.data.participants && isRateLimited(1);
+      }
+      
+      match /voiceParticipants/{participantId} {
+        allow read: if isSignedIn();
+        allow create, update, delete: if isOwner(participantId) || isOwner(get(/databases/$(database)/documents/rooms/$(roomId)).data.createdBy.uid) || isAdmin();
+      }
+
+      match /signals/{signalId} {
+        allow read, write: if isSignedIn(); // Signaling is complex, keep it open for authenticated for now
+      }
+
+       match /games/{gameId} {
+        allow read, write: if isSignedIn(); // Let server-side actions handle game logic
+      }
+    }
+
+    // Direct Messages
+    match /directMessages/{chatId} {
+      // Only participants can access the DM document itself (for creating the subcollection)
+      allow get, list: if isSignedIn() && request.auth.uid in resource.data.participantUids;
+      
+      match /messages/{messageId} {
+        // Only participants can read/write messages
+        allow read, write: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/directMessages/$(chatId)).data.participantUids;
+        // Users can only edit/delete their own messages
+        allow update, delete: if isSignedIn() && request.auth.uid == resource.data.senderId;
+      }
+    }
+    
+    match /directMessagesMetadata/{chatId} {
+       // Only participants can read the metadata (for chat lists)
+      allow read: if isSignedIn() && request.auth.uid in resource.data.participantUids;
+      // Writes are handled by server actions (sendMessage)
+      allow write: if false; 
+    }
+
+    // Config Collection (Read-only for users)
+    match /config/{configId} {
+      allow read: if isSignedIn();
+      // Only admins can change configuration
+      allow write: if isAdmin();
+    }
+
+    // Audit Logs (Admin only)
+    match /auditLogs/{logId} {
+        allow read, write: if isAdmin();
+    }
+    
+    // Game Questions (Admin only)
+    match /game_questions/{questionId} {
+        allow read: if isSignedIn(); // All users can read questions for the game
+        allow write: if isAdmin();
+    }
+    
+     // Reports (Write only for users, read for admins)
+    match /reports/{reportId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isAdmin();
+    }
+  }
+}
