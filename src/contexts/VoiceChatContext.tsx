@@ -3,10 +3,10 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, onSnapshot, doc, addDoc, query, where, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, addDoc, query, where, deleteDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Room, VoiceParticipant } from '../types';
-import { joinVoiceChat, leaveVoiceChat, toggleSelfMute as toggleMuteAction, toggleScreenShare as toggleScreenShareAction, toggleVideo as toggleVideoAction } from '@/lib/actions/voiceActions';
+import { joinVoiceChat, leaveVoiceChat, toggleSelfMute as toggleMuteAction, toggleScreenShare as toggleScreenShareAction, toggleVideo as toggleVideoAction, updateLastActive } from '@/lib/actions/voiceActions';
 import { useToast } from '@/hooks/use-toast';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -44,6 +44,8 @@ interface VoiceChatContextType {
     isMusicPlaying: boolean;
     startMusic: (file: File) => Promise<void>;
     stopMusic: () => Promise<void>;
+    musicVolume: number;
+    setMusicVolume: (volume: number) => void;
 }
 
 const VoiceChatContext = createContext<VoiceChatContextType | undefined>(undefined);
@@ -69,6 +71,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const [remoteVideoStreams, setRemoteVideoStreams] = useState<Record<string, MediaStream>>({});
     const [remoteScreenStreams, setRemoteScreenStreams] = useState<Record<string, MediaStream>>({});
     const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+    const [musicVolume, setMusicVolume] = useState(0.5);
 
     const peerConnections = useRef<Record<string, RTCPeerConnection>>({});
     const screenSenderRef = useRef<Record<string, RTCRtpSender>>({});
@@ -80,10 +83,18 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const audioContextRef = useRef<AudioContext | null>(null);
     const originalMicTrackRef = useRef<MediaStreamTrack | null>(null);
     const mixedStreamDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null);
+    const musicGainNodeRef = useRef<GainNode | null>(null);
 
     const self = useMemo(() => participants.find(p => p.uid === user?.uid) || null, [participants, user?.uid]);
     const isConnected = !!self && !!connectedRoomId;
     const isSharingScreen = !!localScreenStream;
+    
+    const setMusicVolumeCallback = useCallback((volume: number) => {
+        setMusicVolume(volume);
+        if (musicGainNodeRef.current) {
+            musicGainNodeRef.current.gain.value = volume;
+        }
+    }, []);
 
      const stopMusic = useCallback(async () => {
         if (!originalMicTrackRef.current) return;
@@ -91,7 +102,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         if (musicAudioRef.current) {
             musicAudioRef.current.pause();
             musicAudioRef.current.src = "";
-            URL.revokeObjectURL(musicAudioRef.current.src);
+            if (musicAudioRef.current.src) URL.revokeObjectURL(musicAudioRef.current.src);
             musicAudioRef.current = null;
         }
 
@@ -107,6 +118,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             audioContextRef.current = null;
         }
 
+        musicGainNodeRef.current = null;
         mixedStreamDestinationRef.current = null;
         originalMicTrackRef.current = null;
         setIsMusicPlaying(false);
@@ -309,8 +321,13 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             const destination = context.createMediaStreamDestination();
             mixedStreamDestinationRef.current = destination;
 
-            micSource.connect(destination);
-            musicSource.connect(destination);
+            const gainNode = context.createGain();
+            gainNode.gain.value = musicVolume;
+            musicGainNodeRef.current = gainNode;
+
+            micSource.connect(destination); // Mic -> Destination
+            musicSource.connect(gainNode).connect(destination); // Music -> Gain -> Destination (for others)
+            musicSource.connect(context.destination); // Music -> Local Speakers (for self)
 
             const mixedTrack = destination.stream.getAudioTracks()[0];
 
@@ -331,7 +348,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
              await stopMusic();
         }
 
-    }, [isConnected, localStream, isMusicPlaying, stopMusic, toast]);
+    }, [isConnected, localStream, isMusicPlaying, stopMusic, toast, musicVolume]);
     
     const stopScreenShare = useCallback(async () => {
         if (!user || !connectedRoomId || !localScreenStream) return;
@@ -500,7 +517,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     
     const value = {
         activeRoom, participants: memoizedParticipants, self, isConnecting, isConnected, remoteAudioStreams, remoteScreenStreams, remoteVideoStreams, localStream, isSharingScreen, isSharingVideo,
-        setActiveRoomId, joinRoom, leaveRoom, toggleSelfMute, startScreenShare, stopScreenShare, startVideo, stopVideo, isMusicPlaying, startMusic, stopMusic
+        setActiveRoomId, joinRoom, leaveRoom, toggleSelfMute, startScreenShare, stopScreenShare, startVideo, stopVideo, isMusicPlaying, startMusic, stopMusic, musicVolume, setMusicVolume: setMusicVolumeCallback
     };
 
     return <VoiceChatContext.Provider value={value}>{children}</VoiceChatContext.Provider>;
