@@ -66,6 +66,7 @@ export default function ProfilePageClient() {
     const [age, setAge] = useState<number | undefined>(undefined);
     const [city, setCity] = useState("");
     const [country, setCountry] = useState("");
+    const [gender, setGender] = useState<'male' | 'female' | undefined>(undefined);
     const [privateProfile, setPrivateProfile] = useState(false);
     const [acceptsFollowRequests, setAcceptsFollowRequests] = useState(true);
     const [showOnlineStatus, setShowOnlineStatus] = useState(true);
@@ -85,6 +86,7 @@ export default function ProfilePageClient() {
             setAge(userData.age);
             setCity(userData.city || "");
             setCountry(userData.country || "");
+            setGender(userData.gender);
             setPrivateProfile(userData.privateProfile || false);
             setAcceptsFollowRequests(userData.acceptsFollowRequests ?? true);
             setShowOnlineStatus(userData.showOnlineStatus ?? true);
@@ -104,6 +106,7 @@ export default function ProfilePageClient() {
         age !== (userData?.age || undefined) ||
         city !== (userData?.city || "") ||
         country !== (userData?.country || "") ||
+        gender !== (userData?.gender || undefined) ||
         privateProfile !== (userData?.privateProfile || false) || 
         acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true) ||
         showOnlineStatus !== (userData?.showOnlineStatus ?? true) ||
@@ -167,6 +170,7 @@ export default function ProfilePageClient() {
             if (age !== userData?.age) updates.age = Number(age);
             if (city !== userData?.city) updates.city = city;
             if (country !== userData?.country) updates.country = country;
+            if (gender !== userData?.gender) updates.gender = gender;
             if (privateProfile !== userData?.privateProfile) updates.privateProfile = privateProfile;
             if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) updates.acceptsFollowRequests = acceptsFollowRequests;
             if (showOnlineStatus !== (userData?.showOnlineStatus ?? true)) updates.showOnlineStatus = showOnlineStatus;
@@ -268,6 +272,23 @@ export default function ProfilePageClient() {
                                         <Label htmlFor="country">Ülke</Label>
                                         <Input id="country" value={country} onChange={(e) => setCountry(e.target.value)} />
                                     </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Cinsiyet</Label>
+                                    <RadioGroup
+                                        value={gender}
+                                        onValueChange={(value: 'male' | 'female') => setGender(value)}
+                                        className="flex space-x-4 pt-1"
+                                    >
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="male" id="male" />
+                                            <Label htmlFor="male" className="font-normal cursor-pointer">Erkek</Label>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="female" id="female" />
+                                            <Label htmlFor="female" className="font-normal cursor-pointer">Kadın</Label>
+                                        </div>
+                                    </RadioGroup>
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="bio">Biyografi</Label>
