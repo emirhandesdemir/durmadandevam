@@ -12,6 +12,8 @@ admin.initializeApp();
 const db = admin.firestore();
 
 const BOT_UID = "ai-bot-walk";
+const greetingKeywords = ['merhaba', 'selam', 'selamun aleyküm', 'sa', 'as', 'nasılsın', 'nasılsınız', 'naber', 'nbr', 'günaydın', 'iyi akşamlar'];
+
 
 /**
  * Yeni bir mesaj oluşturulduğunda tetiklenir ve AI botunun cevap verip vermeyeceğini kontrol eder.
@@ -23,12 +25,19 @@ export const onMessageCreate = functions.region("us-central1")
         const { roomId } = context.params;
 
         // Bota veya sisteme ait mesajları veya metin içermeyen mesajları yoksay
-        if (!messageData || messageData.uid === BOT_UID || messageData.uid === "system" || !messageData.text) {
+        if (!messageData || !messageData.text || messageData.uid === BOT_UID || messageData.uid === 'system') {
             return null;
         }
 
-        // Eğer mesajda "@Walk" geçmiyorsa, işlem yapma
-        if (!messageData.text.includes("@Walk")) {
+        const lowerCaseText = messageData.text.toLowerCase();
+        const isMention = lowerCaseText.includes('@walk');
+        // Check for standalone greeting words to avoid triggering on parts of other words
+        const containsGreeting = greetingKeywords.some(keyword => 
+            new RegExp(`\\b${keyword}\\b`, 'i').test(messageData.text)
+        );
+
+        // If it's not a mention and not a greeting, exit.
+        if (!isMention && !containsGreeting) {
             return null;
         }
 
@@ -51,6 +60,8 @@ export const onMessageCreate = functions.region("us-central1")
             const botResponse = await roomBotFlow({
                 history: history,
                 currentMessage: messageData.text,
+                isGreeting: containsGreeting && !isMention,
+                authorUsername: messageData.username,
             });
 
             if (botResponse) {

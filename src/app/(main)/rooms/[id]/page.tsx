@@ -36,7 +36,7 @@ export default function RoomPage() {
     
     // --- Auth & Contexts ---
     const { user, userData, featureFlags, loading: authLoading } = useAuth();
-    const { setActiveRoomId, joinRoom, isConnected, isConnecting } = useVoiceChat();
+    const { setActiveRoomId, isConnected, isConnecting } = useVoiceChat();
 
     // --- Component State ---
     const [room, setRoom] = useState<Room | null>(null);
@@ -62,13 +62,6 @@ export default function RoomPage() {
         return () => setActiveRoomId(null);
     }, [roomId, setActiveRoomId]);
 
-    // Auto-join voice chat with mic ON
-    useEffect(() => {
-        if (user && roomId && !isConnected && !isConnecting) {
-            joinRoom({ muted: false });
-        }
-    }, [user, roomId, isConnected, isConnecting, joinRoom]);
-    
     // Auto-start quiz game if host is present
     useEffect(() => {
         if (!isHost || !room || !featureFlags?.quizGameEnabled) return;
