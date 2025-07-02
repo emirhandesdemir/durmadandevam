@@ -2,12 +2,15 @@
 // PWA ayarları, TypeScript ve ESLint kuralları, ve harici resim kaynakları burada tanımlanır.
 import type {NextConfig} from 'next';
 
+const isDev = process.env.NODE_ENV === 'development';
+
 // PWA (Progresif Web Uygulaması) özelliklerini etkinleştiren eklenti.
 const withPWA = require('@ducanh2912/next-pwa').default({
   dest: 'public', // PWA ile ilgili dosyaların oluşturulacağı klasör.
   register: true, // Servis çalışanını otomatik olarak kaydet.
   skipWaiting: true, // Yeni sürüm olduğunda eski servis çalışanını beklemeden aktifleştir.
-  importScripts: ['/firebase-messaging-sw.js'], // Firebase anlık bildirimleri için gerekli servis çalışanı.
+  disable: isDev, // Geliştirme ortamında PWA özelliklerini devre dışı bırak.
+  importScripts: isDev ? undefined : ['/firebase-messaging-sw.js'], // Firebase anlık bildirimleri için gerekli servis çalışanı.
   cacheOnFrontEndNav: true,
   reloadOnOnline: true,
 });
