@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, onSnapshot, doc, serverTimestamp, query, where, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, serverTimestamp, query, where, deleteDoc, addDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Room, VoiceParticipant, PlaylistTrack } from '../types';
 import { joinVoiceChat, leaveVoice, toggleSelfMute as toggleMuteAction, toggleScreenShare as toggleScreenShareAction, toggleVideo as toggleVideoAction, updateLastActive } from '@/lib/actions/voiceActions';
@@ -209,80 +209,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         } catch (error) { console.error("Signal handling error:", type, error); }
     }, [createPeerConnection, sendSignal]);
 
-    // Disconnect from voice when navigating away to a different room
-    useEffect(() => {
-        if (activeRoomId && connectedRoomId && activeRoomId !== connectedRoomId) {
-            leaveVoiceOnly();
-        }
-    }, [activeRoomId, connectedRoomId, leaveVoiceOnly]);
-
-    useEffect(() => {
-        if (!user || !activeRoomId) {
-            setActiveRoom(null);
-            setParticipants([]);
-            setLivePlaylist([]);
-            return;
-        }
-
-        const roomUnsub = onSnapshot(doc(db, "rooms", activeRoomId), docSnap => {
-            if (docSnap.exists()) {
-                 setActiveRoom({id: docSnap.id, ...docSnap.data()} as Room)
-            } else {
-                 if(pathname.startsWith('/rooms/')) {
-                    toast({ variant: 'destructive', title: 'Oda Bulunamadı', description: 'Bu oda artık mevcut değil veya süresi dolmuş.' });
-                    router.push('/rooms');
-                 }
-                 setActiveRoom(null);
-                 setParticipants([]);
-            }
-        });
-
-        const participantsUnsub = onSnapshot(collection(db, "rooms", activeRoomId, "voiceParticipants"), snapshot => {
-            const fetched = snapshot.docs.map(d => d.data() as VoiceParticipant);
-            setParticipants(fetched);
-            if (isConnected && user && !fetched.some(p => p.uid === user.uid)) {
-                toast({ title: "Bağlantı Kesildi", description: "Sesten ayrıldınız veya atıldınız." });
-                _cleanupAndResetState();
-            }
-        });
-
-        const playlistUnsub = onSnapshot(collection(db, "rooms", activeRoomId, "playlist"), snapshot => {
-            const tracks = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as PlaylistTrack)).sort((a,b) => a.order - b.order);
-            setLivePlaylist(tracks);
-        });
-
-        return () => { roomUnsub(); participantsUnsub(); playlistUnsub(); };
-    }, [user, activeRoomId, pathname, router, toast, isConnected, _cleanupAndResetState]);
-    
-    // WebRTC signaling and peer connection management
-    useEffect(() => {
-        if (!isConnected || !user) return () => {};
-
-        const signalsUnsub = onSnapshot(query(collection(db, `rooms/${connectedRoomId}/signals`), where('to', '==', user.uid)), s => {
-             s.docChanges().forEach(async c => {
-                if (c.type === 'added') {
-                    await handleSignal(c.doc.data().from, c.doc.data().type, c.doc.data().data);
-                    await deleteDoc(c.doc.ref);
-                }
-             })
-        });
-        
-        const otherP = participants.filter(p => p.uid !== user.uid);
-        otherP.forEach(p => createPeerConnection(p.uid));
-        
-        Object.keys(peerConnections.current).forEach(uid => {
-            if (!otherP.some(p => p.uid === uid)) {
-                peerConnections.current[uid]?.close();
-                delete peerConnections.current[uid];
-                setRemoteAudioStreams(p => { const s = {...p}; delete s[uid]; return s; });
-                setRemoteScreenStreams(p => { const s = {...p}; delete s[uid]; return s; });
-                setRemoteVideoStreams(p => { const s = {...p}; delete s[uid]; return s; });
-            }
-        });
-        
-        return () => signalsUnsub();
-    }, [participants, isConnected, user, connectedRoomId, handleSignal, createPeerConnection]);
-    
     const joinRoom = useCallback(async (options?: { muted: boolean }) => {
         if (!user || !activeRoomId || isConnected || isConnecting) return;
         
@@ -492,6 +418,80 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         }
     }, [user, activeRoomId, isCurrentUserDj, toast]);
 
+    // Disconnect from voice when navigating away to a different room
+    useEffect(() => {
+        if (activeRoomId && connectedRoomId && activeRoomId !== connectedRoomId) {
+            leaveVoiceOnly();
+        }
+    }, [activeRoomId, connectedRoomId, leaveVoiceOnly]);
+
+    useEffect(() => {
+        if (!user || !activeRoomId) {
+            setActiveRoom(null);
+            setParticipants([]);
+            setLivePlaylist([]);
+            return;
+        }
+
+        const roomUnsub = onSnapshot(doc(db, "rooms", activeRoomId), docSnap => {
+            if (docSnap.exists()) {
+                 setActiveRoom({id: docSnap.id, ...docSnap.data()} as Room)
+            } else {
+                 if(pathname.startsWith('/rooms/')) {
+                    toast({ variant: 'destructive', title: 'Oda Bulunamadı', description: 'Bu oda artık mevcut değil veya süresi dolmuş.' });
+                    router.push('/rooms');
+                 }
+                 setActiveRoom(null);
+                 setParticipants([]);
+            }
+        });
+
+        const participantsUnsub = onSnapshot(collection(db, "rooms", activeRoomId, "voiceParticipants"), snapshot => {
+            const fetched = snapshot.docs.map(d => d.data() as VoiceParticipant);
+            setParticipants(fetched);
+            if (isConnected && user && !fetched.some(p => p.uid === user.uid)) {
+                toast({ title: "Bağlantı Kesildi", description: "Sesten ayrıldınız veya atıldınız." });
+                _cleanupAndResetState();
+            }
+        });
+
+        const playlistUnsub = onSnapshot(collection(db, "rooms", activeRoomId, "playlist"), snapshot => {
+            const tracks = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as PlaylistTrack)).sort((a,b) => a.order - b.order);
+            setLivePlaylist(tracks);
+        });
+
+        return () => { roomUnsub(); participantsUnsub(); playlistUnsub(); };
+    }, [user, activeRoomId, pathname, router, toast, isConnected, _cleanupAndResetState]);
+    
+    // WebRTC signaling and peer connection management
+    useEffect(() => {
+        if (!isConnected || !user) return () => {};
+
+        const signalsUnsub = onSnapshot(query(collection(db, `rooms/${connectedRoomId}/signals`), where('to', '==', user.uid)), s => {
+             s.docChanges().forEach(async c => {
+                if (c.type === 'added') {
+                    await handleSignal(c.doc.data().from, c.doc.data().type, c.doc.data().data);
+                    await deleteDoc(c.doc.ref);
+                }
+             })
+        });
+        
+        const otherP = participants.filter(p => p.uid !== user.uid);
+        otherP.forEach(p => createPeerConnection(p.uid));
+        
+        Object.keys(peerConnections.current).forEach(uid => {
+            if (!otherP.some(p => p.uid === uid)) {
+                peerConnections.current[uid]?.close();
+                delete peerConnections.current[uid];
+                setRemoteAudioStreams(p => { const s = {...p}; delete s[uid]; return s; });
+                setRemoteScreenStreams(p => { const s = {...p}; delete s[uid]; return s; });
+                setRemoteVideoStreams(p => { const s = {...p}; delete s[uid]; return s; });
+            }
+        });
+        
+        return () => signalsUnsub();
+    }, [participants, isConnected, user, connectedRoomId, handleSignal, createPeerConnection]);
+    
     const memoizedParticipants = useMemo(() => {
         return participants.map(p => ({ ...p, isSpeaker: !!speakingStates[p.uid] }));
     }, [participants, speakingStates]);
