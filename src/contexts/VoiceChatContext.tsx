@@ -209,6 +209,13 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         } catch (error) { console.error("Signal handling error:", type, error); }
     }, [createPeerConnection, sendSignal]);
 
+    // Disconnect from voice when navigating away to a different room
+    useEffect(() => {
+        if (activeRoomId && connectedRoomId && activeRoomId !== connectedRoomId) {
+            leaveVoiceOnly();
+        }
+    }, [activeRoomId, connectedRoomId, leaveVoiceOnly]);
+
     useEffect(() => {
         if (!user || !activeRoomId) {
             setActiveRoom(null);
@@ -405,23 +412,33 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     const switchCamera = useCallback(async () => {
         if (!isConnected || !localStream || !isSharingVideo) return;
+        
+        const oldTrack = localStream.getVideoTracks()[0];
+        if (oldTrack) {
+            oldTrack.stop();
+            localStream.removeTrack(oldTrack);
+        }
+
         const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
+        
         try {
             const newVideoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: newFacingMode } });
             const newVideoTrack = newVideoStream.getVideoTracks()[0];
             if (!newVideoTrack) throw new Error("Yeni kamera akışı alınamadı.");
-            const oldTrack = localStream.getVideoTracks()[0];
-            localStream.removeTrack(oldTrack);
-            oldTrack.stop();
+
             localStream.addTrack(newVideoTrack);
+
             for (const peerId in peerConnections.current) {
                 const sender = peerConnections.current[peerId].getSenders().find(s => s.track?.kind === 'video');
-                if (sender) await sender.replaceTrack(newVideoTrack);
+                if (sender) {
+                    await sender.replaceTrack(newVideoTrack);
+                }
             }
+            
             setFacingMode(newFacingMode);
         } catch (error) {
             console.error("Error switching camera:", error);
-            toast({ variant: 'destructive', title: 'Kamera Değiştirilemedi', description: 'Arka kamera bulunamadı veya bir hata oluştu.' });
+            toast({ variant: 'destructive', title: 'Kamera Değiştirilemedi', description: 'Arka kamera bulunamadı veya bir hata oluştu. Lütfen tekrar deneyin.' });
             await stopVideo();
         }
     }, [isConnected, localStream, isSharingVideo, facingMode, toast, stopVideo]);

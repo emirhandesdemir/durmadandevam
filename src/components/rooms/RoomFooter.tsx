@@ -38,6 +38,8 @@ export default function RoomFooter({ room, onGameLobbyOpen }: RoomFooterProps) {
     const [showVideoConfirm, setShowVideoConfirm] = useState(false);
     const [isMusicPlayerOpen, setIsMusicPlayerOpen] = useState(false);
     
+    const isParticipant = room.participants.some(p => p.uid === user?.uid);
+
     const handleJoinLeave = () => {
         if (isConnected) {
             leaveRoom();
@@ -70,7 +72,7 @@ export default function RoomFooter({ room, onGameLobbyOpen }: RoomFooterProps) {
         <>
             <footer className="sticky bottom-0 left-0 right-0 z-10 bg-background/80 backdrop-blur-sm border-t p-2">
                 <div className="flex w-full items-center space-x-2">
-                    <ChatMessageInput roomId={room.id} />
+                    <ChatMessageInput room={room} />
                     <Button onClick={toggleSelfMute} variant="secondary" size="icon" className="rounded-full flex-shrink-0" disabled={!isConnected}>
                         {self?.isMuted ? <MicOff className="h-5 w-5 text-destructive"/> : <Mic className="h-5 w-5" />}
                     </Button>

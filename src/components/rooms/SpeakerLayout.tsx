@@ -26,7 +26,7 @@ export default function SpeakerLayout({ room }: SpeakerLayoutProps) {
 
     return (
         <div className="flex justify-center p-3 border-b">
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2">
                 {sortedParticipants.map((participant) => (
                     <VoiceUserIcon
                         key={participant.uid}

@@ -2,14 +2,13 @@
 'use client';
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogIn, Check, Loader2, Users, Clock, Zap, XCircle, CheckCircle } from "lucide-react";
+import { LogIn, Check, Loader2, Users, Clock, Zap, XCircle, CheckCircle, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { Room } from "@/lib/types";
-import { joinRoom } from "@/lib/actions/roomActions";
 import { Timestamp } from "firebase/firestore";
 import Link from 'next/link';
 import Image from 'next/image';
@@ -28,10 +27,8 @@ const formatTime = (totalSeconds: number) => {
 };
 
 export default function RoomListItem({ room }: RoomListItemProps) {
-    const { toast } = useToast();
     const { user: currentUser } = useAuth();
     const router = useRouter();
-    const [isJoining, setIsJoining] = useState(false);
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
     const hasPortal = room.portalExpiresAt && (room.portalExpiresAt as Timestamp).toDate() > new Date();
@@ -56,59 +53,16 @@ export default function RoomListItem({ room }: RoomListItemProps) {
     const isFull = participants.length >= room.maxParticipants;
     const isParticipant = participants.some(p => p.uid === currentUser?.uid);
     const isExpired = timeLeft === 0;
-
-    const handleJoinClick = async () => {
-        if (!currentUser) {
-            toast({ title: "Giriş Gerekli", description: "Katılmak için giriş yapmalısınız.", variant: "destructive" });
-            router.push('/login');
-            return;
-        }
-        if (isFull || isJoining || isExpired) return;
-
-        setIsJoining(true);
-        try {
-            await joinRoom(room.id, {
-                uid: currentUser.uid,
-                username: currentUser.displayName,
-                photoURL: currentUser.photoURL,
-            });
-            toast({ title: "Başarılı!", description: `"${room.name}" topluluğuna katıldınız.` });
-            router.push(`/rooms/${room.id}`);
-        } catch (error: any) {
-            toast({ title: "Hata", description: error.message, variant: "destructive" });
-        } finally {
-            setIsJoining(false);
-        }
-    };
     
-    const handleEnterClick = () => {
-        if (!isExpired) {
-          router.push(`/rooms/${room.id}`);
-        }
-    }
+    const isDisabled = (isFull && !isParticipant) || isExpired;
 
-    const actionToPerform = isParticipant ? handleEnterClick : handleJoinClick;
-    const isDisabled = isJoining || (isFull && !isParticipant) || isExpired;
-
-    const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        // Clicks on links or their children should not trigger the card's main action
-        let target = e.target as HTMLElement;
-        while (target && target !== e.currentTarget) {
-            if (target.tagName === 'A' || target.hasAttribute('data-tooltip-trigger')) {
-                return;
-            }
-            target = target.parentElement as HTMLElement;
-        }
-        
+    const handleCardClick = () => {
         if (!isDisabled) {
-            actionToPerform();
+            router.push(`/rooms/${room.id}`);
         }
     };
 
     const StatusIndicator = () => {
-        if (isJoining) {
-            return <Loader2 className="h-5 w-5 animate-spin text-primary" />;
-        }
         if (isExpired) {
             return (
                 <TooltipProvider>
@@ -123,16 +77,9 @@ export default function RoomListItem({ room }: RoomListItemProps) {
                 </TooltipProvider>
             );
         }
-        if (isParticipant) {
-             return (
-                <TooltipProvider>
-                    <Tooltip><TooltipTrigger><CheckCircle className="h-5 w-5 text-green-500" /></TooltipTrigger><TooltipContent><p>Odaya Gir</p></TooltipContent></Tooltip>
-                </TooltipProvider>
-            );
-        }
         return (
             <TooltipProvider>
-                <Tooltip><TooltipTrigger><LogIn className="h-5 w-5 text-primary" /></TooltipTrigger><TooltipContent><p>Hemen Katıl</p></TooltipContent></Tooltip>
+                <Tooltip><TooltipTrigger><ArrowRight className="h-5 w-5 text-primary" /></TooltipTrigger><TooltipContent><p>Odaya Gir</p></TooltipContent></Tooltip>
             </TooltipProvider>
         );
     }
