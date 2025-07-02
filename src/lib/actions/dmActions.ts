@@ -1,3 +1,4 @@
+
 // src/lib/actions/dmActions.ts
 'use server';
 
@@ -43,11 +44,16 @@ export async function addCallSystemMessageToDm(chatId: string, status: 'ended' |
         case 'declined': lastMessageText = '📞 Arama reddedildi'; break;
         case 'missed': lastMessageText = '📞 Cevapsız arama'; break;
     }
+
+    const callDataObject: { status: string; duration?: string } = { status };
+    if (duration) {
+      callDataObject.duration = duration;
+    }
     
     await addDoc(messagesColRef, {
         type: 'call',
         createdAt: serverTimestamp(),
-        callData: { status, duration }
+        callData: callDataObject,
     });
     
     await updateDoc(metadataDocRef, {
