@@ -29,13 +29,6 @@ export default function BottomNav() {
       label: 'Anasayfa',
     },
     {
-      id: 'explore',
-      isActive: pathname === '/explore',
-      href: '/explore',
-      icon: Compass,
-      label: 'Keşfet',
-    },
-    {
       id: 'create-post',
       isActive: pathname === '/create-post',
       href: '/create-post',

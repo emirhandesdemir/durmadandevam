@@ -294,28 +294,3 @@ export async function hidePost(userId: string, postId: string) {
         return { success: false, error: "Gönderi gizlenemedi." };
     }
 }
-
-export async function getExploreProfiles(currentUserId: string): Promise<UserProfile[]> {
-    const usersRef = collection(db, 'users');
-    const q = query(
-        usersRef,
-        where('uid', '!=', currentUserId),
-        orderBy('uid'), // Firestore requires ordering by the field used in the inequality filter
-        limit(50)
-    );
-
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) return [];
-
-    let profiles = snapshot.docs
-        .map(doc => doc.data() as UserProfile)
-        .filter(p => p.photoURL && !p.photoURL.startsWith('data:image/svg+xml')); // Filter out default SVG avatars
-
-    // Randomize the order
-    for (let i = profiles.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [profiles[i], profiles[j]] = [profiles[j], profiles[i]];
-    }
-
-    return deepSerialize(profiles.slice(0, 20)); // Return a smaller, randomized set
-}
