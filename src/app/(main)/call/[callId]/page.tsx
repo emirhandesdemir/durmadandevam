@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { doc, onSnapshot, collection, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { sendAnswer, sendIceCandidate, updateCallStatus, updateVideoStatus } from '@/lib/actions/callActions';
+import { sendAnswer, sendIceCandidate, updateCallStatus, updateVideoStatus, sendOffer } from '@/lib/actions/callActions';
 import type { Call } from '@/lib/types';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { Mic, MicOff, PhoneOff, Video as VideoIcon, VideoOff, ChevronDown, MoreHorizontal, Volume2, VolumeX, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { sendOffer } from '@/lib/actions/callActions';
 import Image from 'next/image';
 
 const ICE_SERVERS = {
@@ -29,29 +28,59 @@ const ICE_SERVERS = {
   ],
 };
 
+
+// A more unique, self-contained Control component
 function CallControls({ onHangUp, onToggleMute, isMuted, onToggleVideo, isVideoOff, onToggleSpeaker, isSpeakerOn }: any) {
   return (
     <motion.div
       initial={{ y: 100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 100, opacity: 0 }}
-      transition={{ duration: 0.3 }}
-      className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex items-center gap-4 rounded-full bg-black/40 p-3 backdrop-blur-sm"
+      transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+      // This container is centered
+      className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20"
     >
-      <Button onClick={onToggleVideo} variant="secondary" size="icon" className="h-14 w-14 rounded-full bg-white/20 text-white hover:bg-white/30">
-        {isVideoOff ? <VideoOff /> : <VideoIcon />}
-      </Button>
-       <Button onClick={onToggleMute} variant="secondary" size="icon" className="h-14 w-14 rounded-full bg-white/20 text-white hover:bg-white/30">
-        {isMuted ? <MicOff /> : <Mic />}
-      </Button>
-       <Button onClick={onToggleSpeaker} variant="secondary" size="icon" className="h-14 w-14 rounded-full bg-white/20 text-white hover:bg-white/30">
-        {isSpeakerOn ? <Volume2 /> : <VolumeX />}
-      </Button>
-      <Button onClick={onHangUp} variant="destructive" size="icon" className="h-14 w-14 rounded-full">
-        <PhoneOff />
-      </Button>
+        {/* This flexbox ensures the buttons inside are aligned and spaced correctly */}
+        <div className="flex items-center justify-center gap-6 rounded-full bg-black/40 p-4 backdrop-blur-sm">
+            <Button onClick={onToggleVideo} variant="ghost" size="icon" className="h-14 w-14 rounded-full bg-white/20 text-white hover:bg-white/30">
+                {isVideoOff ? <VideoOff size={28}/> : <VideoIcon size={28}/>}
+            </Button>
+            <Button onClick={onToggleMute} variant="ghost" size="icon" className="h-14 w-14 rounded-full bg-white/20 text-white hover:bg-white/30">
+                {isMuted ? <MicOff size={28}/> : <Mic size={28}/>}
+            </Button>
+            <Button onClick={onHangUp} variant="destructive" size="icon" className="h-16 w-16 rounded-full transform hover:scale-110 transition-transform">
+                <PhoneOff size={32}/>
+            </Button>
+             <Button onClick={onToggleSpeaker} variant="ghost" size="icon" className="h-14 w-14 rounded-full bg-white/20 text-white hover:bg-white/30">
+                {isSpeakerOn ? <Volume2 size={28}/> : <VolumeX size={28}/>}
+            </Button>
+             <Button variant="ghost" size="icon" className="h-14 w-14 rounded-full bg-white/20 text-white hover:bg-white/30">
+                <MoreHorizontal size={28}/>
+            </Button>
+        </div>
     </motion.div>
   );
+}
+
+// Draggable local video view
+function LocalVideoView({ stream }: { stream: MediaStream | null }) {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    useEffect(() => {
+        if (videoRef.current && stream) {
+            videoRef.current.srcObject = stream;
+        }
+    }, [stream]);
+
+    return (
+        <motion.div
+            drag
+            dragMomentum={false}
+            className="absolute top-6 right-6 z-30 w-32 h-48 cursor-grab overflow-hidden rounded-2xl border-2 border-white/50 shadow-2xl"
+            whileTap={{ cursor: 'grabbing' }}
+        >
+            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
+        </motion.div>
+    );
 }
 
 
@@ -65,15 +94,13 @@ export default function CallPage() {
   const [loading, setLoading] = useState(true);
   const [callData, setCallData] = useState<Call | null>(null);
   const [isMuted, setIsMuted] = useState(false);
-  const [isVideoOff, setIsVideoOff] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(true); // Start with video off
   const [isSpeakerOn, setIsSpeakerOn] = useState(true);
   const [partnerVideoOn, setPartnerVideoOn] = useState(false);
   
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
-  const remoteStreamRef = useRef<MediaStream | null>(null);
-
-  const localVideoRef = useRef<HTMLVideoElement>(null);
+  
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
   const partner = user?.uid === callData?.callerId ? callData?.receiverInfo : callData?.callerInfo;
@@ -100,7 +127,6 @@ export default function CallPage() {
         (remoteVideoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
         remoteVideoRef.current.srcObject = null;
     }
-    remoteStreamRef.current = null;
     router.push('/dm');
   }, [router]);
 
@@ -158,9 +184,6 @@ export default function CallPage() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: initialVideoState, audio: true });
         localStreamRef.current = stream;
-        if (localVideoRef.current) {
-            localVideoRef.current.srcObject = stream;
-        }
         stream.getTracks().forEach(track => pc.addTrack(track, stream));
     } catch(err) {
         console.error("getUserMedia error:", err);
@@ -170,7 +193,6 @@ export default function CallPage() {
     }
     
     pc.ontrack = (event) => {
-      remoteStreamRef.current = event.streams[0];
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = event.streams[0];
       }
@@ -189,10 +211,10 @@ export default function CallPage() {
             if (change.type === 'added') {
                 try {
                     await pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+                    await deleteDoc(change.doc.ref);
                 } catch(e) {
                     console.error("Error adding received ice candidate", e);
                 }
-                await deleteDoc(change.doc.ref);
             }
         }
     });
@@ -205,19 +227,13 @@ export default function CallPage() {
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     const init = async () => {
-        if (user && callData) {
+        if (user && callData && !loading) {
             const isCaller = callData.callerId === user.uid;
             unsubscribe = await setupWebRTC(isCaller);
         }
     };
-
-    if(!loading) { // Sadece veri yüklendikten sonra WebRTC kurulumunu başlat.
-        init().catch(e => console.error("Failed to initialize WebRTC", e));
-    }
-
-    return () => {
-        unsubscribe?.();
-    };
+    init().catch(e => console.error("Failed to initialize WebRTC", e));
+    return () => { unsubscribe?.(); };
   }, [user, callData, loading, setupWebRTC]);
 
 
@@ -227,6 +243,7 @@ export default function CallPage() {
     
     const createOffer = async () => {
         const pc = peerConnectionRef.current!;
+        if (pc.signalingState !== 'stable') return;
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         await sendOffer(callId, offer);
@@ -274,8 +291,10 @@ export default function CallPage() {
   };
 
   const toggleSpeaker = () => {
-      // Note: Actual speaker control is complex and browser-dependent.
-      // This is a UI-only toggle for now.
+      // Note: Actual speaker control is complex. This toggles the audio element's muted state for simplicity.
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.muted = !remoteVideoRef.current.muted;
+      }
       setIsSpeakerOn(p => !p);
   }
   
@@ -302,42 +321,50 @@ export default function CallPage() {
   const showRemoteVideo = partnerVideoOn && callData?.type === 'video' && callData?.status === 'active';
 
   return (
-    <div className="relative h-full w-full bg-slate-800 text-white overflow-hidden">
-        {/* Background */}
-        <div className="absolute inset-0">
-             {showRemoteVideo ? (
-                 <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full object-cover" />
-             ) : partner?.photoURL ? (
-                <Image src={partner.photoURL} alt="Partner avatar" fill className="object-cover filter blur-2xl brightness-50 scale-110"/>
-             ) : (
-                <div className="h-full w-full bg-gray-800"></div>
-             )}
-        </div>
+    <div className="relative h-full w-full bg-gradient-to-br from-slate-900 via-slate-800 to-gray-900 text-white overflow-hidden">
+        {/* Remote Video / Background */}
+        <video 
+            ref={remoteVideoRef} 
+            autoPlay 
+            playsInline
+            muted={!isSpeakerOn}
+            className={cn(
+                "absolute inset-0 w-full h-full object-cover transition-opacity duration-500",
+                showRemoteVideo ? "opacity-100" : "opacity-0"
+            )} 
+        />
+        
+        {/* Local Video */}
+        {!isVideoOff && <LocalVideoView stream={localStreamRef.current} />}
 
-        {/* Local Video Preview (Hidden for now, can be added as a small floating window) */}
-        <video ref={localVideoRef} autoPlay playsInline muted className="hidden" />
-
-        {/* Top Controls */}
-        <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-center">
-             <Button variant="ghost" size="icon" className="rounded-full bg-black/30 hover:bg-black/50" onClick={() => router.back()}>
-                <ChevronDown className="h-6 w-6"/>
-            </Button>
-             <Button variant="ghost" size="icon" className="rounded-full bg-black/30 hover:bg-black/50">
-                <MoreHorizontal className="h-6 w-6"/>
-            </Button>
-        </div>
-
-        {/* Centered Content */}
+        {/* Fallback UI when video is off */}
+        <AnimatePresence>
         {!showRemoteVideo && (
-             <div className="absolute inset-0 bg-black/30 z-10 flex flex-col items-center justify-center gap-4">
-                <Avatar className="h-32 w-32 border-4 border-white/50">
-                    <AvatarImage src={partner?.photoURL || undefined} />
-                    <AvatarFallback className="text-4xl bg-gray-600">{partner?.username.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <h2 className="text-3xl font-bold">{partner?.username}</h2>
-                <p className="text-lg text-white/80">{getCallStatusText()}</p>
-             </div>
+            <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 p-4"
+            >
+                <div className="relative">
+                    <Avatar className="h-40 w-40 border-4 border-white/20">
+                        <AvatarImage src={partner?.photoURL || undefined} />
+                        <AvatarFallback className="text-6xl bg-gray-600">{partner?.username.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    {callData?.status === 'ringing' && (
+                        <>
+                            <div className="absolute inset-0 rounded-full border-2 border-white/30 animate-ping"></div>
+                            <div className="absolute inset-0 rounded-full border-2 border-white/50 animate-ping" style={{animationDelay: '0.5s'}}></div>
+                        </>
+                    )}
+                </div>
+                <div className="text-center mt-4">
+                    <h2 className="text-4xl font-bold [text-shadow:_0_2px_4px_rgba(0,0,0,0.5)]">{partner?.username}</h2>
+                    <p className="text-lg text-white/80 mt-2">{getCallStatusText()}</p>
+                </div>
+            </motion.div>
         )}
+        </AnimatePresence>
         
         <CallControls 
             onHangUp={hangUp}
