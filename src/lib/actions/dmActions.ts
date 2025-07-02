@@ -17,6 +17,7 @@ import {
   getDoc,
   deleteDoc,
   orderBy,
+  addDoc,
 } from 'firebase/firestore';
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { revalidatePath } from 'next/cache';
@@ -31,6 +32,31 @@ interface UserInfo {
   photoURL: string | null;
   selectedAvatarFrame?: string;
 }
+
+export async function addCallSystemMessageToDm(chatId: string, status: 'ended' | 'declined' | 'missed', duration?: string) {
+    const messagesColRef = collection(db, 'directMessages', chatId, 'messages');
+    const metadataDocRef = doc(db, 'directMessagesMetadata', chatId);
+    let lastMessageText = "📞 Arama";
+    
+    switch(status) {
+        case 'ended': lastMessageText = `📞 Arama bitti ${duration ? `· ${duration}` : ''}`; break;
+        case 'declined': lastMessageText = '📞 Arama reddedildi'; break;
+        case 'missed': lastMessageText = '📞 Cevapsız arama'; break;
+    }
+    
+    await addDoc(messagesColRef, {
+        type: 'call',
+        createdAt: serverTimestamp(),
+        callData: { status, duration }
+    });
+    
+    await updateDoc(metadataDocRef, {
+        'lastMessage.text': lastMessageText,
+        'lastMessage.timestamp': serverTimestamp(),
+    });
+    revalidatePath(`/dm/${chatId}`);
+}
+
 
 export async function sendMessage(
   chatId: string,
@@ -79,6 +105,7 @@ export async function sendMessage(
       createdAt: serverTimestamp(),
       read: false,
       edited: false,
+      type: 'user',
       text: text || '',
     };
     if (finalImageUrl) {
@@ -317,7 +344,7 @@ export async function createDmFromMatchRoom(roomId: string) {
         senderId: data.uid,
         receiverId: data.uid === user1.uid ? user2.uid : user1.uid,
         text: data.text,
-        imageUrl: data.imageUrl || null,
+        imageUrl: data.imageUrls ? data.imageUrls[0] : null,
         createdAt: data.createdAt,
         read: true, // Herkes odada olduğu için okundu kabul edelim
         edited: false,

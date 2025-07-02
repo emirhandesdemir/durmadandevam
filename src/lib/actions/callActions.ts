@@ -9,8 +9,12 @@ import {
   updateDoc,
   serverTimestamp,
   setDoc,
+  getDoc,
+  Timestamp,
 } from 'firebase/firestore';
 import { createNotification } from './notificationActions';
+import { addCallSystemMessageToDm } from './dmActions';
+import { getChatId } from '../utils';
 
 interface UserInfo {
   uid: string;
@@ -66,12 +70,46 @@ export async function updateVideoStatus(callId: string, userId: string, isEnable
 export async function updateCallStatus(callId: string, status: 'declined' | 'ended' | 'missed' | 'active') {
     const callRef = doc(db, 'calls', callId);
     const updateData: { status: string; [key: string]: any } = { status };
+    let shouldAddDmMessage = false;
+    let duration: string | undefined;
+
+    const callSnap = await getDoc(callRef);
+    if (!callSnap.exists()) return;
+    const callData = callSnap.data();
+    
     if(status !== 'active') {
         updateData.endedAt = serverTimestamp();
+        shouldAddDmMessage = true;
+        if(status === 'ended' && callData.startedAt) {
+            const startTime = (callData.startedAt as Timestamp).toMillis();
+            const endTime = Date.now();
+            const durationSeconds = Math.round((endTime - startTime) / 1000);
+            const minutes = Math.floor(durationSeconds / 60);
+            const seconds = durationSeconds % 60;
+            duration = `${minutes} dakika ${seconds} saniye`;
+        }
     } else {
         updateData.startedAt = serverTimestamp();
     }
+    
     await updateDoc(callRef, updateData);
+
+    if (shouldAddDmMessage) {
+        const chatId = getChatId(callData.callerId, callData.receiverId);
+        await addCallSystemMessageToDm(chatId, status, duration);
+    }
+    
+    if (status === 'missed') {
+         await createNotification({
+            recipientId: callData.receiverId,
+            senderId: callData.callerId,
+            senderUsername: callData.callerInfo.username,
+            senderAvatar: callData.callerInfo.photoURL,
+            type: 'call_missed',
+            callId: callId,
+            callType: callData.type,
+        });
+    }
 }
 
 // For WebRTC signaling

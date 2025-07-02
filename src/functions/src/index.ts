@@ -92,6 +92,17 @@ export const sendPushNotification = functions
                 body = `${notificationData.senderUsername} gönderinizi retweetledi.`;
                 link = '/notifications';
                 break;
+            case "call_incoming":
+                const callType = notificationData.callType === 'video' ? 'Görüntülü' : 'Sesli';
+                title = `📞 Gelen ${callType} Arama`;
+                body = `${notificationData.senderUsername} sizi arıyor...`;
+                link = `/call/${notificationData.callId || ''}`;
+                break;
+            case "call_missed":
+                title = `📞 Cevapsız Arama`;
+                body = `${notificationData.senderUsername} sizi aradı.`;
+                link = `/dm`; // Link to DM list
+                break;
         }
 
         // Firebase Cloud Messaging API (V1) için data-only mesaj oluştur.

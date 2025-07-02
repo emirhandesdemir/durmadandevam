@@ -1,4 +1,3 @@
-
 // src/lib/types.ts
 import { Timestamp } from "firebase/firestore";
 
@@ -77,7 +76,7 @@ export interface Notification {
     senderUsername: string;
     senderAvatar: string | null;
     senderAvatarFrame?: string;
-    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming';
+    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed';
     postId?: string | null;
     postImage?: string | null;
     commentText?: string;
@@ -156,6 +155,7 @@ export interface Room {
     pinnedMessageId: string | null;
     language?: string;
     type?: 'public' | 'match' | 'private';
+    mode?: 'chat' | 'broadcast';
     status?: 'open' | 'closed_declined' | 'converting' | 'converted_to_dm' | 'expired';
     confirmationExpiresAt?: Timestamp;
     matchConfirmation?: { [uid: string]: 'pending' | 'accepted' | 'declined' };
@@ -240,6 +240,7 @@ export interface DirectMessage {
     id: string;
     senderId: string;
     receiverId: string;
+    type?: 'user' | 'call';
     text?: string;
     imageUrl?: string;
     imageType?: 'permanent' | 'timed';
@@ -253,6 +254,10 @@ export interface DirectMessage {
     deleted?: boolean;
     reactions?: {
         [emoji: string]: string[]; // key: emoji, value: array of user UIDs
+    };
+    callData?: {
+        status: 'started' | 'ended' | 'missed' | 'declined';
+        duration?: string; // e.g., "5 dakika 32 saniye"
     };
 }
 

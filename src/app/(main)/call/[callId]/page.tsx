@@ -11,7 +11,7 @@ import type { Call } from '@/lib/types';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Mic, MicOff, PhoneOff, Video as VideoIcon, VideoOff, SwitchCamera } from 'lucide-react';
+import { Mic, MicOff, PhoneOff, Video as VideoIcon, VideoOff, ChevronDown, MoreHorizontal, Volume2, VolumeX } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { sendOffer } from '@/lib/actions/callActions';
@@ -24,7 +24,7 @@ const ICE_SERVERS = {
   ],
 };
 
-function CallControls({ onHangUp, onToggleMute, isMuted, onToggleVideo, isVideoOff, onSwitchCamera, isVideoEnabled }: any) {
+function CallControls({ onHangUp, onToggleMute, isMuted, onToggleVideo, isVideoOff, onToggleSpeaker, isSpeakerOn }: any) {
   return (
     <motion.div
       initial={{ y: 100, opacity: 0 }}
@@ -33,14 +33,14 @@ function CallControls({ onHangUp, onToggleMute, isMuted, onToggleVideo, isVideoO
       transition={{ duration: 0.3 }}
       className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex items-center gap-4 rounded-full bg-black/40 p-3 backdrop-blur-sm"
     >
-      <Button onClick={onToggleMute} variant="secondary" size="icon" className="h-14 w-14 rounded-full bg-white/20 text-white hover:bg-white/30">
-        {isMuted ? <MicOff /> : <Mic />}
-      </Button>
       <Button onClick={onToggleVideo} variant="secondary" size="icon" className="h-14 w-14 rounded-full bg-white/20 text-white hover:bg-white/30">
         {isVideoOff ? <VideoOff /> : <VideoIcon />}
       </Button>
-      <Button onClick={onSwitchCamera} variant="secondary" size="icon" className="h-14 w-14 rounded-full bg-white/20 text-white hover:bg-white/30" disabled={!isVideoEnabled}>
-        <SwitchCamera />
+       <Button onClick={onToggleMute} variant="secondary" size="icon" className="h-14 w-14 rounded-full bg-white/20 text-white hover:bg-white/30">
+        {isMuted ? <MicOff /> : <Mic />}
+      </Button>
+       <Button onClick={onToggleSpeaker} variant="secondary" size="icon" className="h-14 w-14 rounded-full bg-white/20 text-white hover:bg-white/30">
+        {isSpeakerOn ? <Volume2 /> : <VolumeX />}
       </Button>
       <Button onClick={onHangUp} variant="destructive" size="icon" className="h-14 w-14 rounded-full">
         <PhoneOff />
@@ -60,6 +60,7 @@ export default function CallPage() {
   const [callData, setCallData] = useState<Call | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
+  const [isSpeakerOn, setIsSpeakerOn] = useState(true);
   const [partnerVideoOn, setPartnerVideoOn] = useState(false);
   
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
@@ -70,6 +71,14 @@ export default function CallPage() {
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
   const partner = user?.uid === callData?.callerId ? callData?.receiverInfo : callData?.callerInfo;
+  
+  const getCallStatusText = () => {
+      switch (callData?.status) {
+          case 'ringing': return 'Çalıyor...';
+          case 'active': return 'Bağlandı';
+          default: return 'Bekleniyor...';
+      }
+  }
 
   const cleanupCall = useCallback(() => {
     console.log("Arama temizleniyor...");
@@ -80,6 +89,10 @@ export default function CallPage() {
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => track.stop());
       localStreamRef.current = null;
+    }
+    if (remoteVideoRef.current && remoteVideoRef.current.srcObject) {
+        (remoteVideoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
+        remoteVideoRef.current.srcObject = null;
     }
     remoteStreamRef.current = null;
     router.push('/dm');
@@ -228,6 +241,12 @@ export default function CallPage() {
         setIsMuted(p => !p);
     }
   };
+
+  const toggleSpeaker = () => {
+      // Note: Actual speaker control is complex and browser-dependent.
+      // This is a UI-only toggle for now.
+      setIsSpeakerOn(p => !p);
+  }
   
   const toggleVideo = async () => {
       if (!user || !localStreamRef.current) return;
@@ -240,65 +259,45 @@ export default function CallPage() {
       }
   };
 
-  const switchCamera = async () => {
-      if (localStreamRef.current) {
-        const videoTrack = localStreamRef.current.getVideoTracks()[0];
-        if (videoTrack) {
-          videoTrack.stop(); // Stop current track
-          const newStream = await navigator.mediaDevices.getUserMedia({
-              video: { facingMode: { exact: 'environment' } }
-          }).catch(async () => {
-              // Fallback to front camera if back is not available
-              return navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-          });
-
-          const newTrack = newStream.getVideoTracks()[0];
-          const sender = peerConnectionRef.current?.getSenders().find(s => s.track?.kind === 'video');
-          if (sender) {
-              sender.replaceTrack(newTrack);
-          }
-          localStreamRef.current = newStream;
-          if (localVideoRef.current) {
-              localVideoRef.current.srcObject = newStream;
-          }
-        }
-      }
-  };
-
-  const showVideo = partnerVideoOn || (callData?.type === 'video' && callData?.status === 'active');
+  const showRemoteVideo = partnerVideoOn && callData?.type === 'video' && callData?.status === 'active';
 
   return (
-    <div className="relative h-full w-full bg-black text-white">
-        {showVideo ? (
-            <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full object-cover" />
-        ) : (
-            <div className="absolute inset-0">
-                {partner?.photoURL && (
-                    <Image src={partner.photoURL} alt="Partner avatar" fill className="object-cover filter blur-2xl brightness-50"/>
-                )}
-                 <div className="absolute inset-0 bg-black/50 z-10 flex flex-col items-center justify-center gap-4">
-                    <Avatar className="h-32 w-32 border-4">
-                        <AvatarImage src={partner?.photoURL || undefined} />
-                        <AvatarFallback className="text-4xl">{partner?.username.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <h2 className="text-3xl font-bold">{partner?.username}</h2>
-                    <p className="text-xl text-white/80">{callData?.status === 'ringing' ? 'Bağlanıyor...' : (callData?.status === 'active' ? 'Bağlandı' : 'Bekleniyor...')}</p>
-                 </div>
-            </div>
+    <div className="relative h-full w-full bg-slate-800 text-white overflow-hidden">
+        {/* Background */}
+        <div className="absolute inset-0">
+             {showRemoteVideo ? (
+                 <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full object-cover" />
+             ) : partner?.photoURL ? (
+                <Image src={partner.photoURL} alt="Partner avatar" fill className="object-cover filter blur-2xl brightness-50 scale-110"/>
+             ) : (
+                <div className="h-full w-full bg-gray-800"></div>
+             )}
+        </div>
+
+        {/* Local Video Preview (Hidden for now, can be added as a small floating window) */}
+        <video ref={localVideoRef} autoPlay playsInline muted className="hidden" />
+
+        {/* Top Controls */}
+        <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-center">
+             <Button variant="ghost" size="icon" className="rounded-full bg-black/30 hover:bg-black/50" onClick={() => router.back()}>
+                <ChevronDown className="h-6 w-6"/>
+            </Button>
+             <Button variant="ghost" size="icon" className="rounded-full bg-black/30 hover:bg-black/50">
+                <MoreHorizontal className="h-6 w-6"/>
+            </Button>
+        </div>
+
+        {/* Centered Content */}
+        {!showRemoteVideo && (
+             <div className="absolute inset-0 bg-black/30 z-10 flex flex-col items-center justify-center gap-4">
+                <Avatar className="h-32 w-32 border-4 border-white/50">
+                    <AvatarImage src={partner?.photoURL || undefined} />
+                    <AvatarFallback className="text-4xl bg-gray-600">{partner?.username.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <h2 className="text-3xl font-bold">{partner?.username}</h2>
+                <p className="text-lg text-white/80">{getCallStatusText()}</p>
+             </div>
         )}
-        
-        <motion.div
-            drag
-            dragMomentum={false}
-            className="absolute top-4 right-4 h-48 w-32 z-20 rounded-2xl overflow-hidden shadow-lg border-2 border-white/20 cursor-grab"
-        >
-            <video ref={localVideoRef} autoPlay playsInline muted className={cn("h-full w-full object-cover", isVideoOff && "hidden")} />
-            {isVideoOff && (
-                <div className="h-full w-full bg-black flex items-center justify-center">
-                    <VideoOff className="h-8 w-8"/>
-                </div>
-            )}
-        </motion.div>
         
         <CallControls 
             onHangUp={hangUp}
@@ -306,8 +305,8 @@ export default function CallPage() {
             isMuted={isMuted}
             onToggleVideo={toggleVideo}
             isVideoOff={isVideoOff}
-            onSwitchCamera={switchCamera}
-            isVideoEnabled={!isVideoOff}
+            onToggleSpeaker={toggleSpeaker}
+            isSpeakerOn={isSpeakerOn}
         />
     </div>
   );

@@ -18,6 +18,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { initiateCall } from '@/lib/actions/callActions';
 import { useRouter } from 'next/navigation';
+import CallStatusMessage from './CallStatusMessage';
 
 
 interface DMChatProps {
@@ -124,9 +125,12 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
 
       {/* Mesaj Alanı */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map(msg => (
-          <MessageBubble key={msg.id} message={msg} currentUserId={user.uid} chatId={chatId} />
-        ))}
+        {messages.map(msg => {
+            if (msg.type === 'call') {
+                return <CallStatusMessage key={msg.id} message={msg} />;
+            }
+            return <MessageBubble key={msg.id} message={msg} currentUserId={user.uid} chatId={chatId} />;
+        })}
         <div ref={messagesEndRef} />
       </div>
 
