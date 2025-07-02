@@ -15,8 +15,8 @@ export default function PersistentVoiceBar() {
     const { isConnected, activeRoom, self, participants, leaveRoom } = useVoiceChat();
     const pathname = usePathname();
 
-    // Do not show the bar if not connected, or if we are already on the room page
-    if (!isConnected || !activeRoom || pathname.startsWith(`/rooms/${activeRoom.id}`)) {
+    // Do not show the bar if not connected, or if we are already on the room page or a call page
+    if (!isConnected || !activeRoom || pathname.startsWith(`/rooms/${activeRoom.id}`) || pathname.startsWith('/call/')) {
         return null;
     }
 

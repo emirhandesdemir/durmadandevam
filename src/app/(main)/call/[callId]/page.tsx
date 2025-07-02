@@ -103,6 +103,7 @@ export default function CallPage() {
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const didSetupWebRTC = useRef(false);
 
   const getCallStatusText = () => {
       switch (callData?.status) {
@@ -226,14 +227,17 @@ export default function CallPage() {
 
 
   useEffect(() => {
+    if (didSetupWebRTC.current) return;
+    
     let unsubscribe: (() => void) | undefined;
     const init = async () => {
         if (user && callData && partner && !loading) {
-            const isCaller = callData.callerId === user.uid;
-            unsubscribe = await setupWebRTC(isCaller);
+            didSetupWebRTC.current = true;
+            unsubscribe = await setupWebRTC(callData.callerId === user.uid);
         }
     };
     init().catch(e => console.error("Failed to initialize WebRTC", e));
+    
     return () => { unsubscribe?.(); };
   }, [user, callData, partner, loading, setupWebRTC]);
 
@@ -252,7 +256,7 @@ export default function CallPage() {
 
     createOffer().catch(err => console.error("Error creating offer:", err));
 
-  }, [user, callData, callId]);
+  }, [user, callData?.status, callId, callData?.callerId]);
 
   // Effect for receiver: create answer
   useEffect(() => {
@@ -260,15 +264,17 @@ export default function CallPage() {
     
     const createAnswer = async () => {
         const pc = peerConnectionRef.current!;
-        await pc.setRemoteDescription(new RTCSessionDescription(callData.offer!));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        await sendAnswer(callId, answer);
+        if (pc.signalingState === 'stable') {
+          await pc.setRemoteDescription(new RTCSessionDescription(callData.offer!));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          await sendAnswer(callId, answer);
+        }
     };
     
     createAnswer().catch(err => console.error("Error creating answer:", err));
 
-  }, [user, callData, callId]);
+  }, [user, callData?.offer, callData?.status, callData?.receiverId, callId]);
 
 
   // Effect to apply received answer
