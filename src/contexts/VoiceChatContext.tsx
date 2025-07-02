@@ -41,10 +41,17 @@ interface VoiceChatContextType {
     joinRoom: (options?: { muted: boolean }) => Promise<void>;
     leaveRoom: () => Promise<void>;
     toggleSelfMute: () => Promise<void>;
+    // Music Player
+    playlist: File[];
+    currentTrackIndex: number;
     isMusicPlaying: boolean;
-    startMusic: (file: File) => Promise<void>;
-    stopMusic: () => Promise<void>;
     musicVolume: number;
+    addToPlaylist: (file: File) => void;
+    removeFromPlaylist: (index: number) => void;
+    togglePlayPause: () => void;
+    playNextTrack: () => void;
+    playPreviousTrack: () => void;
+    stopPlaylist: () => Promise<void>;
     setMusicVolume: (volume: number) => void;
 }
 
@@ -70,6 +77,10 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const [remoteAudioStreams, setRemoteAudioStreams] = useState<Record<string, MediaStream>>({});
     const [remoteVideoStreams, setRemoteVideoStreams] = useState<Record<string, MediaStream>>({});
     const [remoteScreenStreams, setRemoteScreenStreams] = useState<Record<string, MediaStream>>({});
+    
+    // Music Player State
+    const [playlist, setPlaylist] = useState<File[]>([]);
+    const [currentTrackIndex, setCurrentTrackIndex] = useState(-1);
     const [isMusicPlaying, setIsMusicPlaying] = useState(false);
     const [musicVolume, setMusicVolume] = useState(0.5);
 
@@ -79,6 +90,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const audioAnalysers = useRef<Record<string, { analyser: AnalyserNode, dataArray: Uint8Array, context: AudioContext }>>({});
     const animationFrameId = useRef<number>();
     const lastActiveUpdateTimestamp = useRef<number>(0);
+
+    // Music Refs
     const musicAudioRef = useRef<HTMLAudioElement | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
     const originalMicTrackRef = useRef<MediaStreamTrack | null>(null);
@@ -89,6 +102,158 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const isConnected = !!self && !!connectedRoomId;
     const isSharingScreen = !!localScreenStream;
     
+    const _teardownMusicStream = useCallback(async () => {
+        if (musicAudioRef.current) {
+          musicAudioRef.current.pause();
+          if (musicAudioRef.current.src) URL.revokeObjectURL(musicAudioRef.current.src);
+          musicAudioRef.current = null;
+        }
+
+        if (originalMicTrackRef.current) {
+            for (const peerId in peerConnections.current) {
+              const sender = peerConnections.current[peerId].getSenders().find(s => s.track?.kind === 'audio');
+              if (sender) {
+                await sender.replaceTrack(originalMicTrackRef.current).catch(e => console.error("Error replacing track:", e));
+              }
+            }
+        }
+        
+        if (audioContextRef.current) {
+          await audioContextRef.current.close().catch(e => console.error("Error closing audio context:", e));
+          audioContextRef.current = null;
+        }
+    
+        musicGainNodeRef.current = null;
+        mixedStreamDestinationRef.current = null;
+        originalMicTrackRef.current = null;
+        setIsMusicPlaying(false);
+    }, []);
+
+    const stopPlaylist = useCallback(async () => {
+        await _teardownMusicStream();
+        setPlaylist([]);
+        setCurrentTrackIndex(-1);
+    }, [_teardownMusicStream]);
+
+    const playTrack = useCallback(async (index: number) => {
+        await _teardownMusicStream();
+
+        if (index < 0 || index >= playlist.length || !isConnected || !localStream) {
+            setCurrentTrackIndex(-1);
+            setIsMusicPlaying(false);
+            return;
+        }
+    
+        const trackFile = playlist[index];
+        setCurrentTrackIndex(index);
+    
+        try {
+            const context = new AudioContext();
+            audioContextRef.current = context;
+    
+            const micSource = context.createMediaStreamSource(localStream);
+            originalMicTrackRef.current = localStream.getAudioTracks()[0];
+    
+            const musicElement = new Audio();
+            musicAudioRef.current = musicElement;
+            musicElement.src = URL.createObjectURL(trackFile);
+            musicElement.loop = false;
+            musicElement.onended = () => {
+                const nextIndex = index + 1;
+                if (nextIndex < playlist.length) {
+                    playTrack(nextIndex);
+                } else {
+                    stopPlaylist();
+                }
+            };
+            
+            const musicSource = context.createMediaElementSource(musicElement);
+            const destination = context.createMediaStreamDestination();
+            mixedStreamDestinationRef.current = destination;
+    
+            const gainNode = context.createGain();
+            gainNode.gain.value = musicVolume;
+            musicGainNodeRef.current = gainNode;
+    
+            micSource.connect(destination);
+            musicSource.connect(gainNode);
+            gainNode.connect(context.destination);
+            gainNode.connect(destination);
+    
+            const mixedTrack = destination.stream.getAudioTracks()[0];
+    
+            for (const peerId in peerConnections.current) {
+                const sender = peerConnections.current[peerId].getSenders().find(s => s.track?.kind === 'audio');
+                if (sender && sender.track?.id !== mixedTrack.id) {
+                    await sender.replaceTrack(mixedTrack);
+                }
+            }
+    
+            await musicElement.play();
+            setIsMusicPlaying(true);
+        } catch (error: any) {
+            console.error("Error playing track:", error);
+            toast({ variant: 'destructive', description: "Müzik çalınamadı: " + error.message });
+            await stopPlaylist();
+        }
+    }, [_teardownMusicStream, isConnected, localStream, musicVolume, playlist, stopPlaylist, toast]);
+
+
+    const addToPlaylist = useCallback((file: File) => {
+        setPlaylist(currentPlaylist => {
+            const newPlaylist = [...currentPlaylist, file];
+            if (currentTrackIndex === -1 && isConnected) {
+                // Use a timeout to ensure state has updated before playing
+                setTimeout(() => playTrack(newPlaylist.length - 1), 0);
+            }
+            return newPlaylist;
+        });
+    }, [currentTrackIndex, playTrack, isConnected]);
+
+    const removeFromPlaylist = useCallback((index: number) => {
+        setPlaylist(currentPlaylist => {
+            const newPlaylist = [...currentPlaylist];
+            newPlaylist.splice(index, 1);
+            if (index === currentTrackIndex) {
+                if (newPlaylist.length > 0) {
+                    const nextIndex = index >= newPlaylist.length ? 0 : index;
+                    playTrack(nextIndex);
+                } else {
+                    stopPlaylist();
+                }
+            } else if (index < currentTrackIndex) {
+                setCurrentTrackIndex(current => current - 1);
+            }
+            return newPlaylist;
+        });
+    }, [currentTrackIndex, playTrack, stopPlaylist]);
+
+    const togglePlayPause = useCallback(() => {
+        if (musicAudioRef.current) {
+            if (musicAudioRef.current.paused) {
+                musicAudioRef.current.play().catch(e => console.error("Error playing audio:", e));
+                setIsMusicPlaying(true);
+            } else {
+                musicAudioRef.current.pause();
+                setIsMusicPlaying(false);
+            }
+        } else if (playlist.length > 0) {
+            playTrack(0);
+        }
+    }, [playlist, playTrack]);
+    
+    const playNextTrack = useCallback(() => {
+        if (currentTrackIndex < playlist.length - 1) {
+            playTrack(currentTrackIndex + 1);
+        }
+    }, [currentTrackIndex, playlist.length, playTrack]);
+
+    const playPreviousTrack = useCallback(() => {
+        if (currentTrackIndex > 0) {
+            playTrack(currentTrackIndex - 1);
+        }
+    }, [currentTrackIndex, playTrack]);
+
     const setMusicVolumeCallback = useCallback((volume: number) => {
         setMusicVolume(volume);
         if (musicGainNodeRef.current) {
@@ -96,35 +261,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         }
     }, []);
 
-     const stopMusic = useCallback(async () => {
-        if (!originalMicTrackRef.current) return;
-
-        if (musicAudioRef.current) {
-            musicAudioRef.current.pause();
-            musicAudioRef.current.src = "";
-            if (musicAudioRef.current.src) URL.revokeObjectURL(musicAudioRef.current.src);
-            musicAudioRef.current = null;
-        }
-
-        for (const peerId in peerConnections.current) {
-            const sender = peerConnections.current[peerId].getSenders().find(s => s.track?.kind === 'audio');
-            if (sender) {
-                await sender.replaceTrack(originalMicTrackRef.current);
-            }
-        }
-        
-        if (audioContextRef.current) {
-            await audioContextRef.current.close();
-            audioContextRef.current = null;
-        }
-
-        musicGainNodeRef.current = null;
-        mixedStreamDestinationRef.current = null;
-        originalMicTrackRef.current = null;
-        setIsMusicPlaying(false);
-    }, []);
-
-    const _cleanupAndResetState = useCallback(() => {
+    const _cleanupAndResetState = useCallback(async () => {
+        await stopPlaylist();
         Object.values(peerConnections.current).forEach(pc => pc.close());
         peerConnections.current = {};
         
@@ -133,7 +271,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         setLocalStream(null);
         setLocalScreenStream(null);
         setIsSharingVideo(false);
-
 
         Object.values(audioAnalysers.current).forEach(({ context }) => context.close());
         audioAnalysers.current = {};
@@ -146,8 +283,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         videoSenderRef.current = {};
         setConnectedRoomId(null);
         setIsConnecting(false);
-        stopMusic();
-    }, [localStream, localScreenStream, stopMusic]);
+    }, [localStream, localScreenStream, stopPlaylist]);
     
     const sendSignal = useCallback(async (to: string, type: string, data: any) => {
         if (!connectedRoomId || !user) return;
@@ -166,7 +302,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             if (e.track.kind === 'audio') {
                  setRemoteAudioStreams(p => ({ ...p, [otherUid]: e.streams[0] }));
             } else if (e.track.kind === 'video') {
-                 // Differentiate between camera and screen share streams if needed
                  setRemoteVideoStreams(p => ({ ...p, [otherUid]: e.streams[0] }));
             }
         };
@@ -203,7 +338,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         } catch (error) { console.error("Signal handling error:", type, error); }
     }, [createPeerConnection, sendSignal]);
 
-    // Data listeners for room details and participants. Active whenever in a room.
     useEffect(() => {
         if (!user || !activeRoomId) {
             setActiveRoom(null);
@@ -227,8 +361,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         const participantsUnsub = onSnapshot(collection(db, "rooms", activeRoomId, "voiceParticipants"), snapshot => {
             const fetched = snapshot.docs.map(d => d.data() as VoiceParticipant);
             setParticipants(fetched);
-
-            // If we think we are connected but our UID is not in the list, it means we were kicked.
             if (isConnected && user && !fetched.some(p => p.uid === user.uid)) {
                 toast({ title: "Bağlantı Kesildi", description: "Sesten ayrıldınız veya atıldınız." });
                 _cleanupAndResetState();
@@ -238,7 +370,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         return () => { roomUnsub(); participantsUnsub(); };
     }, [user, activeRoomId, pathname, router, toast, isConnected, _cleanupAndResetState]);
     
-    // WebRTC connection and signaling logic, only active when connected.
     useEffect(() => {
         if (!isConnected || !user) return () => {};
 
@@ -274,12 +405,12 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000 }, video: true });
             stream.getVideoTracks()[0].enabled = false;
-            if (options?.muted) {
+            if (options?.muted ?? true) { // Mute by default
                 stream.getAudioTracks()[0].enabled = false;
             }
             setLocalStream(stream);
             
-            const result = await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL }, { initialMuteState: options?.muted ?? false });
+            const result = await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL }, { initialMuteState: options?.muted ?? true });
             if (!result.success) {
                 throw new Error(result.error || 'Sesli sohbete katılamadınız.');
             }
@@ -298,65 +429,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         await leaveVoiceChat(connectedRoomId, user.uid);
         _cleanupAndResetState();
     }, [user, connectedRoomId, _cleanupAndResetState]);
-
-    const startMusic = useCallback(async (file: File) => {
-        if (!isConnected || !localStream || isMusicPlaying) {
-             toast({ variant: 'destructive', description: "Müzik başlatılamadı. Sesli sohbete bağlı olduğunuzdan emin olun." });
-             return;
-        }
-        
-        await stopMusic();
-
-        try {
-            const context = new AudioContext();
-            audioContextRef.current = context;
-
-            const micSource = context.createMediaStreamSource(localStream);
-            originalMicTrackRef.current = localStream.getAudioTracks()[0];
-
-            const musicElement = new Audio();
-            musicAudioRef.current = musicElement;
-            musicElement.src = URL.createObjectURL(file);
-            musicElement.loop = false; // Don't loop music
-            musicElement.onended = stopMusic;
-            
-            const musicSource = context.createMediaElementSource(musicElement);
-
-            const destination = context.createMediaStreamDestination();
-            mixedStreamDestinationRef.current = destination;
-
-            const gainNode = context.createGain();
-            gainNode.gain.value = musicVolume; // Set initial volume
-            musicGainNodeRef.current = gainNode;
-
-            // Connect mic to destination for others
-            micSource.connect(destination);
-
-            // Connect music to gain node, then to both local output and destination for others
-            musicSource.connect(gainNode);
-            gainNode.connect(context.destination); // For self
-            gainNode.connect(destination); // For others
-
-            const mixedTrack = destination.stream.getAudioTracks()[0];
-
-            for (const peerId in peerConnections.current) {
-                const sender = peerConnections.current[peerId].getSenders().find(s => s.track?.kind === 'audio');
-                if (sender && sender.track?.id !== mixedTrack.id) {
-                    await sender.replaceTrack(mixedTrack);
-                }
-            }
-
-            await musicElement.play();
-            setIsMusicPlaying(true);
-            toast({ description: "Müzik çalmaya başladı." });
-
-        } catch (error: any) {
-             console.error("Müzik başlatılırken hata:", error);
-             toast({ variant: 'destructive', description: "Müzik başlatılamadı: " + error.message });
-             await stopMusic();
-        }
-
-    }, [isConnected, localStream, isMusicPlaying, stopMusic, toast, musicVolume]);
     
     const stopScreenShare = useCallback(async () => {
         if (!user || !connectedRoomId || !localScreenStream) return;
@@ -508,7 +580,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         return () => { if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current); };
     }, [isConnected, runAudioAnalysis]);
     
-    // Update microphone track based on speaking permission
     useEffect(() => {
         if (localStream && self) {
             const audioTrack = localStream.getAudioTracks()[0];
@@ -525,7 +596,9 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     
     const value = {
         activeRoom, participants: memoizedParticipants, self, isConnecting, isConnected, remoteAudioStreams, remoteScreenStreams, remoteVideoStreams, localStream, isSharingScreen, isSharingVideo,
-        setActiveRoomId, joinRoom, leaveRoom, toggleSelfMute, startScreenShare, stopScreenShare, startVideo, stopVideo, isMusicPlaying, startMusic, stopMusic, musicVolume, setMusicVolume: setMusicVolumeCallback
+        setActiveRoomId, joinRoom, leaveRoom, toggleSelfMute, startScreenShare, stopScreenShare, startVideo, stopVideo,
+        // Music Player values
+        playlist, currentTrackIndex, isMusicPlaying, musicVolume, addToPlaylist, removeFromPlaylist, togglePlayPause, playNextTrack, playPreviousTrack, stopPlaylist, setMusicVolume: setMusicVolumeCallback
     };
 
     return <VoiceChatContext.Provider value={value}>{children}</VoiceChatContext.Provider>;

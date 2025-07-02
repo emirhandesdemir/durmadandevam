@@ -27,6 +27,7 @@ import {
   UserCheck,
   UserX,
   Hand,
+  CameraOff
 } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -177,7 +178,7 @@ export default function VoiceUserIcon({
            <div className={cn("avatar-frame-wrapper w-full h-full", participant.selectedAvatarFrame)}>
               {avatarContent}
           </div>
-          <div className={cn("absolute bg-card/70 backdrop-blur-sm rounded-full shadow-md z-10", iconBadgePos)}>
+          <div className={cn("absolute bg-card/70 backdrop-blur-sm rounded-full shadow-md z-10 flex items-center gap-1.5", iconBadgePos)}>
             {hasRequestedSpeak && !canActuallySpeak ? (
               <Hand className={cn(iconSize, "text-yellow-400 animate-pulse")} />
             ) : (participant.isMuted || !canActuallySpeak) ? (
@@ -185,6 +186,7 @@ export default function VoiceUserIcon({
             ) : (
               <Mic className={cn(iconSize, "text-foreground")} />
             )}
+            {participant.isSharingVideo && <CameraOff className={cn(iconSize, "text-blue-400")} />}
           </div>
       </div>
 

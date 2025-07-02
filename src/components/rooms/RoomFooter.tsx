@@ -3,15 +3,14 @@
 
 import { Button } from '@/components/ui/button';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
-import { Mic, MicOff, Settings, LogOut, Loader2, ScreenShareOff, ScreenShare, Music, Music4, Camera, CameraOff } from 'lucide-react';
+import { Mic, MicOff, Settings, LogOut, Loader2, ScreenShareOff, ScreenShare, Music, Camera, CameraOff } from 'lucide-react';
 import ChatMessageInput from '../chat/ChatMessageInput';
 import type { Room } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
-import { Slider } from '../ui/slider';
-import { Label } from '../ui/label';
+import MusicPlayerDialog from '../voice/MusicPlayerDialog';
 
 
 interface RoomFooterProps {
@@ -34,15 +33,9 @@ export default function RoomFooter({ room, onGameLobbyOpen }: RoomFooterProps) {
         isSharingVideo,
         startVideo,
         stopVideo,
-        isMusicPlaying,
-        startMusic,
-        stopMusic,
-        musicVolume,
-        setMusicVolume,
     } = useVoiceChat();
     const [showVideoConfirm, setShowVideoConfirm] = useState(false);
-
-    const musicInputRef = useRef<HTMLInputElement>(null);
+    const [isMusicPlayerOpen, setIsMusicPlayerOpen] = useState(false);
     
     const isParticipant = room.participants.some(p => p.uid === user?.uid);
 
@@ -71,21 +64,7 @@ export default function RoomFooter({ room, onGameLobbyOpen }: RoomFooterProps) {
     }
 
     const handleMusicButtonClick = () => {
-        if (isMusicPlaying) {
-            stopMusic();
-        } else {
-            musicInputRef.current?.click();
-        }
-    };
-
-    const handleMusicFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file) {
-            startMusic(file);
-        }
-        if (event.target) {
-            event.target.value = "";
-        }
+        setIsMusicPlayerOpen(true);
     };
 
     return (
@@ -113,35 +92,19 @@ export default function RoomFooter({ room, onGameLobbyOpen }: RoomFooterProps) {
                                 <Button onClick={handleScreenShare} variant="ghost" size="icon" className="rounded-full" disabled={!isConnected}>
                                 {isSharingScreen ? <ScreenShareOff className="text-destructive"/> : <ScreenShare />}
                                 </Button>
-                                <input
-                                    type="file"
-                                    ref={musicInputRef}
-                                    onChange={handleMusicFileChange}
-                                    accept="audio/*"
-                                    className="hidden"
-                                />
                                 <Button onClick={handleMusicButtonClick} variant="ghost" size="icon" className="rounded-full" disabled={!isConnected}>
-                                {isMusicPlaying ? <Music4 className="text-primary"/> : <Music />}
+                                    <Music />
                                 </Button>
                             </div>
-                            {isMusicPlaying && (
-                                <div className="space-y-1 p-2">
-                                    <Label className="text-xs text-muted-foreground">Müzik Ses Düzeyi</Label>
-                                    <Slider
-                                        value={[musicVolume]}
-                                        onValueChange={(value) => setMusicVolume(value[0])}
-                                        min={0}
-                                        max={1}
-                                        step={0.05}
-                                        className="w-40"
-                                    />
-                                </div>
-                            )}
                         </PopoverContent>
                     </Popover>
 
                 </div>
             </footer>
+             <MusicPlayerDialog 
+                isOpen={isMusicPlayerOpen}
+                onOpenChange={setIsMusicPlayerOpen}
+            />
             <AlertDialog open={showVideoConfirm} onOpenChange={setShowVideoConfirm}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
