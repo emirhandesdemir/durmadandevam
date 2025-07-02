@@ -29,7 +29,7 @@ export async function createRoom(
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
     
     const userRef = doc(db, 'users', userId);
-    const roomCost = 10;
+    const roomCost = 10; // Sabit maliyet
 
     return await runTransaction(db, async (transaction) => {
         const userDoc = await transaction.get(userRef);
