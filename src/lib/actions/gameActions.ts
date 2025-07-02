@@ -17,7 +17,8 @@ import {
     increment,
     where,
     setDoc,
-    arrayUnion
+    arrayUnion,
+    getDocs
 } from "firebase/firestore";
 import type { GameQuestion, GameSettings, ActiveGame, Room } from "../types";
 import { revalidatePath } from "next/cache";
