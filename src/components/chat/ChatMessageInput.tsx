@@ -15,10 +15,9 @@ import { useToast } from '@/hooks/use-toast';
 interface ChatMessageInputProps {
   roomId: string;
   channelId?: string;
-  canSendMessage: boolean;
 }
 
-export default function ChatMessageInput({ roomId, channelId, canSendMessage }: ChatMessageInputProps) {
+export default function ChatMessageInput({ roomId, channelId }: ChatMessageInputProps) {
   const { user: currentUser, userData } = useAuth();
   const { toast } = useToast();
   const [message, setMessage] = useState('');
@@ -50,7 +49,7 @@ export default function ChatMessageInput({ roomId, channelId, canSendMessage }: 
   
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if ((!message.trim() && !file) || !currentUser || !canSendMessage || isSending) return;
+    if ((!message.trim() && !file) || !currentUser || isSending) return;
 
     setIsSending(true);
     let imageUrl: string | undefined;
@@ -106,10 +105,6 @@ export default function ChatMessageInput({ roomId, channelId, canSendMessage }: 
         setIsSending(false);
     }
   };
-
-  if (!canSendMessage) {
-    return <p className="w-full text-center text-sm text-muted-foreground px-4">Mesaj göndermek için topluluğa katılmalısınız.</p>;
-  }
   
   return (
     <div className='w-full'>
