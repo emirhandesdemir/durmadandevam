@@ -60,22 +60,30 @@ export default function RoomPage() {
         return () => setActiveRoomId(null);
     }, [roomId, setActiveRoomId]);
 
-    // Auto-start quiz game if host is present
+    // Auto-start quiz game if room is active
     useEffect(() => {
-        if (!isHost || !room || !featureFlags?.quizGameEnabled) return;
-
+        if (!room || !featureFlags?.quizGameEnabled || !user) return;
+    
+        // The first participant in the list acts as the game host to prevent multiple triggers.
+        const isDesignatedGameStarter = room.participants[0]?.uid === user.uid;
+    
+        if (!isDesignatedGameStarter) return;
+    
         const checkAndStartGame = async () => {
             if (!room?.id) return;
             const now = Timestamp.now();
             const nextGameTime = room.nextGameTimestamp as Timestamp | undefined;
+            
+            // The server-side action `startGameInRoom` has a check to prevent duplicate active games.
             if (!nextGameTime || now.toMillis() > nextGameTime.toMillis()) {
                 await startGameInRoom(room.id);
             }
         };
+    
         const interval = setInterval(checkAndStartGame, 30000); // Check every 30 seconds
         checkAndStartGame();
         return () => clearInterval(interval);
-    }, [isHost, room, featureFlags?.quizGameEnabled]);
+    }, [room, user, featureFlags?.quizGameEnabled]);
 
     useEffect(() => {
         roomRef.current = room;
@@ -230,16 +238,15 @@ export default function RoomPage() {
                     )}
                 </AnimatePresence>
                 
-                 {/* Sticky top content */}
-                <div className="p-4 space-y-4 shrink-0">
+                 <div className="p-4 shrink-0">
+                    <RoomInfoCards room={room} isOwner={isHost} />
+                </div>
+
+                <main ref={chatScrollRef} className="flex-1 flex flex-col overflow-y-auto pt-0 p-4">
                      {isMatchRoom && (room.status === 'open' || room.status === 'converting') && user && (
                         <MatchConfirmationControls room={room} currentUserId={user.uid} />
                     )}
                     {gameContent}
-                    <RoomInfoCards room={room} isOwner={isHost} />
-                </div>
-
-                <main ref={chatScrollRef} className="flex-1 flex flex-col overflow-y-auto">
                     <TextChat messages={messages} loading={messagesLoading} room={room} />
                 </main>
 

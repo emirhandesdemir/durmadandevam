@@ -50,7 +50,7 @@ export default function RoomFooter({ room, onGameLobbyOpen }: RoomFooterProps) {
         if (isConnected) {
             leaveRoom();
         } else {
-            joinRoom({ muted: true });
+            joinRoom();
         }
     };
     
