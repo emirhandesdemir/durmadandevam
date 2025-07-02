@@ -1,7 +1,7 @@
 // src/components/posts/PostsFeed.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { collection, query, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Post } from '@/lib/types';
@@ -16,6 +16,50 @@ export default function PostsFeed() {
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const sortedPosts = useMemo(() => {
+        let postsData = [...posts];
+        // Filter out posts from users the current user has blocked
+        if (userData?.blockedUsers) {
+            postsData = postsData.filter(post => !userData.blockedUsers.includes(post.uid));
+        }
+        
+        // Language-based sorting
+        const postsInUserLanguage = postsData.filter(p => p.language === i18n.language);
+        const otherLanguagePosts = postsData.filter(p => p.language !== i18n.language);
+
+        let languageSortedFeed = [];
+        let langIndex = 0;
+        let otherIndex = 0;
+        while (langIndex < postsInUserLanguage.length || otherIndex < otherLanguagePosts.length) {
+             // Add 3 posts from user's language
+            for (let i = 0; i < 3 && langIndex < postsInUserLanguage.length; i++) {
+                languageSortedFeed.push(postsInUserLanguage[langIndex++]);
+            }
+            // Add 1 post from other languages
+            if (otherIndex < otherLanguagePosts.length) {
+                languageSortedFeed.push(otherLanguagePosts[otherIndex++]);
+            }
+        }
+
+        // Apply gender-based sorting if the user is male
+        if (userData?.gender === 'male') {
+            const femalePosts = languageSortedFeed.filter(p => p.userGender === 'female');
+            const otherPosts = languageSortedFeed.filter(p => p.userGender !== 'female');
+            const finalFeed = [];
+            let fIndex = 0, oIndex = 0;
+            
+            // Interleave posts with a 2:1 female-to-other ratio
+            while(fIndex < femalePosts.length || oIndex < otherPosts.length) {
+                if (fIndex < femalePosts.length) finalFeed.push(femalePosts[fIndex++]);
+                if (fIndex < femalePosts.length) finalFeed.push(femalePosts[fIndex++]);
+                if (oIndex < otherPosts.length) finalFeed.push(otherPosts[oIndex++]);
+            }
+            return finalFeed;
+        } else {
+            return languageSortedFeed;
+        }
+    }, [posts, userData, i18n.language]);
+
     useEffect(() => {
         if (authLoading) return;
         if (!user) {
@@ -24,56 +68,13 @@ export default function PostsFeed() {
         }
 
         const postsRef = collection(db, 'posts');
-        const q = query(postsRef, orderBy('createdAt', 'desc'), limit(100)); // Fetch more posts for sorting
+        const q = query(postsRef, orderBy('createdAt', 'desc'), limit(100));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            let postsData = snapshot.docs.map(doc => ({
+            const postsData = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             } as Post));
-            
-            // Filter out posts from users the current user has blocked
-            if (userData?.blockedUsers) {
-                postsData = postsData.filter(post => !userData.blockedUsers.includes(post.uid));
-            }
-            
-            // Language-based sorting
-            const postsInUserLanguage = postsData.filter(p => p.language === i18n.language);
-            const otherLanguagePosts = postsData.filter(p => p.language !== i18n.language);
-
-            let languageSortedFeed = [];
-            let langIndex = 0;
-            let otherIndex = 0;
-            while (langIndex < postsInUserLanguage.length || otherIndex < otherLanguagePosts.length) {
-                 // Add 3 posts from user's language
-                for (let i = 0; i < 3 && langIndex < postsInUserLanguage.length; i++) {
-                    languageSortedFeed.push(postsInUserLanguage[langIndex++]);
-                }
-                // Add 1 post from other languages
-                if (otherIndex < otherLanguagePosts.length) {
-                    languageSortedFeed.push(otherLanguagePosts[otherIndex++]);
-                }
-            }
-
-
-            // Apply gender-based sorting if the user is male
-            if (userData?.gender === 'male') {
-                const femalePosts = languageSortedFeed.filter(p => p.userGender === 'female');
-                const otherPosts = languageSortedFeed.filter(p => p.userGender !== 'female');
-                const finalFeed = [];
-                let fIndex = 0, oIndex = 0;
-                
-                // Interleave posts with a 2:1 female-to-other ratio
-                while(fIndex < femalePosts.length || oIndex < otherPosts.length) {
-                    if (fIndex < femalePosts.length) finalFeed.push(femalePosts[fIndex++]);
-                    if (fIndex < femalePosts.length) finalFeed.push(femalePosts[fIndex++]);
-                    if (oIndex < otherPosts.length) finalFeed.push(otherPosts[oIndex++]);
-                }
-                postsData = finalFeed;
-            } else {
-                postsData = languageSortedFeed;
-            }
-
             setPosts(postsData);
             setLoading(false);
         }, (error) => {
@@ -82,7 +83,7 @@ export default function PostsFeed() {
         });
 
         return () => unsubscribe();
-    }, [user, authLoading, userData, i18n.language]);
+    }, [user, authLoading]);
 
     if (loading) {
         return (
@@ -93,7 +94,7 @@ export default function PostsFeed() {
         );
     }
 
-    if (posts.length === 0) {
+    if (sortedPosts.length === 0) {
         return (
             <div className="text-center text-muted-foreground py-10">
                 <p>Henüz hiç gönderi yok.</p>
@@ -105,7 +106,7 @@ export default function PostsFeed() {
     return (
         <div className="w-full">
              <div className="divide-y divide-border bg-card/50">
-                {posts.map(post => (
+                {sortedPosts.map(post => (
                     <PostCard key={post.id} post={post} />
                 ))}
             </div>

@@ -122,11 +122,23 @@ export default function RoomPage() {
                 setActiveGameSession(null);
             }
         });
+
+        // Listener for active quiz games
+        const activeQuizQuery = query(collection(db, 'rooms', roomId, 'games'), where('status', '==', 'active'), limit(1));
+        const activeQuizUnsub = onSnapshot(activeQuizQuery, (snapshot) => {
+            if (!snapshot.empty) {
+                const gameDoc = snapshot.docs[0];
+                setActiveQuiz({ id: gameDoc.id, ...gameDoc.data() } as ActiveGame);
+            } else {
+                setActiveQuiz(null);
+            }
+        });
         
         return () => { 
             roomUnsub(); 
             messagesUnsub(); 
             gameSessionUnsub();
+            activeQuizUnsub();
             // Cleanup: delete converted/declined match rooms after leaving
             if (roomRef.current && (roomRef.current.status === 'closed_declined' || roomRef.current.status === 'converted_to_dm')) {
                 deleteMatchRoom(roomId);

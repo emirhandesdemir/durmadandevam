@@ -97,28 +97,7 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
         
         return (
           <div key={msg.id} className={cn("flex items-end gap-3 w-full animate-in fade-in slide-in-from-bottom-4 duration-500 group", isCurrentUser && "flex-row-reverse")}>
-             {isHost && !isBot && (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                            <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                        <DropdownMenuItem onClick={() => handlePinMessage(msg.id)}>
-                            <Pin className="mr-2 h-4 w-4" />
-                            <span>Sabitle</span>
-                        </DropdownMenuItem>
-                         {!isCurrentUser && (
-                             <DropdownMenuItem onClick={() => handleDeleteByHost(msg.id)} className="text-destructive focus:text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4"/>
-                                <span>Mesajı Sil</span>
-                            </DropdownMenuItem>
-                         )}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-             )}
-            <Link href={!isBot ? `/profile/${msg.uid}` : '#'}>
+             <Link href={!isBot ? `/profile/${msg.uid}` : '#'}>
                 <div className={cn("avatar-frame-wrapper", msg.selectedAvatarFrame)}>
                     <Avatar className="relative z-[1] h-8 w-8">
                         <AvatarImage src={msg.photoURL || undefined} />
@@ -135,7 +114,7 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
                    </p>
                 </div>
 
-                <div className="relative">
+                <div className="relative group/message">
                     {msg.selectedBubble && !isBot && (
                         <div className={`bubble-wrapper ${msg.selectedBubble}`}>
                             {Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}
@@ -168,6 +147,27 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
                             <p className="text-sm break-words whitespace-pre-wrap mt-1 px-1">{msg.text}</p>
                         )}
                     </div>
+                     {isHost && !isBot && (
+                        <div className={cn("absolute top-0 opacity-0 group-hover/message:opacity-100 transition-opacity", isCurrentUser ? "-left-8" : "-right-8")}>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align={isCurrentUser ? "end" : "start"}>
+                                    <DropdownMenuItem onClick={() => handlePinMessage(msg.id)}>
+                                        <Pin className="mr-2 h-4 w-4" />
+                                        <span>Sabitle</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleDeleteByHost(msg.id)} className="text-destructive focus:text-destructive">
+                                        <Trash2 className="mr-2 h-4 w-4"/>
+                                        <span>Mesajı Sil</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                     )}
                 </div>
             </div>
           </div>

@@ -274,6 +274,9 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000 }, video: true });
             stream.getVideoTracks()[0].enabled = false;
+            if (options?.muted) {
+                stream.getAudioTracks()[0].enabled = false;
+            }
             setLocalStream(stream);
             
             const result = await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL }, { initialMuteState: options?.muted ?? false });
