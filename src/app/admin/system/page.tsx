@@ -48,7 +48,7 @@ export default function SystemSettingsPage() {
             rewardAmount: 5,
             cooldownSeconds: 30,
             afkTimeoutMinutes: 8,
-            imageUploadQuality: 0.9,
+            imageUploadQuality: 0.92,
             audioBitrate: 64,
             videoBitrate: 1000,
             matchmakingCost: 5,
@@ -174,7 +174,7 @@ export default function SystemSettingsPage() {
                             {loading ? <Skeleton className="h-16 w-full" /> : (
                                 <FormField control={form.control} name="imageUploadQuality" render={({ field }) => (
                                     <FormItem><FormLabel>Resim Yükleme Kalitesi ({field.value})</FormLabel>
-                                    <FormControl><Slider min={0.1} max={1} step={0.1} value={[field.value]} onValueChange={(vals) => field.onChange(vals[0])} /></FormControl>
+                                    <FormControl><Slider min={0.1} max={1} step={0.01} value={[field.value]} onValueChange={(vals) => field.onChange(vals[0])} /></FormControl>
                                     <FormMessage />
                                     </FormItem>
                                 )} />

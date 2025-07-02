@@ -53,7 +53,7 @@ export default function ChatMessageInput({ room }: ChatMessageInputProps) {
     if ((!message.trim() && !file) || !currentUser || !isParticipant || isSending) return;
 
     setIsSending(true);
-    let imageUrl: string | undefined;
+    let imageUrls: string[] = [];
     let videoUrl: string | undefined;
     
     try {
@@ -64,7 +64,7 @@ export default function ChatMessageInput({ room }: ChatMessageInputProps) {
             const storageRef = ref(storage, path);
             await uploadBytes(storageRef, file);
             const downloadUrl = await getDownloadURL(storageRef);
-            if (isImage) imageUrl = downloadUrl;
+            if (isImage) imageUrls.push(downloadUrl);
             else videoUrl = downloadUrl;
         }
 
@@ -81,8 +81,8 @@ export default function ChatMessageInput({ room }: ChatMessageInputProps) {
             selectedAvatarFrame: userData?.selectedAvatarFrame || '',
         };
 
-        if (imageUrl) {
-            messageData.imageUrl = imageUrl;
+        if (imageUrls.length > 0) {
+            messageData.imageUrls = imageUrls;
         }
         if (videoUrl) {
             messageData.videoUrl = videoUrl;
@@ -105,7 +105,26 @@ export default function ChatMessageInput({ room }: ChatMessageInputProps) {
     }
   };
 
-  if (!isParticipant) {
+  if (room.mode === 'broadcast' && room.createdBy.uid !== currentUser?.uid) {
+      // Viewer chat input for broadcasts
+       return (
+        <form onSubmit={handleSendMessage} className="flex w-full items-center space-x-2">
+            <Input
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Bir yorum yaz..."
+                autoComplete="off"
+                className="flex-1 bg-black/30 border-white/30 rounded-full focus-visible:ring-primary placeholder:text-white/70"
+                disabled={isSending}
+            />
+            <Button type="submit" size="icon" disabled={!message.trim() || isSending} className="rounded-full flex-shrink-0 bg-primary/80">
+                {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            </Button>
+        </form>
+      )
+  }
+
+  if (!isParticipant && room.mode === 'chat') {
     return <p className="w-full text-center text-sm text-muted-foreground px-4">Mesaj göndermek için odaya katılmalısınız.</p>;
   }
   

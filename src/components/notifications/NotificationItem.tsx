@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { joinRoom } from '@/lib/actions/roomActions';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 interface NotificationItemProps {
   notification: Notification;
@@ -96,7 +97,9 @@ export default function NotificationItem({ notification }: NotificationItemProps
           <p className="text-xs text-muted-foreground">{timeAgo}</p>
        </div>
         {notification.postImage && (
-            <img src={notification.postImage} alt="Post preview" className="h-12 w-12 rounded-md object-cover"/>
+            <div className="relative h-12 w-12 rounded-md object-cover">
+                <Image src={notification.postImage} alt="Post preview" fill className="rounded-md object-cover" />
+            </div>
         )}
     </div>
   );

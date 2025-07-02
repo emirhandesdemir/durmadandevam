@@ -26,6 +26,7 @@ import GameLobbyDialog from '@/components/game/GameLobbyDialog';
 import ActiveGameArea from '@/components/game/ActiveGameArea';
 import GameInviteMessage from '@/components/game/GameInviteMessage';
 import MatchConfirmationControls from '@/components/rooms/MatchConfirmationControls';
+import BroadcastUI from '@/components/broadcast/BroadcastUI';
 
 export default function RoomPage() {
     const params = useParams();
@@ -33,11 +34,9 @@ export default function RoomPage() {
     const { toast } = useToast();
     const roomId = params.id as string;
     
-    // --- Auth & Contexts ---
     const { user, userData, featureFlags, loading: authLoading } = useAuth();
     const { setActiveRoomId, isConnected, isConnecting } = useVoiceChat();
 
-    // --- Component State ---
     const [room, setRoom] = useState<Room | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [messagesLoading, setMessagesLoading] = useState(true);
@@ -46,7 +45,6 @@ export default function RoomPage() {
     const chatScrollRef = useRef<HTMLDivElement>(null);
     const roomRef = useRef<Room | null>(null);
 
-    // --- Game State ---
     const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
     const [activeQuiz, setActiveQuiz] = useState<ActiveGame | null>(null);
     const [finishedGame, setFinishedGame] = useState<any>(null);
@@ -56,15 +54,13 @@ export default function RoomPage() {
     const isHost = user?.uid === room?.createdBy.uid;
     const isParticipant = useMemo(() => room?.participants.some(p => p.uid === user?.uid), [room, user]);
 
-
     useEffect(() => {
         if (roomId) setActiveRoomId(roomId);
         return () => setActiveRoomId(null);
     }, [roomId, setActiveRoomId]);
     
-    // Auto-join room on page load if not already a participant
     useEffect(() => {
-        if (user && userData && room && !isParticipant && room.type !== 'match') {
+        if (user && userData && room && !isParticipant && room.type !== 'match' && room.mode !== 'broadcast') {
             const autoJoin = async () => {
                 try {
                     await joinRoom(room.id, {
@@ -81,12 +77,9 @@ export default function RoomPage() {
         }
     }, [user, userData, room, isParticipant, router, toast]);
 
-    // Auto-start quiz game if room is active
     useEffect(() => {
-        if (!room || !featureFlags?.quizGameEnabled || !user) return;
+        if (!room || !featureFlags?.quizGameEnabled || !user || room.mode === 'broadcast') return;
     
-        // A designated user will trigger the game to prevent multiple triggers.
-        // For simplicity, we choose the user whose UID comes first alphabetically.
         const designatedStarter = room.participants.sort((a, b) => a.uid.localeCompare(b.uid))[0];
     
         if (!designatedStarter || designatedStarter.uid !== user.uid) return;
@@ -96,7 +89,6 @@ export default function RoomPage() {
             const now = Timestamp.now();
             const nextGameTime = room.nextGameTimestamp as Timestamp | undefined;
             
-            // The server-side action `startGameInRoom` has a check to prevent duplicate active games.
             if (!nextGameTime || now.toMillis() > nextGameTime.toMillis()) {
                 await startGameInRoom(room.id);
             }
@@ -111,8 +103,6 @@ export default function RoomPage() {
         roomRef.current = room;
     }, [room]);
 
-
-    // Room, messages, and game settings listener
     useEffect(() => {
         if (!roomId) return;
         
@@ -134,7 +124,6 @@ export default function RoomPage() {
             setMessagesLoading(false);
         });
         
-        // Listener for active game sessions
         const activeGameQuery = query(collection(db, 'rooms', roomId, 'game_sessions'), where('status', 'in', ['pending', 'active']), limit(1));
         const gameSessionUnsub = onSnapshot(activeGameQuery, (snapshot) => {
             if (!snapshot.empty) {
@@ -145,7 +134,6 @@ export default function RoomPage() {
             }
         });
 
-        // Listener for active quiz games
         const activeQuizQuery = query(collection(db, 'rooms', roomId, 'games'), where('status', '==', 'active'), limit(1));
         const activeQuizUnsub = onSnapshot(activeQuizQuery, (snapshot) => {
             if (!snapshot.empty) {
@@ -161,14 +149,12 @@ export default function RoomPage() {
             messagesUnsub(); 
             gameSessionUnsub();
             activeQuizUnsub();
-            // Cleanup: delete converted/declined match rooms after leaving
             if (roomRef.current && (roomRef.current.status === 'closed_declined' || roomRef.current.status === 'converted_to_dm')) {
                 deleteMatchRoom(roomId);
             }
         };
     }, [roomId, router, toast]);
 
-    // Handle room status changes for matchmaking
     useEffect(() => {
         if (!room || room.type !== 'match' || !user) return;
 
@@ -181,7 +167,6 @@ export default function RoomPage() {
         }
     }, [room, user, router, toast]);
     
-    // Finished game listener (to show results)
     useEffect(() => {
         if (!roomId) return;
         const q = query(collection(db, 'rooms', roomId, 'games'), where('status', '==', 'finished'), orderBy('finishedAt', 'desc'), limit(1));
@@ -229,6 +214,10 @@ export default function RoomPage() {
     const isLoading = authLoading || !room;
     if (isLoading) return <div className="flex h-full items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
     
+    if (room.mode === 'broadcast') {
+        return <BroadcastUI room={room} />;
+    }
+
     const isMatchRoom = room?.type === 'match';
 
     const renderGameContent = () => {

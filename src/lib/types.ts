@@ -98,8 +98,7 @@ export interface Post {
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
     text: string;
-    imageUrl?: string;
-    imagePublicId?: string;
+    imageUrls?: string[]; // Changed from imageUrl to imageUrls
     editedWithAI?: boolean;
     createdAt: Timestamp | { seconds: number; nanoseconds: number };
     likes: string[]; // Beğenen kullanıcıların UID'lerini tutan dizi
@@ -113,7 +112,7 @@ export interface Post {
         userAvatar?: string | null;
         userAvatarFrame?: string;
         text: string;
-        imageUrl?: string;
+        imageUrls?: string[];
         createdAt: Timestamp | { seconds: number; nanoseconds: number };
     }
 }
@@ -137,6 +136,7 @@ export interface Room {
     name: string;
     description: string;
     coverImage?: string;
+    mode?: 'chat' | 'broadcast'; // New property for room type
     createdBy: {
         uid: string;
         username: string;
@@ -284,7 +284,7 @@ export interface Message {
   username: string;
   photoURL?: string | null;
   text?: string;
-  imageUrl?: string;
+  imageUrls?: string[];
   videoUrl?: string;
   type?: 'system' | 'game' | 'portal' | 'user' | 'gameInvite';
   createdAt: Timestamp;

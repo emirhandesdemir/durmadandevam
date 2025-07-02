@@ -45,12 +45,9 @@ interface PostsTableProps {
  */
 export default function PostsTable({ posts }: PostsTableProps) {
     const { toast } = useToast();
-    // Hangi gönderinin işlendiğini tutar (örn: silinirken yükleme animasyonu göstermek için).
     const [isProcessing, setIsProcessing] = useState<string | null>(null);
-    // Silme onayı dialogunu göstermek için seçilen gönderiyi tutar.
     const [showDeleteConfirm, setShowDeleteConfirm] = useState<AdminPostData | null>(null);
 
-    // Gönderiyi silme fonksiyonu.
     const handleDeletePost = async (post: AdminPostData) => {
         setIsProcessing(post.id);
         try {
@@ -82,10 +79,9 @@ export default function PostsTable({ posts }: PostsTableProps) {
                         <TableRow key={post.id}>
                             <TableCell className="font-medium">
                                <div className="flex items-start gap-3">
-                                 {post.imageUrl ? (
-                                    <Image src={post.imageUrl} alt="Gönderi resmi" width={50} height={50} className="rounded-md object-cover aspect-square"/>
+                                 {post.imageUrls && post.imageUrls.length > 0 ? (
+                                    <Image src={post.imageUrls[0]} alt="Gönderi resmi" width={50} height={50} className="rounded-md object-cover aspect-square"/>
                                  ) : (
-                                    // Resmi olmayan gönderiler için bir yer tutucu ikon göster.
                                     <div className="flex h-[50px] w-[50px] items-center justify-center rounded-md bg-secondary">
                                         <ImageIcon className="h-6 w-6 text-muted-foreground"/>
                                     </div>
@@ -126,8 +122,7 @@ export default function PostsTable({ posts }: PostsTableProps) {
                     ))}
                 </TableBody>
             </Table>
-            {/* Silme Onay Dialogu */}
-             <AlertDialog open={!!showDeleteConfirm} onOpenChange={(open) => !open && setShowDeleteConfirm(null)}>
+            <AlertDialog open={!!showDeleteConfirm} onOpenChange={(open) => !open && setShowDeleteConfirm(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Emin misiniz?</AlertDialogTitle>

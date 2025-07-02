@@ -131,9 +131,9 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
                                     : "bg-card rounded-bl-none text-foreground")
                     )}>
                         {isBot && <Bot className="absolute -top-2 -left-2 h-5 w-5 text-blue-400 p-1 bg-background rounded-full" />}
-                        {msg.imageUrl && (
+                        {msg.imageUrls && msg.imageUrls.length > 0 && (
                             <Image 
-                                src={msg.imageUrl} 
+                                src={msg.imageUrls[0]}
                                 alt={msg.text || "Gönderilen resim"}
                                 width={300}
                                 height={300}
