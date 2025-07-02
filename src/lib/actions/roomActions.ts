@@ -22,7 +22,7 @@ const BOT_USER_INFO = {
 
 export async function createRoom(
     userId: string,
-    roomData: Pick<Room, 'name' | 'description' | 'requestToSpeakEnabled' | 'language'>,
+    roomData: Pick<Room, 'name' | 'description' | 'language'>,
     creatorInfo: { username: string, photoURL: string | null, role: string, selectedAvatarFrame: string }
 ) {
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
@@ -48,7 +48,6 @@ export async function createRoom(
             language: roomData.language,
             type: 'public',
             status: 'open',
-            requestToSpeakEnabled: roomData.requestToSpeakEnabled,
             createdBy: {
                 uid: userId,
                 username: creatorInfo.username,
@@ -111,7 +110,6 @@ export async function createPrivateMatchRoom(user1: UserInfo, user2: UserInfo) {
             [user1.uid]: 'pending',
             [user2.uid]: 'pending'
         },
-        requestToSpeakEnabled: false,
         rules: null,
         welcomeMessage: `Hoş geldiniz! Eşleşme odanız oluşturuldu. Birbirinizi tanımak için 5 dakikanız var.`,
         pinnedMessageId: null,
@@ -476,28 +474,6 @@ export async function updateRoomSettings(roomId: string, settings: { requestToSp
     return { success: true };
 }
 
-export async function requestToSpeak(roomId: string, user: UserInfo) {
-    if (!roomId || !user.uid) throw new Error("Gerekli bilgi eksik.");
-    const roomRef = doc(db, 'rooms', roomId);
-    await updateDoc(roomRef, { speakRequests: arrayUnion(user.uid) });
-    return { success: true };
-}
-
-export async function manageSpeakingPermission(roomId: string, targetUserId: string, allow: boolean) {
-    if (!roomId || !targetUserId) throw new Error("Gerekli bilgi eksik.");
-    
-    const batch = writeBatch(db);
-    const roomRef = doc(db, 'rooms', roomId);
-    const participantRef = doc(roomRef, 'voiceParticipants', targetUserId);
-
-    // Remove user from the request list regardless of action
-    batch.update(roomRef, { speakRequests: arrayRemove(targetUserId) });
-    // Update their permission
-    batch.update(participantRef, { canSpeak: allow });
-
-    await batch.commit();
-    return { success: true };
-}
 
 export async function kickFromVoice(roomId: string, currentUserId: string, targetUserId:string) {
     if (!currentUserId || !targetUserId || currentUserId === targetUserId) {

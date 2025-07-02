@@ -39,7 +39,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo, options?: { 
             const [roomDoc, userVoiceDoc, userDbDoc] = await Promise.all([
                 transaction.get(roomRef),
                 transaction.get(userVoiceRef),
-                transaction.get(userDbRef)
+                transaction.get(userDbDoc)
             ]);
 
             if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
@@ -55,11 +55,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo, options?: { 
             const userData = userDbDoc.data();
             const voiceCount = roomData.voiceParticipantsCount || 0;
             if (voiceCount >= roomData.maxParticipants) throw new Error("Sesli sohbet dolu.");
-
-            const isHost = roomData.createdBy.uid === user.uid;
-            const isModerator = roomData.moderators?.includes(user.uid);
-            const canSpeakByDefault = !roomData.requestToSpeakEnabled || isHost || isModerator;
-
+            
             const participantData: Omit<VoiceParticipant, 'isSpeaker'> = {
                 uid: user.uid,
                 username: user.displayName || 'Anonim',
@@ -67,7 +63,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo, options?: { 
                 isMuted: options?.initialMuteState ?? false,
                 isSharingScreen: false,
                 isSharingVideo: false,
-                canSpeak: canSpeakByDefault,
+                canSpeak: true, // All users can speak by default now
                 joinedAt: serverTimestamp() as Timestamp,
                 lastActiveAt: serverTimestamp() as Timestamp,
                 selectedBubble: userData.selectedBubble || '',

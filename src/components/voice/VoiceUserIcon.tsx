@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import { kickFromVoice, manageSpeakingPermission } from "@/lib/actions/roomActions";
+import { kickFromVoice } from "@/lib/actions/roomActions";
 import type { VoiceParticipant, Room } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -26,7 +26,6 @@ import {
   VolumeX,
   UserCheck,
   UserX,
-  Hand,
   CameraOff
 } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
@@ -72,7 +71,6 @@ export default function VoiceUserIcon({
   const isSelf = participant.uid === currentUserId;
   const isParticipantHost = participant.uid === room.createdBy.uid;
   const isParticipantModerator = room.moderators?.includes(participant.uid);
-  const hasRequestedSpeak = room.speakRequests?.includes(participant.uid);
 
   const canModerate = isHost || isModerator;
   
@@ -92,20 +90,7 @@ export default function VoiceUserIcon({
       setIsProcessing(false);
     }
   };
-
-  const handleManageSpeaking = async (allow: boolean) => {
-    if (!canModerate) return;
-    setIsProcessing(true);
-    try {
-      await manageSpeakingPermission(room.id, participant.uid, allow);
-      toast({ description: `${participant.username} kullanıcısının konuşma izni ${allow ? 'verildi' : 'kaldırıldı'}.`})
-    } catch (e: any) {
-      toast({ variant: 'destructive', description: e.message });
-    } finally {
-      setIsProcessing(false);
-    }
-  }
-
+  
   const handleViewProfile = () => {
       router.push(`/profile/${participant.uid}`);
   }
@@ -121,18 +106,6 @@ export default function VoiceUserIcon({
       {canModerate && !isSelf && !isParticipantHost && (
         <>
             <DropdownMenuSeparator />
-            {participant.canSpeak ? (
-                <DropdownMenuItem onClick={() => handleManageSpeaking(false)}>
-                    <UserX className="mr-2 h-4 w-4" />
-                    <span>Sustur</span>
-                </DropdownMenuItem>
-            ) : (
-                 <DropdownMenuItem onClick={() => handleManageSpeaking(true)}>
-                    <UserCheck className="mr-2 h-4 w-4" />
-                    <span>Konuşma İzni Ver</span>
-                </DropdownMenuItem>
-            )}
-
             <DropdownMenuItem
             className="text-destructive focus:text-destructive"
             onClick={handleKick}
@@ -152,8 +125,7 @@ export default function VoiceUserIcon({
   const iconSize = size === 'lg' ? "h-5 w-5" : "h-4 w-4";
   
   const speakingRing = participant.isSpeaker && !participant.isMuted;
-  const canActuallySpeak = !room.requestToSpeakEnabled || participant.canSpeak || isHost || isModerator;
-
+  
   const avatarContent = (
     <div className={cn("relative z-[1] border-2 transition-all duration-300 w-full h-full rounded-full overflow-hidden",
         speakingRing ? "border-green-500 shadow-lg shadow-green-500/50 ring-4 ring-green-500/30" : "border-transparent",
@@ -179,9 +151,7 @@ export default function VoiceUserIcon({
               {avatarContent}
           </div>
           <div className={cn("absolute bg-card/70 backdrop-blur-sm rounded-full shadow-md z-10 flex items-center gap-1.5", iconBadgePos)}>
-            {hasRequestedSpeak && !canActuallySpeak ? (
-              <Hand className={cn(iconSize, "text-yellow-400 animate-pulse")} />
-            ) : (participant.isMuted || !canActuallySpeak) ? (
+            {participant.isMuted ? (
               <MicOff className={cn(iconSize, "text-destructive")} />
             ) : (
               <Mic className={cn(iconSize, "text-foreground")} />

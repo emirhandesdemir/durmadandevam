@@ -28,14 +28,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Hand, Gem } from "lucide-react";
-import { Switch } from "../ui/switch";
+import { Loader2, Gem } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 const formSchema = z.object({
   name: z.string().min(3, { message: "Ad en az 3 karakter olmalıdır." }).max(50, {message: "Ad en fazla 50 karakter olabilir."}),
   description: z.string().min(3, { message: "Açıklama en az 3 karakter olmalıdır." }).max(100, {message: "Açıklama en fazla 100 karakter olabilir."}),
-  requestToSpeakEnabled: z.boolean().default(false),
 });
 
 export default function CreateRoomForm() {
@@ -47,7 +45,7 @@ export default function CreateRoomForm() {
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
-        defaultValues: { name: "", description: "", requestToSpeakEnabled: false },
+        defaultValues: { name: "", description: "" },
     });
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -108,30 +106,7 @@ export default function CreateRoomForm() {
                                 <FormMessage className="ml-4" />
                             </FormItem>
                         )} />
-                        <FormField
-                            control={form.control}
-                            name="requestToSpeakEnabled"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between rounded-full border p-3">
-                                <div className="space-y-0.5">
-                                    <FormLabel className="flex items-center gap-2 text-sm">
-                                        <Hand className="h-4 w-4"/>
-                                        El Kaldırma Modu
-                                    </FormLabel>
-                                    <p className="text-xs text-muted-foreground pl-6">
-                                        Katılımcıların konuşmak için izin istemesi gerekir.
-                                    </p>
-                                </div>
-                                <FormControl>
-                                    <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                    />
-                                </FormControl>
-                                </FormItem>
-                            )}
-                        />
-
+                        
                         <Button type="submit" size="lg" className="w-full rounded-full py-6 text-lg font-semibold bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg transition-transform hover:scale-105 disabled:opacity-75" disabled={isLoading}>
                              {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
                              Oluştur

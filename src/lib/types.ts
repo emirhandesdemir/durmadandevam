@@ -150,8 +150,6 @@ export interface Room {
     maxParticipants: number;
     nextGameTimestamp?: Timestamp;
     voiceParticipantsCount?: number;
-    requestToSpeakEnabled?: boolean;
-    speakRequests?: string[]; // Array of UIDs who requested to speak
     rules: string | null;
     welcomeMessage: string | null;
     pinnedMessageId: string | null;

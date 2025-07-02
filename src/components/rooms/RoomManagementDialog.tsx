@@ -1,7 +1,7 @@
 // src/components/rooms/RoomManagementDialog.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -22,12 +22,10 @@ import {
   } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { deleteRoomAsOwner, extendRoomTime, increaseParticipantLimit, updateRoomSettings } from "@/lib/actions/roomActions";
-import { Trash2, Loader2, ShieldAlert, Clock, Hand, UserPlus, Gem } from "lucide-react";
+import { deleteRoomAsOwner, extendRoomTime, increaseParticipantLimit } from "@/lib/actions/roomActions";
+import { Trash2, Loader2, ShieldAlert, Clock, UserPlus, Gem } from "lucide-react";
 import type { Room } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
-import { Switch } from "../ui/switch";
-import { Label } from "../ui/label";
 
 interface RoomManagementDialogProps {
   isOpen: boolean;
@@ -42,30 +40,7 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isExtending, setIsExtending] = useState(false);
   const [isIncreasingLimit, setIsIncreasingLimit] = useState(false);
-  const [isSavingSettings, setIsSavingSettings] = useState(false);
-  const [requestToSpeak, setRequestToSpeak] = useState(false);
   
-  useEffect(() => {
-    if (room) {
-        setRequestToSpeak(room.requestToSpeakEnabled || false);
-    }
-  }, [room]);
-  
-
-  const handleToggleRequestToSpeak = async (enabled: boolean) => {
-    if (!room) return;
-    setIsSavingSettings(true);
-    try {
-        await updateRoomSettings(room.id, { requestToSpeakEnabled: enabled });
-        setRequestToSpeak(enabled);
-        toast({ description: "Oda ayarları güncellendi."})
-    } catch (e: any) {
-        toast({ variant: 'destructive', description: e.message });
-    } finally {
-        setIsSavingSettings(false);
-    }
-  }
-
   const handleDeleteRoom = async () => {
     if (!room || !user) return;
     setIsDeleting(true);
@@ -143,14 +118,6 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
           </DialogHeader>
 
           <div className="py-4 space-y-4">
-             <div className="flex items-center justify-between rounded-lg border p-3">
-                <div className="space-y-0.5">
-                    <Label htmlFor="requests-mode" className="font-semibold flex items-center gap-2"><Hand className="h-4 w-4" /> El Kaldırma Modu</Label>
-                    <p className="text-xs text-muted-foreground pl-6">Aktifse, katılımcıların konuşmak için izin istemesi gerekir.</p>
-                </div>
-                <Switch id="requests-mode" checked={requestToSpeak} onCheckedChange={handleToggleRequestToSpeak} disabled={isSavingSettings}/>
-            </div>
-
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
                 <h4 className="font-bold text-foreground">Süreyi Uzat (+20 dk)</h4>
