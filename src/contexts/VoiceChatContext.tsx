@@ -39,6 +39,7 @@ interface VoiceChatContextType {
     stopScreenShare: () => Promise<void>;
     startVideo: () => Promise<void>;
     stopVideo: () => Promise<void>;
+    switchCamera: () => Promise<void>;
     joinRoom: (options?: { muted: boolean }) => Promise<void>;
     leaveRoom: () => Promise<void>;
     leaveVoiceOnly: () => Promise<void>;
@@ -75,6 +76,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [isSharingVideo, setIsSharingVideo] = useState(false);
+    const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
     const [localScreenStream, setLocalScreenStream] = useState<MediaStream | null>(null);
     const [remoteAudioStreams, setRemoteAudioStreams] = useState<Record<string, MediaStream>>({});
     const [remoteVideoStreams, setRemoteVideoStreams] = useState<Record<string, MediaStream>>({});
@@ -405,14 +407,16 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         
         setIsConnecting(true);
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000 }, video: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000 }, 
+                video: { facingMode }
+            });
             stream.getVideoTracks()[0].enabled = false;
-            if (options?.muted ?? true) { // Mute by default
-                stream.getAudioTracks()[0].enabled = false;
-            }
+            // No longer muting by default
+            
             setLocalStream(stream);
             
-            const result = await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL }, { initialMuteState: options?.muted ?? true });
+            const result = await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL }, { initialMuteState: options?.muted ?? false });
             if (!result.success) {
                 throw new Error(result.error || 'Sesli sohbete katılamadınız.');
             }
@@ -424,7 +428,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         } finally {
             setIsConnecting(false);
         }
-    }, [user, activeRoomId, isConnected, isConnecting, toast, _cleanupAndResetState]);
+    }, [user, activeRoomId, isConnected, isConnecting, toast, _cleanupAndResetState, facingMode]);
     
     const leaveVoiceOnly = useCallback(async () => {
         if (!user || !connectedRoomId) return;
@@ -534,16 +538,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         }
     }, [self, connectedRoomId, localStream, user]);
 
-     const startVideo = useCallback(async () => {
-        if (!self || !connectedRoomId || !localStream || isSharingVideo) return;
-        const videoTrack = localStream.getVideoTracks()[0];
-        if (videoTrack) {
-            videoTrack.enabled = true;
-            setIsSharingVideo(true);
-            await toggleVideoAction(connectedRoomId, self.uid, true);
-        }
-    }, [self, connectedRoomId, localStream, isSharingVideo]);
-
     const stopVideo = useCallback(async () => {
         if (!self || !connectedRoomId || !localStream || !isSharingVideo) return;
         const videoTrack = localStream.getVideoTracks()[0];
@@ -553,6 +547,59 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             await toggleVideoAction(connectedRoomId, self.uid, false);
         }
     }, [self, connectedRoomId, localStream, isSharingVideo]);
+    
+    const startVideo = useCallback(async () => {
+        if (!self || !connectedRoomId || !localStream || isSharingVideo) return;
+        const videoTrack = localStream.getVideoTracks()[0];
+        if (videoTrack) {
+            videoTrack.enabled = true;
+            setIsSharingVideo(true);
+            await toggleVideoAction(connectedRoomId, self.uid, true);
+        }
+    }, [self, connectedRoomId, localStream, isSharingVideo]);
+
+    const switchCamera = useCallback(async () => {
+        if (!isConnected || !localStream || !isSharingVideo) return;
+
+        const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
+        
+        try {
+            // Get new video stream with new facing mode
+            const newVideoStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: newFacingMode }
+            });
+            const newVideoTrack = newVideoStream.getVideoTracks()[0];
+            
+            if (!newVideoTrack) throw new Error("Yeni kamera akışı alınamadı.");
+
+            // Replace the track in the local stream
+            const oldTrack = localStream.getVideoTracks()[0];
+            localStream.removeTrack(oldTrack);
+            oldTrack.stop();
+            localStream.addTrack(newVideoTrack);
+
+            // Replace the track for all peer connections
+            for (const peerId in peerConnections.current) {
+                const sender = peerConnections.current[peerId].getSenders().find(
+                    s => s.track?.kind === 'video'
+                );
+                if (sender) {
+                    await sender.replaceTrack(newVideoTrack);
+                }
+            }
+            
+            setFacingMode(newFacingMode);
+        } catch (error) {
+            console.error("Error switching camera:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Kamera Değiştirilemedi',
+                description: 'Arka kamera bulunamadı veya bir hata oluştu.',
+            });
+            // If switching fails, stop video to avoid a broken state
+            await stopVideo();
+        }
+    }, [isConnected, localStream, isSharingVideo, facingMode, toast, stopVideo]);
 
 
     useEffect(() => {
@@ -606,7 +653,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     
     const value = {
         activeRoom, participants: memoizedParticipants, self, isConnecting, isConnected, remoteAudioStreams, remoteScreenStreams, remoteVideoStreams, localStream, isSharingScreen, isSharingVideo,
-        setActiveRoomId, joinRoom, leaveRoom, leaveVoiceOnly, toggleSelfMute, startScreenShare, stopScreenShare, startVideo, stopVideo,
+        setActiveRoomId, joinRoom, leaveRoom, leaveVoiceOnly, toggleSelfMute, startScreenShare, stopScreenShare, startVideo, stopVideo, switchCamera,
         // Music Player values
         playlist, currentTrackIndex, isMusicPlaying, musicVolume, addToPlaylist, removeFromPlaylist, togglePlayPause, playNextTrack, playPreviousTrack, stopPlaylist, setMusicVolume: setMusicVolumeCallback
     };
