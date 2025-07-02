@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { Home, MessageSquare, PlusSquare, Swords } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { Home, MessageSquare, PlusSquare, Compass } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -16,7 +16,7 @@ export default function BottomNav() {
   }
 
   // Hide nav on specific full-screen pages
-  if ((pathname.startsWith('/rooms/') && pathname !== '/rooms') || (pathname.startsWith('/dm/') && pathname !== '/dm')) {
+  if ((pathname.startsWith('/rooms/') && pathname !== '/rooms') || (pathname.startsWith('/dm/') && pathname !== '/dm') || (pathname.startsWith('/call/'))) {
     return null;
   }
 
@@ -29,18 +29,11 @@ export default function BottomNav() {
       label: 'Anasayfa',
     },
     {
-      id: 'rooms',
-      isActive: pathname === '/rooms' || pathname === '/create-room',
-      href: '/rooms',
-      icon: MessageSquare,
-      label: 'Odalar',
-    },
-    {
-        id: 'matchmaking',
-        isActive: pathname === '/matchmaking',
-        href: '/matchmaking',
-        icon: Swords,
-        label: 'Eşleşme',
+      id: 'explore',
+      isActive: pathname === '/explore',
+      href: '/explore',
+      icon: Compass,
+      label: 'Keşfet',
     },
     {
       id: 'create-post',
@@ -48,6 +41,13 @@ export default function BottomNav() {
       href: '/create-post',
       icon: PlusSquare,
       label: 'Oluştur',
+    },
+    {
+      id: 'rooms',
+      isActive: pathname === '/rooms' || pathname === '/create-room',
+      href: '/rooms',
+      icon: MessageSquare,
+      label: 'Odalar',
     },
     {
       id: 'profile',
