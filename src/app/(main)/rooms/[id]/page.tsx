@@ -64,10 +64,11 @@ export default function RoomPage() {
     useEffect(() => {
         if (!room || !featureFlags?.quizGameEnabled || !user) return;
     
-        // The first participant in the list acts as the game host to prevent multiple triggers.
-        const isDesignatedGameStarter = room.participants[0]?.uid === user.uid;
+        // A designated user will trigger the game to prevent multiple triggers.
+        // For simplicity, we choose the user whose UID comes first alphabetically.
+        const designatedStarter = room.participants.sort((a, b) => a.uid.localeCompare(b.uid))[0];
     
-        if (!isDesignatedGameStarter) return;
+        if (!designatedStarter || designatedStarter.uid !== user.uid) return;
     
         const checkAndStartGame = async () => {
             if (!room?.id) return;
@@ -231,7 +232,6 @@ export default function RoomPage() {
                     room={room} 
                     isHost={isHost} 
                     onParticipantListToggle={() => setIsParticipantSheetOpen(true)} 
-                    onBackClick={() => router.back()}
                     isSpeakerLayoutCollapsed={isSpeakerLayoutCollapsed}
                     onToggleCollapse={() => setIsSpeakerLayoutCollapsed(p => !p)}
                 />

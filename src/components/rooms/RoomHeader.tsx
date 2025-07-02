@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft, MoreHorizontal, Users, UserPlus, Gift, Zap, ChevronUp, ChevronDown, Clock } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Users, UserPlus, Gift, Zap, ChevronUp, ChevronDown, Clock, LogOut, MicOff, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Room } from '@/lib/types';
 import InviteDialog from './InviteDialog';
@@ -12,15 +12,17 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Timestamp } from 'firebase/firestore';
 import { addSystemMessage } from '@/lib/actions/roomActions';
+import { useVoiceChat } from '@/contexts/VoiceChatContext';
+import { useRouter } from 'next/navigation';
 
 interface RoomHeaderProps {
   room: Room;
   isHost: boolean;
   onParticipantListToggle: () => void;
-  onBackClick: () => void;
   isSpeakerLayoutCollapsed: boolean;
   onToggleCollapse: () => void;
 }
@@ -32,11 +34,14 @@ const formatTime = (totalSeconds: number) => {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
 
-export default function RoomHeader({ room, isHost, onParticipantListToggle, onBackClick, isSpeakerLayoutCollapsed, onToggleCollapse }: RoomHeaderProps) {
+export default function RoomHeader({ room, isHost, onParticipantListToggle, isSpeakerLayoutCollapsed, onToggleCollapse }: RoomHeaderProps) {
     const [isInviteOpen, setIsInviteOpen] = useState(false);
     const [isPortalDialogOpen, setIsPortalDialogOpen] = useState(false);
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
     const [warningSent, setWarningSent] = useState(false);
+    const { leaveRoom, leaveVoiceOnly } = useVoiceChat();
+    const router = useRouter();
+
 
     useEffect(() => {
         if (!room.expiresAt) return;
@@ -64,10 +69,26 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, onBa
         <>
             <header className="flex items-center justify-between p-3 border-b shrink-0 bg-background/50 backdrop-blur-sm">
                 <div className="flex items-center gap-1">
-                    <Button onClick={onBackClick} variant="ghost" size="icon" className="rounded-full">
-                        <ChevronLeft />
-                    </Button>
-                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="rounded-full">
+                          <ChevronLeft />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuItem onClick={() => router.push('/rooms')}>
+                          <Minimize2 className="mr-2 h-4 w-4" /> Odayı Küçült
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={leaveVoiceOnly}>
+                          <MicOff className="mr-2 h-4 w-4" /> Sesden Ayrıl
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={leaveRoom} className="text-destructive focus:text-destructive">
+                          <LogOut className="mr-2 h-4 w-4" /> Odadan Ayrıl
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
                     {isHost && (
                          <div className="relative">
                             <Button onClick={() => setIsPortalDialogOpen(true)} variant="ghost" size="icon" className="rounded-full text-yellow-400 hover:text-yellow-300 animate-pulse" disabled={hasActivePortal}>

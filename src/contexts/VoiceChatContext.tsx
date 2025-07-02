@@ -3,10 +3,11 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, onSnapshot, doc, addDoc, query, where, deleteDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, addDoc, query, where, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Room, VoiceParticipant } from '../types';
-import { joinVoiceChat, leaveVoiceChat, toggleSelfMute as toggleMuteAction, toggleScreenShare as toggleScreenShareAction, toggleVideo as toggleVideoAction, updateLastActive } from '@/lib/actions/voiceActions';
+import { joinVoiceChat, leaveVoice, toggleSelfMute as toggleMuteAction, toggleScreenShare as toggleScreenShareAction, toggleVideo as toggleVideoAction, updateLastActive } from '@/lib/actions/voiceActions';
+import { leaveRoom as leaveRoomAction } from '@/lib/actions/roomActions';
 import { useToast } from '@/hooks/use-toast';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -40,6 +41,7 @@ interface VoiceChatContextType {
     stopVideo: () => Promise<void>;
     joinRoom: (options?: { muted: boolean }) => Promise<void>;
     leaveRoom: () => Promise<void>;
+    leaveVoiceOnly: () => Promise<void>;
     toggleSelfMute: () => Promise<void>;
     // Music Player
     playlist: File[];
@@ -423,13 +425,21 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             setIsConnecting(false);
         }
     }, [user, activeRoomId, isConnected, isConnecting, toast, _cleanupAndResetState]);
+    
+    const leaveVoiceOnly = useCallback(async () => {
+        if (!user || !connectedRoomId) return;
+        await leaveVoice(connectedRoomId, user.uid);
+        _cleanupAndResetState();
+    }, [user, connectedRoomId, _cleanupAndResetState]);
 
     const leaveRoom = useCallback(async () => {
         if (!user || !connectedRoomId) return;
-        await leaveVoiceChat(connectedRoomId, user.uid);
+        await leaveVoice(connectedRoomId, user.uid);
+        await leaveRoomAction(connectedRoomId, user.uid, user.displayName || 'Biri');
         _cleanupAndResetState();
-    }, [user, connectedRoomId, _cleanupAndResetState]);
-    
+        router.push('/rooms');
+    }, [user, connectedRoomId, _cleanupAndResetState, router]);
+
     const stopScreenShare = useCallback(async () => {
         if (!user || !connectedRoomId || !localScreenStream) return;
         localScreenStream.getTracks().forEach(track => track.stop());
@@ -596,7 +606,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     
     const value = {
         activeRoom, participants: memoizedParticipants, self, isConnecting, isConnected, remoteAudioStreams, remoteScreenStreams, remoteVideoStreams, localStream, isSharingScreen, isSharingVideo,
-        setActiveRoomId, joinRoom, leaveRoom, toggleSelfMute, startScreenShare, stopScreenShare, startVideo, stopVideo,
+        setActiveRoomId, joinRoom, leaveRoom, leaveVoiceOnly, toggleSelfMute, startScreenShare, stopScreenShare, startVideo, stopVideo,
         // Music Player values
         playlist, currentTrackIndex, isMusicPlaying, musicVolume, addToPlaylist, removeFromPlaylist, togglePlayPause, playNextTrack, playPreviousTrack, stopPlaylist, setMusicVolume: setMusicVolumeCallback
     };

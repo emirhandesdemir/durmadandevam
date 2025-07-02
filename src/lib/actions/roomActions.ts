@@ -253,6 +253,38 @@ export async function joinRoom(roomId: string, userInfo: UserInfo) {
     return { success: true };
 }
 
+export async function leaveRoom(roomId: string, userId: string, username: string) {
+    if (!roomId || !userId) throw new Error("Oda ve kullanıcı bilgisi gerekli.");
+
+    const roomRef = doc(db, "rooms", roomId);
+    
+    await runTransaction(db, async (transaction) => {
+        const roomDoc = await transaction.get(roomRef);
+        if (!roomDoc.exists()) return;
+
+        const roomData = roomDoc.data() as Room;
+
+        const participantToRemove = roomData.participants?.find(p => p.uid === userId);
+        if (participantToRemove) {
+            transaction.update(roomRef, {
+                participants: arrayRemove(participantToRemove)
+            });
+
+            const messagesRef = collection(db, 'rooms', roomId, 'messages');
+            const leaveMessage = {
+                type: 'system',
+                text: `🏃 ${username || 'Bir kullanıcı'} odadan ayrıldı.`,
+                createdAt: serverTimestamp(),
+                uid: 'system',
+                username: 'System',
+            };
+            transaction.set(doc(messagesRef), leaveMessage);
+        }
+    });
+
+    return { success: true };
+}
+
 export async function sendRoomInvite(
   roomId: string,
   roomName: string,

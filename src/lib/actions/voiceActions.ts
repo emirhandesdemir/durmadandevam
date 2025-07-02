@@ -12,12 +12,7 @@ import {
     updateDoc,
     Timestamp,
     deleteDoc,
-    arrayRemove,
-    getDocs,
-    writeBatch,
-    arrayUnion,
-    query,
-    where
+    setDoc
 } from 'firebase/firestore';
 import type { Room, VoiceParticipant } from '../types';
 
@@ -76,29 +71,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo, options?: { 
             };
             
             transaction.set(userVoiceRef, participantData);
-
-            const isAlreadyParticipant = roomData.participants?.some(p => p.uid === user.uid);
-            const roomUpdates: { [key: string]: any } = { voiceParticipantsCount: increment(1) };
-            const newParticipantData = {
-                uid: user.uid,
-                username: user.displayName || 'Anonim',
-                photoURL: user.photoURL || null
-            };
-
-            if (!isAlreadyParticipant) {
-                roomUpdates.participants = arrayUnion(newParticipantData);
-                const messagesRef = collection(db, 'rooms', roomId, 'messages');
-                const joinMessage = {
-                    type: 'system',
-                    text: `👋 ${newParticipantData.username} odaya katıldı.`,
-                    createdAt: serverTimestamp(),
-                    uid: 'system',
-                    username: 'System',
-                };
-                transaction.set(doc(messagesRef), joinMessage);
-            }
-
-            transaction.update(roomRef, roomUpdates);
+            transaction.update(roomRef, { voiceParticipantsCount: increment(1) });
             transaction.set(voiceStatsRef, { totalUsers: increment(1) }, { merge: true });
         });
         
@@ -112,8 +85,9 @@ export async function joinVoiceChat(roomId: string, user: UserInfo, options?: { 
 
 /**
  * Kullanıcının sesli sohbetten ayrılması için sunucu eylemi.
+ * Bu fonksiyon sadece sesli sohbetle ilgili verileri temizler.
  */
-export async function leaveVoiceChat(roomId: string, userId: string) {
+export async function leaveVoice(roomId: string, userId: string) {
     if (!userId) throw new Error("Yetkilendirme hatası.");
 
     const roomRef = doc(db, 'rooms', roomId);
@@ -121,35 +95,13 @@ export async function leaveVoiceChat(roomId: string, userId: string) {
 
     try {
         await runTransaction(db, async (transaction) => {
-            const roomDoc = await transaction.get(roomRef);
             const userVoiceDoc = await transaction.get(userVoiceRef);
-
-            if (!roomDoc.exists()) return; // Oda silinmiş olabilir, sessizce çık.
-            const roomData = roomDoc.data() as Room;
 
             // Eğer sesli sohbetteyse, çıkar.
             if (userVoiceDoc.exists()) {
                 transaction.delete(userVoiceRef);
                 transaction.update(roomRef, { voiceParticipantsCount: increment(-1) });
                 transaction.set(voiceStatsRef, { totalUsers: increment(-1) }, { merge: true });
-            }
-
-            // Ayrıca ana katılımcı listesinden çıkar ve sistem mesajı gönder.
-            const participantToRemove = roomData.participants?.find(p => p.uid === userId);
-            if (participantToRemove) {
-                transaction.update(roomRef, {
-                    participants: arrayRemove(participantToRemove)
-                });
-                
-                const messagesRef = collection(db, 'rooms', roomId, 'messages');
-                const leaveMessage = {
-                    type: 'system',
-                    text: `🏃 ${participantToRemove.username || 'Bir kullanıcı'} odadan ayrıldı.`,
-                    createdAt: serverTimestamp(),
-                    uid: 'system',
-                    username: 'System',
-                };
-                transaction.set(doc(messagesRef), leaveMessage);
             }
         });
         return { success: true };
