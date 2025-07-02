@@ -4,7 +4,7 @@
 import { db, storage } from '@/lib/firebase';
 import { deleteRoomWithSubcollections } from '@/lib/firestoreUtils';
 import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch, arrayUnion, arrayRemove, updateDoc, runTransaction, increment, setDoc, query, where, getDocs, orderBy, deleteField } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { createNotification } from './notificationActions';
 import type { Room, Message, PlaylistTrack } from '../types';
 import { createDmFromMatchRoom } from './dmActions';
@@ -598,27 +598,32 @@ export async function deleteMessageByHost(roomId: string, messageId: string, hos
 
 
 // MUSIC ACTIONS
-export async function addTrackToPlaylist(roomId: string, file: File, userInfo: { uid: string, username: string }) {
-    if (!file) throw new Error("Dosya gerekli.");
-    if (file.size > 15 * 1024 * 1024) throw new Error("Müzik dosyası 15MB'dan büyük olamaz.");
+export async function addTrackToPlaylist(
+    data: { roomId: string, fileName: string, fileDataUrl: string },
+    userInfo: { uid: string, username: string }
+) {
+    if (!data.fileDataUrl) throw new Error("Dosya verisi gerekli.");
+    if (!data.fileName) throw new Error("Dosya adı gerekli.");
+
+    const { roomId, fileName, fileDataUrl } = data;
 
     const roomRef = doc(db, 'rooms', roomId);
     const playlistRef = collection(roomRef, 'playlist');
     
-    // Check playlist size
     const playlistSnapshot = await getDocs(playlistRef);
     if (playlistSnapshot.size >= 20) {
         throw new Error("Çalma listesi dolu (Maksimum 20 şarkı).");
     }
 
-    const storagePath = `music/${roomId}/${uuidv4()}_${file.name}`;
+    const storagePath = `music/${roomId}/${uuidv4()}_${fileName}`;
     const musicStorageRef = ref(storage, storagePath);
-    await uploadBytes(musicStorageRef, file);
+    
+    await uploadString(musicStorageRef, fileDataUrl, 'data_url');
     const fileUrl = await getDownloadURL(musicStorageRef);
     
     const newTrackDoc = doc(playlistRef);
     const newTrackData: Omit<PlaylistTrack, 'id'> = {
-        name: file.name,
+        name: fileName,
         fileUrl,
         storagePath,
         addedByUid: userInfo.uid,
@@ -628,7 +633,6 @@ export async function addTrackToPlaylist(roomId: string, file: File, userInfo: {
     };
     await setDoc(newTrackDoc, newTrackData);
     
-    // If no one is DJing, claim it and start playing
     const roomDoc = await getDoc(roomRef);
     if (!roomDoc.data()?.djUid) {
         await controlPlayback(roomId, userInfo.uid, { action: 'play' });

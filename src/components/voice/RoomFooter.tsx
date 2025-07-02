@@ -72,7 +72,7 @@ export default function RoomFooter({ room, onGameLobbyOpen }: RoomFooterProps) {
         <>
             <footer className="sticky bottom-0 left-0 right-0 z-10 bg-background/80 backdrop-blur-sm border-t p-2">
                 <div className="flex w-full items-center space-x-2">
-                    <ChatMessageInput roomId={room.id} canSendMessage={isParticipant} />
+                    <ChatMessageInput room={room} />
                     <Button onClick={toggleSelfMute} variant="secondary" size="icon" className="rounded-full flex-shrink-0" disabled={!isConnected}>
                         {self?.isMuted ? <MicOff className="h-5 w-5 text-destructive"/> : <Mic className="h-5 w-5" />}
                     </Button>
@@ -108,6 +108,7 @@ export default function RoomFooter({ room, onGameLobbyOpen }: RoomFooterProps) {
              <MusicPlayerDialog 
                 isOpen={isMusicPlayerOpen}
                 onOpenChange={setIsMusicPlayerOpen}
+                roomId={room.id}
             />
             <AlertDialog open={showVideoConfirm} onOpenChange={setShowVideoConfirm}>
                 <AlertDialogContent>

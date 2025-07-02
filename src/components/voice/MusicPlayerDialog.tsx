@@ -14,13 +14,15 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Music, Plus, Play, Pause, SkipForward, SkipBack, Trash2, ListMusic, User, Loader2 } from 'lucide-react';
 import { useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface MusicPlayerDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  roomId: string;
 }
 
-export default function MusicPlayerDialog({ isOpen, onOpenChange }: MusicPlayerDialogProps) {
+export default function MusicPlayerDialog({ isOpen, onOpenChange, roomId }: MusicPlayerDialogProps) {
     const { user } = useAuth();
     const {
         livePlaylist,
@@ -34,12 +36,38 @@ export default function MusicPlayerDialog({ isOpen, onOpenChange }: MusicPlayerD
         skipTrack,
     } = useVoiceChat();
     const musicInputRef = useRef<HTMLInputElement>(null);
+    const { toast } = useToast();
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (file) {
-            await addTrackToPlaylist(file);
+        if (!file) return;
+
+        if (file.size > 15 * 1024 * 1024) {
+            toast({
+                variant: "destructive",
+                title: "Dosya Çok Büyük",
+                description: "Müzik dosyası 15MB'dan büyük olamaz."
+            });
+            if (event.target) event.target.value = "";
+            return;
         }
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onloadend = async () => {
+            const base64Data = reader.result as string;
+            if (base64Data) {
+                await addTrackToPlaylist({
+                    fileName: file.name,
+                    fileDataUrl: base64Data,
+                });
+            }
+        };
+        reader.onerror = (error) => {
+            console.error("Error reading file:", error);
+            toast({ variant: "destructive", description: "Dosya okunurken bir hata oluştu." });
+        };
+        
         if (event.target) {
             event.target.value = "";
         }

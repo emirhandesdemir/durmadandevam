@@ -50,7 +50,7 @@ interface VoiceChatContextType {
     isCurrentUserDj: boolean;
     isDjActive: boolean;
     isMusicLoading: boolean;
-    addTrackToPlaylist: (file: File) => Promise<void>;
+    addTrackToPlaylist: (data: { fileName: string, fileDataUrl: string }) => Promise<void>;
     removeTrackFromPlaylist: (trackId: string) => Promise<void>;
     togglePlayback: () => Promise<void>;
     skipTrack: (direction: 'next' | 'previous') => Promise<void>;
@@ -370,11 +370,18 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     }, [isConnected, localStream, isSharingVideo, facingMode, toast, stopVideo]);
 
     // --- MUSIC PLAYER ACTIONS ---
-    const addTrackToPlaylist = useCallback(async (file: File) => {
+    const addTrackToPlaylist = useCallback(async (data: { fileName: string, fileDataUrl: string }) => {
         if (!user || !activeRoomId || !userData) return;
         setIsMusicLoading(true);
         try {
-            await addTrackAction(activeRoomId, file, { uid: user.uid, username: userData.username });
+            await addTrackAction({
+                roomId: activeRoomId,
+                fileName: data.fileName,
+                fileDataUrl: data.fileDataUrl,
+            }, { 
+                uid: user.uid, 
+                username: userData.username 
+            });
         } catch (e: any) {
             toast({ variant: 'destructive', description: e.message });
         } finally {
