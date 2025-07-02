@@ -29,6 +29,7 @@ export interface UserProfile {
     hasUnreadNotifications?: boolean;
     fcmTokens?: string[];
     blockedUsers?: string[];
+    hiddenPostIds?: string[];
     isBanned?: boolean;
     reportCount?: number;
     isOnline?: boolean;
@@ -144,6 +145,7 @@ export interface Room {
     moderators: string[]; // List of moderator UIDs
     createdAt: Timestamp;
     expiresAt?: Timestamp; // Only for rooms
+    portalExpiresAt?: Timestamp; // For public announcements
     participants: { uid: string, username: string, photoURL?: string | null }[];
     maxParticipants: number;
     nextGameTimestamp?: Timestamp;

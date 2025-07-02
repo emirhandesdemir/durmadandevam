@@ -9,19 +9,24 @@ import PostCard from './PostCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
+import { hidePost } from '@/lib/actions/userActions';
 
 export default function PostsFeed() {
     const { user, userData, loading: authLoading } = useAuth();
     const { i18n } = useTranslation();
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
+    const [clientHiddenIds, setClientHiddenIds] = useState<string[]>([]);
 
     const sortedPosts = useMemo(() => {
         let postsData = [...posts];
-        // Filter out posts from users the current user has blocked
-        if (userData?.blockedUsers) {
-            postsData = postsData.filter(post => !userData.blockedUsers.includes(post.uid));
-        }
+
+        const allHiddenIds = new Set([...(userData?.hiddenPostIds || []), ...clientHiddenIds]);
+        
+        // Filter out posts from blocked users and hidden posts
+        postsData = postsData.filter(post => 
+            !userData?.blockedUsers?.includes(post.uid) && !allHiddenIds.has(post.id)
+        );
         
         // Language-based sorting
         const postsInUserLanguage = postsData.filter(p => p.language === i18n.language);
@@ -58,7 +63,14 @@ export default function PostsFeed() {
         } else {
             return languageSortedFeed;
         }
-    }, [posts, userData, i18n.language]);
+    }, [posts, userData, i18n.language, clientHiddenIds]);
+    
+    const handleHidePost = async (postId: string) => {
+        setClientHiddenIds(prev => [...prev, postId]);
+        if (user) {
+            await hidePost(user.uid, postId);
+        }
+    };
 
     useEffect(() => {
         if (authLoading) return;
@@ -107,7 +119,7 @@ export default function PostsFeed() {
         <div className="w-full">
              <div className="divide-y divide-border bg-card/50">
                 {sortedPosts.map(post => (
-                    <PostCard key={post.id} post={post} />
+                    <PostCard key={post.id} post={post} onHide={handleHidePost} />
                 ))}
             </div>
         </div>

@@ -3,16 +3,20 @@
 
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, Settings, Gem } from 'lucide-react';
+import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff } from 'lucide-react';
 import FollowButton from './FollowButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 import FollowListDialog from './FollowListDialog';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { getChatId } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import SendDiamondDialog from '../diamond/SendDiamondDialog';
-
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useToast } from '@/hooks/use-toast';
+import { blockUser } from '@/lib/actions/userActions';
+import ReportDialog from '../common/ReportDialog';
 
 interface ProfileHeaderProps {
   profileUser: any;
@@ -20,17 +24,34 @@ interface ProfileHeaderProps {
 
 export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
   const { user: currentUserAuth, userData: currentUserData } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<'followers' | 'following'>('followers');
   const [sendDiamondOpen, setSendDiamondOpen] = useState(false);
+  const [isBlocking, setIsBlocking] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
 
   const isOwnProfile = currentUserAuth?.uid === profileUser.uid;
   const areMutuals = currentUserData?.following?.includes(profileUser.uid) && profileUser.following?.includes(currentUserAuth?.uid);
 
-
   const handleStatClick = (type: 'followers' | 'following') => {
     setDialogType(type);
     setDialogOpen(true);
+  };
+
+  const handleBlockUser = async () => {
+    if (!currentUserData) return;
+    setIsBlocking(true);
+    const result = await blockUser(currentUserData.uid, profileUser.uid);
+    setIsBlocking(false);
+    if (result.success) {
+      toast({ description: `${profileUser.username} engellendi.` });
+      router.push('/home');
+    } else {
+      toast({ variant: 'destructive', description: result.error });
+    }
   };
   
   const userIdsToShow = dialogType === 'followers' ? profileUser.followers : profileUser.following;
@@ -76,12 +97,11 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
         
         {/* Action Buttons */}
         <div className={cn(
-            "mt-4 w-full max-w-sm gap-2",
-            isOwnProfile ? "flex justify-center" : "grid grid-cols-2"
+            "mt-4 w-full max-w-sm flex justify-center items-center gap-2"
         )}>
            {isOwnProfile ? (
               <>
-                <Button asChild variant="secondary">
+                <Button asChild variant="secondary" className="flex-1">
                     <Link href="/profile">Profili Düzenle</Link>
                 </Button>
                 <Button asChild variant="secondary" size="icon">
@@ -93,16 +113,27 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
             ) : (
                 <>
                     <FollowButton currentUserData={currentUserData} targetUser={profileUser} />
-                    <Button asChild>
+                    <Button asChild className="flex-1">
                         <Link href={`/dm/${getChatId(currentUserAuth!.uid, profileUser.uid)}`}>
                            <MessageCircle className="mr-2 h-4 w-4"/> Mesaj
                         </Link>
                     </Button>
-                    {areMutuals && (
-                         <Button onClick={() => setSendDiamondOpen(true)} variant="outline" className="col-span-2">
-                            <Gem className="mr-2 h-4 w-4"/> Elmas Gönder
-                        </Button>
-                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="icon"><MoreHorizontal /></Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => setSendDiamondOpen(true)} disabled={!areMutuals}>
+                          <Gem className="mr-2 h-4 w-4"/>Elmas Gönder
+                        </DropdownMenuItem>
+                         <DropdownMenuItem onSelect={() => setIsReportOpen(true)}>
+                            Şikayet Et
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={handleBlockUser} className="text-destructive focus:text-destructive">
+                           <ShieldOff className="mr-2 h-4 w-4"/> Engelle
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                 </>
             )}
         </div>
@@ -117,6 +148,11 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
         isOpen={sendDiamondOpen}
         onOpenChange={setSendDiamondOpen}
         recipient={profileUser}
+      />
+      <ReportDialog 
+        isOpen={isReportOpen}
+        onOpenChange={setIsReportOpen}
+        target={{ type: 'user', id: profileUser.uid, name: profileUser.username }}
       />
     </>
   );

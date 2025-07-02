@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Post } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck, Sparkles, Repeat } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck, Sparkles, Repeat, EyeOff } from "lucide-react";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -20,6 +20,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
@@ -41,9 +42,10 @@ import QuoteRetweetDialog from "./QuoteRetweetDialog";
 interface PostCardProps {
     post: Post;
     isStandalone?: boolean;
+    onHide?: (postId: string) => void;
 }
 
-export default function PostCard({ post, isStandalone = false }: PostCardProps) {
+export default function PostCard({ post, isStandalone = false, onHide }: PostCardProps) {
     const { user: currentUser, userData: currentUserData } = useAuth();
     const { toast } = useToast();
 
@@ -175,6 +177,12 @@ export default function PostCard({ post, isStandalone = false }: PostCardProps) 
         setPostToRetweet(post);
     };
     
+    const handleHide = () => {
+        if (onHide) {
+            onHide(post.id);
+        }
+    };
+
     if (post.retweetOf) {
         const originalPost = post.retweetOf;
         const originalCreatedAtDate = originalPost.createdAt && 'seconds' in originalPost.createdAt
@@ -338,19 +346,26 @@ export default function PostCard({ post, isStandalone = false }: PostCardProps) 
                             )}
                             {post.editedWithAI && <span>·</span>}
                             <span>{timeAgo}</span>
-                            {isOwner && !isEditing && (
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full -mr-2">
-                                            <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => setIsEditing(true)}><Edit className="mr-2 h-4 w-4" /><span>Düzenle</span></DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Sil</span></DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            )}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full -mr-2">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    {isOwner ? (
+                                        <>
+                                            <DropdownMenuItem onClick={() => setIsEditing(true)}><Edit className="mr-2 h-4 w-4" /><span>Düzenle</span></DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Sil</span></DropdownMenuItem>
+                                        </>
+                                    ) : (
+                                        <DropdownMenuItem onClick={handleHide}>
+                                            <EyeOff className="mr-2 h-4 w-4" />
+                                            <span>İlgilenmiyorum</span>
+                                        </DropdownMenuItem>
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                     </div>
                     

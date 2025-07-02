@@ -144,6 +144,7 @@ export async function blockUser(blockerId: string, targetId: string) {
             blockedUsers: arrayUnion(targetId)
         });
         revalidatePath(`/profile/${targetId}`);
+        revalidatePath(`/home`);
         return { success: true };
     } catch (error: any) {
         return { success: false, error: "Kullanıcı engellenemedi: " + error.message };
@@ -244,5 +245,22 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
         revalidatePath(`/profile/${uid}`);
     } catch (error) {
         console.error("Kullanıcı gönderileri güncellenirken hata:", error);
+    }
+}
+
+
+export async function hidePost(userId: string, postId: string) {
+    if (!userId || !postId) throw new Error("Kullanıcı ve gönderi ID'leri gereklidir.");
+
+    const userRef = doc(db, 'users', userId);
+    try {
+        await updateDoc(userRef, {
+            hiddenPostIds: arrayUnion(postId)
+        });
+        revalidatePath('/home');
+        return { success: true };
+    } catch (error: any) {
+        console.error("Gönderi gizlenirken hata:", error);
+        return { success: false, error: "Gönderi gizlenemedi." };
     }
 }
