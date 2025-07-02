@@ -11,10 +11,15 @@ import type { Call } from '@/lib/types';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Mic, MicOff, PhoneOff, Video as VideoIcon, VideoOff, ChevronDown, MoreHorizontal, Volume2, VolumeX, Loader2 } from 'lucide-react';
+import { Mic, MicOff, PhoneOff, Video as VideoIcon, VideoOff, MoreHorizontal, Volume2, VolumeX, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import Image from 'next/image';
+
+// Define the UserInfo type locally as it's used for partner state
+interface UserInfo {
+  username: string;
+  photoURL: string | null;
+}
 
 const ICE_SERVERS = {
   iceServers: [
@@ -29,7 +34,6 @@ const ICE_SERVERS = {
 };
 
 
-// A more unique, self-contained Control component
 function CallControls({ onHangUp, onToggleMute, isMuted, onToggleVideo, isVideoOff, onToggleSpeaker, isSpeakerOn }: any) {
   return (
     <motion.div
@@ -37,10 +41,8 @@ function CallControls({ onHangUp, onToggleMute, isMuted, onToggleVideo, isVideoO
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 100, opacity: 0 }}
       transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-      // This container is centered
       className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20"
     >
-        {/* This flexbox ensures the buttons inside are aligned and spaced correctly */}
         <div className="flex items-center justify-center gap-6 rounded-full bg-black/40 p-4 backdrop-blur-sm">
             <Button onClick={onToggleVideo} variant="ghost" size="icon" className="h-14 w-14 rounded-full bg-white/20 text-white hover:bg-white/30">
                 {isVideoOff ? <VideoOff size={28}/> : <VideoIcon size={28}/>}
@@ -62,7 +64,6 @@ function CallControls({ onHangUp, onToggleMute, isMuted, onToggleVideo, isVideoO
   );
 }
 
-// Draggable local video view
 function LocalVideoView({ stream }: { stream: MediaStream | null }) {
     const videoRef = useRef<HTMLVideoElement>(null);
     useEffect(() => {
@@ -93,18 +94,16 @@ export default function CallPage() {
 
   const [loading, setLoading] = useState(true);
   const [callData, setCallData] = useState<Call | null>(null);
+  const [partner, setPartner] = useState<UserInfo | null>(null);
   const [isMuted, setIsMuted] = useState(false);
-  const [isVideoOff, setIsVideoOff] = useState(true); // Start with video off
+  const [isVideoOff, setIsVideoOff] = useState(true);
   const [isSpeakerOn, setIsSpeakerOn] = useState(true);
   const [partnerVideoOn, setPartnerVideoOn] = useState(false);
   
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
-  
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
-  const partner = user?.uid === callData?.callerId ? callData?.receiverInfo : callData?.callerInfo;
-  
   const getCallStatusText = () => {
       switch (callData?.status) {
           case 'ringing': return 'Çalıyor...';
@@ -144,18 +143,21 @@ export default function CallPage() {
     const callRef = doc(db, 'calls', callId);
     const unsubscribeCall = onSnapshot(callRef, (snapshot) => {
       if (!snapshot.exists()) {
-        toast({ variant: 'destructive', description: "Arama bulunamadı." });
-        setLoading(false);
+        toast({ variant: 'destructive', description: "Arama bulunamadı veya sonlandırıldı." });
         cleanupCall();
         return;
       }
       
       const data = { id: snapshot.id, ...snapshot.data() } as Call;
+      const derivedPartner = user.uid === data.callerId ? data.receiverInfo : data.callerInfo;
+      
       setCallData(data);
-      setLoading(false);
+      setPartner(derivedPartner);
       
       const partnerId = data.callerId === user.uid ? data.receiverId : data.callerId;
       setPartnerVideoOn(data.videoStatus?.[partnerId] ?? false);
+
+      setLoading(false);
 
       if (data.status === 'ended' || data.status === 'declined' || data.status === 'missed') {
         toast({ description: "Arama sonlandırıldı." });
@@ -164,7 +166,6 @@ export default function CallPage() {
     }, (error) => {
         console.error("Arama verisi alınamadı:", error);
         toast({ variant: 'destructive', description: "Arama bilgileri alınamadı. Bağlantı hatası olabilir." });
-        setLoading(false);
         cleanupCall();
     });
 
@@ -227,14 +228,14 @@ export default function CallPage() {
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     const init = async () => {
-        if (user && callData && !loading) {
+        if (user && callData && partner && !loading) {
             const isCaller = callData.callerId === user.uid;
             unsubscribe = await setupWebRTC(isCaller);
         }
     };
     init().catch(e => console.error("Failed to initialize WebRTC", e));
     return () => { unsubscribe?.(); };
-  }, [user, callData, loading, setupWebRTC]);
+  }, [user, callData, partner, loading, setupWebRTC]);
 
 
   // Effect for caller: create offer
@@ -291,7 +292,6 @@ export default function CallPage() {
   };
 
   const toggleSpeaker = () => {
-      // Note: Actual speaker control is complex. This toggles the audio element's muted state for simplicity.
       if (remoteVideoRef.current) {
         remoteVideoRef.current.muted = !remoteVideoRef.current.muted;
       }
@@ -309,7 +309,7 @@ export default function CallPage() {
       }
   };
 
-  if (loading) {
+  if (loading || !callData || !partner) {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center bg-slate-900">
         <Loader2 className="h-10 w-10 animate-spin text-white" />
@@ -318,11 +318,10 @@ export default function CallPage() {
     );
   }
 
-  const showRemoteVideo = partnerVideoOn && callData?.type === 'video' && callData?.status === 'active';
+  const showRemoteVideo = partnerVideoOn && callData.type === 'video' && callData.status === 'active';
 
   return (
     <div className="relative h-full w-full bg-gradient-to-br from-slate-900 via-slate-800 to-gray-900 text-white overflow-hidden">
-        {/* Remote Video / Background */}
         <video 
             ref={remoteVideoRef} 
             autoPlay 
@@ -334,10 +333,8 @@ export default function CallPage() {
             )} 
         />
         
-        {/* Local Video */}
         {!isVideoOff && <LocalVideoView stream={localStreamRef.current} />}
 
-        {/* Fallback UI when video is off */}
         <AnimatePresence>
         {!showRemoteVideo && (
             <motion.div
@@ -348,10 +345,10 @@ export default function CallPage() {
             >
                 <div className="relative">
                     <Avatar className="h-40 w-40 border-4 border-white/20">
-                        <AvatarImage src={partner?.photoURL || undefined} />
-                        <AvatarFallback className="text-6xl bg-gray-600">{partner?.username.charAt(0)}</AvatarFallback>
+                        <AvatarImage src={partner.photoURL || undefined} />
+                        <AvatarFallback className="text-6xl bg-gray-600">{partner.username.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    {callData?.status === 'ringing' && (
+                    {callData.status === 'ringing' && (
                         <>
                             <div className="absolute inset-0 rounded-full border-2 border-white/30 animate-ping"></div>
                             <div className="absolute inset-0 rounded-full border-2 border-white/50 animate-ping" style={{animationDelay: '0.5s'}}></div>
@@ -359,7 +356,7 @@ export default function CallPage() {
                     )}
                 </div>
                 <div className="text-center mt-4">
-                    <h2 className="text-4xl font-bold [text-shadow:_0_2px_4px_rgba(0,0,0,0.5)]">{partner?.username}</h2>
+                    <h2 className="text-4xl font-bold [text-shadow:_0_2px_4px_rgba(0,0,0,0.5)]">{partner.username}</h2>
                     <p className="text-lg text-white/80 mt-2">{getCallStatusText()}</p>
                 </div>
             </motion.div>
