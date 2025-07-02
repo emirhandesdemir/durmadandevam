@@ -34,34 +34,28 @@ const ICE_SERVERS = {
 };
 
 
-function CallControls({ onHangUp, onToggleMute, isMuted, onToggleVideo, isVideoOff, onToggleSpeaker, isSpeakerOn }: any) {
-  return (
-    <motion.div
-      initial={{ y: 100, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      exit={{ y: 100, opacity: 0 }}
-      transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-      className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20"
-    >
-        <div className="flex items-center justify-center gap-6 rounded-full bg-black/40 p-4 backdrop-blur-sm">
-            <Button onClick={onToggleVideo} variant="ghost" size="icon" className="h-14 w-14 rounded-full bg-white/20 text-white hover:bg-white/30">
-                {isVideoOff ? <VideoOff size={28}/> : <VideoIcon size={28}/>}
-            </Button>
-            <Button onClick={onToggleMute} variant="ghost" size="icon" className="h-14 w-14 rounded-full bg-white/20 text-white hover:bg-white/30">
-                {isMuted ? <MicOff size={28}/> : <Mic size={28}/>}
-            </Button>
-            <Button onClick={onHangUp} variant="destructive" size="icon" className="h-16 w-16 rounded-full transform hover:scale-110 transition-transform">
-                <PhoneOff size={32}/>
-            </Button>
-             <Button onClick={onToggleSpeaker} variant="ghost" size="icon" className="h-14 w-14 rounded-full bg-white/20 text-white hover:bg-white/30">
-                {isSpeakerOn ? <Volume2 size={28}/> : <VolumeX size={28}/>}
-            </Button>
-             <Button variant="ghost" size="icon" className="h-14 w-14 rounded-full bg-white/20 text-white hover:bg-white/30">
-                <MoreHorizontal size={28}/>
-            </Button>
-        </div>
-    </motion.div>
-  );
+function CallControls({ onHangUp, onToggleMute, isMuted, onToggleVideo, isVideoOff }: any) {
+    return (
+        <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+            className="absolute bottom-10 inset-x-0 z-20 flex justify-center"
+        >
+            <div className="flex items-center justify-center gap-4 rounded-full bg-black/40 p-3 backdrop-blur-sm">
+                <Button onClick={onToggleVideo} variant="ghost" size="icon" className="h-14 w-14 rounded-full text-white hover:bg-white/30">
+                    {isVideoOff ? <VideoOff size={28}/> : <VideoIcon size={28}/>}
+                </Button>
+                <Button onClick={onToggleMute} variant="ghost" size="icon" className="h-14 w-14 rounded-full text-white hover:bg-white/30">
+                    {isMuted ? <MicOff size={28}/> : <Mic size={28}/>}
+                </Button>
+                 <Button onClick={onHangUp} variant="destructive" size="icon" className="h-14 w-14 rounded-full">
+                    <PhoneOff size={28}/>
+                </Button>
+            </div>
+        </motion.div>
+    );
 }
 
 function LocalVideoView({ stream }: { stream: MediaStream | null }) {
@@ -86,13 +80,13 @@ function LocalVideoView({ stream }: { stream: MediaStream | null }) {
 
 
 export default function CallPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
   const callId = params.callId as string;
 
-  const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(true);
   const [callData, setCallData] = useState<Call | null>(null);
   const [partner, setPartner] = useState<UserInfo | null>(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -158,7 +152,7 @@ export default function CallPage() {
       const partnerId = data.callerId === user.uid ? data.receiverId : data.callerId;
       setPartnerVideoOn(data.videoStatus?.[partnerId] ?? false);
 
-      setLoading(false);
+      setPageLoading(false);
 
       if (data.status === 'ended' || data.status === 'declined' || data.status === 'missed') {
         toast({ description: "Arama sonlandırıldı." });
@@ -227,11 +221,11 @@ export default function CallPage() {
 
 
   useEffect(() => {
-    if (didSetupWebRTC.current) return;
+    if (didSetupWebRTC.current || authLoading) return;
     
     let unsubscribe: (() => void) | undefined;
     const init = async () => {
-        if (user && callData && partner && !loading) {
+        if (user && callData && partner && !pageLoading) {
             didSetupWebRTC.current = true;
             unsubscribe = await setupWebRTC(callData.callerId === user.uid);
         }
@@ -239,7 +233,7 @@ export default function CallPage() {
     init().catch(e => console.error("Failed to initialize WebRTC", e));
     
     return () => { unsubscribe?.(); };
-  }, [user, callData, partner, loading, setupWebRTC]);
+  }, [user, callData, partner, pageLoading, setupWebRTC, authLoading]);
 
 
   // Effect for caller: create offer
@@ -296,13 +290,6 @@ export default function CallPage() {
         setIsMuted(p => !p);
     }
   };
-
-  const toggleSpeaker = () => {
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.muted = !remoteVideoRef.current.muted;
-      }
-      setIsSpeakerOn(p => !p);
-  }
   
   const toggleVideo = async () => {
       if (!user || !localStreamRef.current) return;
@@ -315,7 +302,7 @@ export default function CallPage() {
       }
   };
 
-  if (loading || !callData || !partner) {
+  if (authLoading || pageLoading || !callData || !partner) {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center bg-slate-900">
         <Loader2 className="h-10 w-10 animate-spin text-white" />
@@ -327,7 +314,7 @@ export default function CallPage() {
   const showRemoteVideo = partnerVideoOn && callData.type === 'video' && callData.status === 'active';
 
   return (
-    <div className="relative h-full w-full bg-gradient-to-br from-slate-900 via-slate-800 to-gray-900 text-white overflow-hidden">
+    <div className="relative h-full w-full bg-gradient-to-br from-slate-800 via-black to-slate-900 text-white overflow-hidden">
         <video 
             ref={remoteVideoRef} 
             autoPlay 
@@ -375,8 +362,6 @@ export default function CallPage() {
             isMuted={isMuted}
             onToggleVideo={toggleVideo}
             isVideoOff={isVideoOff}
-            onToggleSpeaker={toggleSpeaker}
-            isSpeakerOn={isSpeakerOn}
         />
     </div>
   );
