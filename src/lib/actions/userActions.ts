@@ -3,10 +3,86 @@
 
 import { db, storage } from '@/lib/firebase';
 import type { Report, UserProfile } from '@/lib/types';
-import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, orderBy, setDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, orderBy, setDoc, collectionGroup } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
+
+
+// Helper function to process queries in batches to avoid Firestore limits
+async function processQueryInBatches(query: any, updateData: any) {
+    const snapshot = await getDocs(query);
+    if (snapshot.empty) return;
+
+    // Firestore allows up to 500 operations in a single batch.
+    const batchSize = 499;
+    const batches = [];
+    let currentBatch = writeBatch(db);
+    let operationCount = 0;
+
+    snapshot.docs.forEach((doc) => {
+        currentBatch.update(doc.ref, updateData);
+        operationCount++;
+        if (operationCount === batchSize) {
+            batches.push(currentBatch.commit());
+            currentBatch = writeBatch(db);
+            operationCount = 0;
+        }
+    });
+
+    if (operationCount > 0) {
+        batches.push(currentBatch.commit());
+    }
+
+    await Promise.all(batches);
+}
+
+export async function updateUserPosts(uid: string, updates: { [key: string]: any }) {
+    if (!uid || !updates || Object.keys(updates).length === 0) {
+        return;
+    }
+
+    const postsRef = collection(db, 'posts');
+    const writePromises = [];
+
+    // Update user's own posts (original posts and retweets by them)
+    const userPostsQuery = query(postsRef, where('uid', '==', uid));
+    writePromises.push(processQueryInBatches(userPostsQuery, updates));
+
+    // Update user's appearance in others' retweets of their posts
+    const retweetUpdates: { [key: string]: any } = {};
+    if (updates.username) retweetUpdates['retweetOf.username'] = updates.username;
+    if (updates.userAvatar) retweetUpdates['retweetOf.userAvatar'] = updates.userAvatar;
+    if (updates.userAvatarFrame) retweetUpdates['retweetOf.userAvatarFrame'] = updates.userAvatarFrame;
+    
+    if (Object.keys(retweetUpdates).length > 0) {
+        const retweetsQuery = query(postsRef, where('retweetOf.uid', '==', uid));
+        writePromises.push(processQueryInBatches(retweetsQuery, retweetUpdates));
+    }
+
+    try {
+        await Promise.all(writePromises);
+        revalidatePath('/home');
+        revalidatePath(`/profile/${uid}`);
+    } catch (error) {
+        console.error("Kullanıcı gönderileri güncellenirken hata:", error);
+    }
+}
+
+export async function updateUserComments(uid: string, updates: { userAvatar?: string; userAvatarFrame?: string; username?: string }) {
+    if (!uid || !updates || Object.keys(updates).length === 0) {
+        return;
+    }
+
+    const commentsQuery = query(collectionGroup(db, 'comments'), where('uid', '==', uid));
+
+    try {
+        await processQueryInBatches(commentsQuery, updates);
+    } catch (error) {
+        console.error("Kullanıcı yorumları güncellenirken hata:", error);
+    }
+}
+
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     if (!uid) return null;
@@ -199,52 +275,6 @@ export async function submitReport(reportData: Omit<Report, 'id' | 'timestamp'>)
     } catch (error: any) {
         console.error("Error submitting report:", error);
         return { success: false, error: "Rapor gönderilirken bir hata oluştu." };
-    }
-}
-
-export async function updateUserPosts(uid: string, updates: { [key: string]: any }) {
-    if (!uid || !updates || Object.keys(updates).length === 0) {
-        return;
-    }
-
-    const postsRef = collection(db, 'posts');
-    const writePromises = [];
-
-    // Update user's own posts
-    const userPostsQuery = query(postsRef, where('uid', '==', uid));
-    const userPostsSnap = await getDocs(userPostsQuery);
-    if (!userPostsSnap.empty) {
-        const batch1 = writeBatch(db);
-        userPostsSnap.docs.forEach(doc => {
-            batch1.update(doc.ref, updates);
-        });
-        writePromises.push(batch1.commit());
-    }
-
-    // Update user's appearance in retweets
-    const retweetUpdates: { [key: string]: any } = {};
-    if (updates.username) retweetUpdates['retweetOf.username'] = updates.username;
-    if (updates.userAvatar) retweetUpdates['retweetOf.userAvatar'] = updates.userAvatar;
-    if (updates.userAvatarFrame) retweetUpdates['retweetOf.userAvatarFrame'] = updates.userAvatarFrame;
-    
-    if (Object.keys(retweetUpdates).length > 0) {
-        const retweetsQuery = query(postsRef, where('retweetOf.uid', '==', uid));
-        const retweetsSnap = await getDocs(retweetsQuery);
-        if (!retweetsSnap.empty) {
-            const batch2 = writeBatch(db);
-            retweetsSnap.docs.forEach(doc => {
-                batch2.update(doc.ref, retweetUpdates);
-            });
-            writePromises.push(batch2.commit());
-        }
-    }
-
-    try {
-        await Promise.all(writePromises);
-        revalidatePath('/home');
-        revalidatePath(`/profile/${uid}`);
-    } catch (error) {
-        console.error("Kullanıcı gönderileri güncellenirken hata:", error);
     }
 }
 

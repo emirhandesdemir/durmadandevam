@@ -33,7 +33,7 @@ import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import ProfileViewerList from "./ProfileViewerList";
 import { Textarea } from "../ui/textarea";
 import { useRouter } from 'next/navigation';
-import { findUserByUsername, updateUserPosts } from "@/lib/actions/userActions";
+import { findUserByUsername, updateUserPosts, updateUserComments } from "@/lib/actions/userActions";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../common/LanguageSwitcher";
 
@@ -193,6 +193,15 @@ export default function ProfilePageClient() {
 
             if (Object.keys(postUpdates).length > 0) {
                 await updateUserPosts(user.uid, postUpdates);
+            }
+
+            const commentUpdates: { userAvatar?: string; userAvatarFrame?: string; username?: string } = {};
+            if (postUpdates.userAvatar) commentUpdates.userAvatar = postUpdates.userAvatar;
+            if (postUpdates.userAvatarFrame) commentUpdates.userAvatarFrame = postUpdates.userAvatarFrame;
+            if (postUpdates.username) commentUpdates.username = postUpdates.username;
+
+            if (Object.keys(commentUpdates).length > 0) {
+                await updateUserComments(user.uid, commentUpdates);
             }
 
             toast({
