@@ -17,7 +17,7 @@ interface UserInfo {
   photoURL: string | null;
 }
 
-export async function initiateCall(caller: UserInfo, receiver: UserInfo) {
+export async function initiateCall(caller: UserInfo, receiver: UserInfo, type: 'video' | 'audio') {
   const callsRef = collection(db, 'calls');
   const newCallRef = doc(callsRef);
 
@@ -33,11 +33,24 @@ export async function initiateCall(caller: UserInfo, receiver: UserInfo) {
       photoURL: receiver.photoURL,
     },
     status: 'ringing',
+    type: type,
+    videoStatus: {
+        [caller.uid]: type === 'video',
+        [receiver.uid]: type === 'video',
+    },
     createdAt: serverTimestamp(),
   });
 
   return newCallRef.id;
 }
+
+export async function updateVideoStatus(callId: string, userId: string, isEnabled: boolean) {
+  const callRef = doc(db, 'calls', callId);
+  await updateDoc(callRef, {
+    [`videoStatus.${userId}`]: isEnabled,
+  });
+}
+
 
 export async function updateCallStatus(callId: string, status: 'declined' | 'ended' | 'missed' | 'active') {
     const callRef = doc(db, 'calls', callId);

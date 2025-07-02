@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { UserProfile, DirectMessage } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Loader2, Video } from 'lucide-react';
+import { ChevronLeft, Loader2, Video, Phone } from 'lucide-react';
 import NewMessageInput from './NewMessageInput';
 import MessageBubble from './MessageBubble';
 import Link from 'next/link';
@@ -59,13 +59,14 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
   
-  const handleInitiateCall = async () => {
+  const handleInitiateCall = async (type: 'video' | 'audio') => {
     if (!user || !userData || !partner) return;
     setIsCalling(true);
     try {
       const callId = await initiateCall(
         { uid: user.uid, username: userData.username, photoURL: userData.photoURL },
-        { uid: partner.uid, username: partner.username, photoURL: partner.photoURL }
+        { uid: partner.uid, username: partner.username, photoURL: partner.photoURL },
+        type
       );
       router.push(`/call/${callId}`);
     } catch (error: any) {
@@ -113,13 +114,10 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
             </div>
         </Link>
         <div className="flex-1" />
-        <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full"
-            onClick={handleInitiateCall}
-            disabled={isCalling}
-        >
+        <Button variant="ghost" size="icon" className="rounded-full" onClick={() => handleInitiateCall('audio')} disabled={isCalling}>
+            <Phone className="h-5 w-5" />
+        </Button>
+        <Button variant="ghost" size="icon" className="rounded-full" onClick={() => handleInitiateCall('video')} disabled={isCalling}>
             {isCalling ? <Loader2 className="h-5 w-5 animate-spin"/> : <Video className="h-5 w-5" />}
         </Button>
       </header>

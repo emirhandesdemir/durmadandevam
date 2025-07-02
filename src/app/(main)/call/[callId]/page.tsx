@@ -4,9 +4,9 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { doc, onSnapshot, collection, deleteDoc, getDocs, query, where } from 'firebase/firestore';
+import { doc, onSnapshot, collection, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { sendAnswer, sendIceCandidate, updateCallStatus } from '@/lib/actions/callActions';
+import { sendAnswer, sendIceCandidate, updateCallStatus, updateVideoStatus } from '@/lib/actions/callActions';
 import type { Call } from '@/lib/types';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -15,6 +15,7 @@ import { Mic, MicOff, PhoneOff, Video as VideoIcon, VideoOff, SwitchCamera } fro
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { sendOffer } from '@/lib/actions/callActions';
+import Image from 'next/image';
 
 const ICE_SERVERS = {
   iceServers: [
@@ -23,7 +24,7 @@ const ICE_SERVERS = {
   ],
 };
 
-function CallControls({ onHangUp, onToggleMute, isMuted, onToggleVideo, isVideoOff, onSwitchCamera }: any) {
+function CallControls({ onHangUp, onToggleMute, isMuted, onToggleVideo, isVideoOff, onSwitchCamera, isVideoEnabled }: any) {
   return (
     <motion.div
       initial={{ y: 100, opacity: 0 }}
@@ -38,7 +39,7 @@ function CallControls({ onHangUp, onToggleMute, isMuted, onToggleVideo, isVideoO
       <Button onClick={onToggleVideo} variant="secondary" size="icon" className="h-14 w-14 rounded-full bg-white/20 text-white hover:bg-white/30">
         {isVideoOff ? <VideoOff /> : <VideoIcon />}
       </Button>
-      <Button onClick={onSwitchCamera} variant="secondary" size="icon" className="h-14 w-14 rounded-full bg-white/20 text-white hover:bg-white/30">
+      <Button onClick={onSwitchCamera} variant="secondary" size="icon" className="h-14 w-14 rounded-full bg-white/20 text-white hover:bg-white/30" disabled={!isVideoEnabled}>
         <SwitchCamera />
       </Button>
       <Button onClick={onHangUp} variant="destructive" size="icon" className="h-14 w-14 rounded-full">
@@ -59,6 +60,7 @@ export default function CallPage() {
   const [callData, setCallData] = useState<Call | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
+  const [partnerVideoOn, setPartnerVideoOn] = useState(false);
   
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -67,8 +69,10 @@ export default function CallPage() {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
+  const partner = user?.uid === callData?.callerId ? callData?.receiverInfo : callData?.callerInfo;
+
   const cleanupCall = useCallback(() => {
-    console.log("Cleaning up call...");
+    console.log("Arama temizleniyor...");
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
@@ -103,6 +107,9 @@ export default function CallPage() {
       const data = { id: snapshot.id, ...snapshot.data() } as Call;
       setCallData(data);
       
+      const partnerId = data.callerId === user.uid ? data.receiverId : data.callerId;
+      setPartnerVideoOn(data.videoStatus?.[partnerId] ?? false);
+
       if (data.status === 'ended' || data.status === 'declined' || data.status === 'missed') {
         toast({ description: "Arama sonlandırıldı." });
         cleanupCall();
@@ -119,17 +126,17 @@ export default function CallPage() {
     peerConnectionRef.current = new RTCPeerConnection(ICE_SERVERS);
     const pc = peerConnectionRef.current;
     
-    // Get media devices
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    const initialVideoState = callData.videoStatus?.[user.uid] ?? false;
+    setIsVideoOff(!initialVideoState);
+
+    const stream = await navigator.mediaDevices.getUserMedia({ video: initialVideoState, audio: true });
     localStreamRef.current = stream;
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = stream;
     }
     
-    // Add tracks to peer connection
     stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
-    // Handle remote stream
     pc.ontrack = (event) => {
       remoteStreamRef.current = event.streams[0];
       if (remoteVideoRef.current) {
@@ -137,7 +144,6 @@ export default function CallPage() {
       }
     };
     
-    // Handle ICE candidates
     const target = isCaller ? 'receiver' : 'caller';
     pc.onicecandidate = (event) => {
       if (event.candidate) {
@@ -173,7 +179,7 @@ export default function CallPage() {
 
     createOffer().catch(err => console.error("Error creating offer:", err));
 
-  }, [user, callData, callId, peerConnectionRef]);
+  }, [user, callData, callId]);
 
   // Effect for receiver: create answer
   useEffect(() => {
@@ -189,7 +195,7 @@ export default function CallPage() {
     
     createAnswer().catch(err => console.error("Error creating answer:", err));
 
-  }, [user, callData, callId, peerConnectionRef]);
+  }, [user, callData, callId]);
 
 
   // Effect to apply received answer
@@ -223,12 +229,14 @@ export default function CallPage() {
     }
   };
   
-  const toggleVideo = () => {
-      if (localStreamRef.current) {
-          localStreamRef.current.getVideoTracks().forEach(track => {
-              track.enabled = !track.enabled;
-          });
-          setIsVideoOff(p => !p);
+  const toggleVideo = async () => {
+      if (!user || !localStreamRef.current) return;
+      const videoTrack = localStreamRef.current.getVideoTracks()[0];
+      if (videoTrack) {
+          const newVideoState = !videoTrack.enabled;
+          videoTrack.enabled = newVideoState;
+          setIsVideoOff(!newVideoState);
+          await updateVideoStatus(callId, user.uid, newVideoState);
       }
   };
 
@@ -257,28 +265,27 @@ export default function CallPage() {
       }
   };
 
-  const partner = user?.uid === callData?.callerId ? callData?.receiverInfo : callData?.callerInfo;
+  const showVideo = partnerVideoOn || (callData?.type === 'video' && callData?.status === 'active');
 
   return (
     <div className="relative h-full w-full bg-black text-white">
-        <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full object-cover" />
-        
-        <AnimatePresence>
-            {!remoteStreamRef.current && (
-                 <motion.div 
-                    initial={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="absolute inset-0 bg-black/50 z-10 flex flex-col items-center justify-center gap-4"
-                >
+        {showVideo ? (
+            <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full object-cover" />
+        ) : (
+            <div className="absolute inset-0">
+                {partner?.photoURL && (
+                    <Image src={partner.photoURL} alt="Partner avatar" fill className="object-cover filter blur-2xl brightness-50"/>
+                )}
+                 <div className="absolute inset-0 bg-black/50 z-10 flex flex-col items-center justify-center gap-4">
                     <Avatar className="h-32 w-32 border-4">
                         <AvatarImage src={partner?.photoURL || undefined} />
                         <AvatarFallback className="text-4xl">{partner?.username.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <h2 className="text-3xl font-bold">{partner?.username}</h2>
-                    <p className="text-xl text-white/80">{callData?.status === 'ringing' ? 'Bağlanıyor...' : 'Bekleniyor...'}</p>
-                 </motion.div>
-            )}
-        </AnimatePresence>
+                    <p className="text-xl text-white/80">{callData?.status === 'ringing' ? 'Bağlanıyor...' : (callData?.status === 'active' ? 'Bağlandı' : 'Bekleniyor...')}</p>
+                 </div>
+            </div>
+        )}
         
         <motion.div
             drag
@@ -300,6 +307,7 @@ export default function CallPage() {
             onToggleVideo={toggleVideo}
             isVideoOff={isVideoOff}
             onSwitchCamera={switchCamera}
+            isVideoEnabled={!isVideoOff}
         />
     </div>
   );

@@ -306,6 +306,8 @@ export interface Call {
     photoURL: string | null;
   };
   status: 'ringing' | 'active' | 'declined' | 'ended' | 'missed';
+  type: 'video' | 'audio';
+  videoStatus?: { [uid: string]: boolean };
   offer?: RTCSessionDescriptionInit;
   answer?: RTCSessionDescriptionInit;
   createdAt: Timestamp;
