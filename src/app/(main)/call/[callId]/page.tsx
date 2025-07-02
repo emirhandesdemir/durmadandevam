@@ -11,7 +11,7 @@ import type { Call } from '@/lib/types';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Mic, MicOff, PhoneOff, Video as VideoIcon, VideoOff, ChevronDown, MoreHorizontal, Volume2, VolumeX } from 'lucide-react';
+import { Mic, MicOff, PhoneOff, Video as VideoIcon, VideoOff, ChevronDown, MoreHorizontal, Volume2, VolumeX, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { sendOffer } from '@/lib/actions/callActions';
@@ -57,6 +57,7 @@ export default function CallPage() {
   const { toast } = useToast();
   const callId = params.callId as string;
 
+  const [loading, setLoading] = useState(true);
   const [callData, setCallData] = useState<Call | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
@@ -113,12 +114,14 @@ export default function CallPage() {
     const unsubscribeCall = onSnapshot(callRef, (snapshot) => {
       if (!snapshot.exists()) {
         toast({ variant: 'destructive', description: "Arama bulunamadı." });
+        setLoading(false);
         cleanupCall();
         return;
       }
       
       const data = { id: snapshot.id, ...snapshot.data() } as Call;
       setCallData(data);
+      setLoading(false);
       
       const partnerId = data.callerId === user.uid ? data.receiverId : data.callerId;
       setPartnerVideoOn(data.videoStatus?.[partnerId] ?? false);
@@ -127,6 +130,11 @@ export default function CallPage() {
         toast({ description: "Arama sonlandırıldı." });
         cleanupCall();
       }
+    }, (error) => {
+        console.error("Arama verisi alınamadı:", error);
+        toast({ variant: 'destructive', description: "Arama bilgileri alınamadı. Bağlantı hatası olabilir." });
+        setLoading(false);
+        cleanupCall();
     });
 
     return () => unsubscribeCall();
@@ -142,14 +150,20 @@ export default function CallPage() {
     const initialVideoState = callData.videoStatus?.[user.uid] ?? false;
     setIsVideoOff(!initialVideoState);
 
-    const stream = await navigator.mediaDevices.getUserMedia({ video: initialVideoState, audio: true });
-    localStreamRef.current = stream;
-    if (localVideoRef.current) {
-      localVideoRef.current.srcObject = stream;
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: initialVideoState, audio: true });
+        localStreamRef.current = stream;
+        if (localVideoRef.current) {
+            localVideoRef.current.srcObject = stream;
+        }
+        stream.getTracks().forEach(track => pc.addTrack(track, stream));
+    } catch(err) {
+        console.error("getUserMedia error:", err);
+        toast({ variant: "destructive", title: "İzin Hatası", description: "Arama için kamera/mikrofon izni gerekli." });
+        hangUp();
+        return () => {};
     }
     
-    stream.getTracks().forEach(track => pc.addTrack(track, stream));
-
     pc.ontrack = (event) => {
       remoteStreamRef.current = event.streams[0];
       if (remoteVideoRef.current) {
@@ -168,7 +182,11 @@ export default function CallPage() {
     const unsubscribeCandidates = onSnapshot(candidatesCollection, async (snapshot) => {
         for (const change of snapshot.docChanges()) {
             if (change.type === 'added') {
-                await pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+                try {
+                    await pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+                } catch(e) {
+                    console.error("Error adding received ice candidate", e);
+                }
                 await deleteDoc(change.doc.ref);
             }
         }
@@ -176,7 +194,26 @@ export default function CallPage() {
     
     return unsubscribeCandidates;
 
-  }, [user, callId, callData]);
+  }, [user, callId, callData, hangUp, toast]);
+
+
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+    const init = async () => {
+        if (user && callData) {
+            const isCaller = callData.callerId === user.uid;
+            unsubscribe = await setupWebRTC(isCaller);
+        }
+    };
+
+    if(!loading) { // Sadece veri yüklendikten sonra WebRTC kurulumunu başlat.
+        init().catch(e => console.error("Failed to initialize WebRTC", e));
+    }
+
+    return () => {
+        unsubscribe?.();
+    };
+  }, [user, callData, loading, setupWebRTC]);
 
 
   // Effect for caller: create offer
@@ -222,17 +259,6 @@ export default function CallPage() {
   }, [user, callData?.answer, callData?.callerId]);
 
 
-  useEffect(() => {
-    if (user && callData) {
-      const isCaller = callData.callerId === user.uid;
-      const unsubscribePromise = setupWebRTC(isCaller);
-      return () => {
-        unsubscribePromise?.then(unsub => unsub());
-      };
-    }
-  }, [user, callData, setupWebRTC]);
-
-
   const toggleMute = () => {
     if (localStreamRef.current) {
         localStreamRef.current.getAudioTracks().forEach(track => {
@@ -258,6 +284,15 @@ export default function CallPage() {
           await updateVideoStatus(callId, user.uid, newVideoState);
       }
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center bg-slate-900">
+        <Loader2 className="h-10 w-10 animate-spin text-white" />
+        <p className="mt-4 text-white">Arama bilgileri yükleniyor...</p>
+      </div>
+    );
+  }
 
   const showRemoteVideo = partnerVideoOn && callData?.type === 'video' && callData?.status === 'active';
 
