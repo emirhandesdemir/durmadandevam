@@ -332,9 +332,13 @@ export async function increaseParticipantLimit(roomId: string, userId: string) {
         const roomData = roomDoc.data();
         const userData = userDoc.data();
 
-        if (roomData.createdBy.uid !== userId) {
+        const isHost = roomData.createdBy.uid === userId;
+        const isModerator = roomData.moderators?.includes(userId);
+
+        if (!isHost && !isModerator) {
             throw new Error("Bu işlemi yapma yetkiniz yok.");
         }
+        
         if ((userData.diamonds || 0) < cost) {
             throw new Error(`Katılımcı limitini artırmak için ${cost} elmasa ihtiyacınız var.`);
         }
@@ -345,7 +349,7 @@ export async function increaseParticipantLimit(roomId: string, userId: string) {
 
     const roomSnap = await getDoc(roomRef);
     const newLimit = roomSnap.data()?.maxParticipants;
-    await addSystemMessage(roomId, `👤 Oda sahibi, katılımcı limitini ${newLimit}'e yükseltti! Bu işlem ${cost} elmasa mal oldu.`);
+    await addSystemMessage(roomId, `👤 Oda sahibi/moderatörü, katılımcı limitini ${newLimit}'e yükseltti! Bu işlem ${cost} elmasa mal oldu.`);
     return { success: true };
 }
 

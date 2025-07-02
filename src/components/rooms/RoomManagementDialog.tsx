@@ -22,7 +22,7 @@ import {
   } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { deleteRoomAsOwner, extendRoomTime, updateRoomSettings, increaseParticipantLimit } from "@/lib/actions/roomActions";
+import { deleteRoomAsOwner, extendRoomTime, increaseParticipantLimit, updateRoomSettings } from "@/lib/actions/roomActions";
 import { Trash2, Loader2, ShieldAlert, Clock, Hand, UserPlus, Gem } from "lucide-react";
 import type { Room } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
