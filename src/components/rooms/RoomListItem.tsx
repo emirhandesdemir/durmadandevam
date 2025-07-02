@@ -2,8 +2,7 @@
 'use client';
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { LogIn, Check, Loader2, Users, Clock, Zap } from "lucide-react";
+import { LogIn, Check, Loader2, Users, Clock, Zap, XCircle, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
@@ -88,27 +87,62 @@ export default function RoomListItem({ room }: RoomListItemProps) {
         }
     }
 
-    const ActionButton = () => {
-      if (isParticipant) {
+    const actionToPerform = isParticipant ? handleEnterClick : handleJoinClick;
+    const isDisabled = isJoining || (isFull && !isParticipant) || isExpired;
+
+    const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        // Clicks on links or their children should not trigger the card's main action
+        let target = e.target as HTMLElement;
+        while (target && target !== e.currentTarget) {
+            if (target.tagName === 'A' || target.hasAttribute('data-tooltip-trigger')) {
+                return;
+            }
+            target = target.parentElement as HTMLElement;
+        }
+        
+        if (!isDisabled) {
+            actionToPerform();
+        }
+    };
+
+    const StatusIndicator = () => {
+        if (isJoining) {
+            return <Loader2 className="h-5 w-5 animate-spin text-primary" />;
+        }
+        if (isExpired) {
+            return (
+                <TooltipProvider>
+                    <Tooltip><TooltipTrigger><XCircle className="h-5 w-5 text-muted-foreground" /></TooltipTrigger><TooltipContent><p>Süresi Doldu</p></TooltipContent></Tooltip>
+                </TooltipProvider>
+            );
+        }
+        if (isFull && !isParticipant) {
+             return (
+                <TooltipProvider>
+                    <Tooltip><TooltipTrigger><XCircle className="h-5 w-5 text-destructive" /></TooltipTrigger><TooltipContent><p>Oda Dolu</p></TooltipContent></Tooltip>
+                </TooltipProvider>
+            );
+        }
+        if (isParticipant) {
+             return (
+                <TooltipProvider>
+                    <Tooltip><TooltipTrigger><CheckCircle className="h-5 w-5 text-green-500" /></TooltipTrigger><TooltipContent><p>Odaya Gir</p></TooltipContent></Tooltip>
+                </TooltipProvider>
+            );
+        }
         return (
-          <Button variant="secondary" onClick={handleEnterClick} disabled={isExpired}>
-            <Check className="mr-2 h-4 w-4" /> Odaya Gir
-          </Button>
+            <TooltipProvider>
+                <Tooltip><TooltipTrigger><LogIn className="h-5 w-5 text-primary" /></TooltipTrigger><TooltipContent><p>Hemen Katıl</p></TooltipContent></Tooltip>
+            </TooltipProvider>
         );
-      }
-      return (
-        <Button onClick={handleJoinClick} disabled={isJoining || isFull || isExpired}>
-          {isJoining ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
-          {isExpired ? 'Süresi Doldu' : (isFull ? 'Oda Dolu' : 'Hemen Katıl')}
-        </Button>
-      );
     }
 
     return (
-        <Card className={cn(
+        <Card onClick={handleCardClick} className={cn(
             "group overflow-hidden transition-all duration-300 flex flex-col rounded-2xl shadow-lg border",
             hasPortal ? "border-primary/50 shadow-primary/10" : "border-border",
-            isExpired && "opacity-60"
+            isDisabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:shadow-xl hover:-translate-y-1",
+            isParticipant && !isDisabled && "hover:border-green-500/50"
         )}>
              {isExpired && (
                 <div className="absolute inset-0 bg-background/80 z-20 flex items-center justify-center">
@@ -161,7 +195,7 @@ export default function RoomListItem({ room }: RoomListItemProps) {
                         {participants.slice(0, 4).map(p => (
                             <TooltipProvider key={p.uid}>
                                 <Tooltip>
-                                    <TooltipTrigger>
+                                    <TooltipTrigger data-tooltip-trigger>
                                         <Avatar className="h-8 w-8 border-2 border-background">
                                             <AvatarImage src={p.photoURL || undefined} />
                                             <AvatarFallback>{p.username?.charAt(0)}</AvatarFallback>
@@ -188,7 +222,7 @@ export default function RoomListItem({ room }: RoomListItemProps) {
                     )}
                 </div>
                 <div className="w-auto">
-                    <ActionButton />
+                    <StatusIndicator />
                 </div>
             </CardFooter>
         </Card>
