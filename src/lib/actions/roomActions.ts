@@ -1,3 +1,4 @@
+
 // src/lib/actions/roomActions.ts
 'use server';
 
@@ -22,13 +23,13 @@ const BOT_USER_INFO = {
 
 export async function createRoom(
     userId: string,
-    roomData: { name: string, description: string, language: string, mode: 'chat' | 'broadcast' },
+    roomData: { name: string, description: string, language: string },
     creatorInfo: { username: string, photoURL: string | null, role: string, selectedAvatarFrame: string }
 ) {
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
     
     const userRef = doc(db, 'users', userId);
-    const roomCost = roomData.mode === 'broadcast' ? 20 : 10;
+    const roomCost = 10;
 
     return await runTransaction(db, async (transaction) => {
         const userDoc = await transaction.get(userRef);
@@ -40,13 +41,12 @@ export async function createRoom(
         }
         
         const newRoomRef = doc(collection(db, 'rooms'));
-        const durationInMs = roomData.mode === 'broadcast' ? 60 * 60 * 1000 : 15 * 60 * 1000;
+        const durationInMs = 15 * 60 * 1000;
         
-        const newRoom: Omit<Room, 'id'> = {
+        const newRoom: Partial<Room> = {
             name: roomData.name,
             description: roomData.description,
             language: roomData.language,
-            mode: roomData.mode,
             type: 'public',
             status: 'open',
             createdBy: {
@@ -59,12 +59,10 @@ export async function createRoom(
             moderators: [userId],
             createdAt: serverTimestamp() as Timestamp,
             expiresAt: Timestamp.fromMillis(Date.now() + durationInMs),
-            participants: [
-               // Participant list no longer includes creator by default, handled by joinVoiceChat
-            ],
-            maxParticipants: roomData.mode === 'broadcast' ? 100 : 9,
+            participants: [],
+            maxParticipants: 9,
             voiceParticipantsCount: 0,
-            nextGameTimestamp: serverTimestamp() as Timestamp, // Start game timer on creation
+            nextGameTimestamp: serverTimestamp() as Timestamp,
             rules: null,
             welcomeMessage: null,
             pinnedMessageId: null,
@@ -95,7 +93,6 @@ export async function createPrivateMatchRoom(user1: UserInfo, user2: UserInfo) {
         name: `${user1.username} & ${user2.username}`,
         description: 'Özel eşleşme odası.',
         type: 'match',
-        mode: 'chat',
         status: 'open',
         createdBy: { uid: user1.uid, username: user1.username, photoURL: user1.photoURL },
         moderators: [user1.uid, user2.uid],

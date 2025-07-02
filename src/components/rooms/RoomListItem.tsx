@@ -1,9 +1,9 @@
+
 // src/components/rooms/RoomListItem.tsx
 'use client';
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogIn, Check, Loader2, Users, Clock, Zap, XCircle, CheckCircle, ArrowRight } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { ArrowRight, Clock, Users, XCircle, Zap } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -11,8 +11,7 @@ import { cn } from "@/lib/utils";
 import type { Room } from "@/lib/types";
 import { Timestamp } from "firebase/firestore";
 import Link from 'next/link';
-import Image from 'next/image';
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 
 interface RoomListItemProps {
@@ -112,24 +111,13 @@ export default function RoomListItem({ room }: RoomListItemProps) {
                 </div>
             )}
 
-            <div className="relative aspect-[16/9] w-full overflow-hidden">
-                <Image 
-                    src={room.coverImage || `https://placehold.co/600x400/8b5cf6/ffffff?text=HiweWalk`}
-                    data-ai-hint="HiweWalk logo"
-                    alt={room.name}
-                    fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
-                 <div className="absolute bottom-0 left-0 p-4 w-full">
-                     <h3 className="font-bold text-lg text-white truncate">{room.name}</h3>
-                     <p className="text-sm text-white/80 truncate">{room.description}</p>
-                 </div>
-            </div>
-
-            <CardContent className="p-3">
+            <CardHeader>
+                <CardTitle className="truncate">{room.name}</CardTitle>
+                <CardDescription className="truncate h-10">{room.description}</CardDescription>
+            </CardHeader>
+            <CardContent className="p-3 pt-0 flex-1">
                 <div className="flex items-center justify-between">
-                    <Link href={`/profile/${room.createdBy.uid}`} className="flex items-center gap-2 overflow-hidden">
+                    <Link href={`/profile/${room.createdBy.uid}`} className="flex items-center gap-2 overflow-hidden" onClick={(e) => e.stopPropagation()}>
                         <div className={cn("avatar-frame-wrapper", room.createdBy.selectedAvatarFrame)}>
                              <Avatar className="relative z-[1] h-8 w-8">
                                 <AvatarImage src={room.createdBy.photoURL || undefined} />
@@ -142,7 +130,7 @@ export default function RoomListItem({ room }: RoomListItemProps) {
                         {participants.slice(0, 4).map(p => (
                             <TooltipProvider key={p.uid}>
                                 <Tooltip>
-                                    <TooltipTrigger data-tooltip-trigger>
+                                    <TooltipTrigger asChild>
                                         <Avatar className="h-8 w-8 border-2 border-background">
                                             <AvatarImage src={p.photoURL || undefined} />
                                             <AvatarFallback>{p.username?.charAt(0)}</AvatarFallback>
@@ -161,7 +149,7 @@ export default function RoomListItem({ room }: RoomListItemProps) {
                 </div>
             </CardContent>
 
-            <CardFooter className="bg-card p-3 flex justify-between items-center text-sm mt-auto border-t">
+            <CardFooter className="bg-muted/50 p-3 flex justify-between items-center text-sm mt-auto border-t">
                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1.5"><Users className="h-4 w-4"/><span>{participants.length} / {room.maxParticipants}</span></div>
                     {timeLeft !== null && !isExpired && (

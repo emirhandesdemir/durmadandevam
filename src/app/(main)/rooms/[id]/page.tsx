@@ -1,3 +1,4 @@
+
 // src/app/(main)/rooms/[id]/page.tsx
 "use client";
 
@@ -26,7 +27,6 @@ import GameLobbyDialog from '@/components/game/GameLobbyDialog';
 import ActiveGameArea from '@/components/game/ActiveGameArea';
 import GameInviteMessage from '@/components/game/GameInviteMessage';
 import MatchConfirmationControls from '@/components/rooms/MatchConfirmationControls';
-import BroadcastUI from '@/components/broadcast/BroadcastUI';
 
 export default function RoomPage() {
     const params = useParams();
@@ -60,7 +60,7 @@ export default function RoomPage() {
     }, [roomId, setActiveRoomId]);
     
     useEffect(() => {
-        if (user && userData && room && !isParticipant && room.type !== 'match' && room.mode !== 'broadcast') {
+        if (user && userData && room && !isParticipant && room.type !== 'match' ) {
             const autoJoin = async () => {
                 try {
                     await joinRoom(room.id, {
@@ -78,7 +78,7 @@ export default function RoomPage() {
     }, [user, userData, room, isParticipant, router, toast]);
 
     useEffect(() => {
-        if (!room || !featureFlags?.quizGameEnabled || !user || room.mode === 'broadcast') return;
+        if (!room || !featureFlags?.quizGameEnabled || !user) return;
     
         const designatedStarter = room.participants.sort((a, b) => a.uid.localeCompare(b.uid))[0];
     
@@ -138,7 +138,7 @@ export default function RoomPage() {
         const activeQuizUnsub = onSnapshot(activeQuizQuery, (snapshot) => {
             if (!snapshot.empty) {
                 const gameDoc = snapshot.docs[0];
-                setActiveQuiz({ id: gameDoc.id, ...gameDoc.data() } as ActiveGame);
+                setActiveQuiz({ id: gameDoc.id, ...doc.data() } as ActiveGame);
             } else {
                 setActiveQuiz(null);
             }
@@ -214,10 +214,6 @@ export default function RoomPage() {
     const isLoading = authLoading || !room;
     if (isLoading) return <div className="flex h-full items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
     
-    if (room.mode === 'broadcast') {
-        return <BroadcastUI room={room} />;
-    }
-
     const isMatchRoom = room?.type === 'match';
 
     const renderGameContent = () => {

@@ -1,3 +1,4 @@
+
 // src/lib/types.ts
 import { Timestamp } from "firebase/firestore";
 
@@ -135,8 +136,6 @@ export interface Room {
     id: string;
     name: string;
     description: string;
-    coverImage?: string;
-    mode?: 'chat' | 'broadcast'; // New property for room type
     createdBy: {
         uid: string;
         username: string;
