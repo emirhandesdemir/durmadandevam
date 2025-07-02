@@ -65,7 +65,3 @@ export async function sendIceCandidate(callId: string, candidate: RTCIceCandidat
     const candidatesCol = collection(db, 'calls', callId, `${target}Candidates`);
     await addDoc(candidatesCol, candidate);
 }
-```,
-  </change>
-  <change>
-    <file
