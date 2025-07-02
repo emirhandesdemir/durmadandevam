@@ -18,9 +18,9 @@ import type { Room, ActiveGame, GameSettings, Message, ActiveGameSession } from 
 import RoomFooter from '@/components/rooms/RoomFooter';
 import SpeakerLayout from '@/components/rooms/SpeakerLayout';
 import RoomInfoCards from '@/components/rooms/RoomInfoCards';
-import { getGameSettings, startGameInRoom } from '@/lib/actions/gameActions';
+import { getGameSettings, startGameInRoom, submitAnswer, endGameWithoutWinner } from '@/lib/actions/gameActions';
 import RoomGameCard from '@/components/game/RoomGameCard';
-import { endGameWithoutWinner, submitAnswer, deleteMatchRoom, joinRoom } from '@/lib/actions/roomActions';
+import { deleteMatchRoom, joinRoom } from '@/lib/actions/roomActions';
 import GameResultCard from '@/components/game/GameResultCard';
 import GameLobbyDialog from '@/components/game/GameLobbyDialog';
 import ActiveGameArea from '@/components/game/ActiveGameArea';
