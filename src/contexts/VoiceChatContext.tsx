@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, onSnapshot, doc, serverTimestamp, query, where, deleteDoc, addDoc, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, serverTimestamp, query, where, deleteDoc, addDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Room, VoiceParticipant, PlaylistTrack } from '../types';
 import { joinVoiceChat, leaveVoice, toggleSelfMute as toggleMuteAction, toggleScreenShare as toggleScreenShareAction, toggleVideo as toggleVideoAction, updateLastActive } from '@/lib/actions/voiceActions';
@@ -98,7 +98,13 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const mixedStreamDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null);
     const musicGainNodeRef = useRef<GainNode | null>(null);
 
-    const self = useMemo(() => participants.find(p => p.uid === user?.uid) || null, [participants, user?.uid]);
+    const self = useMemo(() => {
+        const p = participants.find(p => p.uid === user?.uid);
+        if (p) {
+            return { ...p, isSpeaker: !!speakingStates[p.uid] };
+        }
+        return null;
+    }, [participants, user?.uid, speakingStates]);
     const isConnected = !!self && !!connectedRoomId;
     const isSharingScreen = !!localScreenStream;
     const isCurrentUserDj = isConnected && !!activeRoom?.djUid && activeRoom.djUid === user?.uid;
@@ -142,9 +148,13 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         setIsSharingVideo(false);
 
         // Cleanup audio analysis
-        Object.values(audioAnalysers.current).forEach(({ context }) => context.close());
+        Object.values(audioAnalysers.current).forEach(({ context }) => context.close().catch(e => console.error("Error closing audio context on cleanup:", e)));
         audioAnalysers.current = {};
-        if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
+        if (animationFrameId.current) {
+            cancelAnimationFrame(animationFrameId.current);
+            animationFrameId.current = undefined;
+        }
+        setSpeakingStates({});
 
         // Reset state
         setRemoteAudioStreams({});
@@ -493,12 +503,79 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 setRemoteAudioStreams(p => { const s = {...p}; delete s[uid]; return s; });
                 setRemoteScreenStreams(p => { const s = {...p}; delete s[uid]; return s; });
                 setRemoteVideoStreams(p => { const s = {...p}; delete s[uid]; return s; });
+                if (audioAnalysers.current[uid]) {
+                    audioAnalysers.current[uid].context.close().catch(e => console.error("Error closing audio context on leave:", e));
+                    delete audioAnalysers.current[uid];
+                }
             }
         });
         
         return () => signalsUnsub();
     }, [participants, isConnected, user, connectedRoomId, handleSignal, createPeerConnection]);
     
+     // Speaker detection logic
+     useEffect(() => {
+        const analyseAllStreams = () => {
+            if (Object.keys(audioAnalysers.current).length === 0 && (!self || self.isMuted)) {
+                if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
+                animationFrameId.current = undefined;
+                if(Object.keys(speakingStates).length > 0) setSpeakingStates({});
+                return;
+            }
+
+            const newStates: Record<string, boolean> = {};
+
+            Object.entries(audioAnalysers.current).forEach(([uid, { analyser, dataArray }]) => {
+                analyser.getByteFrequencyData(dataArray);
+                const sum = dataArray.reduce((a, b) => a + b, 0);
+                const avg = dataArray.length > 0 ? sum / dataArray.length : 0;
+                newStates[uid] = avg > 15; // Speaking threshold
+            });
+
+            if (self) {
+                newStates[self.uid] = !self.isMuted;
+            }
+
+            setSpeakingStates(currentStates => {
+                let hasChanged = false;
+                const allUids = new Set([...Object.keys(currentStates), ...Object.keys(newStates)]);
+                allUids.forEach(uid => {
+                    if (!!currentStates[uid] !== !!newStates[uid]) {
+                        hasChanged = true;
+                    }
+                });
+                return hasChanged ? newStates : currentStates;
+            });
+            
+            animationFrameId.current = requestAnimationFrame(analyseAllStreams);
+        };
+        
+        Object.entries(remoteAudioStreams).forEach(([uid, stream]) => {
+            if (!audioAnalysers.current[uid]) {
+                try {
+                    const audioContext = new AudioContext();
+                    const analyser = audioContext.createAnalyser();
+                    analyser.fftSize = 512;
+                    analyser.smoothingTimeConstant = 0.5;
+                    const source = audioContext.createMediaStreamSource(stream);
+                    source.connect(analyser);
+                    audioAnalysers.current[uid] = { analyser, dataArray: new Uint8Array(analyser.frequencyBinCount), context: audioContext };
+                } catch (e) { console.error(`Could not create audio analyser for ${uid}:`, e); }
+            }
+        });
+        
+        if (!animationFrameId.current) {
+            analyseAllStreams();
+        }
+
+        return () => {
+            if (animationFrameId.current) {
+                cancelAnimationFrame(animationFrameId.current);
+                animationFrameId.current = undefined;
+            }
+        };
+    }, [remoteAudioStreams, self]);
+
     const memoizedParticipants = useMemo(() => {
         return participants.map(p => ({ ...p, isSpeaker: !!speakingStates[p.uid] }));
     }, [participants, speakingStates]);

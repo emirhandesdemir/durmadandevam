@@ -124,7 +124,7 @@ export default function VoiceUserIcon({
   const iconBadgePos = size === 'lg' ? "bottom-1 right-1 p-2" : "bottom-0 right-0 p-1.5";
   const iconSize = size === 'lg' ? "h-5 w-5" : "h-4 w-4";
   
-  const speakingRing = participant.isSpeaker && !participant.isMuted;
+  const speakingRing = participant.isSpeaker;
   
   const avatarContent = (
     <div className={cn("relative z-[1] border-2 transition-all duration-300 w-full h-full rounded-full overflow-hidden",
