@@ -25,7 +25,6 @@ export default function DashboardPage() {
   const [femaleCount, setFemaleCount] = useState(0);
   const [roomCount, setRoomCount] = useState(0);
   const [postCount, setPostCount] = useState(0);
-  const [questionCount, setQuestionCount] = useState(0);
   const [voiceUserCount, setVoiceUserCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -38,7 +37,6 @@ export default function DashboardPage() {
         userSnapshot,
         roomSnapshot,
         postSnapshot,
-        questionSnapshot,
         maleSnapshot,
         femaleSnapshot,
         roomsDocsSnapshot
@@ -47,7 +45,6 @@ export default function DashboardPage() {
         getCountFromServer(usersRef),
         getCountFromServer(roomsRef),
         getCountFromServer(collection(db, "posts")),
-        getCountFromServer(collection(db, "game_questions")),
         getCountFromServer(query(usersRef, where("gender", "==", "male"))),
         getCountFromServer(query(usersRef, where("gender", "==", "female"))),
         getDocs(roomsRef) // Get all room docs to sum voice participants
@@ -56,7 +53,6 @@ export default function DashboardPage() {
       setUserCount(userSnapshot.data().count);
       setRoomCount(roomSnapshot.data().count);
       setPostCount(postSnapshot.data().count);
-      setQuestionCount(questionSnapshot.data().count);
       setMaleCount(maleSnapshot.data().count);
       setFemaleCount(femaleSnapshot.data().count);
 
@@ -159,17 +155,17 @@ export default function DashboardPage() {
                     <CardHeader>
                         <CardTitle className="flex items-center gap-3">
                             <Puzzle className="w-6 h-6 text-primary"/>
-                            Quiz Soru Yönetimi
+                            Quiz Oyunu (AI)
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <p className="text-muted-foreground text-sm">
-                            Oyun için yeni sorular ekleyin, düzenleyin veya silin. Toplam: {questionCount}
+                           Oyunlar artık AI tarafından otomatik yönetiliyor. Ayarlar için sistem sayfasına bakın.
                         </p>
                     </CardContent>
                     <CardFooter>
                         <Button asChild variant="outline">
-                            <Link href="/admin/questions">Soruları Yönet</Link>
+                            <Link href="/admin/system">Sistem Ayarları</Link>
                         </Button>
                     </CardFooter>
                 </Card>

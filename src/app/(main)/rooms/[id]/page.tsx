@@ -19,7 +19,6 @@ import RoomFooter from '@/components/rooms/RoomFooter';
 import SpeakerLayout from '@/components/rooms/SpeakerLayout';
 import RoomInfoCards from '@/components/rooms/RoomInfoCards';
 import { getGameSettings, startGameInRoom } from '@/lib/actions/gameActions';
-import GameCountdownCard from '@/components/game/GameCountdownCard';
 import RoomGameCard from '@/components/game/RoomGameCard';
 import { endGameWithoutWinner, submitAnswer, deleteMatchRoom } from '@/lib/actions/gameActions';
 import GameResultCard from '@/components/game/GameResultCard';
@@ -50,7 +49,6 @@ export default function RoomPage() {
     // --- Game State ---
     const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
     const [activeQuiz, setActiveQuiz] = useState<ActiveGame | null>(null);
-    const [quizCountdown, setQuizCountdown] = useState<number | null>(null);
     const [finishedGame, setFinishedGame] = useState<any>(null);
     const [isGameLobbyOpen, setIsGameLobbyOpen] = useState(false);
     const [activeGameSession, setActiveGameSession] = useState<ActiveGameSession | null>(null);
@@ -197,9 +195,6 @@ export default function RoomPage() {
         }
         if (finishedGame) {
            return <GameResultCard game={finishedGame} />;
-        }
-        if (quizCountdown) {
-            return <GameCountdownCard timeLeft={quizCountdown} />;
         }
         if (activeQuiz && gameSettings) {
             return <RoomGameCard game={activeQuiz} settings={gameSettings} onAnswerSubmit={handleQuizAnswerSubmit} onTimerEnd={handleGameTimerEnd} currentUserId={user!.uid} />;

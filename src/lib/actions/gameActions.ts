@@ -7,10 +7,8 @@ import {
     doc, 
     addDoc, 
     updateDoc, 
-    deleteDoc, 
     serverTimestamp,
     getDoc,
-    getDocs,
     writeBatch,
     runTransaction,
     query,
@@ -23,6 +21,7 @@ import {
 } from "firebase/firestore";
 import type { GameQuestion, GameSettings, ActiveGame, Room } from "../types";
 import { revalidatePath } from "next/cache";
+import { generateQuizQuestion } from '@/ai/flows/generateQuizQuestionFlow';
 
 
 // Ayarları almak için fonksiyon
@@ -66,35 +65,11 @@ export async function updateGameSettings(settings: Partial<GameSettings>) {
     revalidatePath('/admin/system');
 }
 
-// --- Soru CRUD İşlemleri ---
-
-export async function addQuestion(data: Omit<GameQuestion, 'id' | 'createdAt'>) {
-    const questionsRef = collection(db, 'game_questions');
-    await addDoc(questionsRef, {
-        ...data,
-        createdAt: serverTimestamp(),
-    });
-    revalidatePath('/admin/questions');
-}
-
-export async function updateQuestion(id: string, data: Partial<Omit<GameQuestion, 'id' | 'createdAt'>>) {
-    const questionRef = doc(db, 'game_questions', id);
-    await updateDoc(questionRef, data);
-    revalidatePath('/admin/questions');
-}
-
-export async function deleteQuestion(id: string) {
-    const questionRef = doc(db, 'game_questions', id);
-    await deleteDoc(questionRef);
-    revalidatePath('/admin/questions');
-}
-
-
 // --- Quiz Oyunu Mekanikleri ---
 
 /**
  * Bir odada yeni bir quiz oyunu başlatır.
- * Rastgele bir soru seçer ve oda için bir oyun dokümanı oluşturur.
+ * Yapay zekadan rastgele bir soru alır ve oda için bir oyun dokümanı oluşturur.
  * @param roomId Oyunun başlatılacağı odanın ID'si.
  */
 export async function startGameInRoom(roomId: string) {
@@ -107,26 +82,33 @@ export async function startGameInRoom(roomId: string) {
         return { success: false, error: "Zaten aktif bir oyun var."};
     }
 
-    const questionsRef = collection(db, 'game_questions');
-    const questionsSnapshot = await getDocs(questionsRef);
-    if (questionsSnapshot.empty) {
-        console.warn("Oyun başlatılamadı: Hiç soru bulunmuyor.");
-        return { success: false, error: "Hiç soru bulunmuyor."};
+    // AI'dan soru al
+    const questionData = await generateQuizQuestion({});
+    if (!questionData || !questionData.question || !questionData.options || typeof questionData.correctOptionIndex !== 'number') {
+        throw new Error("AI'dan geçerli bir soru alınamadı.");
     }
-    const allQuestions = questionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GameQuestion));
-    const randomQuestion = allQuestions[Math.floor(Math.random() * allQuestions.length)];
 
     const gamesRef = collection(roomRef, 'games');
     const newGame = {
-        questionId: randomQuestion.id,
-        question: randomQuestion.question,
-        options: randomQuestion.options,
-        correctOptionIndex: randomQuestion.correctOptionIndex,
+        questionId: `ai-${Date.now()}`,
+        question: questionData.question,
+        options: questionData.options,
+        correctOptionIndex: questionData.correctOptionIndex,
         startTime: serverTimestamp(),
-        status: 'active', // 'active', 'finished'
-        answeredBy: [], // Cevap verenlerin UID'lerini tutar
+        status: 'active',
+        answeredBy: [],
     };
     await addDoc(gamesRef, newGame);
+    
+    const systemMessage = {
+        type: 'game',
+        text: `Yeni bir oyun başlıyor!`,
+        createdAt: serverTimestamp(),
+        uid: 'system',
+        username: 'System'
+    };
+    await addDoc(collection(roomRef, 'messages'), systemMessage);
+
     return { success: true };
 }
 

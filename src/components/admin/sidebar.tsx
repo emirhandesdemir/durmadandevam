@@ -35,7 +35,6 @@ const navItems = [
   { href: "/admin/reports", label: "Şikayetler", icon: ShieldAlert },
   { href: "/admin/rooms", label: "Odalar", icon: MessageSquare },
   { href: "/admin/posts", label: "Gönderiler", icon: FileText },
-  { href: "/admin/questions", label: "Quiz Soruları", icon: Puzzle },
   { href: "/admin/features", label: "Özellik Yönetimi", icon: SlidersHorizontal },
   { href: "/admin/logs", label: "Olay Kayıtları", icon: History },
   { href: "/admin/theme", label: "Tema Ayarları", icon: Palette },
