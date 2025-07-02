@@ -52,7 +52,7 @@ export const onMessageCreate = functions.region("us-central1")
                 const data = doc.data();
                 return {
                     author: data.uid === BOT_UID ? 'model' : 'user',
-                    content: data.text,
+                    content: data.text || '', // Ensure content is always a string
                 };
             });
 

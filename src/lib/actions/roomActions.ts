@@ -59,7 +59,6 @@ export async function createRoom(
             expiresAt: Timestamp.fromMillis(Date.now() + fifteenMinutesInMs),
             participants: [
                 { uid: userId, username: creatorInfo.username, photoURL: creatorInfo.photoURL },
-                { uid: BOT_USER_INFO.uid, username: BOT_USER_INFO.username, photoURL: BOT_USER_INFO.photoURL },
             ],
             maxParticipants: 9,
             voiceParticipantsCount: 0,
