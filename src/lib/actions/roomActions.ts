@@ -1,12 +1,14 @@
 // src/lib/actions/roomActions.ts
 'use server';
 
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
 import { deleteRoomWithSubcollections } from '@/lib/firestoreUtils';
-import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch, arrayUnion, arrayRemove, updateDoc, runTransaction, increment, setDoc, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch, arrayUnion, arrayRemove, updateDoc, runTransaction, increment, setDoc, query, where, getDocs, orderBy, deleteField } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { createNotification } from './notificationActions';
-import type { Room, Message } from '../types';
+import type { Room, Message, PlaylistTrack } from '../types';
 import { createDmFromMatchRoom } from './dmActions';
+import { v4 as uuidv4 } from 'uuid';
 
 const voiceStatsRef = doc(db, 'config', 'voiceStats');
 
@@ -58,7 +60,7 @@ export async function createRoom(
             createdAt: serverTimestamp() as Timestamp,
             expiresAt: Timestamp.fromMillis(Date.now() + fifteenMinutesInMs),
             participants: [
-                { uid: userId, username: creatorInfo.username, photoURL: creatorInfo.photoURL },
+               // Participant list no longer includes creator by default, handled by joinVoiceChat
             ],
             maxParticipants: 9,
             voiceParticipantsCount: 0,
@@ -73,19 +75,6 @@ export async function createRoom(
             diamonds: increment(-roomCost),
             lastActionTimestamp: serverTimestamp()
         });
-
-        // Add welcome message from bot
-        const messagesRef = collection(db, 'rooms', newRoomRef.id, 'messages');
-        const welcomeMessage = {
-            type: 'user', // Render as a user message
-            text: `Selam! Ben Walk, bu odanın yapay zeka asistanıyım. Nasıl yardımcı olabilirim? Merak ettiğiniz bir şey varsa bana "@Walk" diye seslenin!`,
-            createdAt: serverTimestamp(),
-            uid: BOT_USER_INFO.uid,
-            username: BOT_USER_INFO.username,
-            photoURL: BOT_USER_INFO.photoURL,
-            selectedAvatarFrame: BOT_USER_INFO.selectedAvatarFrame,
-        };
-        transaction.set(doc(messagesRef), welcomeMessage);
         
         return { success: true, roomId: newRoomRef.id };
     });
@@ -243,11 +232,13 @@ export async function joinRoom(roomId: string, userInfo: UserInfo) {
     });
     const messagesRef = collection(db, "rooms", roomId, "messages");
     batch.set(doc(messagesRef), {
-        type: 'system',
-        text: `👋 ${userInfo.username || 'Bir kullanıcı'} odaya katıldı.`,
-        createdAt: serverTimestamp(), 
-        uid: 'system', 
-        username: 'System',
+        type: 'user',
+        uid: BOT_USER_INFO.uid,
+        username: BOT_USER_INFO.username,
+        photoURL: BOT_USER_INFO.photoURL,
+        selectedAvatarFrame: BOT_USER_INFO.selectedAvatarFrame,
+        text: `Hoş geldin, ${userInfo.username}!`,
+        createdAt: serverTimestamp()
     });
     await batch.commit();
     return { success: true };
@@ -626,5 +617,160 @@ export async function deleteMessageByHost(roomId: string, messageId: string, hos
         }
 
         return { success: true };
+    });
+}
+
+
+// MUSIC ACTIONS
+export async function addTrackToPlaylist(roomId: string, file: File, userInfo: { uid: string, username: string }) {
+    if (!file) throw new Error("Dosya gerekli.");
+    if (file.size > 15 * 1024 * 1024) throw new Error("Müzik dosyası 15MB'dan büyük olamaz.");
+
+    const roomRef = doc(db, 'rooms', roomId);
+    const playlistRef = collection(roomRef, 'playlist');
+    
+    // Check playlist size
+    const playlistSnapshot = await getDocs(playlistRef);
+    if (playlistSnapshot.size >= 20) {
+        throw new Error("Çalma listesi dolu (Maksimum 20 şarkı).");
+    }
+
+    const storagePath = `music/${roomId}/${uuidv4()}_${file.name}`;
+    const musicStorageRef = ref(storage, storagePath);
+    await uploadBytes(musicStorageRef, file);
+    const fileUrl = await getDownloadURL(musicStorageRef);
+    
+    const newTrackDoc = doc(playlistRef);
+    const newTrackData: Omit<PlaylistTrack, 'id'> = {
+        name: file.name,
+        fileUrl,
+        storagePath,
+        addedByUid: userInfo.uid,
+        addedByUsername: userInfo.username,
+        order: Date.now(),
+        createdAt: serverTimestamp() as Timestamp,
+    };
+    await setDoc(newTrackDoc, newTrackData);
+    
+    // If no one is DJing, claim it and start playing
+    const roomDoc = await getDoc(roomRef);
+    if (!roomDoc.data()?.djUid) {
+        await controlPlayback(roomId, userInfo.uid, { action: 'play' });
+    }
+
+    return { success: true };
+}
+
+export async function removeTrackFromPlaylist(roomId: string, trackId: string, userId: string) {
+    const roomRef = doc(db, 'rooms', roomId);
+    const trackRef = doc(roomRef, 'playlist', trackId);
+
+    await runTransaction(db, async (transaction) => {
+        const roomDoc = await transaction.get(roomRef);
+        const trackDoc = await transaction.get(trackRef);
+
+        if (!roomDoc.exists() || !trackDoc.exists()) throw new Error("Oda veya parça bulunamadı.");
+
+        const roomData = roomDoc.data() as Room;
+        const trackData = trackDoc.data() as PlaylistTrack;
+        const isDj = roomData.djUid === userId;
+        const isOwner = trackData.addedByUid === userId;
+
+        if (!isDj && !isOwner) {
+            throw new Error("Bu parçayı silme yetkiniz yok.");
+        }
+
+        transaction.delete(trackRef);
+        // Optional: Delete from storage
+        const fileStorageRef = ref(storage, trackData.storagePath);
+        await deleteObject(fileStorageRef).catch(e => console.warn("Depolamadan dosya silinemedi:", e.message));
+
+        // If the deleted track was the one playing, advance to the next track or stop
+        const currentTrack = roomData.currentTrackIndex !== undefined ? roomData.currentTrackIndex : -1;
+        const playlistSnapshot = await getDocs(query(collection(roomRef, 'playlist'), orderBy('order')));
+        const playlist = playlistSnapshot.docs;
+        const deletedTrackOrder = trackData.order;
+        const oldIndex = playlist.findIndex(doc => doc.data().order === deletedTrackOrder);
+
+        if (isDj && oldIndex === currentTrack) {
+             if (playlist.length > 1) { // More tracks left after deletion
+                const nextIndex = oldIndex % (playlist.length -1);
+                const nextTrack = playlist[nextIndex]?.data();
+                transaction.update(roomRef, {
+                    currentTrackIndex: nextIndex,
+                    currentTrackName: nextTrack?.name,
+                });
+             } else { // Last track deleted
+                transaction.update(roomRef, {
+                    djUid: null,
+                    isMusicPlaying: false,
+                    currentTrackIndex: -1,
+                    currentTrackName: '',
+                });
+             }
+        }
+    });
+
+    return { success: true };
+}
+
+export async function controlPlayback(roomId: string, userId: string, control: { action: 'play' | 'pause' | 'toggle' | 'skip', trackIndex?: number, direction?: 'next' | 'previous' }) {
+    const roomRef = doc(db, 'rooms', roomId);
+    const playlistRef = collection(roomRef, 'playlist');
+
+    return runTransaction(db, async (transaction) => {
+        const roomDoc = await transaction.get(roomRef);
+        if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
+        const roomData = roomDoc.data() as Room;
+        const currentDj = roomData.djUid;
+
+        if (currentDj && currentDj !== userId) {
+            throw new Error("Başka bir kullanıcı şu anda DJ.");
+        }
+        
+        const playlistSnapshot = await getDocs(query(playlistRef, orderBy('order')));
+        const playlist = playlistSnapshot.docs.map(d => ({id: d.id, ...d.data() as Omit<PlaylistTrack, 'id'>}));
+        
+        if (playlist.length === 0) {
+            transaction.update(roomRef, { djUid: null, isMusicPlaying: false, currentTrackIndex: -1, currentTrackName: '' });
+            return;
+        }
+
+        let newIndex = roomData.currentTrackIndex !== undefined ? roomData.currentTrackIndex : -1;
+        let newIsPlaying = roomData.isMusicPlaying || false;
+
+        switch (control.action) {
+            case 'play':
+                newIsPlaying = true;
+                if (control.trackIndex !== undefined) {
+                    newIndex = control.trackIndex;
+                } else if (newIndex === -1) {
+                    newIndex = 0;
+                }
+                break;
+            case 'pause':
+                newIsPlaying = false;
+                break;
+            case 'toggle':
+                newIsPlaying = !newIsPlaying;
+                // If starting from scratch, become DJ and play first song
+                if (newIsPlaying && !currentDj) {
+                    newIndex = 0;
+                }
+                break;
+            case 'skip':
+                const direction = control.direction === 'next' ? 1 : -1;
+                newIndex = (newIndex + direction + playlist.length) % playlist.length;
+                newIsPlaying = true;
+                break;
+        }
+
+        const newTrack = playlist[newIndex];
+        transaction.update(roomRef, {
+            djUid: userId,
+            isMusicPlaying: newIsPlaying,
+            currentTrackIndex: newIndex,
+            currentTrackName: newTrack?.name || '',
+        });
     });
 }

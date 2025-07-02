@@ -3,7 +3,6 @@
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
 import VoiceUserIcon from '../voice/VoiceUserIcon';
 import type { Room } from '@/lib/types';
-import { Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface SpeakerLayoutProps {
@@ -25,13 +24,10 @@ export default function SpeakerLayout({ room }: SpeakerLayoutProps) {
         ...otherParticipants
     ];
 
-    const maxVisible = 8;
-    const visibleParticipants = sortedParticipants.slice(0, maxVisible);
-    
     return (
         <div className="flex justify-center p-3 border-b">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {visibleParticipants.map((participant) => (
+                {sortedParticipants.map((participant) => (
                     <VoiceUserIcon
                         key={participant.uid}
                         participant={participant}

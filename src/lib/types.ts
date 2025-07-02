@@ -161,6 +161,22 @@ export interface Room {
     confirmationExpiresAt?: Timestamp;
     matchConfirmation?: { [uid: string]: 'pending' | 'accepted' | 'declined' };
     finalChatId?: string;
+    // Music Player State
+    djUid?: string | null;
+    isMusicPlaying?: boolean;
+    currentTrackIndex?: number;
+    currentTrackName?: string;
+}
+
+export interface PlaylistTrack {
+    id: string;
+    name: string;
+    fileUrl: string;
+    storagePath: string;
+    addedByUid: string;
+    addedByUsername: string;
+    order: number;
+    createdAt: Timestamp;
 }
 
 export interface VoiceParticipant {
