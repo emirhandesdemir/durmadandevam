@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { addDoc, collection, serverTimestamp, doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
@@ -12,7 +12,6 @@ import { Input } from '@/components/ui/input';
 import { Send, Loader2, ImagePlus, X, FileVideo } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Room } from '@/lib/types';
-import { joinRoom } from '@/lib/actions/roomActions';
 
 interface ChatMessageInputProps {
   room: Room;
@@ -26,7 +25,6 @@ export default function ChatMessageInput({ room }: ChatMessageInputProps) {
   const [preview, setPreview] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const isParticipant = room.participants.some(p => p.uid === currentUser?.uid);
 
   useEffect(() => {
@@ -52,23 +50,7 @@ export default function ChatMessageInput({ room }: ChatMessageInputProps) {
   
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if ((!message.trim() && !file) || !currentUser || isSending) return;
-
-    // If not a participant, join the room first
-    if (!isParticipant) {
-        try {
-            await joinRoom(room.id, {
-                uid: currentUser.uid,
-                username: currentUser.displayName,
-                photoURL: currentUser.photoURL
-            });
-        } catch (error: any) {
-            toast({ variant: 'destructive', description: `Odaya katılırken bir hata oluştu: ${error.message}` });
-            setIsSending(false);
-            return;
-        }
-    }
-
+    if ((!message.trim() && !file) || !currentUser || !isParticipant || isSending) return;
 
     setIsSending(true);
     let imageUrl: string | undefined;
@@ -122,6 +104,10 @@ export default function ChatMessageInput({ room }: ChatMessageInputProps) {
         setIsSending(false);
     }
   };
+
+  if (!isParticipant) {
+    return <p className="w-full text-center text-sm text-muted-foreground px-4">Mesaj göndermek için odaya katılmalısınız.</p>;
+  }
   
   return (
     <div className='w-full'>

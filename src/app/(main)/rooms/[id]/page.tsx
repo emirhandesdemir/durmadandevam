@@ -1,7 +1,7 @@
 // src/app/(main)/rooms/[id]/page.tsx
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, onSnapshot, collection, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -20,7 +20,7 @@ import SpeakerLayout from '@/components/rooms/SpeakerLayout';
 import RoomInfoCards from '@/components/rooms/RoomInfoCards';
 import { getGameSettings, startGameInRoom } from '@/lib/actions/gameActions';
 import RoomGameCard from '@/components/game/RoomGameCard';
-import { endGameWithoutWinner, submitAnswer, deleteMatchRoom } from '@/lib/actions/gameActions';
+import { endGameWithoutWinner, submitAnswer, deleteMatchRoom, joinRoom } from '@/lib/actions/roomActions';
 import GameResultCard from '@/components/game/GameResultCard';
 import GameLobbyDialog from '@/components/game/GameLobbyDialog';
 import ActiveGameArea from '@/components/game/ActiveGameArea';
@@ -54,11 +54,32 @@ export default function RoomPage() {
     const [activeGameSession, setActiveGameSession] = useState<ActiveGameSession | null>(null);
 
     const isHost = user?.uid === room?.createdBy.uid;
+    const isParticipant = useMemo(() => room?.participants.some(p => p.uid === user?.uid), [room, user]);
+
 
     useEffect(() => {
         if (roomId) setActiveRoomId(roomId);
         return () => setActiveRoomId(null);
     }, [roomId, setActiveRoomId]);
+    
+    // Auto-join room on page load if not already a participant
+    useEffect(() => {
+        if (user && userData && room && !isParticipant && room.type !== 'match') {
+            const autoJoin = async () => {
+                try {
+                    await joinRoom(room.id, {
+                        uid: user.uid,
+                        username: userData.username,
+                        photoURL: userData.photoURL || null,
+                    });
+                } catch (error: any) {
+                    toast({ variant: 'destructive', description: `Odaya katılırken hata: ${error.message}` });
+                    router.push('/rooms');
+                }
+            };
+            autoJoin();
+        }
+    }, [user, userData, room, isParticipant, router, toast]);
 
     // Auto-start quiz game if room is active
     useEffect(() => {
