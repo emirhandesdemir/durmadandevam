@@ -3,7 +3,6 @@
 // anlık bildirim gönderme gibi işlemleri gerçekleştirir.
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
-import { roomBotFlow } from "./flows/roomBotFlow";
 
 // Firebase Admin SDK'sını başlat. Bu, sunucu tarafında Firebase servislerine erişim sağlar.
 admin.initializeApp();
@@ -11,83 +10,10 @@ admin.initializeApp();
 // Firestore veritabanı örneğini al.
 const db = admin.firestore();
 
-const BOT_UID = "ai-bot-walk";
-const greetingKeywords = ['merhaba', 'selam', 'selamun aleyküm', 'sa', 'as', 'nasılsın', 'nasılsınız', 'naber', 'nbr', 'günaydın', 'iyi akşamlar'];
-
-
-/**
- * Yeni bir mesaj oluşturulduğunda tetiklenir ve AI botunun cevap verip vermeyeceğini kontrol eder.
- */
-export const onMessageCreate = functions.region("us-central1")
-    .firestore.document("rooms/{roomId}/messages/{messageId}")
-    .onCreate(async (snapshot, context) => {
-        const messageData = snapshot.data();
-        const { roomId } = context.params;
-
-        // Bota veya sisteme ait mesajları veya metin içermeyen mesajları yoksay
-        if (!messageData || !messageData.text || messageData.uid === BOT_UID || messageData.uid === 'system') {
-            return null;
-        }
-
-        const lowerCaseText = messageData.text.toLowerCase();
-        const isMention = lowerCaseText.includes('@walk');
-        // Check for standalone greeting words to avoid triggering on parts of other words
-        const containsGreeting = greetingKeywords.some(keyword => 
-            new RegExp(`\\b${keyword}\\b`, 'i').test(messageData.text)
-        );
-
-        // If it's not a mention and not a greeting, exit.
-        if (!isMention && !containsGreeting) {
-            return null;
-        }
-
-        try {
-            // Sohbet geçmişini al
-            const historySnapshot = await db.collection(`rooms/${roomId}/messages`)
-                .orderBy("createdAt", "desc")
-                .limit(10) // Son 10 mesajı al
-                .get();
-            
-            const history = historySnapshot.docs.reverse().map(doc => {
-                const data = doc.data();
-                return {
-                    author: data.uid === BOT_UID ? 'model' : 'user',
-                    content: data.text || '', // Ensure content is always a string
-                };
-            });
-
-            // Yapay zeka akışını çağır
-            const botResponse = await roomBotFlow({
-                history: history,
-                currentMessage: messageData.text,
-                isGreeting: containsGreeting && !isMention,
-                authorUsername: messageData.username,
-            });
-
-            if (botResponse) {
-                // Botun cevabını yeni bir mesaj olarak ekle
-                const botSvg = `<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="50" fill="url(#bot-grad)"/><rect x="25" y="45" width="50" height="20" rx="10" fill="white" fill-opacity="0.8"/><circle cx="50" cy="40" r="15" fill="white"/><circle cx="50" cy="40" r="10" fill="url(#eye-grad)"/><path d="M35 70 Q 50 80, 65 70" stroke="white" stroke-width="4" stroke-linecap="round" fill="none"/><defs><linearGradient id="bot-grad" x1="0" y1="0" x2="100" y2="100"><stop stop-color="#8b5cf6"/><stop offset="1" stop-color="#3b82f6"/></linearGradient><radialGradient id="eye-grad"><stop offset="20%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#2563eb"/></radialGradient></defs></svg>`;
-                const botMessage = {
-                    uid: BOT_UID,
-                    username: "Walk",
-                    photoURL: `data:image/svg+xml;base64,${Buffer.from(botSvg).toString("base64")}`,
-                    selectedAvatarFrame: 'avatar-frame-tech',
-                    text: botResponse,
-                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                    type: 'user',
-                };
-                await db.collection(`rooms/${roomId}/messages`).add(botMessage);
-            }
-        } catch (error) {
-            console.error("AI bot flow error:", error);
-        }
-        return null;
-    });
-
-
 /**
  * Yeni bir bildirim dokümanı oluşturulduğunda tetiklenir.
- * Kullanıcının FCM jetonlarını alır ve bir anlık bildirim gönderir.
+ * Kullanıcının FCM jetonlarını alır ve Firebase Cloud Messaging API (V1) kullanarak
+ * bir anlık bildirim gönderir.
  */
 export const sendPushNotification = functions
     .region("us-central1") // Fonksiyonun çalışacağı bölgeyi belirt.
@@ -109,7 +35,6 @@ export const sendPushNotification = functions
         }
 
         const userData = userDoc.data();
-        // Kullanıcının bildirim jetonu (FCM token) yoksa işlem yapma.
         if (!userData || !userData.fcmTokens || userData.fcmTokens.length === 0) {
             console.log(`Kullanıcı ${userId} için FCM jetonu yok.`);
             return;
@@ -117,7 +42,6 @@ export const sendPushNotification = functions
         
         const tokens: string[] = userData.fcmTokens;
 
-        // Bildirim türüne göre başlık, içerik ve link belirle.
         let title = "Yeni bir bildiriminiz var!";
         let body = "Uygulamayı açarak kontrol edin.";
         let link = "/notifications"; // Varsayılan link
@@ -168,30 +92,34 @@ export const sendPushNotification = functions
                 body = `${notificationData.senderUsername} gönderinizi retweetledi.`;
                 link = '/notifications';
                 break;
+            case "call_incoming":
+                const callType = notificationData.callType === 'video' ? 'Görüntülü' : 'Sesli';
+                title = `📞 Gelen ${callType} Arama`;
+                body = `${notificationData.senderUsername} sizi arıyor...`;
+                link = `/call/${notificationData.callId || ''}`;
+                break;
         }
 
-        const payload: admin.messaging.MessagingPayload = {
+        // Firebase Cloud Messaging API (V1) için data-only mesaj oluştur.
+        // Bu, servis çalışanına bildirim üzerinde tam kontrol sağlar.
+        const message: admin.messaging.MulticastMessage = {
+            tokens: tokens,
             data: {
                 title: title,
                 body: body,
-                icon: "/icons/icon.svg",
+                icon: "/icons/icon.svg", // SVG ikonunu kullan
                 link: link,
-            },
-            webpush: {
-                fcmOptions: {
-                    link: link, 
-                },
-            },
+            }
         };
 
-        // Bildirimi cihazlara gönder.
-        const response = await admin.messaging().sendToDevice(tokens, payload);
+        // Bildirimi birden fazla cihaza gönder.
+        const response = await admin.messaging().sendEachForMulticast(message);
 
         // Geçersiz veya süresi dolmuş jetonları temizle.
         const tokensToRemove: string[] = [];
-        response.results.forEach((result, index) => {
-            const error = result.error;
-            if (error) {
+        response.responses.forEach((result, index) => {
+            if (!result.success) {
+                const error = result.error;
                 console.error(
                     "Bildirim gönderilirken hata:",
                     tokens[index],

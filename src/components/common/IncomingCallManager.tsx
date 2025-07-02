@@ -1,7 +1,7 @@
 // src/components/common/IncomingCallManager.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { doc, onSnapshot, collection, query, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -17,6 +17,7 @@ export default function IncomingCallManager() {
   const { user } = useAuth();
   const router = useRouter();
   const [incomingCall, setIncomingCall] = useState<Call | null>(null);
+  const ringtoneRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -69,6 +70,19 @@ export default function IncomingCallManager() {
     }
   }, [user]);
 
+  // Effect to play/stop ringtone
+  useEffect(() => {
+    if (incomingCall && ringtoneRef.current) {
+        ringtoneRef.current.loop = true;
+        ringtoneRef.current.play().catch(e => {
+            console.warn("Ringtone autoplay was blocked by the browser.", e);
+        });
+    } else if (!incomingCall && ringtoneRef.current) {
+        ringtoneRef.current.pause();
+        ringtoneRef.current.currentTime = 0;
+    }
+  }, [incomingCall]);
+
   const handleAccept = () => {
     if (!incomingCall) return;
     router.push(`/call/${incomingCall.id}`);
@@ -82,42 +96,45 @@ export default function IncomingCallManager() {
   };
 
   return (
-    <AnimatePresence>
-      {incomingCall && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-md flex flex-col items-center justify-center"
-        >
-          <div className="flex flex-col items-center justify-center gap-4 text-white">
-            <Avatar className="h-32 w-32 border-4">
-              <AvatarImage src={incomingCall.callerInfo.photoURL || undefined} />
-              <AvatarFallback className="text-5xl">{incomingCall.callerInfo.username.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <h2 className="text-4xl font-bold">{incomingCall.callerInfo.username}</h2>
-            <p className="text-xl flex items-center gap-2">
-                {incomingCall.type === 'video' ? <Video/> : <Phone/>}
-                {incomingCall.type === 'video' ? 'Görüntülü arama...' : 'Sesli arama...'}
-            </p>
-          </div>
+    <>
+      <audio ref={ringtoneRef} src="https://cdn.pixabay.com/audio/2022/08/17/audio_313c0b8b89.mp3" preload="auto" />
+      <AnimatePresence>
+        {incomingCall && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-md flex flex-col items-center justify-center"
+          >
+            <div className="flex flex-col items-center justify-center gap-4 text-white">
+              <Avatar className="h-32 w-32 border-4">
+                <AvatarImage src={incomingCall.callerInfo.photoURL || undefined} />
+                <AvatarFallback className="text-5xl">{incomingCall.callerInfo.username.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <h2 className="text-4xl font-bold">{incomingCall.callerInfo.username}</h2>
+              <p className="text-xl flex items-center gap-2">
+                  {incomingCall.type === 'video' ? <Video/> : <Phone/>}
+                  {incomingCall.type === 'video' ? 'Görüntülü arama...' : 'Sesli arama...'}
+              </p>
+            </div>
 
-          <div className="absolute bottom-20 flex w-full justify-around">
-             <div className="flex flex-col items-center gap-2">
-                <Button onClick={handleDecline} variant="destructive" size="icon" className="h-16 w-16 rounded-full">
-                    <PhoneOff className="h-8 w-8"/>
-                </Button>
-                <span className="text-white">Reddet</span>
-             </div>
-             <div className="flex flex-col items-center gap-2">
-                <Button onClick={handleAccept} variant="default" size="icon" className="h-16 w-16 rounded-full bg-green-500 hover:bg-green-600">
-                    <Phone className="h-8 w-8"/>
-                </Button>
-                <span className="text-white">Cevapla</span>
-             </div>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+            <div className="absolute bottom-20 flex w-full justify-around">
+              <div className="flex flex-col items-center gap-2">
+                  <Button onClick={handleDecline} variant="destructive" size="icon" className="h-16 w-16 rounded-full">
+                      <PhoneOff className="h-8 w-8"/>
+                  </Button>
+                  <span className="text-white">Reddet</span>
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                  <Button onClick={handleAccept} variant="default" size="icon" className="h-16 w-16 rounded-full bg-green-500 hover:bg-green-600">
+                      <Phone className="h-8 w-8"/>
+                  </Button>
+                  <span className="text-white">Cevapla</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

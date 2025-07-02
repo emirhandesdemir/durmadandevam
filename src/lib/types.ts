@@ -76,7 +76,7 @@ export interface Notification {
     senderUsername: string;
     senderAvatar: string | null;
     senderAvatarFrame?: string;
-    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus';
+    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming';
     postId?: string | null;
     postImage?: string | null;
     commentText?: string;
@@ -85,6 +85,8 @@ export interface Notification {
     diamondAmount?: number;
     createdAt: Timestamp;
     read: boolean;
+    callId?: string;
+    callType?: 'video' | 'audio';
 }
 
 export interface Post {

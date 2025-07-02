@@ -10,6 +10,7 @@ import {
   serverTimestamp,
   setDoc,
 } from 'firebase/firestore';
+import { createNotification } from './notificationActions';
 
 interface UserInfo {
   uid: string;
@@ -39,6 +40,16 @@ export async function initiateCall(caller: UserInfo, receiver: UserInfo, type: '
         [receiver.uid]: type === 'video',
     },
     createdAt: serverTimestamp(),
+  });
+
+  await createNotification({
+    recipientId: receiver.uid,
+    senderId: caller.uid,
+    senderUsername: caller.username,
+    senderAvatar: caller.photoURL,
+    type: 'call_incoming',
+    callId: newCallRef.id,
+    callType: type,
   });
 
   return newCallRef.id;

@@ -17,13 +17,15 @@ interface CreateNotificationArgs {
   senderUsername: string;
   senderAvatar: string | null;
   senderAvatarFrame?: string;
-  type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus';
+  type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming';
   postId?: string | null;
   postImage?: string | null;
   commentText?: string;
   roomId?: string;
   roomName?: string;
   diamondAmount?: number;
+  callId?: string;
+  callType?: 'video' | 'audio';
 }
 
 export async function createNotification(data: CreateNotificationArgs) {
