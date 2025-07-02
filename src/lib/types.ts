@@ -293,6 +293,26 @@ export interface Message {
   gameInviteData?: GameInviteMessageData;
 }
 
+export interface Call {
+  id: string;
+  callerId: string;
+  callerInfo: {
+    username: string;
+    photoURL: string | null;
+  };
+  receiverId: string;
+  receiverInfo: {
+    username: string;
+    photoURL: string | null;
+  };
+  status: 'ringing' | 'active' | 'declined' | 'ended' | 'missed';
+  offer?: RTCSessionDescriptionInit;
+  answer?: RTCSessionDescriptionInit;
+  createdAt: Timestamp;
+  startedAt?: Timestamp;
+  endedAt?: Timestamp;
+}
+
 
 // Admin Analytics Types
 export interface UserGrowthDataPoint {

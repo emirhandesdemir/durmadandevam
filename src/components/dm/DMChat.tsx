@@ -16,6 +16,8 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import { initiateCall } from '@/lib/actions/callActions';
+import { useRouter } from 'next/navigation';
 
 
 interface DMChatProps {
@@ -28,8 +30,10 @@ interface DMChatProps {
  */
 export default function DMChat({ chatId, partner }: DMChatProps) {
   const { user, userData } = useAuth();
+  const router = useRouter();
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCalling, setIsCalling] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -54,6 +58,22 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
     // Yeni mesaj geldiğinde en alta kaydır
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+  
+  const handleInitiateCall = async () => {
+    if (!user || !userData || !partner) return;
+    setIsCalling(true);
+    try {
+      const callId = await initiateCall(
+        { uid: user.uid, username: userData.username, photoURL: userData.photoURL },
+        { uid: partner.uid, username: partner.username, photoURL: partner.photoURL }
+      );
+      router.push(`/call/${callId}`);
+    } catch (error: any) {
+      toast({ variant: 'destructive', description: error.message || "Arama başlatılamadı." });
+      setIsCalling(false);
+    }
+  }
+
 
   if (loading) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-10 w-10 animate-spin" /></div>;
@@ -97,9 +117,10 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
             variant="ghost"
             size="icon"
             className="rounded-full"
-            onClick={() => toast({ description: "Görüntülü ve sesli arama yakında geliyor!" })}
+            onClick={handleInitiateCall}
+            disabled={isCalling}
         >
-            <Video className="h-5 w-5" />
+            {isCalling ? <Loader2 className="h-5 w-5 animate-spin"/> : <Video className="h-5 w-5" />}
         </Button>
       </header>
 

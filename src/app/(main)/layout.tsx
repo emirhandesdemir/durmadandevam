@@ -11,6 +11,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import NotificationPermissionManager from "@/components/common/NotificationPermissionManager";
 import InAppNotificationHandler from "@/components/common/InAppNotificationHandler";
+import IncomingCallManager from '@/components/common/IncomingCallManager'; // Import the new component
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
 
@@ -116,7 +117,7 @@ export default function MainAppLayout({
 
   // Bazı sayfaların (oda ve dm detay) tam ekran düzen kullanması ve
   // header göstermemesi gerekir. Bu kontrolü burada yapıyoruz.
-  const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/');
+  const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/');
   const isHeaderlessPage = isFullPageLayout;
   const isHomePage = pathname === '/home';
 
@@ -143,6 +144,7 @@ export default function MainAppLayout({
       {/* Bildirim izni ve PWA yükleme gibi genel işlemleri yöneten bileşenler. */}
       <NotificationPermissionManager />
       <InAppNotificationHandler />
+      <IncomingCallManager />
       
       <div className="relative flex h-dvh w-full flex-col bg-background overflow-hidden">
         {/* PWA yükleme çubuğu */}
