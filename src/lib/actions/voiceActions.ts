@@ -36,14 +36,14 @@ export async function joinVoiceChat(roomId: string, user: UserInfo, options?: { 
 
     try {
         await runTransaction(db, async (transaction) => {
-            const [roomDoc, userVoiceDoc, userDbDoc] = await Promise.all([
-                transaction.get(roomRef),
-                transaction.get(userVoiceRef),
-                transaction.get(userDbDoc)
-            ]);
-
+            // Fetch documents sequentially to avoid initialization errors.
+            const roomDoc = await transaction.get(roomRef);
             if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
+
+            const userDbDoc = await transaction.get(userDbRef);
             if (!userDbDoc.exists()) throw new Error("Kullanıcı profili bulunamadı.");
+            
+            const userVoiceDoc = await transaction.get(userVoiceRef);
 
             const roomData = roomDoc.data() as Room;
             const isExpired = roomData.expiresAt && (roomData.expiresAt as Timestamp).toDate() < new Date();
