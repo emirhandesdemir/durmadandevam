@@ -253,3 +253,17 @@
     100% { background-position: 0% 50%; }
   }
 }
+
+/* Post Like Animation */
+@layer components {
+  @keyframes like-pop {
+    0% { opacity: 0; transform: scale(0.5); }
+    30% { opacity: 0.9; transform: scale(1.2); }
+    60% { opacity: 0.9; transform: scale(1.0); }
+    100% { opacity: 0; transform: scale(1.0); }
+  }
+
+  .animate-like-pop {
+    animation: like-pop 0.6s ease-in-out forwards;
+  }
+}
