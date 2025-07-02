@@ -29,7 +29,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Gem, MessageSquare, TowerBroadcast } from "lucide-react";
+import { Loader2, MessageSquare, TowerBroadcast } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 
