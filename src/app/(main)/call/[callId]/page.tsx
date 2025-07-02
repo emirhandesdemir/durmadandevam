@@ -91,7 +91,6 @@ export default function CallPage() {
   const [partner, setPartner] = useState<UserInfo | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(true);
-  const [isSpeakerOn, setIsSpeakerOn] = useState(true);
   const [partnerVideoOn, setPartnerVideoOn] = useState(false);
   
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
@@ -221,19 +220,34 @@ export default function CallPage() {
 
 
   useEffect(() => {
-    if (didSetupWebRTC.current || authLoading) return;
+    // Only proceed if we have the necessary data and haven't set up yet.
+    if (!user || !callData || didSetupWebRTC.current) {
+        return;
+    }
+
+    // Mark as "setting up" to prevent this effect from running again.
+    didSetupWebRTC.current = true;
     
-    let unsubscribe: (() => void) | undefined;
-    const init = async () => {
-        if (user && callData && partner && !pageLoading) {
-            didSetupWebRTC.current = true;
-            unsubscribe = await setupWebRTC(callData.callerId === user.uid);
+    let unsubscribeCandidates: (() => void) | undefined;
+    
+    const initWebRTC = async () => {
+        // The setupWebRTC function returns the unsubscribe function for the candidate listener.
+        unsubscribeCandidates = await setupWebRTC(callData.callerId === user.uid);
+    };
+
+    initWebRTC().catch(e => {
+        console.error("Failed to initialize WebRTC", e);
+        // If init fails, reset the flag so it can be tried again if dependencies change.
+        didSetupWebRTC.current = false;
+    });
+
+    // Cleanup function for this effect.
+    return () => {
+        if (unsubscribeCandidates) {
+            unsubscribeCandidates();
         }
     };
-    init().catch(e => console.error("Failed to initialize WebRTC", e));
-    
-    return () => { unsubscribe?.(); };
-  }, [user, callData, partner, pageLoading, setupWebRTC, authLoading]);
+}, [user, callData, setupWebRTC]);
 
 
   // Effect for caller: create offer
@@ -319,7 +333,6 @@ export default function CallPage() {
             ref={remoteVideoRef} 
             autoPlay 
             playsInline
-            muted={!isSpeakerOn}
             className={cn(
                 "absolute inset-0 w-full h-full object-cover transition-opacity duration-500",
                 showRemoteVideo ? "opacity-100" : "opacity-0"
