@@ -3,7 +3,6 @@
 // anlık bildirim gönderme gibi işlemleri gerçekleştirir.
 import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
-import axios from "axios";
 
 // Firebase Admin SDK'sını başlat. Bu, sunucu tarafında Firebase servislerine erişim sağlar.
 admin.initializeApp();
@@ -105,16 +104,23 @@ export const sendPushNotification = functions
         };
 
         try {
-            await axios.post("https://onesignal.com/api/v1/notifications", oneSignalPayload, {
+            const response = await fetch("https://onesignal.com/api/v1/notifications", {
+                method: "POST",
                 headers: {
                     "Authorization": `Basic ${ONE_SIGNAL_REST_API_KEY}`,
                     "Content-Type": "application/json",
                 },
+                body: JSON.stringify(oneSignalPayload),
             });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(JSON.stringify(errorData));
+            }
+
             console.log(`OneSignal notification sent to user ${userId}`);
         } catch (error: any) {
-            console.error(`Error sending OneSignal notification to user ${userId}:`,
-                error.response?.data || error.message);
+            console.error(`Error sending OneSignal notification to user ${userId}:`, error.message);
         }
     });
 
