@@ -14,7 +14,7 @@ const db = admin.firestore();
 // OneSignal konfigürasyonunu ortam değişkenlerinden al.
 // Bu anahtarı `firebase functions:config:set onesignal.rest_api_key=YOUR_KEY` komutuyla ayarlamanız gerekir.
 const ONE_SIGNAL_APP_ID = "51c67432-a305-43fc-a4c8-9c5d9d478d1c";
-const ONE_SIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY;
+const ONE_SIGNAL_REST_API_KEY = functions.config().onesignal?.rest_api_key;
 
 
 /**
