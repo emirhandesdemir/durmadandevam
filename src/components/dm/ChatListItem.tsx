@@ -1,14 +1,14 @@
 // src/components/dm/ChatListItem.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import type { DirectMessageMetadata } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import Link from 'next/link';
 import { Check, CheckCheck, Pin, PinOff, Trash2, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { togglePinChat, hideChat } from '@/lib/actions/dmActions';
@@ -23,10 +23,33 @@ interface ChatListItemProps {
 }
 
 export default function ChatListItem({ chat, currentUserId, isSelected }: ChatListItemProps) {
+  const router = useRouter();
   const { toast } = useToast();
+  
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
+  const pressTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const handlePointerDown = () => {
+    pressTimer.current = setTimeout(() => {
+        setIsMenuOpen(true);
+        pressTimer.current = null; // Timer fired, it's a long press
+    }, 500);
+  };
+
+  const handlePointerUp = () => {
+    if (pressTimer.current) {
+        clearTimeout(pressTimer.current);
+        pressTimer.current = null;
+        // If timer didn't fire, it's a short press/click
+        if (!isMenuOpen) {
+            router.push(`/dm/${chat.id}`);
+        }
+    }
+  };
+
   const partnerId = chat.participantUids.find(uid => uid !== currentUserId);
   if (!partnerId) return null;
   const partnerInfo = chat.participantInfo[partnerId];
@@ -74,52 +97,58 @@ export default function ChatListItem({ chat, currentUserId, isSelected }: ChatLi
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
         <DropdownMenuTrigger asChild>
-          <div onContextMenu={(e) => e.preventDefault()} className="w-full cursor-pointer rounded-lg">
-            <Link href={`/dm/${chat.id}`} className="block">
-              <div className={cn(
-                "flex items-center gap-4 p-3 border-b hover:bg-muted/50 transition-colors",
-                isSelected ? "bg-muted" : (isUnread ? "bg-primary/10" : "bg-card")
-              )}>
-                <div className="relative">
-                  <div className={cn("avatar-frame-wrapper", partnerFrame)}>
-                    <Avatar className="relative z-[1] h-12 w-12">
-                      <AvatarImage src={partnerInfo.photoURL || undefined} />
-                      <AvatarFallback>{partnerInfo.username.charAt(0)}</AvatarFallback>
-                    </Avatar>
+          <div 
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setIsMenuOpen(true);
+            }} 
+            className="w-full cursor-pointer rounded-lg"
+          >
+            <div className={cn(
+              "flex items-center gap-4 p-3 border-b hover:bg-muted/50 transition-colors",
+              isSelected ? "bg-muted" : (isUnread ? "bg-primary/10" : "bg-card")
+            )}>
+              <div className="relative">
+                <div className={cn("avatar-frame-wrapper", partnerFrame)}>
+                  <Avatar className="relative z-[1] h-12 w-12">
+                    <AvatarImage src={partnerInfo.photoURL || undefined} />
+                    <AvatarFallback>{partnerInfo.username.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                </div>
+                {isUnread && !isSelected && (
+                    <span className="absolute bottom-0 right-0 block h-3.5 w-3.5 rounded-full bg-primary ring-2 ring-background" />
+                )}
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                      {isPinned && <Pin className="h-4 w-4 text-primary" />}
+                      <h3 className={cn("truncate", isUnread && !isSelected ? "font-bold text-foreground" : "font-semibold")}>{partnerInfo.username}</h3>
                   </div>
+                  <p className="text-xs text-muted-foreground shrink-0">{timeAgo}</p>
+                </div>
+                <div className="flex justify-between items-start mt-1">
+                  <p className={cn(
+                      "text-sm truncate pr-2", 
+                      isUnread && !isSelected ? "text-primary font-bold" : "text-muted-foreground"
+                  )}>
+                    {lastMessage && lastMessage.senderId === currentUserId && (
+                      <span className="inline-block mr-1">
+                          {lastMessage.read ? <CheckCheck className="h-4 w-4 text-primary" /> : <Check className="h-4 w-4 text-muted-foreground" />}
+                      </span>
+                    )}
+                    {lastMessage?.text || 'Sohbet başlatıldı'}
+                  </p>
                   {isUnread && !isSelected && (
-                      <span className="absolute bottom-0 right-0 block h-3.5 w-3.5 rounded-full bg-primary ring-2 ring-background" />
+                    <Badge variant="default" className="h-6 min-w-[24px] flex items-center justify-center p-1 text-xs shrink-0">{unreadCount}</Badge>
                   )}
                 </div>
-                <div className="flex-1 overflow-hidden">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                        {isPinned && <Pin className="h-4 w-4 text-primary" />}
-                        <h3 className={cn("truncate", isUnread && !isSelected ? "font-bold text-foreground" : "font-semibold")}>{partnerInfo.username}</h3>
-                    </div>
-                    <p className="text-xs text-muted-foreground shrink-0">{timeAgo}</p>
-                  </div>
-                  <div className="flex justify-between items-start mt-1">
-                    <p className={cn(
-                        "text-sm truncate pr-2", 
-                        isUnread && !isSelected ? "text-primary font-bold" : "text-muted-foreground"
-                    )}>
-                      {lastMessage && lastMessage.senderId === currentUserId && (
-                        <span className="inline-block mr-1">
-                            {lastMessage.read ? <CheckCheck className="h-4 w-4 text-primary" /> : <Check className="h-4 w-4 text-muted-foreground" />}
-                        </span>
-                      )}
-                      {lastMessage?.text || 'Sohbet başlatıldı'}
-                    </p>
-                    {isUnread && !isSelected && (
-                      <Badge variant="default" className="h-6 min-w-[24px] flex items-center justify-center p-1 text-xs shrink-0">{unreadCount}</Badge>
-                    )}
-                  </div>
-                </div>
               </div>
-            </Link>
+            </div>
           </div>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
