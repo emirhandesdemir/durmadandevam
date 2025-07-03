@@ -155,7 +155,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
             await updatePost(post.id, editedText);
             toast({ description: "Gönderi güncellendi." });
             setIsEditing(false);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error updating post:", error);
             toast({ variant: "destructive", description: "Gönderi güncellenirken bir hata oluştu." });
         } finally {
@@ -195,74 +195,64 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
         return (
              <>
                 <div 
-                    className={cn("relative flex gap-3 p-4 transition-colors hover:bg-muted/50", !isStandalone && "border-b")}
-                    onDoubleClick={handleDoubleClick}
+                    className={cn("relative flex flex-col pt-4 transition-colors", !isStandalone && "border-b")}
                 >
                      {showLikeAnimation && (
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                            <Heart className="text-white h-20 w-20 drop-shadow-lg animate-like-pop" fill="currentColor" />
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                            <Heart className="text-white h-24 w-24 drop-shadow-lg animate-like-pop" fill="currentColor" />
                         </div>
                     )}
-                    {/* Retweeter Avatar Column */}
-                    <div>
-                        <Link href={`/profile/${post.uid}`}>
-                             <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
-                                <Avatar className="relative z-[1] h-10 w-10">
-                                    <AvatarImage src={post.userAvatar} />
-                                    <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                            </div>
-                        </Link>
-                    </div>
 
-                    {/* Content Column */}
-                    <div className="flex-1">
+                    <div className="px-4 pb-2">
                         <div className="text-xs text-muted-foreground flex items-center gap-2 mb-2">
                             <Repeat className="h-4 w-4" />
                             <Link href={`/profile/${post.uid}`} className="font-bold hover:underline">{post.username}</Link> retweetledi
                         </div>
 
-                        {/* The QUOTE TEXT from the retweeter */}
+                         {/* The QUOTE TEXT from the retweeter */}
                         {post.text && (
-                          <p className="whitespace-pre-wrap text-sm mb-2">{post.text}</p>
+                          <div className="flex gap-3">
+                             <div className="w-10 flex-shrink-0" />
+                             <p className="whitespace-pre-wrap text-sm">{post.text}</p>
+                          </div>
                         )}
+                    </div>
 
-                        {/* Original Post Content in a nested box */}
-                        <div className="border rounded-lg p-3 space-y-2">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Link href={`/profile/${originalPost.uid}`}>
-                                        <div className={cn("avatar-frame-wrapper", originalPost.userAvatarFrame)}>
-                                            <Avatar className="relative z-[1] h-8 w-8">
-                                                <AvatarImage src={originalPost.userAvatar || undefined} />
-                                                <AvatarFallback>{originalPost.username?.charAt(0)}</AvatarFallback>
-                                            </Avatar>
-                                        </div>
-                                    </Link>
-                                    <div className="flex items-center gap-1.5">
-                                        <Link href={`/profile/${originalPost.uid}`}><p className="font-bold text-sm hover:underline">{originalPost.username}</p></Link>
-                                    </div>
+                    {/* Original Post Content in a nested box */}
+                    <div className="border rounded-lg mx-4 mt-2 overflow-hidden">
+                        <div className="flex items-center gap-3 p-3">
+                            <Link href={`/profile/${originalPost.uid}`}>
+                                <div className={cn("avatar-frame-wrapper", originalPost.userAvatarFrame)}>
+                                    <Avatar className="relative z-[1] h-9 w-9">
+                                        <AvatarImage src={originalPost.userAvatar || undefined} />
+                                        <AvatarFallback>{originalPost.username?.charAt(0)}</AvatarFallback>
+                                    </Avatar>
                                 </div>
+                            </Link>
+                            <div className="flex-1">
+                                <Link href={`/profile/${originalPost.uid}`}><p className="font-bold text-sm hover:underline">{originalPost.username}</p></Link>
                                 <span className="text-xs text-muted-foreground">{originalTimeAgo}</span>
                             </div>
-                            
-                            {originalPost.text && <p className="whitespace-pre-wrap text-sm">{originalPost.text}</p>}
-                            
-                            {originalPost.imageUrl && (
-                                <div className="relative mt-2 h-auto w-full overflow-hidden rounded-lg border">
-                                    <Image 
-                                        src={originalPost.imageUrl} 
-                                        alt="Retweeted post" 
-                                        width={800} height={800} 
-                                        className="h-auto w-full max-h-[500px] object-cover"
-                                        onContextMenu={(e) => e.preventDefault()}
-                                    />
-                                </div>
-                            )}
                         </div>
+                        
+                        {originalPost.text && <p className="whitespace-pre-wrap text-sm px-3 pb-2">{originalPost.text}</p>}
+                        
+                        {originalPost.imageUrl && (
+                            <div className="relative w-full bg-muted cursor-pointer" onDoubleClick={handleDoubleClick}>
+                                <Image 
+                                    src={originalPost.imageUrl} 
+                                    alt="Retweeted post" 
+                                    width={800} height={800} 
+                                    className="h-auto w-full object-cover"
+                                    onContextMenu={(e) => e.preventDefault()}
+                                />
+                            </div>
+                        )}
+                    </div>
 
-                        {/* Action buttons for the retweet */}
-                        <div className="mt-3 flex items-center gap-1 -ml-2">
+                    {/* Action buttons for the retweet */}
+                    <div className="px-2 pt-1 pb-2">
+                        <div className="flex items-center gap-1">
                             <Button variant="ghost" size="icon" className={cn("rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive", optimisticLiked && "text-destructive")} onClick={handleLike} disabled={!currentUser}>
                                 <Heart className={cn("h-5 w-5", optimisticLiked && "fill-current")} />
                             </Button>
@@ -274,7 +264,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                             </Button>
                         </div>
                         {(optimisticLikeCount > 0 || post.commentCount > 0) && (
-                            <div className="mt-1 text-xs text-muted-foreground">
+                             <div className="mt-1 px-2 text-xs text-muted-foreground">
                                 <span>{post.commentCount || 0} yanıt</span>
                                 <span className="mx-1">·</span>
                                 <span>{optimisticLikeCount || 0} beğeni</span>
@@ -290,31 +280,24 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     
     return (
         <>
-           <div 
-                className={cn("relative flex gap-3 p-4 transition-colors hover:bg-muted/50", !isStandalone && "border-b")}
-                onDoubleClick={handleDoubleClick}
-            >
+            <div className={cn("relative flex flex-col transition-colors", !isStandalone && "border-b")}>
                 {showLikeAnimation && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                        <Heart className="text-white h-20 w-20 drop-shadow-lg animate-like-pop" fill="currentColor" />
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                        <Heart className="text-white h-24 w-24 drop-shadow-lg animate-like-pop" fill="currentColor" />
                     </div>
                 )}
-                {/* Avatar Column */}
-                <div>
+            
+                {/* Header: Avatar, Name, Time, Menu */}
+                <div className="flex items-start gap-3 p-4">
                     <Link href={`/profile/${post.uid}`}>
-                         <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
+                        <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
                             <Avatar className="relative z-[1] h-10 w-10">
                                 <AvatarImage src={post.userAvatar} />
                                 <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
                             </Avatar>
                         </div>
                     </Link>
-                </div>
-
-                {/* Content Column */}
-                <div className="flex-1">
-                    {/* Header */}
-                    <div className="flex items-center justify-between">
+                    <div className="flex-1">
                         <div className="flex items-center gap-1.5">
                             <Link href={`/profile/${post.uid}`}>
                                 <p className="font-bold text-sm hover:underline">{post.username}</p>
@@ -322,68 +305,55 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                             {post.userRole === 'admin' && (
                                 <TooltipProvider>
                                     <Tooltip>
-                                        <TooltipTrigger>
-                                            <BadgeCheck className="h-4 w-4 text-primary fill-primary/20" />
-                                        </TooltipTrigger>
+                                        <TooltipTrigger><BadgeCheck className="h-4 w-4 text-primary fill-primary/20" /></TooltipTrigger>
                                         <TooltipContent><p>Yönetici</p></TooltipContent>
                                     </Tooltip>
                                 </TooltipProvider>
                             )}
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            {post.editedWithAI && (
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger className="flex items-center gap-1 text-primary font-semibold">
-                                            <Sparkles className="h-3 w-3" />
-                                            <span>HiweWalkAI ile düzenlendi</span>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>Bu gönderideki resim HiweWalkAI ile düzenlenmiştir.</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-                            )}
-                            {post.editedWithAI && <span>·</span>}
-                            <span>{timeAgo}</span>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full -mr-2">
-                                        <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    {isOwner ? (
-                                        <>
-                                            <DropdownMenuItem onClick={() => setIsEditing(true)}><Edit className="mr-2 h-4 w-4" /><span>Düzenle</span></DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Sil</span></DropdownMenuItem>
-                                        </>
-                                    ) : (
-                                        <DropdownMenuItem onClick={handleHide}>
-                                            <EyeOff className="mr-2 h-4 w-4" />
-                                            <span>İlgilenmiyorum</span>
-                                        </DropdownMenuItem>
-                                    )}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
+                        <span className="text-xs text-muted-foreground">{timeAgo}</span>
                     </div>
-                    
-                    {/* Post Text/Editing */}
-                    <div className="mt-1 text-sm text-foreground/90">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        {post.editedWithAI && (
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger className="flex items-center gap-1 text-primary font-semibold">
+                                        <Sparkles className="h-3 w-3" />
+                                        <span>AI ile düzenlendi</span>
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>Bu gönderideki resim HiweWalkAI ile düzenlenmiştir.</p></TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full -mr-2">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                {isOwner ? (
+                                    <>
+                                        <DropdownMenuItem onClick={() => setIsEditing(true)}><Edit className="mr-2 h-4 w-4" /><span>Düzenle</span></DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Sil</span></DropdownMenuItem>
+                                    </>
+                                ) : (
+                                    <DropdownMenuItem onClick={handleHide}>
+                                        <EyeOff className="mr-2 h-4 w-4" />
+                                        <span>İlgilenmiyorum</span>
+                                    </DropdownMenuItem>
+                                )}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                </div>
+
+                {/* Content: Text */}
+                 {(post.text || isEditing) && (
+                    <div className="px-4 pb-3 text-sm text-foreground/90">
                         {isEditing ? (
                             <div className="space-y-2">
-                                <Textarea
-                                    ref={textareaRef}
-                                    value={editedText}
-                                    onChange={(e) => setEditedText(e.target.value)}
-                                    className="w-full resize-none bg-muted p-2 rounded-lg"
-                                    onInput={(e) => {
-                                        const target = e.currentTarget;
-                                        target.style.height = 'inherit';
-                                        target.style.height = `${target.scrollHeight}px`;
-                                    }}
-                                />
+                                <Textarea ref={textareaRef} value={editedText} onChange={(e) => setEditedText(e.target.value)} className="w-full resize-none bg-muted p-2 rounded-lg" onInput={(e) => { const target = e.currentTarget; target.style.height = 'inherit'; target.style.height = `${target.scrollHeight}px`; }} />
                                 <div className="flex justify-end gap-2">
                                     <Button variant="ghost" size="sm" onClick={handleCancelEdit}>İptal</Button>
                                     <Button size="sm" onClick={handleSaveEdit} disabled={isSaving}>
@@ -396,23 +366,25 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                             post.text && <p className="whitespace-pre-wrap">{post.text}</p>
                         )}
                     </div>
-
-                    {/* Image */}
-                    {post.imageUrl && !isEditing && (
-                        <div className="relative mt-3 h-auto w-full overflow-hidden rounded-xl border">
-                             <Image
-                                src={post.imageUrl}
-                                alt="Gönderi resmi"
-                                width={800}
-                                height={800}
-                                className="h-auto w-full max-h-[600px] object-cover"
-                                onContextMenu={(e) => e.preventDefault()}
-                            />
-                        </div>
-                    )}
-                    
-                    {/* Action Buttons */}
-                    <div className="mt-3 flex items-center gap-1 -ml-2">
+                 )}
+                
+                {/* Image */}
+                {post.imageUrl && !isEditing && (
+                    <div className="relative w-full bg-muted cursor-pointer" onDoubleClick={handleDoubleClick}>
+                        <Image
+                            src={post.imageUrl}
+                            alt="Gönderi resmi"
+                            width={800}
+                            height={800}
+                            className="h-auto w-full max-h-[70vh] object-cover"
+                            onContextMenu={(e) => e.preventDefault()}
+                        />
+                    </div>
+                )}
+                
+                {/* Actions and Stats */}
+                <div className="px-2 pt-1 pb-2">
+                    <div className="flex items-center gap-1">
                         <Button variant="ghost" size="icon" className={cn("rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive", optimisticLiked && "text-destructive")} onClick={handleLike} disabled={!currentUser}>
                            <Heart className={cn("h-5 w-5", optimisticLiked && "fill-current")} />
                         </Button>
@@ -424,12 +396,11 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                         </Button>
                     </div>
 
-                    {/* Stats */}
                     {(optimisticLikeCount > 0 || post.commentCount > 0) && (
-                        <div className="mt-1 text-xs text-muted-foreground">
-                            <span>{post.commentCount || 0} yanıt</span>
-                            <span className="mx-1">·</span>
+                         <div className="mt-1 px-2 text-xs text-muted-foreground">
                             <span>{optimisticLikeCount || 0} beğeni</span>
+                            <span className="mx-1">·</span>
+                            <span>{post.commentCount || 0} yanıt</span>
                         </div>
                     )}
                 </div>
