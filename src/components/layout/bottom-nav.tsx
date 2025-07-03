@@ -2,10 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageSquare, PlusSquare, Compass } from 'lucide-react';
+import { Home, MessageSquare, PlusSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { motion } from 'framer-motion';
+
+const MotionLink = motion(Link);
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -57,13 +60,16 @@ export default function BottomNav() {
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
-              <Link
+              <MotionLink
                 key={item.id}
                 href={item.href}
                 className={cn(
-                  'flex flex-col h-14 w-16 items-center justify-center rounded-xl text-muted-foreground transition-all duration-300',
+                  'flex flex-col h-14 w-16 items-center justify-center rounded-xl text-muted-foreground transition-colors duration-200',
                   item.isActive ? 'text-primary' : 'hover:text-foreground'
                 )}
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 400, damping: 15 }}
               >
                 {item.id === 'profile' ? (
                   <div className="relative">
@@ -81,7 +87,7 @@ export default function BottomNav() {
                   Icon && <Icon className="h-6 w-6" />
                 )}
                 <span className="text-xs font-medium mt-0.5">{item.label}</span>
-              </Link>
+              </MotionLink>
             );
           })}
         </nav>
