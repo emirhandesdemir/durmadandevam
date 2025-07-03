@@ -1,4 +1,3 @@
-
 // Bu dosya, uygulamanın en dış katmanını oluşturan kök düzendir (root layout).
 // Tüm sayfalar bu düzenin içinde render edilir.
 // HTML ve BODY etiketlerini, temel fontları, tema ve kimlik doğrulama sağlayıcılarını içerir.
@@ -6,14 +5,14 @@ import type { Metadata, Viewport } from 'next';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import './globals.css';
-import { Inter } from 'next/font/google';
+import { Plus_Jakarta_Sans } from 'next/font/google'; // Changed from Inter
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/layout/ThemeProvider';
 import NetworkStatusNotifier from '@/components/common/NetworkStatusNotifier';
 import I18nProvider from '@/components/common/I18nProvider';
 
-// Google Fonts'tan Inter font ailesini yüklüyoruz.
-const inter = Inter({ 
+// Google Fonts'tan Plus Jakarta Sans font ailesini yüklüyoruz.
+const fontSans = Plus_Jakarta_Sans({ 
   subsets: ['latin'], 
   variable: '--font-sans', // CSS'te bu değişken adıyla kullanılabilir.
   weight: ['400', '500', '600', '700', '800']
@@ -59,7 +58,7 @@ export default function RootLayout({
       <body
         className={cn(
           'min-h-screen bg-background font-sans antialiased font-medium',
-          inter.variable // Inter fontunu tüm body'e uygula.
+          fontSans.variable // Plus Jakarta Sans fontunu tüm body'e uygula.
         )}
       >
         {/* Tema Sağlayıcısı (Aydınlık/Karanlık Mod) */}

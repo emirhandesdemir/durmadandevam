@@ -29,20 +29,34 @@ export default function ChatList({ selectedChatId }: ChatListProps) {
       return;
     }
 
-    // Kullanıcının dahil olduğu sohbet metadatalarını dinle
     const metadataRef = collection(db, 'directMessagesMetadata');
-    // Performans için sıralamayı veritabanında yap
     const q = query(
       metadataRef,
-      where('participantUids', 'array-contains', user.uid),
-      orderBy('lastMessage.timestamp', 'desc')
+      where('participantUids', 'array-contains', user.uid)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const chatsData = snapshot.docs.map(doc => ({
+      let chatsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
       } as DirectMessageMetadata));
+
+      // Filter out hidden chats
+      chatsData = chatsData.filter(chat => !(chat.hiddenBy && chat.hiddenBy.includes(user.uid)));
+
+      // Sort chats: pinned first, then by last message timestamp
+      chatsData.sort((a, b) => {
+        const aIsPinned = a.pinnedBy?.includes(user.uid);
+        const bIsPinned = b.pinnedBy?.includes(user.uid);
+
+        if (aIsPinned && !bIsPinned) return -1;
+        if (!aIsPinned && bIsPinned) return 1;
+
+        const timeA = a.lastMessage?.timestamp?.toMillis() || 0;
+        const timeB = b.lastMessage?.timestamp?.toMillis() || 0;
+        return timeB - timeA;
+      });
+
       setChats(chatsData);
       setLoading(false);
     }, (error) => {

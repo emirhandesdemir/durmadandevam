@@ -280,6 +280,8 @@ export interface DirectMessageMetadata {
     unreadCounts: {
         [uid: string]: number;
     };
+    pinnedBy?: string[];
+    hiddenBy?: string[];
 }
 
 export interface Message {

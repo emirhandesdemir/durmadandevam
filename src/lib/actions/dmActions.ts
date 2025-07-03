@@ -1,4 +1,3 @@
-
 // src/lib/actions/dmActions.ts
 'use server';
 
@@ -19,6 +18,8 @@ import {
   deleteDoc,
   orderBy,
   addDoc,
+  arrayUnion,
+  arrayRemove,
 } from 'firebase/firestore';
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { revalidatePath } from 'next/cache';
@@ -382,4 +383,46 @@ export async function createDmFromMatchRoom(roomId: string) {
   await batch.commit();
 
   return chatId;
+}
+
+
+export async function togglePinChat(chatId: string, userId: string) {
+  if (!chatId || !userId) throw new Error("Sohbet ID ve Kullanıcı ID gerekli.");
+
+  const metadataRef = doc(db, 'directMessagesMetadata', chatId);
+  try {
+    const docSnap = await getDoc(metadataRef);
+    if (!docSnap.exists()) throw new Error("Sohbet bulunamadı.");
+    
+    const pinnedBy: string[] = docSnap.data().pinnedBy || [];
+    const isPinned = pinnedBy.includes(userId);
+
+    await updateDoc(metadataRef, {
+      pinnedBy: isPinned ? arrayRemove(userId) : arrayUnion(userId)
+    });
+    
+    revalidatePath('/dm');
+    return { success: true, newState: !isPinned };
+  } catch (error: any) {
+    console.error("Sohbet sabitlenirken hata oluştu:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function hideChat(chatId: string, userId: string) {
+  if (!chatId || !userId) throw new Error("Sohbet ID ve Kullanıcı ID gerekli.");
+
+  const metadataRef = doc(db, 'directMessagesMetadata', chatId);
+  try {
+    // We add the user to a "hiddenBy" list instead of deleting
+    await updateDoc(metadataRef, {
+      hiddenBy: arrayUnion(userId)
+    });
+    
+    revalidatePath('/dm');
+    return { success: true };
+  } catch (error: any) {
+    console.error("Sohbet gizlenirken hata oluştu:", error);
+    return { success: false, error: error.message };
+  }
 }
