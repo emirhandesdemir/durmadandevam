@@ -3,7 +3,6 @@
 // anlık bildirim gönderme gibi işlemleri gerçekleştirir.
 import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
-import axios from "axios";
 
 // Firebase Admin SDK'sını başlat. Bu, sunucu tarafında Firebase servislerine erişim sağlar.
 admin.initializeApp();
@@ -11,11 +10,10 @@ admin.initializeApp();
 // Firestore veritabanı örneğini al.
 const db = admin.firestore();
 
-// OneSignal konfigürasyonu.
-// GÜVENLİK NOTU: API anahtarını doğrudan koda eklemek en iyi pratik değildir.
-// İdeal olarak bu, Firebase ortam değişkenlerinden (`functions.config()` veya `process.env`) okunmalıdır.
+// OneSignal konfigürasyonunu ortam değişkenlerinden al.
+// Bu anahtarları `firebase functions:config:set onesignal.rest_api_key=YOUR_KEY` komutuyla ayarlamalısınız.
 const ONE_SIGNAL_APP_ID = "51c67432-a305-43fc-a4c8-9c5d9d478d1c";
-const ONE_SIGNAL_REST_API_KEY = "os_v2_app_khdhimvdavb7zjgitroz2r4ndrkixk2biw6eqrfn4oygor7fxogtw3riv5mjpu4koeuuju6ma2scefend3lqkwij53ppdzbngmbouvy";
+const ONE_SIGNAL_REST_API_KEY = functions.config().onesignal?.rest_api_key;
 
 
 /**
@@ -27,7 +25,9 @@ export const sendPushNotification = functions
     .firestore.document("users/{userId}/notifications/{notificationId}")
     .onCreate(async (snapshot: functions.firestore.QueryDocumentSnapshot, context: functions.EventContext) => {
         if (!ONE_SIGNAL_REST_API_KEY) {
-            console.error("OneSignal REST API Key not configured.");
+            console.error("OneSignal REST API Key not configured. " +
+                "This is required for push notifications. " +
+                "Set it with 'firebase functions:config:set onesignal.rest_api_key=YOUR_KEY'");
             return;
         }
 
@@ -110,16 +110,23 @@ export const sendPushNotification = functions
         };
 
         try {
-            await axios.post("https://onesignal.com/api/v1/notifications", oneSignalPayload, {
+            const response = await fetch("https://onesignal.com/api/v1/notifications", {
+                method: 'POST',
                 headers: {
                     "Authorization": `Basic ${ONE_SIGNAL_REST_API_KEY}`,
                     "Content-Type": "application/json",
                 },
+                body: JSON.stringify(oneSignalPayload),
             });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(JSON.stringify(errorData));
+            }
             console.log(`OneSignal notification sent to user ${userId}`);
+
         } catch (error: any) {
-            console.error(`Error sending OneSignal notification to user ${userId}:`,
-                error.response?.data || error.message);
+            console.error(`Error sending OneSignal notification to user ${userId}:`, error.message);
         }
     });
 
