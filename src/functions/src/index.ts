@@ -27,6 +27,7 @@ export const sendPushNotification = functions
     .onCreate(async (snapshot: functions.firestore.QueryDocumentSnapshot, context: functions.EventContext) => {
         if (!ONE_SIGNAL_REST_API_KEY) {
             console.error("OneSignal REST API Key not configured. " +
+                "This is required for push notifications. " +
                 "Set it with 'firebase functions:config:set onesignal.rest_api_key=YOUR_KEY'");
             return;
         }
@@ -184,7 +185,7 @@ export const onMessageCreate = functions.firestore
       const isGreeting = /^(selam|merhaba|hey|hi|sa)\b/i.test(message.text.replace(/@walk/i, '').trim());
 
       try {
-        const { roomBotFlow } = await import('./flows/roomBotFlow');
+        const { roomBotFlow } = await import('./flows/roomBotFlow.js');
         const responseText = await roomBotFlow({
             history,
             currentMessage: message.text,
