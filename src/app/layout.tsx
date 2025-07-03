@@ -1,3 +1,4 @@
+
 // Bu dosya, uygulamanın en dış katmanını oluşturan kök düzendir (root layout).
 // Tüm sayfalar bu düzenin içinde render edilir.
 // HTML ve BODY etiketlerini, temel fontları, tema ve kimlik doğrulama sağlayıcılarını içerir.
@@ -59,24 +60,29 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const themeSettings = await getThemeSettings();
+  const isDev = process.env.NODE_ENV === 'development';
 
   return (
     <html lang="tr" suppressHydrationWarning>
       <head>
-        <Script
-          src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"
-          defer
-        />
-        <Script id="onesignal-init">
-          {`
-            window.OneSignalDeferred = window.OneSignalDeferred || [];
-            OneSignalDeferred.push(async function(OneSignal) {
-              await OneSignal.init({
-                appId: "51c67432-a305-43fc-a4c8-9c5d9d478d1c",
-              });
-            });
-          `}
-        </Script>
+        {!isDev && (
+            <>
+                <Script
+                    src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"
+                    defer
+                />
+                <Script id="onesignal-init">
+                {`
+                    window.OneSignalDeferred = window.OneSignalDeferred || [];
+                    OneSignalDeferred.push(async function(OneSignal) {
+                    await OneSignal.init({
+                        appId: "51c67432-a305-43fc-a4c8-9c5d9d478d1c",
+                    });
+                    });
+                `}
+                </Script>
+            </>
+        )}
         <DynamicTheme />
       </head>
       <body

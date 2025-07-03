@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -32,6 +33,11 @@ export default function NotificationPermissionManager() {
   }, [dismiss, toast]);
 
   useEffect(() => {
+    // If OneSignal scripts are not loaded (e.g., in dev mode), do nothing.
+    if (typeof window.OneSignalDeferred === 'undefined') {
+        return;
+    }
+
     if (user) {
         // Associate the user with OneSignal as soon as they log in
         window.OneSignalDeferred.push(function(OneSignal) {
