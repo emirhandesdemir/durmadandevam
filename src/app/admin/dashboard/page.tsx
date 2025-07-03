@@ -1,7 +1,7 @@
 // src/app/admin/dashboard/page.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { collection, doc, getCountFromServer, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import StatCard from "@/components/admin/stat-card";
@@ -30,7 +30,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   // Performans için, sık değişmeyen verileri tek seferde çeken fonksiyon.
-  const fetchCounts = useCallback(async () => {
+  const fetchCounts = async () => {
     try {
       const usersRef = collection(db, "users");
       const [
@@ -57,7 +57,7 @@ export default function DashboardPage() {
     } catch (error) {
         console.error("İstatistikler alınırken hata:", error);
     }
-  }, []);
+  };
 
   useEffect(() => {
     setIsLoading(true);
@@ -75,7 +75,7 @@ export default function DashboardPage() {
     return () => {
       voiceStatsUnsub();
     };
-  }, [fetchCounts]);
+  }, []);
 
   return (
     <div>

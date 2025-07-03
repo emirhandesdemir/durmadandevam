@@ -95,19 +95,14 @@ export default function ProfilePosts({ userId, profileUser }: ProfilePostsProps)
                         className="group relative aspect-square block bg-muted/50 focus:outline-none"
                         onClick={() => setSelectedPost(post)}
                     >
-                        {post.imageUrls && post.imageUrls.length > 0 ? (
-                            <>
-                                <Image
-                                    src={post.imageUrls[0]}
-                                    alt="Kullanıcı gönderisi"
-                                    fill
-                                    className="object-cover"
-                                    onContextMenu={(e) => e.preventDefault()}
-                                />
-                                {post.imageUrls.length > 1 && (
-                                    <Images className="absolute top-2 right-2 h-5 w-5 text-white drop-shadow-lg"/>
-                                )}
-                            </>
+                        {post.imageUrl ? (
+                            <Image
+                                src={post.imageUrl}
+                                alt="Kullanıcı gönderisi"
+                                fill
+                                className="object-cover"
+                                onContextMenu={(e) => e.preventDefault()}
+                            />
                         ) : (
                         <div className="flex flex-col items-center justify-center h-full p-2 text-center">
                             <FileText className="h-6 w-6 text-muted-foreground mb-2"/>

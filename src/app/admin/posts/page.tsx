@@ -13,7 +13,7 @@ export interface AdminPostData {
     uid: string;
     username: string;
     text: string;
-    imageUrls?: string[];
+    imageUrl?: string;
     createdAt: Timestamp;
     likeCount: number;
     commentCount: number;

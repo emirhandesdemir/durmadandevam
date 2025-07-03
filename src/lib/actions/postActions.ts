@@ -28,7 +28,7 @@ async function handlePostMentions(postId: string, text: string, sender: { uid: s
     if (mentions) {
         const mentionedUsernames = new Set(mentions);
 
-        for (const username of mentionedUsernames) {
+        for (const username of mentions) {
             const mentionedUser = await findUserByUsername(username);
             if (mentionedUser && mentionedUser.uid !== sender.uid) {
                 const postSnap = await getDoc(doc(db, "posts", postId));

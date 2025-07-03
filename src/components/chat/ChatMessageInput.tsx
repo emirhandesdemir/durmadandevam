@@ -1,4 +1,3 @@
-
 // src/components/chat/ChatMessageInput.tsx
 "use client";
 
@@ -54,7 +53,7 @@ export default function ChatMessageInput({ room }: ChatMessageInputProps) {
     if ((!message.trim() && !file) || !currentUser || !isParticipant || isSending) return;
 
     setIsSending(true);
-    let imageUrls: string[] = [];
+    let imageUrl: string | undefined;
     let videoUrl: string | undefined;
     
     try {
@@ -65,7 +64,7 @@ export default function ChatMessageInput({ room }: ChatMessageInputProps) {
             const storageRef = ref(storage, path);
             await uploadBytes(storageRef, file);
             const downloadUrl = await getDownloadURL(storageRef);
-            if (isImage) imageUrls.push(downloadUrl);
+            if (isImage) imageUrl = downloadUrl;
             else videoUrl = downloadUrl;
         }
 
@@ -82,8 +81,8 @@ export default function ChatMessageInput({ room }: ChatMessageInputProps) {
             selectedAvatarFrame: userData?.selectedAvatarFrame || '',
         };
 
-        if (imageUrls.length > 0) {
-            messageData.imageUrls = imageUrls;
+        if (imageUrl) {
+            messageData.imageUrl = imageUrl;
         }
         if (videoUrl) {
             messageData.videoUrl = videoUrl;

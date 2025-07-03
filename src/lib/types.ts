@@ -98,7 +98,7 @@ export interface Post {
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
     text: string;
-    imageUrls?: string[]; // Changed from imageUrl to imageUrls
+    imageUrl?: string;
     editedWithAI?: boolean;
     createdAt: Timestamp | { seconds: number; nanoseconds: number };
     likes: string[]; // Beğenen kullanıcıların UID'lerini tutan dizi
@@ -112,7 +112,7 @@ export interface Post {
         userAvatar?: string | null;
         userAvatarFrame?: string;
         text: string;
-        imageUrls?: string[];
+        imageUrl?: string;
         createdAt: Timestamp | { seconds: number; nanoseconds: number };
     }
 }
@@ -288,7 +288,7 @@ export interface Message {
   username: string;
   photoURL?: string | null;
   text?: string;
-  imageUrls?: string[];
+  imageUrl?: string; // Changed from imageUrls
   videoUrl?: string;
   type?: 'system' | 'game' | 'portal' | 'user' | 'gameInvite';
   createdAt: Timestamp;

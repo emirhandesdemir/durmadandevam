@@ -79,8 +79,8 @@ export default function PostsTable({ posts }: PostsTableProps) {
                         <TableRow key={post.id}>
                             <TableCell className="font-medium">
                                <div className="flex items-start gap-3">
-                                 {post.imageUrls && post.imageUrls.length > 0 ? (
-                                    <Image src={post.imageUrls[0]} alt="Gönderi resmi" width={50} height={50} className="rounded-md object-cover aspect-square"/>
+                                 {post.imageUrl ? (
+                                    <Image src={post.imageUrl} alt="Gönderi resmi" width={50} height={50} className="rounded-md object-cover aspect-square"/>
                                  ) : (
                                     <div className="flex h-[50px] w-[50px] items-center justify-center rounded-md bg-secondary">
                                         <ImageIcon className="h-6 w-6 text-muted-foreground"/>
