@@ -80,7 +80,7 @@ export default function PostsFeed() {
         }
 
         const postsRef = collection(db, 'posts');
-        const q = query(postsRef, orderBy('createdAt', 'desc'), limit(100));
+        const q = query(postsRef, orderBy('createdAt', 'desc'), limit(50));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const postsData = snapshot.docs.map(doc => ({
