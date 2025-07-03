@@ -26,10 +26,9 @@ export async function initiateCall(caller: UserInfo, receiver: UserInfo, type: '
   const callsRef = collection(db, 'calls');
   const newCallRef = doc(callsRef);
 
-  // Set the initial video status based on the call type
   const initialVideoStatus = {
     [caller.uid]: type === 'video',
-    [receiver.uid]: false, // Receiver always starts with video off
+    [receiver.uid]: false,
   };
 
   await setDoc(newCallRef, {
@@ -43,6 +42,7 @@ export async function initiateCall(caller: UserInfo, receiver: UserInfo, type: '
       username: receiver.username,
       photoURL: receiver.photoURL,
     },
+    participantUids: [caller.uid, receiver.uid],
     status: 'ringing',
     type: type,
     videoStatus: initialVideoStatus,
@@ -103,7 +103,6 @@ export async function updateCallStatus(callId: string, status: 'declined' | 'end
         await addCallSystemMessageToDm(chatId, status, duration);
     }
     
-    // Send a missed call notification to the original caller if the receiver misses it
     if (status === 'missed' && callData.callerId) {
          await createNotification({
             recipientId: callData.callerId,
@@ -117,7 +116,6 @@ export async function updateCallStatus(callId: string, status: 'declined' | 'end
     }
 }
 
-// For WebRTC signaling
 export async function sendOffer(callId: string, offer: RTCSessionDescriptionInit) {
     const callRef = doc(db, 'calls', callId);
     await updateDoc(callRef, { offer: offer });

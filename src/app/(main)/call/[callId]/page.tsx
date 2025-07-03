@@ -4,7 +4,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { doc, onSnapshot, collection, deleteDoc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, collection, deleteDoc, getDoc, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { sendAnswer, sendIceCandidate, updateCallStatus, updateVideoStatus, sendOffer } from '@/lib/actions/callActions';
 import type { Call } from '@/lib/types';
@@ -93,7 +93,8 @@ export default function CallPage() {
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
-  const signalingStateRef = useRef<string | null>(null); // To track signaling state changes
+  const iceCandidateQueue = useRef<RTCIceCandidate[]>([]);
+
 
   const getCallStatusText = () => {
       if (!callData) return 'Yükleniyor...';
@@ -104,17 +105,17 @@ export default function CallPage() {
       }
   }
 
-  const cleanupAndLeave = useCallback(async (shouldUpdateStatus = false) => {
-    if (shouldUpdateStatus && callId) {
+  const cleanupAndLeave = useCallback(async (shouldUpdateDb = false) => {
+    if (shouldUpdateDb && callId) {
       await updateCallStatus(callId, 'ended');
     }
     if (peerConnectionRef.current) {
-      peerConnectionRef.current.close();
-      peerConnectionRef.current = null;
+        peerConnectionRef.current.close();
+        peerConnectionRef.current = null;
     }
     if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => track.stop());
-      localStreamRef.current = null;
+        localStreamRef.current.getTracks().forEach(track => track.stop());
+        localStreamRef.current = null;
     }
     if (remoteVideoRef.current && remoteVideoRef.current.srcObject) {
         (remoteVideoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
@@ -124,37 +125,43 @@ export default function CallPage() {
   }, [callId, router]);
 
 
-  // Effect for setting up WebRTC and handling signals
   useEffect(() => {
     if (!user || !callId) return;
 
-    let unsubCall: (() => void) | null = null;
-    let unsubCandidates: (() => void) | null = null;
+    let callUnsubscribe: () => void = () => {};
+    let candidatesUnsubscribe: () => void = () => {};
+    
+    const initCall = async () => {
+        const initialCallSnap = await getDoc(doc(db, 'calls', callId));
+        if (!initialCallSnap.exists()) {
+            toast({ variant: "destructive", description: "Arama bulunamadı." });
+            router.replace('/dm');
+            return;
+        }
 
-    const setup = async () => {
-        // Step 1: Get user media
+        const callDoc = initialCallSnap.data() as Call;
+        setCallData(callDoc);
+        setPartner(user.uid === callDoc.callerId ? callDoc.receiverInfo : callDoc.callerInfo);
+        
+        peerConnectionRef.current = new RTCPeerConnection(ICE_SERVERS);
+        const pc = peerConnectionRef.current;
+        iceCandidateQueue.current = [];
+
+        // Setup Media Stream
+        const videoEnabled = callDoc.videoStatus?.[user.uid] ?? false;
         try {
-            const videoEnabled = callData ? callData.videoStatus?.[user.uid] ?? false : false;
             const stream = await navigator.mediaDevices.getUserMedia({ video: videoEnabled, audio: true });
             localStreamRef.current = stream;
+            stream.getTracks().forEach(track => pc.addTrack(track, stream));
             setIsVideoOff(!videoEnabled);
         } catch(err) {
             console.error("getUserMedia error:", err);
             toast({ variant: "destructive", title: "İzin Hatası", description: "Arama için kamera/mikrofon izni gerekli." });
-            cleanupAndLeave(true);
+            await cleanupAndLeave(true);
             return;
         }
 
-        // Step 2: Create Peer Connection
-        peerConnectionRef.current = new RTCPeerConnection(ICE_SERVERS);
-        const pc = peerConnectionRef.current;
-
-        // Step 3: Add local tracks to PC
-        localStreamRef.current.getTracks().forEach(track => {
-            pc.addTrack(track, localStreamRef.current!);
-        });
-        
-        // Step 4: Setup event listeners for PC
+        // Setup Peer Connection Listeners
         pc.ontrack = (event) => {
             if (remoteVideoRef.current) {
                 remoteVideoRef.current.srcObject = event.streams[0];
@@ -163,82 +170,79 @@ export default function CallPage() {
 
         pc.onicecandidate = (event) => {
             if (event.candidate && callData) {
-                const targetId = user.uid === callData.callerId ? callData.receiverId : callData.callerId;
+                const targetId = user.uid === callDoc.callerId ? callDoc.receiverId : callDoc.callerId;
                 sendIceCandidate(callId, event.candidate.toJSON(), targetId);
             }
         };
 
-        pc.onsignalingstatechange = () => {
-             signalingStateRef.current = pc.signalingState;
-        };
-
-        // Step 5: Listen for signals
-        unsubCall = onSnapshot(doc(db, 'calls', callId), async (snapshot) => {
+        // Listen for call document changes (offer/answer)
+        callUnsubscribe = onSnapshot(doc(db, 'calls', callId), async (snapshot) => {
             const data = snapshot.data() as Call;
             if (!snapshot.exists() || ['ended', 'declined', 'missed'].includes(data.status)) {
                 toast({ description: "Arama sonlandırıldı." });
-                cleanupAndLeave();
+                await cleanupAndLeave();
                 return;
             }
-            
+
             setCallData(data);
             const isCaller = data.callerId === user.uid;
 
             // Offer-Answer flow
-            if (isCaller && data.status === 'ringing' && pc.signalingState === 'stable') {
+            if (pc.signalingState === 'stable' && isCaller && !data.offer) {
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
                 await sendOffer(callId, offer);
             }
 
-            if (!isCaller && data.offer && pc.signalingState !== 'have-remote-offer') {
+            if (data.offer && pc.signalingState !== 'have-remote-offer') {
                 await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-                const answer = await pc.createAnswer();
-                await pc.setLocalDescription(answer);
-                await sendAnswer(callId, answer);
+                
+                if (!isCaller) {
+                    const answer = await pc.createAnswer();
+                    await pc.setLocalDescription(answer);
+                    await sendAnswer(callId, answer);
+                }
             }
 
-            if (isCaller && data.answer && pc.signalingState === 'have-local-offer') {
+            if (data.answer && pc.signalingState === 'have-local-offer') {
                 await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+            }
+
+            // Process queued candidates
+            if(pc.remoteDescription && iceCandidateQueue.current.length > 0) {
+                 for (const candidate of iceCandidateQueue.current) {
+                    try {
+                        await pc.addIceCandidate(candidate);
+                    } catch(e) { console.error("Error adding queued ICE candidate:", e)}
+                }
+                iceCandidateQueue.current = [];
             }
         });
 
-        // Step 6: Listen for ICE candidates
-        const otherPeerId = callData ? (user.uid === callData.callerId ? callData.receiverId : callData.callerId) : null;
-        if(otherPeerId) {
-            unsubCandidates = onSnapshot(collection(db, 'calls', callId, `${user.uid}Candidates`), async (snapshot) => {
-                for (const change of snapshot.docChanges()) {
-                    if (change.type === 'added') {
+        // Listen for ICE candidates
+        candidatesUnsubscribe = onSnapshot(collection(db, 'calls', callId, `${user.uid}Candidates`), async (snapshot) => {
+            for (const change of snapshot.docChanges()) {
+                if (change.type === 'added') {
+                    const candidate = new RTCIceCandidate(change.doc.data());
+                    if (pc.remoteDescription) {
                         try {
-                           if (pc.remoteDescription) {
-                             await pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
-                             await deleteDoc(change.doc.ref);
-                           }
+                           await pc.addIceCandidate(candidate);
                         } catch(e) { console.error("Error adding received ice candidate", e); }
+                    } else {
+                        iceCandidateQueue.current.push(candidate);
                     }
+                    await deleteDoc(change.doc.ref);
                 }
-            });
-        }
+            }
+        });
     };
-    
-    // Initial data fetch before setting up WebRTC
-    const callDocRef = doc(db, 'calls', callId);
-    getDoc(callDocRef).then(initialSnap => {
-        if(initialSnap.exists()) {
-            const data = initialSnap.data() as Call;
-            setCallData(data);
-            setPartner(user?.uid === data.callerId ? data.receiverInfo : data.callerInfo);
-            setup();
-        } else {
-            toast({ variant: "destructive", description: "Arama bulunamadı." });
-            router.replace('/dm');
-        }
-    });
+
+    initCall();
 
     return () => {
-        if (unsubCall) unsubCall();
-        if (unsubCandidates) unsubCandidates();
-        cleanupAndLeave();
+      callUnsubscribe();
+      candidatesUnsubscribe();
+      cleanupAndLeave();
     };
   }, [user, callId, router, toast, cleanupAndLeave]);
 
@@ -262,7 +266,7 @@ export default function CallPage() {
       }
   };
   
-  const isLoading = authLoading || !callData || !partner || !peerConnectionRef.current;
+  const isLoading = authLoading || !callData || !partner;
   if (isLoading) {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center bg-slate-900">

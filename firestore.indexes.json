@@ -1,5 +1,20 @@
+
 {
   "indexes": [
+    {
+      "collectionGroup": "calls",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "participantUids",
+          "arrayConfig": "CONTAINS"
+        }
+      ]
+    },
     {
       "collectionGroup": "directMessagesMetadata",
       "queryScope": "COLLECTION",

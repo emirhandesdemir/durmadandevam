@@ -344,6 +344,7 @@ export interface Call {
     username: string;
     photoURL: string | null;
   };
+  participantUids: string[];
   status: 'ringing' | 'active' | 'declined' | 'ended' | 'missed';
   type: 'video' | 'audio';
   videoStatus?: { [uid: string]: boolean };
