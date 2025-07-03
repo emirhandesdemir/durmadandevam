@@ -81,7 +81,7 @@ export default function QuoteRetweetDialog({ isOpen, onOpenChange, post }: Quote
             <div className="flex items-start gap-3">
                  <Avatar className="h-9 w-9">
                     <AvatarImage src={user?.photoURL || undefined} />
-                    <AvatarFallback>{userData?.username.charAt(0)}</AvatarFallback>
+                    <AvatarFallback>{userData?.username?.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <Textarea
                     placeholder="Yorumunu ekle..."
@@ -95,7 +95,7 @@ export default function QuoteRetweetDialog({ isOpen, onOpenChange, post }: Quote
                 <div className="flex items-center gap-2">
                     <Avatar className="h-6 w-6">
                         <AvatarImage src={post.userAvatar || undefined} />
-                        <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
+                        <AvatarFallback>{post.username?.charAt(0) || '?'}</AvatarFallback>
                     </Avatar>
                     <span className="font-bold text-sm">{post.username}</span>
                     <span className="text-xs text-muted-foreground">{timeAgo}</span>

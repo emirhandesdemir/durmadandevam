@@ -86,7 +86,7 @@ export default function RoomList({ searchTerm }: RoomListProps) {
     try {
         await joinRoom(randomRoom.id, {
             uid: user.uid,
-            username: user.displayName,
+            username: user.displayName || 'Bilinmeyen',
             photoURL: user.photoURL,
         });
         toast({ description: `"${randomRoom.name}" odasına katıldın!` });

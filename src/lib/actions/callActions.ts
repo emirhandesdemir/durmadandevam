@@ -90,6 +90,7 @@ export async function updateCallStatus(callId: string, status: 'declined' | 'end
             const minutes = Math.floor(durationSeconds / 60);
             const seconds = durationSeconds % 60;
             duration = `${minutes} dakika ${seconds} saniye`;
+            updateData.duration = duration;
         }
     } else {
         updateData.startedAt = serverTimestamp();
@@ -103,7 +104,7 @@ export async function updateCallStatus(callId: string, status: 'declined' | 'end
     }
     
     // Send a missed call notification to the original caller if the receiver misses it
-    if (status === 'missed') {
+    if (status === 'missed' && callData.callerId) {
          await createNotification({
             recipientId: callData.callerId,
             senderId: callData.receiverId,
@@ -129,5 +130,5 @@ export async function sendAnswer(callId: string, answer: RTCSessionDescriptionIn
 
 export async function sendIceCandidate(callId: string, candidate: RTCIceCandidateInit, targetId: string) {
     const candidatesCol = collection(db, 'calls', callId, `${targetId}Candidates`);
-    await addDoc(candidatesCol, candidate);
+    await addDoc(candidatesCol, { ...candidate });
 }

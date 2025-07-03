@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm, SubmitHandler } from 'react-hook-form';
+import { useForm, SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { submitReport } from '@/lib/actions/userActions';
 import { Loader2 } from 'lucide-react';
+import { Form, FormControl, FormField, FormItem, FormMessage } from '../ui/form';
 
 type Target = {
   type: 'user';
@@ -53,7 +54,7 @@ const reasonOptions = [
 export default function ReportDialog({ isOpen, onOpenChange, target }: ReportDialogProps) {
   const { user, userData } = useAuth();
   const { toast } = useToast();
-  const { register, handleSubmit, formState: { errors, isSubmitting }, control, reset } = useForm<ReportFormValues>({
+  const form = useForm<ReportFormValues>({
     resolver: zodResolver(reportSchema),
   });
 
@@ -82,7 +83,7 @@ export default function ReportDialog({ isOpen, onOpenChange, target }: ReportDia
             title: 'Şikayetiniz Alındı',
             description: 'İlgili birime iletildi. Teşekkür ederiz.',
         });
-        reset();
+        form.reset();
         onOpenChange(false);
     } catch (error: any) {
       toast({
@@ -98,7 +99,7 @@ export default function ReportDialog({ isOpen, onOpenChange, target }: ReportDia
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
         if (!open) {
-            reset();
+            form.reset();
             onOpenChange(false);
         }
     }}>
@@ -109,44 +110,62 @@ export default function ReportDialog({ isOpen, onOpenChange, target }: ReportDia
             Lütfen şikayet sebebini belirtin. Ekibimiz en kısa sürede inceleyecektir.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <Label htmlFor="reason">Şikayet Sebebi</Label>
-            <Select onValueChange={(value) => control._fields.reason?._f.onChange(value)} disabled={isSubmitting}>
-              <SelectTrigger id="reason">
-                <SelectValue placeholder="Bir sebep seçin..." />
-              </SelectTrigger>
-              <SelectContent>
-                {reasonOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                    </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.reason && <p className="text-sm text-destructive mt-1">{errors.reason.message}</p>}
-          </div>
-          <div>
-            <Label htmlFor="details">Ek Detaylar (İsteğe Bağlı)</Label>
-            <Textarea
-              id="details"
-              {...register('details')}
-              placeholder="Şikayetinizle ilgili daha fazla bilgi verin..."
-              className="min-h-[100px]"
-              disabled={isSubmitting}
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="reason"
+              render={({ field }) => (
+                <FormItem>
+                  <Label>Şikayet Sebebi</Label>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={form.formState.isSubmitting}>
+                    <FormControl>
+                        <SelectTrigger id="reason">
+                            <SelectValue placeholder="Bir sebep seçin..." />
+                        </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {reasonOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                          </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-             {errors.details && <p className="text-sm text-destructive mt-1">{errors.details.message}</p>}
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-              İptal
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Şikayet Et
-            </Button>
-          </DialogFooter>
-        </form>
+             <FormField
+              control={form.control}
+              name="details"
+              render={({ field }) => (
+                <FormItem>
+                    <Label htmlFor="details">Ek Detaylar (İsteğe Bağlı)</Label>
+                    <FormControl>
+                        <Textarea
+                        id="details"
+                        placeholder="Şikayetinizle ilgili daha fazla bilgi verin..."
+                        className="min-h-[100px]"
+                        disabled={form.formState.isSubmitting}
+                        {...field}
+                        />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+              )}
+             />
+            <DialogFooter>
+                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={form.formState.isSubmitting}>
+                İptal
+                </Button>
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Şikayet Et
+                </Button>
+            </DialogFooter>
+            </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

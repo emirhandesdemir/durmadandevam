@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 
 interface UserListItemProps {
   user: UserProfile;
-  currentUserData: any | null;
+  currentUserData: UserProfile | null;
 }
 
 export default function UserListItem({ user, currentUserData }: UserListItemProps) {
@@ -24,7 +24,7 @@ export default function UserListItem({ user, currentUserData }: UserListItemProp
         </div>
         <span className="font-semibold group-hover:underline">{user.username}</span>
       </Link>
-      <FollowButton currentUser={currentUserData} targetUser={user} />
+      <FollowButton currentUserData={currentUserData} targetUser={user} />
     </div>
   );
 }

@@ -54,6 +54,7 @@ export interface UserProfile {
     following: string[];
     followRequests: FollowRequest[];
     diamonds: number;
+    matchmakingRights: number;
     referredBy?: string | null;
     referralCount?: number;
     selectedBubble?: string;
@@ -66,6 +67,8 @@ export interface UserProfile {
     reportCount?: number;
     isOnline?: boolean;
     lastSeen?: Timestamp;
+    matchmakingStatus?: 'idle' | 'searching' | 'matched';
+    matchRoomId?: string | null;
 }
 
 export interface ProfileViewer {
@@ -164,6 +167,7 @@ export interface Room {
     id: string;
     name: string;
     description: string;
+    status?: 'active' | 'converting' | 'declined';
     createdBy: {
         uid: string;
         username: string;
@@ -184,6 +188,9 @@ export interface Room {
     pinnedMessageId: string | null;
     language?: string;
     type?: 'public' | 'private' | 'match';
+    // Matchmaking-specific fields
+    confirmationExpiresAt?: Timestamp;
+    matchConfirmation?: { [uid: string]: 'pending' | 'accepted' | 'declined' };
     // Music Player State
     djUid?: string | null;
     isMusicPlaying?: boolean;
@@ -235,6 +242,7 @@ export interface GameSettings {
     imageUploadQuality: number;
     audioBitrate: number;
     videoBitrate: number;
+    matchmakingCost: number;
 }
 
 export interface ActiveGame {
@@ -344,6 +352,7 @@ export interface Call {
   createdAt: Timestamp;
   startedAt?: Timestamp;
   endedAt?: Timestamp;
+  duration?: string;
 }
 
 

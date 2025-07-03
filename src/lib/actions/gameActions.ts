@@ -210,7 +210,7 @@ export async function endGameWithoutWinner(roomId: string, gameId: string) {
             }
 
             const gameData = gameDoc.data();
-            const correctOptionText = gameData.options[gameData.correctOptionIndex];
+            const correctOptionText = gameData?.options?.[gameData.correctOptionIndex] || 'Bilinmeyen';
 
             transaction.update(gameRef, { status: 'finished', finishedAt: serverTimestamp() });
             

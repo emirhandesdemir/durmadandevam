@@ -65,8 +65,8 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
     setIsCalling(true);
     try {
       const callId = await initiateCall(
-        { uid: user.uid, username: userData.username, photoURL: userData.photoURL },
-        { uid: partner.uid, username: partner.username, photoURL: partner.photoURL },
+        { uid: user.uid, username: userData.username, photoURL: userData.photoURL || null },
+        { uid: partner.uid, username: partner.username, photoURL: partner.photoURL || null },
         type
       );
       router.push(`/call/${callId}`);

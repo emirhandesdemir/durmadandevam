@@ -7,7 +7,7 @@ import { collection, onSnapshot, doc, serverTimestamp, query, where, deleteDoc, 
 import { db } from '@/lib/firebase';
 import type { Room, VoiceParticipant, PlaylistTrack } from '../types';
 import { joinVoiceChat, leaveVoice, toggleSelfMute as toggleMuteAction, toggleScreenShare as toggleScreenShareAction, toggleVideo as toggleVideoAction, updateLastActive } from '@/lib/actions/voiceActions';
-import { leaveRoom as leaveRoomAction, addTrackToPlaylist as addTrackAction, removeTrackFromPlaylist as removeTrackAction, controlPlayback as controlPlaybackAction } from '@/lib/actions/roomActions';
+import { leaveRoom, addTrackToPlaylist as addTrackAction, removeTrackFromPlaylist as removeTrackAction, controlPlayback as controlPlaybackAction } from '@/lib/actions/roomActions';
 import { useToast } from '@/hooks/use-toast';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -228,8 +228,9 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, 
                 video: { facingMode }
             });
-            stream.getVideoTracks()[0].enabled = false;
-            // Join with mic ON by default
+            if (stream.getVideoTracks()[0]) {
+              stream.getVideoTracks()[0].enabled = false;
+            }
             if (stream.getAudioTracks()[0]) {
                 stream.getAudioTracks()[0].enabled = true;
             }
@@ -256,10 +257,10 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         _cleanupAndResetState();
     }, [user, connectedRoomId, _cleanupAndResetState]);
 
-    const leaveRoom = useCallback(async () => {
+    const handleLeaveRoom = useCallback(async () => {
         if (!user || !connectedRoomId) return;
         await leaveVoice(connectedRoomId, user.uid);
-        await leaveRoomAction(connectedRoomId, user.uid, user.displayName || 'Biri');
+        await leaveRoom(connectedRoomId, user.uid, user.displayName || 'Biri');
         _cleanupAndResetState();
         router.push('/rooms');
     }, [user, connectedRoomId, _cleanupAndResetState, router]);
@@ -279,7 +280,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     }, [user, connectedRoomId, localScreenStream]);
 
     const startScreenShare = useCallback(async () => {
-        if (!user || !connectedRoomId || isSharingScreen) return;
+        if (!user || !connectedRoomId || isSharingScreen || !localStream) return;
 
         try {
             if (!navigator?.mediaDevices?.getDisplayMedia) {
@@ -310,7 +311,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 description: description
             });
         }
-    }, [user, connectedRoomId, isSharingScreen, stopScreenShare, toast]);
+    }, [user, connectedRoomId, isSharingScreen, stopScreenShare, toast, localStream]);
 
     const toggleSelfMute = useCallback(async () => {
         if (!self || !connectedRoomId || !localStream) return;
@@ -582,7 +583,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     
     const value = {
         activeRoom, participants: memoizedParticipants, self, isConnecting, isConnected, remoteAudioStreams, remoteScreenStreams, remoteVideoStreams, localStream, isSharingScreen, isSharingVideo,
-        setActiveRoomId, joinRoom, leaveRoom, leaveVoiceOnly, toggleSelfMute, startScreenShare, stopScreenShare, startVideo, stopVideo, switchCamera,
+        setActiveRoomId, joinRoom, leaveRoom: handleLeaveRoom, leaveVoiceOnly, toggleSelfMute, startScreenShare, stopScreenShare, startVideo, stopVideo, switchCamera,
         // Music Player values
         livePlaylist, currentTrack, isCurrentUserDj, isDjActive, isMusicLoading,
         addTrackToPlaylist, removeTrackFromPlaylist, togglePlayback, skipTrack

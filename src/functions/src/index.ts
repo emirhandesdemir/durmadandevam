@@ -3,6 +3,9 @@
 // anlık bildirim gönderme gibi işlemleri gerçekleştirir.
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import axios from "axios";
+import { functionAi } from './genkit-config';
+import { roomBotFlow } from './flows/roomBotFlow';
 
 // Firebase Admin SDK'sını başlat. Bu, sunucu tarafında Firebase servislerine erişim sağlar.
 admin.initializeApp();
@@ -10,15 +13,26 @@ admin.initializeApp();
 // Firestore veritabanı örneğini al.
 const db = admin.firestore();
 
+// OneSignal konfigürasyonunu ortam değişkenlerinden al.
+// Bu anahtarları `firebase functions:config:set onesignal.rest_api_key=YOUR_KEY` komutuyla ayarlamalısınız.
+const ONE_SIGNAL_APP_ID = "51c67432-a305-43fc-a4c8-9c5d9d478d1c";
+const ONE_SIGNAL_REST_API_KEY = functions.config().onesignal?.rest_api_key;
+
+
 /**
  * Yeni bir bildirim dokümanı oluşturulduğunda tetiklenir.
- * Kullanıcının FCM jetonlarını alır ve Firebase Cloud Messaging API (V1) kullanarak
- * bir anlık bildirim gönderir.
+ * OneSignal REST API'sini kullanarak bir anlık bildirim gönderir.
  */
 export const sendPushNotification = functions
-    .region("us-central1") // Fonksiyonun çalışacağı bölgeyi belirt.
+    .region("us-central1")
     .firestore.document("users/{userId}/notifications/{notificationId}")
-    .onCreate(async (snapshot: functions.firestore.QueryDocumentSnapshot, context: functions.EventContext) => {
+    .onCreate(async (snapshot, context) => {
+        if (!ONE_SIGNAL_REST_API_KEY) {
+            console.error("OneSignal REST API Key not configured. " +
+                "Set it with 'firebase functions:config:set onesignal.rest_api_key=YOUR_KEY'");
+            return;
+        }
+
         const notificationData = snapshot.data();
         if (!notificationData) {
             console.log("Bildirim verisi bulunamadı.");
@@ -26,28 +40,12 @@ export const sendPushNotification = functions
         }
 
         const userId = context.params.userId;
-        const userRef = db.collection("users").doc(userId);
-        const userDoc = await userRef.get();
-
-        if (!userDoc.exists) {
-            console.log(`Kullanıcı dokümanı bulunamadı: ${userId}`);
-            return;
-        }
-
-        const userData = userDoc.data();
-        if (!userData || !userData.fcmTokens || userData.fcmTokens.length === 0) {
-            console.log(`Kullanıcı ${userId} için FCM jetonu yok.`);
-            return;
-        }
-        
-        const tokens: string[] = userData.fcmTokens;
-
         let title = "Yeni bir bildiriminiz var!";
         let body = "Uygulamayı açarak kontrol edin.";
         let link = "/notifications"; // Varsayılan link
 
         switch (notificationData.type) {
-            case "like":
+             case "like":
                 title = "Yeni Beğeni 👍";
                 body = `${notificationData.senderUsername} gönderinizi beğendi.`;
                 link = `/notifications`;
@@ -105,49 +103,26 @@ export const sendPushNotification = functions
                 break;
         }
 
-        // Firebase Cloud Messaging API (V1) için data-only mesaj oluştur.
-        // Bu, servis çalışanına bildirim üzerinde tam kontrol sağlar.
-        const message: admin.messaging.MulticastMessage = {
-            tokens: tokens,
-            data: {
-                title: title,
-                body: body,
-                icon: "/icons/icon.svg", // SVG ikonunu kullan
-                link: link,
-            }
+        const oneSignalPayload = {
+            app_id: ONE_SIGNAL_APP_ID,
+            include_external_user_ids: [userId],
+            headings: { "en": title, "tr": title },
+            contents: { "en": body, "tr": body },
+            web_url: `https://yenidendeneme-ea9ed.web.app${link}`,
         };
 
-        // Bildirimi birden fazla cihaza gönder.
-        const response = await admin.messaging().sendEachForMulticast(message);
-
-        // Geçersiz veya süresi dolmuş jetonları temizle.
-        const tokensToRemove: string[] = [];
-        response.responses.forEach((result, index) => {
-            if (!result.success) {
-                const error = result.error;
-                console.error(
-                    "Bildirim gönderilirken hata:",
-                    tokens[index],
-                    error
-                );
-                // Eğer jeton geçersizse, silinecekler listesine ekle.
-                if (
-                    error.code === "messaging/invalid-registration-token" ||
-                    error.code === "messaging/registration-token-not-registered"
-                ) {
-                    tokensToRemove.push(tokens[index]);
-                }
-            }
-        });
-
-        // Geçersiz jetonlar varsa kullanıcı dokümanından sil.
-        if (tokensToRemove.length > 0) {
-            return userRef.update({
-                fcmTokens: admin.firestore.FieldValue.arrayRemove(...tokensToRemove),
+        try {
+            await axios.post("https://onesignal.com/api/v1/notifications", oneSignalPayload, {
+                headers: {
+                    "Authorization": `Basic ${ONE_SIGNAL_REST_API_KEY}`,
+                    "Content-Type": "application/json",
+                },
             });
+            console.log(`OneSignal notification sent to user ${userId}`);
+        } catch (error: any) {
+            console.error(`Error sending OneSignal notification to user ${userId}:`,
+                error.response?.data || error.message);
         }
-
-        return null;
     });
 
 /**
@@ -184,4 +159,54 @@ export const onUserDelete = functions.auth.user().onDelete(async (user: admin.au
         details: `${user.displayName || user.email || user.uid} hesabı sistemden silindi.`
     };
      await db.collection("auditLogs").add(log);
+});
+
+export const onMessageCreate = functions.firestore
+  .document('rooms/{roomId}/messages/{messageId}')
+  .onCreate(async (snap, context) => {
+    const message = snap.data();
+    const { roomId, messageId } = context.params;
+
+    if (message.text && message.text.toLowerCase().includes('@walk')) {
+      // Get recent history
+      const historySnapshot = await db.collection(`rooms/${roomId}/messages`)
+        .orderBy('createdAt', 'desc')
+        .where('createdAt', '<', message.createdAt)
+        .limit(10)
+        .get();
+
+      const history = historySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+              author: data.uid === 'ai-bot-walk' ? 'model' : 'user',
+              content: data.text
+          };
+      }).reverse();
+
+      const isGreeting = /^(selam|merhaba|hey|hi|sa)\b/i.test(message.text.replace(/@walk/i, '').trim());
+
+      try {
+        const responseText = await roomBotFlow({
+            history,
+            currentMessage: message.text,
+            isGreeting,
+            authorUsername: message.username,
+        });
+
+        const svg = `<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="50" fill="url(#bot-grad)"/><rect x="25" y="45" width="50" height="20" rx="10" fill="white" fill-opacity="0.8"/><circle cx="50" cy="40" r="15" fill="white"/><circle cx="50" cy="40" r="10" fill="url(#eye-grad)"/><path d="M35 70 Q 50 80, 65 70" stroke="white" stroke-width="4" stroke-linecap="round" fill="none"/><defs><linearGradient id="bot-grad" x1="0" y1="0" x2="100" y2="100"><stop stop-color="#8b5cf6"/><stop offset="1" stop-color="#3b82f6"/></linearGradient><radialGradient id="eye-grad"><stop offset="20%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#2563eb"/></radialGradient></defs></svg>`;
+        
+        // Add bot's response to the chat
+        await db.collection(`rooms/${roomId}/messages`).add({
+            uid: 'ai-bot-walk',
+            username: 'Walk',
+            photoURL: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`,
+            selectedAvatarFrame: 'avatar-frame-tech',
+            text: responseText,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            type: 'user',
+        });
+      } catch (error) {
+        console.error("Error running roomBotFlow:", error);
+      }
+    }
 });
