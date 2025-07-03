@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { collection, doc, getCountFromServer, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import StatCard from "@/components/admin/stat-card";
-import { Users, MessageSquare, FileText, Puzzle, Headphones, BarChart3, SlidersHorizontal, Settings, HeartPulse, Mars, Venus } from "lucide-react";
+import { Users, MessageSquare, FileText, Headphones, BarChart3, SlidersHorizontal, Settings, HeartPulse, Mars, Venus } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -152,24 +152,6 @@ export default function DashboardPage() {
                     <CardFooter>
                         <Button asChild variant="outline">
                             <Link href="/admin/posts">Gönderileri Yönet</Link>
-                        </Button>
-                    </CardFooter>
-                </Card>
-                <Card className="hover:shadow-lg transition-shadow">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-3">
-                            <Puzzle className="w-6 h-6 text-primary"/>
-                            Quiz Oyunu (AI)
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-muted-foreground text-sm">
-                           Oyunlar artık AI tarafından otomatik yönetiliyor. Ayarlar için sistem sayfasına bakın.
-                        </p>
-                    </CardContent>
-                    <CardFooter>
-                        <Button asChild variant="outline">
-                            <Link href="/admin/system">Sistem Ayarları</Link>
                         </Button>
                     </CardFooter>
                 </Card>

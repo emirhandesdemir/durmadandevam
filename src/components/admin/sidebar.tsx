@@ -12,7 +12,6 @@ import {
   Users,
   MessageSquare,
   FileText,
-  Puzzle,
   Palette,
   Settings,
   X,

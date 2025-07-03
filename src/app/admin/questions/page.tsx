@@ -1,95 +1,44 @@
 // src/app/admin/questions/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { Puzzle, Loader2, PlusCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import QuestionsTable from "@/components/admin/QuestionsTable";
-import EditQuestionDialog from "@/components/admin/EditQuestionDialog";
-import { GameQuestion } from "@/lib/types";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Puzzle, AlertTriangle, Lightbulb } from "lucide-react";
 
-/**
- * Yönetim Paneli - Quiz Soru Yöneticisi Sayfası
- * 
- * Firestore'daki `game_questions` koleksiyonunu yönetir.
- * Yöneticinin soruları listelemesine, yeni soru eklemesine,
- * mevcutları düzenlemesine ve silmesine olanak tanır.
- */
 export default function QuestionManagerPage() {
-    const [questions, setQuestions] = useState<GameQuestion[]>([]);
-    const [loading, setLoading] = useState(true);
-    // Dialog penceresinin açık/kapalı durumunu yönetir.
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-    // Düzenlenmek üzere seçilen soruyu tutar. Null ise yeni soru eklenir.
-    const [selectedQuestion, setSelectedQuestion] = useState<GameQuestion | null>(null);
-
-    // Soruları Firestore'dan anlık olarak dinle.
-    useEffect(() => {
-        const q = query(collection(db, "game_questions"), orderBy("createdAt", "desc"));
-        
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const questionsData = querySnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            } as GameQuestion));
-            setQuestions(questionsData);
-            setLoading(false);
-        }, (error) => {
-            console.error("Soruları çekerken hata:", error);
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, []);
-
-    // Yeni soru ekleme dialogunu açar.
-    const handleAddNew = () => {
-        setSelectedQuestion(null);
-        setIsDialogOpen(true);
-    };
-
-    // Mevcut bir soruyu düzenleme dialogunu açar.
-    const handleEdit = (question: GameQuestion) => {
-        setSelectedQuestion(question);
-        setIsDialogOpen(true);
-    };
-
     return (
         <div>
-            <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                    <Puzzle className="h-8 w-8 text-primary" />
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Quiz Soru Yöneticisi</h1>
-                        <p className="text-muted-foreground mt-1">
-                            Oda içi quiz oyunları için soruları yönetin.
-                        </p>
-                    </div>
+            <div className="flex items-center gap-4">
+                <Puzzle className="h-8 w-8 text-primary" />
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Quiz Soru Yönetimi</h1>
+                    <p className="text-muted-foreground mt-1">
+                        Oda içi quiz oyunları için soruların yönetimi hakkında bilgi.
+                    </p>
                 </div>
-                <Button onClick={handleAddNew}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Yeni Soru Ekle
-                </Button>
             </div>
 
-            <div className="mt-8">
-                {loading ? (
-                    <div className="flex justify-center py-12">
-                        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+             <Card className="mt-8 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                <CardHeader className="flex-row items-start gap-4">
+                    <Lightbulb className="h-6 w-6 text-blue-600 dark:text-blue-400 mt-1" />
+                    <div>
+                        <CardTitle className="text-blue-900 dark:text-blue-200">Otomatikleştirilmiş Sistem</CardTitle>
+                        <CardDescription className="text-blue-800 dark:text-blue-300">
+                            Bu özellik artık tamamen yapay zeka tarafından yönetilmektedir. Sistem, oyun zamanı geldiğinde otomatik olarak internetten güncel, çeşitli ve eğlenceli bir trivia sorusu bularak oyunu kendi kendine başlatır. Bu sayede manuel olarak soru eklemenize veya yönetmenize gerek kalmamıştır.
+                        </CardDescription>
                     </div>
-                ) : (
-                    <QuestionsTable questions={questions} onEdit={handleEdit} />
-                )}
-            </div>
+                </CardHeader>
+            </Card>
 
-            {/* Soru Ekleme/Düzenleme Dialogu */}
-            <EditQuestionDialog 
-                isOpen={isDialogOpen}
-                setIsOpen={setIsDialogOpen}
-                question={selectedQuestion}
-            />
+            <Card className="mt-6">
+                <CardHeader>
+                    <CardTitle>Ayarları Nereden Değiştirebilirim?</CardTitle>
+                </CardHeader>
+                 <CardContent>
+                    <p className="text-muted-foreground">
+                        Oyunun ne sıklıkla başlayacağı, soru süresi veya ödül miktarı gibi ayarları değiştirmek için lütfen <Link href="/admin/system" className="text-primary font-semibold hover:underline">Sistem Ayarları</Link> sayfasına gidin.
+                    </p>
+                </CardContent>
+            </Card>
         </div>
     );
 }
