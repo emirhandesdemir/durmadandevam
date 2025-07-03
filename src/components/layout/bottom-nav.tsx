@@ -1,8 +1,9 @@
+
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageSquare, PlusSquare } from 'lucide-react';
+import { Home, MessageSquare, PlusSquare, Swords } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -37,6 +38,13 @@ export default function BottomNav() {
       href: '/create-post',
       icon: PlusSquare,
       label: 'Oluştur',
+    },
+    {
+      id: 'matchmaking',
+      isActive: pathname === '/matchmaking',
+      href: '/matchmaking',
+      icon: Swords,
+      label: 'Eşleşme',
     },
     {
       id: 'rooms',

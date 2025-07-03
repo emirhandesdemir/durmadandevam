@@ -98,6 +98,11 @@ export const sendPushNotification = functions
                 body = `${notificationData.senderUsername} sizi arıyor...`;
                 link = `/call/${notificationData.callId || ''}`;
                 break;
+            case "call_missed":
+                title = `📞 Cevapsız Arama`;
+                body = `${notificationData.senderUsername} sizi aradı.`;
+                link = `/dm`; // Link to DM list
+                break;
         }
 
         // Firebase Cloud Messaging API (V1) için data-only mesaj oluştur.
@@ -107,7 +112,7 @@ export const sendPushNotification = functions
             data: {
                 title: title,
                 body: body,
-                icon: "/icons/icon.svg", // SVG ikonunu kullan
+                icon: "/icons/icon-192x192.png", // PNG ikonunu kullan
                 link: link,
             }
         };

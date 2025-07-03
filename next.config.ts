@@ -1,3 +1,4 @@
+
 // Bu dosya, Next.js projesinin temel yapılandırmasını içerir.
 // PWA ayarları, TypeScript ve ESLint kuralları, ve harici resim kaynakları burada tanımlanır.
 import type {NextConfig} from 'next';

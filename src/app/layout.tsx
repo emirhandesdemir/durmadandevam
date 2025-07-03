@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   manifest: '/manifest.json', // PWA manifest dosyası.
   icons: {
     icon: '/icons/icon.svg',
-    apple: '/icons/icon.svg', // Apple cihazlar için ikon.
+    apple: '/icons/icon-192x192.png', // Apple cihazlar için ikon.
   },
   applicationName: "HiweWalk",
   appleWebApp: {
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
 
 // Mobil cihazlarda tarayıcı çubuğunun rengi gibi viewport ayarları.
 export const viewport: Viewport = {
-  themeColor: '#09090B', // Karanlık mod için tema rengi.
+  themeColor: '#7c3aed', // Primary color
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1, // Kullanıcının zoom yapmasını engelle (uygulama hissi için).
