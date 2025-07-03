@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/layout/ThemeProvider';
 import NetworkStatusNotifier from '@/components/common/NetworkStatusNotifier';
 import I18nProvider from '@/components/common/I18nProvider';
+import DynamicTheme from '@/components/layout/DynamicTheme';
 
 // Google Fonts'tan Plus Jakarta Sans font ailesini yüklüyoruz.
 const fontSans = Plus_Jakarta_Sans({ 
@@ -54,7 +55,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="tr" suppressHydrationWarning>
-      <head />
+      <head>
+        <DynamicTheme />
+      </head>
       <body
         className={cn(
           'min-h-screen bg-background font-sans antialiased font-medium',
