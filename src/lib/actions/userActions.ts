@@ -108,6 +108,27 @@ export async function findUserByUsername(username: string): Promise<UserProfile 
     return deepSerialize(userData);
 }
 
+export async function searchUsers(searchTerm: string, currentUserId: string): Promise<UserProfile[]> {
+    if (!searchTerm.trim()) return [];
+    
+    const usersRef = collection(db, 'users');
+    const q = query(
+        usersRef,
+        orderBy('username'),
+        where('username', '>=', searchTerm),
+        where('username', '<=', searchTerm + '\uf8ff'),
+        limit(10)
+    );
+
+    const snapshot = await getDocs(q);
+
+    const users = snapshot.docs
+        .map(doc => ({ ...doc.data(), uid: doc.id } as UserProfile))
+        .filter(user => user.uid !== currentUserId);
+
+    return deepSerialize(users);
+}
+
 export async function saveFCMToken(userId: string, token: string) {
   if (!userId || !token) {
     throw new Error('Kullanıcı ID ve jeton gereklidir.');

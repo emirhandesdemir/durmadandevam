@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageSquare, PlusSquare, Swords } from 'lucide-react';
+import { Home, MessageSquare, Search, Swords } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -33,11 +33,11 @@ export default function BottomNav() {
       label: 'Anasayfa',
     },
     {
-      id: 'create-post',
-      isActive: pathname === '/create-post',
-      href: '/create-post',
-      icon: PlusSquare,
-      label: 'Oluştur',
+      id: 'search',
+      isActive: pathname === '/search',
+      href: '/search',
+      icon: Search,
+      label: 'Ara',
     },
     {
       id: 'matchmaking',

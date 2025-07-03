@@ -1,10 +1,9 @@
-
 // src/components/layout/Header.tsx
 "use client";
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Send, Users, Bell } from "lucide-react";
+import { Send, Users, Bell, Search } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
@@ -28,6 +27,10 @@ export default function Header() {
                     <span className="text-xl font-bold tracking-tight">HiweWalk</span>
                 </Link>
                 <div className="flex items-center gap-1">
+                     <Button variant="ghost" size="icon" className="rounded-full relative" onClick={() => router.push('/search')}>
+                        <Search className="h-5 w-5" />
+                        <span className="sr-only">Ara</span>
+                    </Button>
                     <Button variant="ghost" size="icon" className="rounded-full relative" onClick={() => router.push('/dm')}>
                         <Send className="h-5 w-5" />
                         {totalUnreadDms > 0 && (
