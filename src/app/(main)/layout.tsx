@@ -4,7 +4,6 @@
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/Header";
 import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
-import PersistentVoiceBar from "@/components/voice/PersistentVoiceBar";
 import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
 import { useState, useRef, useEffect } from 'react';
@@ -14,6 +13,7 @@ import NotificationPermissionManager from "@/components/common/NotificationPermi
 import IncomingCallManager from '@/components/common/IncomingCallManager';
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
+import ActiveCallBar from "@/components/voice/ActiveCallBar";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -190,7 +190,7 @@ export default function MainAppLayout({
         
         {/* Her zaman aktif olan sesli sohbet bileşenleri. */}
         <VoiceAudioPlayer />
-        <PersistentVoiceBar />
+        <ActiveCallBar />
         <BottomNav />
       </div>
     </VoiceChatProvider>
