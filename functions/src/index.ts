@@ -1,7 +1,9 @@
 // Bu dosya, Firebase projesinin sunucu tarafı mantığını içerir.
 // Veritabanındaki belirli olaylara (örn: yeni bildirim oluşturma) tepki vererek
 // anlık bildirim gönderme gibi işlemleri gerçekleştirir.
-import * as functions from "firebase-functions/v1";
+import { onDocumentCreated } from "firebase-functions/v2/firestore";
+import { onUserCreated, onUserDeleted } from "firebase-functions/v2/auth";
+import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
 
 // Firebase Admin SDK'sını başlat. Bu, sunucu tarafında Firebase servislerine erişim sağlar.
@@ -21,17 +23,25 @@ const ONE_SIGNAL_REST_API_KEY = "os_v2_app_khdhimvdavb7zjgitroz2r4ndrkixk2biw6eq
  * Yeni bir bildirim dokümanı oluşturulduğunda tetiklenir.
  * OneSignal REST API'sini kullanarak bir anlık bildirim gönderir.
  */
-export const sendPushNotification = functions
-    .region("us-central1")
-    .firestore.document("users/{userId}/notifications/{notificationId}")
-    .onCreate(async (snapshot: functions.firestore.QueryDocumentSnapshot, context: functions.EventContext) => {
-        const notificationData = snapshot.data();
-        if (!notificationData) {
-            console.log("Bildirim verisi bulunamadı.");
+export const sendPushNotification = onDocumentCreated(
+    {
+        document: "users/{userId}/notifications/{notificationId}",
+        region: "us-central1"
+    },
+    async (event) => {
+        const snapshot = event.data;
+        if (!snapshot) {
+            logger.info("No data associated with the event, skipping.");
             return;
         }
 
-        const userId = context.params.userId;
+        const notificationData = snapshot.data();
+        if (!notificationData) {
+            logger.info("Bildirim verisi bulunamadı.");
+            return;
+        }
+        
+        const userId = event.params.userId;
         let title = "Yeni bir bildiriminiz var!";
         let body = "Uygulamayı açarak kontrol edin.";
         let link = "/notifications"; // Varsayılan link
@@ -118,17 +128,20 @@ export const sendPushNotification = functions
                 throw new Error(JSON.stringify(errorData));
             }
 
-            console.log(`OneSignal notification sent to user ${userId}`);
-        } catch (error: any) {
-            console.error(`Error sending OneSignal notification to user ${userId}:`, error.message);
+            logger.info(`OneSignal notification sent to user ${userId}`);
+        } catch (error) {
+            logger.error(`Error sending OneSignal notification to user ${userId}:`, error);
         }
-    });
+    }
+);
+
 
 /**
  * Firebase Authentication'da yeni bir kullanıcı oluşturulduğunda tetiklenir.
  * Kullanıcı oluşturma olayı için bir denetim kaydı (audit log) oluşturur.
  */
-export const onUserCreate = functions.auth.user().onCreate(async (user: admin.auth.UserRecord) => {
+export const onUserCreate = onUserCreated(async (event) => {
+    const user = event.data;
     const log = {
         type: "user_created",
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
@@ -146,7 +159,8 @@ export const onUserCreate = functions.auth.user().onCreate(async (user: admin.au
  * Firebase Authentication'dan bir kullanıcı silindiğinde tetiklenir.
  * Kullanıcı silme olayı için bir denetim kaydı oluşturur.
  */
-export const onUserDelete = functions.auth.user().onDelete(async (user: admin.auth.UserRecord) => {
+export const onUserDelete = onUserDeleted(async (event) => {
+    const user = event.data;
     const log = {
         type: "user_deleted",
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
@@ -160,14 +174,18 @@ export const onUserDelete = functions.auth.user().onDelete(async (user: admin.au
      await db.collection("auditLogs").add(log);
 });
 
-export const onMessageCreate = functions.firestore
-  .document('rooms/{roomId}/messages/{messageId}')
-  .onCreate(async (snap: functions.firestore.QueryDocumentSnapshot, context: functions.EventContext) => {
-    const message = snap.data();
-    const { roomId } = context.params;
+
+export const onMessageCreate = onDocumentCreated("rooms/{roomId}/messages/{messageId}", async (event) => {
+    const snapshot = event.data;
+    if (!snapshot) {
+      logger.info("No data in onMessageCreate event.");
+      return;
+    }
+    
+    const message = snapshot.data();
+    const { roomId } = event.params;
 
     if (message.text && message.text.toLowerCase().includes('@walk')) {
-      // Get recent history
       const historySnapshot = await db.collection(`rooms/${roomId}/messages`)
         .orderBy('createdAt', 'desc')
         .where('createdAt', '<', message.createdAt)
@@ -195,7 +213,6 @@ export const onMessageCreate = functions.firestore
 
         const svg = `<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="50" fill="url(#bot-grad)"/><rect x="25" y="45" width="50" height="20" rx="10" fill="white" fill-opacity="0.8"/><circle cx="50" cy="40" r="15" fill="white"/><circle cx="50" cy="40" r="10" fill="url(#eye-grad)"/><path d="M35 70 Q 50 80, 65 70" stroke="white" stroke-width="4" stroke-linecap="round" fill="none"/><defs><linearGradient id="bot-grad" x1="0" y1="0" x2="100" y2="100"><stop stop-color="#8b5cf6"/><stop offset="1" stop-color="#3b82f6"/></linearGradient><radialGradient id="eye-grad"><stop offset="20%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#2563eb"/></radialGradient></defs></svg>`;
         
-        // Add bot's response to the chat
         await db.collection(`rooms/${roomId}/messages`).add({
             uid: 'ai-bot-walk',
             username: 'Walk',
@@ -206,7 +223,7 @@ export const onMessageCreate = functions.firestore
             type: 'user',
         });
       } catch (error) {
-        console.error("Error running roomBotFlow:", error);
+        logger.error("Error running roomBotFlow:", error);
       }
     }
 });
