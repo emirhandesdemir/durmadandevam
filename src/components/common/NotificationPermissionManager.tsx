@@ -41,7 +41,7 @@ export default function NotificationPermissionManager() {
         // Prompt for permission if not granted
         const promptTimer = setTimeout(() => {
              window.OneSignalDeferred.push(async function(OneSignal) {
-                const permission = await OneSignal.Notifications.getPermission();
+                const permission = OneSignal.Notifications.permission;
                 if (permission === 'default') {
                     const { id } = toast({
                         title: 'Bildirimleri Etkinleştir',
