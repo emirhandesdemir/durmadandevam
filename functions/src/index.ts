@@ -11,10 +11,11 @@ admin.initializeApp();
 // Firestore veritabanı örneğini al.
 const db = admin.firestore();
 
-// OneSignal konfigürasyonunu ortam değişkenlerinden al.
-// Bu anahtarı `firebase functions:config:set onesignal.rest_api_key=YOUR_KEY` komutuyla ayarlamanız gerekir.
+// OneSignal konfigürasyonu.
+// GÜVENLİK NOTU: API anahtarını doğrudan koda eklemek en iyi pratik değildir.
+// İdeal olarak bu, Firebase ortam değişkenlerinden (`functions.config()` veya `process.env`) okunmalıdır.
 const ONE_SIGNAL_APP_ID = "51c67432-a305-43fc-a4c8-9c5d9d478d1c";
-const ONE_SIGNAL_REST_API_KEY = functions.config().onesignal?.rest_api_key;
+const ONE_SIGNAL_REST_API_KEY = "os_v2_app_khdhimvdavb7zjgitroz2r4ndrkixk2biw6eqrfn4oygor7fxogtw3riv5mjpu4koeuuju6ma2scefend3lqkwij53ppdzbngmbouvy";
 
 
 /**
@@ -26,8 +27,7 @@ export const sendPushNotification = functions
     .firestore.document("users/{userId}/notifications/{notificationId}")
     .onCreate(async (snapshot: functions.firestore.QueryDocumentSnapshot, context: functions.EventContext) => {
         if (!ONE_SIGNAL_REST_API_KEY) {
-            console.error("OneSignal REST API Key not configured. " +
-                "Set it with 'firebase functions:config:set onesignal.rest_api_key=YOUR_KEY'");
+            console.error("OneSignal REST API Key not configured.");
             return;
         }
 
