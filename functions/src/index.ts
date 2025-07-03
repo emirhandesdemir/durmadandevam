@@ -4,7 +4,6 @@
 import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import axios from "axios";
-import { roomBotFlow } from './flows/roomBotFlow';
 
 // Firebase Admin SDK'sını başlat. Bu, sunucu tarafında Firebase servislerine erişim sağlar.
 admin.initializeApp();
@@ -13,9 +12,9 @@ admin.initializeApp();
 const db = admin.firestore();
 
 // OneSignal konfigürasyonunu ortam değişkenlerinden al.
-// Bu anahtarları `firebase functions:config:set onesignal.rest_api_key=YOUR_KEY` komutuyla ayarlamalısınız.
+// Bu anahtarı `firebase functions:set:env ONESIGNAL_REST_API_KEY=YOUR_KEY` komutuyla ayarlamanız gerekir.
 const ONE_SIGNAL_APP_ID = "51c67432-a305-43fc-a4c8-9c5d9d478d1c";
-const ONE_SIGNAL_REST_API_KEY = functions.config().onesignal?.rest_api_key;
+const ONE_SIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY;
 
 
 /**
@@ -28,7 +27,7 @@ export const sendPushNotification = functions
     .onCreate(async (snapshot: functions.firestore.QueryDocumentSnapshot, context: functions.EventContext) => {
         if (!ONE_SIGNAL_REST_API_KEY) {
             console.error("OneSignal REST API Key not configured. " +
-                "Set it with 'firebase functions:config:set onesignal.rest_api_key=YOUR_KEY'");
+                "Set it with 'firebase functions:set:env ONESIGNAL_REST_API_KEY=YOUR_KEY'");
             return;
         }
 
@@ -185,6 +184,7 @@ export const onMessageCreate = functions.firestore
       const isGreeting = /^(selam|merhaba|hey|hi|sa)\b/i.test(message.text.replace(/@walk/i, '').trim());
 
       try {
+        const { roomBotFlow } = await import('./flows/roomBotFlow');
         const responseText = await roomBotFlow({
             history,
             currentMessage: message.text,
