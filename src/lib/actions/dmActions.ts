@@ -25,6 +25,7 @@ import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'f
 import { revalidatePath } from 'next/cache';
 import { v4 as uuidv4 } from 'uuid';
 import { getChatId } from '../utils';
+import { deleteChatWithSubcollections } from '../firestoreUtils';
 
 interface UserInfo {
   uid: string;
@@ -347,20 +348,26 @@ export async function togglePinChat(chatId: string, userId: string, pinState?: b
   }
 }
 
-export async function hideChat(chatId: string, userId: string) {
-  if (!chatId || !userId) throw new Error("Sohbet ID ve Kullanıcı ID gerekli.");
+export async function deleteDirectMessage(chatId: string, currentUserId: string) {
+    if (!chatId || !currentUserId) throw new Error("Gerekli parametreler eksik.");
 
-  const metadataRef = doc(db, 'directMessagesMetadata', chatId);
-  try {
-    // We add the user to a "hiddenBy" list instead of deleting
-    await updateDoc(metadataRef, {
-      hiddenBy: arrayUnion(userId)
-    });
+    const metadataRef = doc(db, 'directMessagesMetadata', chatId);
+    const docSnap = await getDoc(metadataRef);
+
+    if (!docSnap.exists()) {
+        console.warn("Sohbet zaten silinmiş.");
+        return { success: true };
+    }
     
+    // Check if the current user is a participant.
+    const participants: string[] = docSnap.data().participantUids || [];
+    if (!participants.includes(currentUserId)) {
+        throw new Error("Bu sohbeti silme yetkiniz yok.");
+    }
+    
+    // This will delete metadata and the messages subcollection.
+    await deleteChatWithSubcollections(chatId);
+
     revalidatePath('/dm');
     return { success: true };
-  } catch (error: any) {
-    console.error("Sohbet gizlenirken hata oluştu:", error);
-    return { success: false, error: error.message };
-  }
 }

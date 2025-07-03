@@ -87,3 +87,22 @@ export async function deleteRoomWithSubcollections(roomId: string) {
     // Ana oda dokümanını sil.
     await deleteDoc(roomRef);
 }
+
+/**
+ * Bir sohbet dokümanını, tüm alt koleksiyonlarını (mesajlar)
+ * ve o sohbetle ilişkili tüm dosyaları Firebase Storage'dan tamamen siler.
+ * @param chatId Silinecek sohbetin ID'si.
+ */
+export async function deleteChatWithSubcollections(chatId: string) {
+    const metadataRef = doc(db, 'directMessagesMetadata', chatId);
+    const messagesCollectionRef = collection(db, 'directMessages', chatId, 'messages');
+
+    // Firestore subcollections
+    await deleteCollection(messagesCollectionRef, 50);
+
+    // Storage folder (e.g., for images, audio)
+    await deleteStorageFolder(`dms/${chatId}`);
+
+    // Main metadata document
+    await deleteDoc(metadataRef);
+}

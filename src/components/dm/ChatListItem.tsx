@@ -1,60 +1,36 @@
 // src/components/dm/ChatListItem.tsx
 'use client';
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import type { DirectMessageMetadata } from '@/lib/types';
+import type { DirectMessageMetadata, UserProfile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Check, CheckCheck, Pin } from 'lucide-react';
+import { Check, CheckCheck, Pin, MoreHorizontal, Trash2, ShieldOff, Loader2 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { Button } from '../ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { deleteDirectMessage, togglePinChat } from '@/lib/actions/dmActions';
+import { blockUser } from '@/lib/actions/userActions';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
+import Link from 'next/link';
 
 interface ChatListItemProps {
   chat: DirectMessageMetadata;
   currentUserId: string;
-  isSelected: boolean;
-  selectionActive: boolean;
-  onLongPress: (chatId: string) => void;
-  onToggleSelection: (chatId: string) => void;
 }
 
-export default function ChatListItem({ chat, currentUserId, isSelected, selectionActive, onLongPress, onToggleSelection }: ChatListItemProps) {
+export default function ChatListItem({ chat, currentUserId }: ChatListItemProps) {
   const router = useRouter();
-  const longPressTimer = useRef<NodeJS.Timeout>();
-  const [isLongPress, setIsLongPress] = useState(false);
-
-  const handleClick = () => {
-    // Prevent click action after a long press
-    if (isLongPress) {
-        setIsLongPress(false);
-        return;
-    }
-    // If in selection mode, toggle selection. Otherwise, navigate.
-    if (selectionActive) {
-      onToggleSelection(chat.id);
-    } else {
-      router.push(`/dm/${chat.id}`);
-    }
-  };
-
-  const handlePointerDown = () => {
-    setIsLongPress(false); // Reset on new touch
-    longPressTimer.current = setTimeout(() => {
-        onLongPress(chat.id);
-        setIsLongPress(true); // Flag to prevent click after long press
-    }, 500); // 500ms threshold for long press
-  };
-
-  const handlePointerUp = () => {
-    clearTimeout(longPressTimer.current);
-  };
+  const { toast } = useToast();
+  const { userData: currentUserData } = useAuth();
   
-  const handlePointerMove = () => {
-      // Cancel long press if user is scrolling
-      clearTimeout(longPressTimer.current);
-  }
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const partnerId = chat.participantUids.find(uid => uid !== currentUserId);
   if (!partnerId) return null;
@@ -71,70 +47,132 @@ export default function ChatListItem({ chat, currentUserId, isSelected, selectio
     ? formatDistanceToNow(lastMessage.timestamp.toDate(), { addSuffix: true, locale: tr })
     : '';
 
+  const handleAction = async (action: () => Promise<any>, successMessage: string) => {
+    setIsProcessing(true);
+    try {
+      await action();
+      toast({ description: successMessage });
+    } catch (e: any) {
+      toast({ variant: 'destructive', description: e.message });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handlePinToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    handleAction(
+      () => togglePinChat(chat.id, currentUserId),
+      isPinned ? "Sabitleme kaldırıldı." : "Sohbet sabitlendi."
+    );
+  };
+
+  const handleDelete = () => {
+    setShowDeleteConfirm(false);
+    handleAction(
+        () => deleteDirectMessage(chat.id, currentUserId),
+        "Sohbet kalıcı olarak silindi."
+    );
+  }
+
+  const handleBlock = async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!currentUserData) return;
+      handleAction(
+          () => blockUser(currentUserData.uid, partnerId),
+          `${partnerInfo.username} engellendi.`
+      )
+  };
+
   return (
-    <div 
-        onClick={handleClick}
-        onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
-        onPointerMove={handlePointerMove}
-        onContextMenu={(e) => e.preventDefault()} // Prevent default context menu on desktop
-        className="w-full cursor-pointer rounded-lg select-none"
-    >
-        <div className={cn(
-            "relative flex items-center gap-4 p-3 border-b transition-colors",
-            isSelected ? "bg-primary/20" : "hover:bg-muted/50",
-            !selectionActive && isUnread ? "bg-primary/10" : "bg-card"
-        )}>
-            {/* Selection Overlay */}
-            {isSelected && (
-                <div className="absolute inset-0 bg-primary/20 z-10"></div>
-            )}
-            
-            {/* Avatar */}
-            <div className="relative z-20">
-                <div className={cn("avatar-frame-wrapper", partnerFrame)}>
-                    <Avatar className="relative z-[1] h-12 w-12">
-                        <AvatarImage src={partnerInfo.photoURL || undefined} />
-                        <AvatarFallback>{partnerInfo.username.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                </div>
-                {isUnread && !selectionActive && (
-                    <span className="absolute bottom-0 right-0 block h-3.5 w-3.5 rounded-full bg-primary ring-2 ring-background" />
-                )}
-                {isSelected && (
-                     <div className="absolute -bottom-1 -right-1 flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground border-2 border-background">
-                        <Check className="h-4 w-4"/>
-                    </div>
-                )}
-            </div>
-            
-            {/* Chat Info */}
-            <div className="flex-1 overflow-hidden z-20">
-                <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                        {isPinned && <Pin className="h-4 w-4 text-primary" />}
-                        <h3 className={cn("truncate", isUnread && !isSelected ? "font-bold text-foreground" : "font-semibold")}>{partnerInfo.username}</h3>
-                    </div>
-                    <p className="text-xs text-muted-foreground shrink-0">{timeAgo}</p>
-                </div>
-                <div className="flex justify-between items-start mt-1">
-                    <p className={cn(
-                        "text-sm truncate pr-2", 
-                        isUnread && !isSelected ? "text-primary font-bold" : "text-muted-foreground"
-                    )}>
-                    {lastMessage && lastMessage.senderId === currentUserId && (
-                        <span className="inline-block mr-1">
-                            {lastMessage.read ? <CheckCheck className="h-4 w-4 text-primary" /> : <Check className="h-4 w-4 text-muted-foreground" />}
-                        </span>
-                    )}
-                    {lastMessage?.text || 'Sohbet başlatıldı'}
-                    </p>
-                    {isUnread && !selectionActive && (
-                        <Badge variant="default" className="h-6 min-w-[24px] flex items-center justify-center p-1 text-xs shrink-0">{unreadCount}</Badge>
-                    )}
-                </div>
-            </div>
+    <>
+      <div 
+        onClick={() => router.push(`/dm/${chat.id}`)}
+        onContextMenu={(e) => e.preventDefault()}
+        className={cn(
+            "group relative flex items-center gap-4 p-3 border-b transition-colors cursor-pointer",
+            isUnread ? "bg-primary/10" : "bg-card hover:bg-muted/50",
+        )}
+      >
+        <div className="relative z-20">
+          <div className={cn("avatar-frame-wrapper", partnerFrame)}>
+            <Avatar className="relative z-[1] h-12 w-12">
+              <AvatarImage src={partnerInfo.photoURL || undefined} />
+              <AvatarFallback>{partnerInfo.username.charAt(0)}</AvatarFallback>
+            </Avatar>
+          </div>
+          {isUnread && (
+            <span className="absolute bottom-0 right-0 block h-3.5 w-3.5 rounded-full bg-primary ring-2 ring-background" />
+          )}
         </div>
-    </div>
+        
+        <div className="flex-1 overflow-hidden z-20">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              {isPinned && <Pin className="h-4 w-4 text-primary" />}
+              <h3 className={cn("truncate", isUnread ? "font-bold text-foreground" : "font-semibold")}>
+                  <Link href={`/profile/${partnerId}`} className="hover:underline" onClick={e => e.stopPropagation()}>
+                    {partnerInfo.username}
+                  </Link>
+              </h3>
+            </div>
+            <p className="text-xs text-muted-foreground shrink-0">{timeAgo}</p>
+          </div>
+          <div className="flex justify-between items-start mt-1">
+            <p className={cn("text-sm truncate pr-2", isUnread ? "font-semibold" : "text-muted-foreground")}>
+              {lastMessage && lastMessage.senderId === currentUserId && (
+                <span className="inline-block mr-1">
+                  {lastMessage.read ? <CheckCheck className="h-4 w-4 text-primary" /> : <Check className="h-4 w-4 text-muted-foreground" />}
+                </span>
+              )}
+              {lastMessage?.text || 'Sohbet başlatıldı'}
+            </p>
+            {isUnread && (
+              <Badge variant="default" className="h-6 min-w-[24px] flex items-center justify-center p-1 text-xs shrink-0">{unreadCount}</Badge>
+            )}
+          </div>
+        </div>
+        
+        <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={e => e.stopPropagation()}>
+                        {isProcessing ? <Loader2 className="h-4 w-4 animate-spin"/> : <MoreHorizontal className="h-4 w-4" />}
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent onClick={e => e.stopPropagation()} align="end">
+                    <DropdownMenuItem onClick={handlePinToggle}>
+                        <Pin className="mr-2 h-4 w-4" />
+                        <span>{isPinned ? "Sabitlemeyi Kaldır" : "Sohbeti Sabitle"}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleBlock}>
+                        <ShieldOff className="mr-2 h-4 w-4 text-destructive" />
+                        <span className="text-destructive">Engelle</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)}>
+                        <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                        <span className="text-destructive">Sohbeti Sil</span>
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
+      </div>
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Sohbeti Silinsin mi?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Bu işlem geri alınamaz. Sohbet ve içindeki tüm mesajlar kalıcı olarak silinecektir.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>İptal</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                    Sil
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
