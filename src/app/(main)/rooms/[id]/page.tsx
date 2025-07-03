@@ -21,12 +21,11 @@ import SpeakerLayout from '@/components/rooms/SpeakerLayout';
 import RoomInfoCards from '@/components/rooms/RoomInfoCards';
 import { getGameSettings, startGameInRoom, submitAnswer, endGameWithoutWinner } from '@/lib/actions/gameActions';
 import RoomGameCard from '@/components/game/RoomGameCard';
-import { deleteMatchRoom, joinRoom } from '@/lib/actions/roomActions';
+import { joinRoom } from '@/lib/actions/roomActions';
 import GameResultCard from '@/components/game/GameResultCard';
 import GameLobbyDialog from '@/components/game/GameLobbyDialog';
 import ActiveGameArea from '@/components/game/ActiveGameArea';
 import GameInviteMessage from '@/components/game/GameInviteMessage';
-import MatchConfirmationControls from '@/components/rooms/MatchConfirmationControls';
 
 export default function RoomPage() {
     const params = useParams();
@@ -60,7 +59,7 @@ export default function RoomPage() {
     }, [roomId, setActiveRoomId]);
     
     useEffect(() => {
-        if (user && userData && room && !isParticipant && room.type !== 'match' ) {
+        if (user && userData && room && !isParticipant ) {
             const autoJoin = async () => {
                 try {
                     await joinRoom(room.id, {
@@ -149,24 +148,9 @@ export default function RoomPage() {
             messagesUnsub(); 
             gameSessionUnsub();
             activeQuizUnsub();
-            if (roomRef.current && (roomRef.current.status === 'closed_declined' || roomRef.current.status === 'converted_to_dm')) {
-                deleteMatchRoom(roomId);
-            }
         };
     }, [roomId, router, toast]);
 
-    useEffect(() => {
-        if (!room || room.type !== 'match' || !user) return;
-
-        if (room.status === 'converted_to_dm' && room.finalChatId) {
-            toast({ title: "Harika!", description: "Sohbetiniz kalıcı hale getirildi. Kaldığınız yerden devam edebilirsiniz." });
-            router.push(`/dm/${room.finalChatId}`);
-        } else if (room.status === 'closed_declined') {
-            toast({ variant: 'destructive', description: "Eşleşme sonlandırıldı." });
-            router.push('/matchmaking');
-        }
-    }, [room, user, router, toast]);
-    
     useEffect(() => {
         if (!roomId) return;
         const q = query(collection(db, 'rooms', roomId, 'games'), where('status', '==', 'finished'), orderBy('finishedAt', 'desc'), limit(1));
@@ -214,8 +198,6 @@ export default function RoomPage() {
     const isLoading = authLoading || !room;
     if (isLoading) return <div className="flex h-full items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
     
-    const isMatchRoom = room?.type === 'match';
-
     const renderGameContent = () => {
         if (activeGameSession && user) {
             return <ActiveGameArea game={activeGameSession} roomId={roomId} currentUser={{uid: user.uid, username: user.displayName!}} />
@@ -261,9 +243,6 @@ export default function RoomPage() {
                 </div>
 
                 <main ref={chatScrollRef} className="flex-1 flex flex-col overflow-y-auto pt-0 p-4">
-                     {isMatchRoom && (room.status === 'open' || room.status === 'converting') && user && (
-                        <MatchConfirmationControls room={room} currentUserId={user.uid} />
-                    )}
                     {gameContent}
                     <TextChat messages={messages} loading={messagesLoading} room={room} />
                 </main>

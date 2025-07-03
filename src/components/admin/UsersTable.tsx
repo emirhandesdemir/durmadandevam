@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { tr } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
 import { deleteUserFromFirestore, updateUserRole, banUser } from "@/lib/actions/adminActions";
-import { MoreHorizontal, Trash2, UserCheck, UserX, Loader2, ShieldCheck, Shield, Gem, Ban, Users, Swords } from "lucide-react";
+import { MoreHorizontal, Trash2, UserCheck, UserX, Loader2, ShieldCheck, Shield, Gem, Ban } from "lucide-react";
 
 import {
   Table,
@@ -106,7 +106,6 @@ export default function UsersTable({ users }: UsersTableProps) {
                 <TableHead>Rol</TableHead>
                 <TableHead>Durum</TableHead>
                 <TableHead>Elmas</TableHead>
-                <TableHead>Eşleşme Hakkı</TableHead>
                 <TableHead>Katılma Tarihi</TableHead>
                 <TableHead className="text-right">Eylemler</TableHead>
                 </TableRow>
@@ -140,12 +139,6 @@ export default function UsersTable({ users }: UsersTableProps) {
                         <div className="flex items-center font-semibold">
                             <Gem className="mr-2 h-4 w-4 text-cyan-400" />
                             {user.diamonds || 0}
-                        </div>
-                    </TableCell>
-                    <TableCell>
-                        <div className="flex items-center font-semibold">
-                            <Swords className="mr-2 h-4 w-4 text-primary" />
-                            {user.matchmakingRights || 0}
                         </div>
                     </TableCell>
                     <TableCell>

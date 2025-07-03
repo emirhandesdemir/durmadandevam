@@ -34,9 +34,6 @@ export interface UserProfile {
     reportCount?: number;
     isOnline?: boolean;
     lastSeen?: Timestamp;
-    matchmakingStatus?: 'idle' | 'searching' | 'matched';
-    matchRoomId?: string | null;
-    matchmakingRights?: number;
 }
 
 export interface ProfileViewer {
@@ -154,12 +151,7 @@ export interface Room {
     welcomeMessage: string | null;
     pinnedMessageId: string | null;
     language?: string;
-    type?: 'public' | 'match' | 'private';
-    mode?: 'chat' | 'broadcast';
-    status?: 'open' | 'closed_declined' | 'converting' | 'converted_to_dm' | 'expired';
-    confirmationExpiresAt?: Timestamp;
-    matchConfirmation?: { [uid: string]: 'pending' | 'accepted' | 'declined' };
-    finalChatId?: string;
+    type?: 'public' | 'private';
     // Music Player State
     djUid?: string | null;
     isMusicPlaying?: boolean;
@@ -211,7 +203,6 @@ export interface GameSettings {
     imageUploadQuality: number;
     audioBitrate: number;
     videoBitrate: number;
-    matchmakingCost: number;
 }
 
 export interface ActiveGame {
@@ -372,10 +363,4 @@ export interface GameInviteMessageData {
     acceptedPlayers: { uid: string, username: string, photoURL: string | null }[];
     declinedPlayers: { uid: string, username: string, photoURL: string | null }[];
     status: 'pending' | 'accepted' | 'declined' | 'cancelled';
-}
-
-export interface MatchmakingQueueEntry {
-    uid: string;
-    gender: 'male' | 'female';
-    enteredAt: Timestamp;
 }

@@ -85,20 +85,6 @@
       ]
     },
     {
-      "collectionGroup": "matchmakingQueue",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "gender",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "enteredAt",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "calls",
       "queryScope": "COLLECTION_GROUP",
       "fields": [

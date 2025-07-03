@@ -8,7 +8,6 @@ import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch
 import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { createNotification } from './notificationActions';
 import type { Room, Message, PlaylistTrack } from '../types';
-import { createDmFromMatchRoom } from './dmActions';
 import { v4 as uuidv4 } from 'uuid';
 
 const voiceStatsRef = doc(db, 'config', 'voiceStats');
@@ -48,7 +47,8 @@ export async function createRoom(
             description: roomData.description,
             language: roomData.language,
             type: 'public',
-            status: 'open',
+            createdAt: serverTimestamp() as Timestamp,
+            expiresAt: Timestamp.fromMillis(Date.now() + durationInMs),
             createdBy: {
                 uid: userId,
                 username: creatorInfo.username,
@@ -57,8 +57,6 @@ export async function createRoom(
                 selectedAvatarFrame: creatorInfo.selectedAvatarFrame,
             },
             moderators: [userId],
-            createdAt: serverTimestamp() as Timestamp,
-            expiresAt: Timestamp.fromMillis(Date.now() + durationInMs),
             participants: [],
             maxParticipants: 9,
             voiceParticipantsCount: 0,
@@ -82,40 +80,6 @@ interface UserInfo {
     uid: string;
     username: string;
     photoURL?: string | null;
-}
-
-export async function createPrivateMatchRoom(user1: UserInfo, user2: UserInfo) {
-    const newRoomRef = doc(collection(db, 'rooms'));
-    const oneHourInMs = 60 * 60 * 1000;
-    const fiveMinutesInMs = 5 * 60 * 1000;
-
-    const newRoom: Omit<Room, 'id'> = {
-        name: `${user1.username} & ${user2.username}`,
-        description: 'Özel eşleşme odası.',
-        type: 'match',
-        status: 'open',
-        createdBy: { uid: user1.uid, username: user1.username, photoURL: user1.photoURL },
-        moderators: [user1.uid, user2.uid],
-        createdAt: serverTimestamp() as Timestamp,
-        participants: [
-            { uid: user1.uid, username: user1.username, photoURL: user1.photoURL },
-            { uid: user2.uid, username: user2.username, photoURL: user2.photoURL }
-        ],
-        maxParticipants: 2,
-        voiceParticipantsCount: 0,
-        expiresAt: Timestamp.fromMillis(Date.now() + oneHourInMs),
-        confirmationExpiresAt: Timestamp.fromMillis(Date.now() + fiveMinutesInMs),
-        matchConfirmation: {
-            [user1.uid]: 'pending',
-            [user2.uid]: 'pending'
-        },
-        rules: null,
-        welcomeMessage: `Hoş geldiniz! Eşleşme odanız oluşturuldu. Birbirinizi tanımak için 5 dakikanız var.`,
-        pinnedMessageId: null,
-    };
-    
-    await setDoc(newRoomRef, newRoom);
-    return newRoomRef.id;
 }
 
 
@@ -167,10 +131,6 @@ export async function deleteRoomAsOwner(roomId: string, userId: string) {
         console.error("Oda silinirken hata:", error);
         return { success: false, error: error.message };
     }
-}
-
-export async function deleteMatchRoom(roomId: string) {
-    await deleteRoomWithSubcollections(roomId);
 }
 
 
@@ -517,54 +477,6 @@ export async function kickFromVoice(roomId: string, currentUserId: string, targe
         console.error("Error kicking user from voice:", error);
         throw new Error(error.message || "Could not kick user from voice.");
     }
-}
-
-export async function handleMatchConfirmation(roomId: string, userId: string, accepted: boolean) {
-  const roomRef = doc(db, 'rooms', roomId);
-
-  // Use a transaction to safely update the confirmation status
-  const shouldConvert = await runTransaction(db, async (transaction) => {
-    const roomDoc = await transaction.get(roomRef);
-    if (!roomDoc.exists()) throw new Error("Eşleşme odası bulunamadı.");
-    const roomData = roomDoc.data() as Room;
-
-    if (roomData.status !== 'open') throw new Error("Bu eşleşme odası artık aktif değil.");
-    if (roomData.matchConfirmation?.[userId] !== 'pending') throw new Error("Zaten bir seçim yaptınız.");
-
-    const partnerId = roomData.participants.find(p => p.uid !== userId)!.uid;
-    const partnerStatus = roomData.matchConfirmation?.[partnerId];
-
-    if (!accepted) {
-      transaction.update(roomRef, { status: 'closed_declined', [`matchConfirmation.${userId}`]: 'declined' });
-      return false;
-    }
-
-    if (partnerStatus === 'accepted') {
-      transaction.update(roomRef, { status: 'converting', [`matchConfirmation.${userId}`]: 'accepted' });
-      return true; // Signal to convert
-    } else {
-      transaction.update(roomRef, { [`matchConfirmation.${userId}`]: 'accepted' });
-      return false; // Wait for partner
-    }
-  });
-
-  if (shouldConvert) {
-    try {
-      // Perform the migration outside the transaction
-      const newChatId = await createDmFromMatchRoom(roomId);
-      // Final update to signal redirection to clients
-      await updateDoc(roomRef, {
-        status: 'converted_to_dm',
-        finalChatId: newChatId,
-      });
-    } catch (error) {
-      console.error("Failed to convert match room:", error);
-      await updateDoc(roomRef, { status: 'open' }); // Revert on failure
-      throw new Error("Sohbet oluşturulurken bir hata oluştu.");
-    }
-  }
-
-  return { success: true };
 }
 
 export async function deleteMessageByHost(roomId: string, messageId: string, hostId: string) {

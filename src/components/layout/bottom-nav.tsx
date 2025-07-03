@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageSquare, Search, Swords } from 'lucide-react';
+import { Home, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -31,20 +31,6 @@ export default function BottomNav() {
       href: '/home',
       icon: Home,
       label: 'Anasayfa',
-    },
-    {
-      id: 'search',
-      isActive: pathname === '/search',
-      href: '/search',
-      icon: Search,
-      label: 'Ara',
-    },
-    {
-      id: 'matchmaking',
-      isActive: pathname === '/matchmaking',
-      href: '/matchmaking',
-      icon: Swords,
-      label: 'Eşleşme',
     },
     {
       id: 'rooms',

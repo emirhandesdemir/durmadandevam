@@ -14,7 +14,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Settings, Loader2, Gamepad2, UserX, Database, Signal, Swords } from "lucide-react";
+import { Settings, Loader2, Gamepad2, UserX, Database, Signal } from "lucide-react";
 import { GameSettings as GameSettingsType } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
@@ -30,7 +30,6 @@ const settingsSchema = z.object({
   imageUploadQuality: z.coerce.number().min(0.1, "Kalite en az 0.1 olmalı").max(1, "Kalite en fazla 1 olabilir"),
   audioBitrate: z.coerce.number().min(16, "Bit hızı en az 16 olmalı").max(128, "Bit hızı en fazla 128 olabilir"),
   videoBitrate: z.coerce.number().min(100, "Bit hızı en az 100 olmalı").max(2000, "Bit hızı en fazla 2000 olabilir"),
-  matchmakingCost: z.coerce.number().min(0, "Maliyet 0'dan küçük olamaz."),
 });
 
 
@@ -51,7 +50,6 @@ export default function SystemSettingsPage() {
             imageUploadQuality: 0.92,
             audioBitrate: 64,
             videoBitrate: 1000,
-            matchmakingCost: 5,
         },
     });
 
@@ -147,15 +145,15 @@ export default function SystemSettingsPage() {
                     <Card>
                         <CardHeader>
                             <div className="flex items-center gap-3">
-                                <Swords className="h-6 w-6 text-muted-foreground" />
-                                <CardTitle>Eşleşme Ayarları</CardTitle>
+                                <UserX className="h-6 w-6 text-muted-foreground" />
+                                <CardTitle>Sesli Sohbet Ayarları</CardTitle>
                             </div>
-                             <CardDescription>1v1 eşleşme sisteminin maliyetini belirleyin.</CardDescription>
+                            <CardDescription>Sesli sohbet odalarının işleyişiyle ilgili kuralları belirleyin.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             {loading ? <Skeleton className="h-16 w-full" /> : (
-                                <FormField control={form.control} name="matchmakingCost" render={({ field }) => (
-                                    <FormItem><FormLabel>Eşleşme Maliyeti (Elmas)</FormLabel><FormControl><Input type="number" {...field} className="max-w-sm" /></FormControl><FormMessage /></FormItem>
+                                <FormField control={form.control} name="afkTimeoutMinutes" render={({ field }) => (
+                                    <FormItem><FormLabel>AFK Zaman Aşımı (Dakika)</FormLabel><FormControl><Input type="number" {...field} className="max-w-sm" /></FormControl><FormMessage /></FormItem>
                                 )} />
                             )}
                         </CardContent>
@@ -209,22 +207,6 @@ export default function SystemSettingsPage() {
                                         </FormItem>
                                     )} />
                                 </>
-                            )}
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center gap-3">
-                                <UserX className="h-6 w-6 text-muted-foreground" />
-                                <CardTitle>Sesli Sohbet Ayarları</CardTitle>
-                            </div>
-                            <CardDescription>Sesli sohbet odalarının işleyişiyle ilgili kuralları belirleyin.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            {loading ? <Skeleton className="h-16 w-full" /> : (
-                                <FormField control={form.control} name="afkTimeoutMinutes" render={({ field }) => (
-                                    <FormItem><FormLabel>AFK Zaman Aşımı (Dakika)</FormLabel><FormControl><Input type="number" {...field} className="max-w-sm" /></FormControl><FormMessage /></FormItem>
-                                )} />
                             )}
                         </CardContent>
                     </Card>
