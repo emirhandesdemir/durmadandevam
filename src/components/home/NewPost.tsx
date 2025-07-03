@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Image as ImageIcon } from "lucide-react";
+import { cn } from '@/lib/utils';
 
 /**
  * Yeni Gönderi Giriş Noktası
@@ -15,7 +16,7 @@ import { Image as ImageIcon } from "lucide-react";
  * Kullanıcı avatarını, "Aklında ne var?" metnini ve bir resim ikonu içerir.
  */
 export default function NewPost() {
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
 
   // Kullanıcı giriş yapmamışsa bu bileşeni gösterme.
   if (!user) {
@@ -28,10 +29,12 @@ export default function NewPost() {
         <Card className="group w-full cursor-pointer overflow-hidden rounded-2xl border bg-card/50 p-4 shadow-lg shadow-black/5 transition-colors hover:border-primary/50 hover:bg-card">
             <div className="flex items-center gap-4">
                 {/* Kullanıcı Avatarı */}
-                <Avatar className="h-11 w-11 flex-shrink-0">
-                    <AvatarImage src={user?.photoURL || undefined} />
-                    <AvatarFallback>{user?.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
-                </Avatar>
+                 <div className={cn("avatar-frame-wrapper", userData?.selectedAvatarFrame)}>
+                    <Avatar className="relative z-[1] h-11 w-11 flex-shrink-0">
+                        <AvatarImage src={user?.photoURL || undefined} />
+                        <AvatarFallback>{user?.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                </div>
                 
                 {/* Sahte Giriş Alanı */}
                 <div className="flex-1 text-left text-muted-foreground">

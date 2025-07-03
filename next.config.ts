@@ -11,7 +11,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   register: true, // Servis çalışanını otomatik olarak kaydet.
   skipWaiting: true, // Yeni sürüm olduğunda eski servis çalışanını beklemeden aktifleştir.
   disable: isDev, // Geliştirme ortamında PWA özelliklerini devre dışı bırak.
-  importScripts: isDev ? undefined : ['/firebase-messaging-sw.js'], // Firebase anlık bildirimleri için gerekli servis çalışanı.
+  importScripts: ['/firebase-messaging-sw.js'],
   cacheOnFrontEndNav: true,
   reloadOnOnline: true,
 });

@@ -3,6 +3,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Puzzle, AlertTriangle, Lightbulb } from "lucide-react";
+import Link from 'next/link';
 
 export default function QuestionManagerPage() {
     return (

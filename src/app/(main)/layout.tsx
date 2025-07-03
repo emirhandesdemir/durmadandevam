@@ -1,4 +1,4 @@
-
+// src/app/(main)/layout.tsx
 'use client';
 
 import BottomNav from "@/components/layout/bottom-nav";
@@ -11,7 +11,7 @@ import { useState, useRef, useEffect } from 'react';
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import NotificationPermissionManager from "@/components/common/NotificationPermissionManager";
-import IncomingCallManager from '@/components/common/IncomingCallManager'; // Import the new component
+import IncomingCallManager from '@/components/common/IncomingCallManager';
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
 
@@ -139,23 +139,6 @@ export default function MainAppLayout({
     exit: { opacity: 0, x: -20, transition: { duration: 0.2 } },
   };
 
-  // Prevent context menu on long-press for a more native feel on touch devices
-  useEffect(() => {
-    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
-    const handleContextMenu = (e: Event) => {
-      e.preventDefault();
-      e.stopPropagation();
-    };
-
-    if (isTouchDevice) {
-        document.addEventListener('contextmenu', handleContextMenu);
-        return () => {
-            document.removeEventListener('contextmenu', handleContextMenu);
-        };
-    }
-  }, []);
-
   return (
     <VoiceChatProvider>
       {/* Bildirim izni ve PWA yükleme gibi genel işlemleri yöneten bileşenler. */}
@@ -195,7 +178,8 @@ export default function MainAppLayout({
                 animate="animate"
                 exit="exit"
                 className={cn(
-                  isFullPageLayout ? "flex-1 flex flex-col overflow-hidden" : "",
+                  "flex-1 flex flex-col", // flex-1 ve flex-col ekleyerek içeriğin tüm alanı kaplamasını sağla
+                  isFullPageLayout ? "overflow-hidden" : "",
                   !isHomePage && !isFullPageLayout && "p-4" // Ana sayfa dışındaki normal sayfalara padding ekle.
                 )}
              >

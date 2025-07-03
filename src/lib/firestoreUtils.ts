@@ -74,14 +74,15 @@ export async function deleteRoomWithSubcollections(roomId: string) {
     const roomRef = doc(db, 'rooms', roomId);
 
     // Firestore alt koleksiyonlarını sil.
-    const subcollections = ['messages', 'voiceParticipants', 'signals', 'games'];
+    const subcollections = ['messages', 'voiceParticipants', 'signals', 'games', 'game_sessions', 'playlist'];
     for (const sub of subcollections) {
         await deleteCollection(collection(roomRef, sub), 50);
     }
 
     // Storage'daki ilgili dosyaları sil.
-    const roomStoragePath = `upload/rooms/${roomId}`;
-    await deleteStorageFolder(roomStoragePath);
+    await deleteStorageFolder(`upload/rooms/${roomId}`);
+    await deleteStorageFolder(`music/${roomId}`);
+
 
     // Ana oda dokümanını sil.
     await deleteDoc(roomRef);

@@ -1,10 +1,10 @@
-// This file must be in the public folder.
+// Import and configure the Firebase SDK
+// It's important to import the firebase-app.js and firebase-messaging.js modules.
+importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js');
 
-// Scripts for firebase and firebase messaging
-importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js');
-
-// Your web app's Firebase configuration
+// Initialize the Firebase app in the service worker by passing in
+// the messagingSenderId.
 const firebaseConfig = {
   apiKey: "AIzaSyBHLuoO7KM9ai0dMeCcGhmSHSVYCDO1rEo",
   authDomain: "yenidendeneme-ea9ed.firebaseapp.com",
@@ -15,31 +15,43 @@ const firebaseConfig = {
   measurementId: "G-J3EB02J0LN"
 };
 
-// Initialize Firebase
-const app = firebase.initializeApp(firebaseConfig);
+firebase.initializeApp(firebaseConfig);
+
+// Retrieve an instance of Firebase Messaging so that it can handle background
+// messages.
 const messaging = firebase.messaging();
 
-// Background message handler
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Received background message ', payload);
-
+  
   const notificationTitle = payload.data.title;
   const notificationOptions = {
     body: payload.data.body,
-    icon: payload.data.icon,
+    icon: payload.data.icon || '/icons/icon-192x192.png',
     data: {
-      link: payload.data.link
+      link: payload.data.link || '/'
     }
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// Optional: Handle notification click
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const link = event.notification.data.link;
-  if (link && clients.openWindow) {
-    clients.openWindow(link);
-  }
+
+  event.waitUntil(
+    clients.matchAll({
+      type: "window"
+    }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url === '/' && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(link);
+      }
+    })
+  );
 });

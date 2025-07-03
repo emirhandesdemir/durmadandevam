@@ -1,9 +1,9 @@
-
+// src/components/layout/bottom-nav.tsx
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageSquare } from 'lucide-react';
+import { Home, MessageSquare, Plus, Search, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
