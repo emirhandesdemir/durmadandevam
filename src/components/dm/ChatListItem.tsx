@@ -1,7 +1,7 @@
 // src/components/dm/ChatListItem.tsx
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -9,41 +9,53 @@ import type { DirectMessageMetadata } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Check, CheckCheck, Pin, PinOff, Trash2, Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { togglePinChat, hideChat } from '@/lib/actions/dmActions';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Button } from '../ui/button';
+import { Check, CheckCheck, Pin } from 'lucide-react';
 
 interface ChatListItemProps {
   chat: DirectMessageMetadata;
   currentUserId: string;
   isSelected: boolean;
+  selectionActive: boolean;
+  onLongPress: (chatId: string) => void;
+  onToggleSelection: (chatId: string) => void;
 }
 
-export default function ChatListItem({ chat, currentUserId, isSelected }: ChatListItemProps) {
+export default function ChatListItem({ chat, currentUserId, isSelected, selectionActive, onLongPress, onToggleSelection }: ChatListItemProps) {
   const router = useRouter();
-  const { toast } = useToast();
-  
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const longPressTimer = useRef<NodeJS.Timeout>();
+  const [isLongPress, setIsLongPress] = useState(false);
 
   const handleClick = () => {
-    // Menü açıkken tıklanırsa, sadece menüyü kapat.
-    if (isMenuOpen) {
-        setIsMenuOpen(false);
+    // Prevent click action after a long press
+    if (isLongPress) {
+        setIsLongPress(false);
         return;
     }
-    router.push(`/dm/${chat.id}`);
+    // If in selection mode, toggle selection. Otherwise, navigate.
+    if (selectionActive) {
+      onToggleSelection(chat.id);
+    } else {
+      router.push(`/dm/${chat.id}`);
+    }
   };
 
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsMenuOpen(true);
+  const handlePointerDown = () => {
+    setIsLongPress(false); // Reset on new touch
+    longPressTimer.current = setTimeout(() => {
+        onLongPress(chat.id);
+        setIsLongPress(true); // Flag to prevent click after long press
+    }, 500); // 500ms threshold for long press
+  };
+
+  const handlePointerUp = () => {
+    clearTimeout(longPressTimer.current);
   };
   
+  const handlePointerMove = () => {
+      // Cancel long press if user is scrolling
+      clearTimeout(longPressTimer.current);
+  }
+
   const partnerId = chat.participantUids.find(uid => uid !== currentUserId);
   if (!partnerId) return null;
   const partnerInfo = chat.participantInfo[partnerId];
@@ -59,115 +71,70 @@ export default function ChatListItem({ chat, currentUserId, isSelected }: ChatLi
     ? formatDistanceToNow(lastMessage.timestamp.toDate(), { addSuffix: true, locale: tr })
     : '';
 
-  const handleTogglePin = async () => {
-    setIsProcessing(true);
-    try {
-        const result = await togglePinChat(chat.id, currentUserId);
-        if (result.success) {
-            toast({ description: result.newState ? "Sohbet sabitlendi." : "Sabitlenmiş sohbet kaldırıldı." });
-        } else {
-            throw new Error(result.error);
-        }
-    } catch(e: any) {
-        toast({ variant: 'destructive', description: e.message });
-    } finally {
-        setIsProcessing(false);
-    }
-  };
-
-  const handleDeleteChat = async () => {
-    setIsProcessing(true);
-    try {
-        await hideChat(chat.id, currentUserId);
-        toast({ description: "Sohbet gizlendi." });
-        setShowDeleteConfirm(false);
-    } catch(e: any) {
-        toast({ variant: 'destructive', description: e.message });
-    } finally {
-        setIsProcessing(false);
-    }
-  };
-
-
   return (
-    <>
-      <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-        <DropdownMenuTrigger asChild>
-          <div 
-            onClick={handleClick}
-            onContextMenu={handleContextMenu} 
-            className="w-full cursor-pointer rounded-lg"
-          >
-            <div className={cn(
-              "flex items-center gap-4 p-3 border-b hover:bg-muted/50 transition-colors",
-              isSelected ? "bg-muted" : (isUnread ? "bg-primary/10" : "bg-card")
-            )}>
-              <div className="relative">
+    <div 
+        onClick={handleClick}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerMove={handlePointerMove}
+        onContextMenu={(e) => e.preventDefault()} // Prevent default context menu on desktop
+        className="w-full cursor-pointer rounded-lg select-none"
+    >
+        <div className={cn(
+            "relative flex items-center gap-4 p-3 border-b transition-colors",
+            isSelected ? "bg-primary/20" : "hover:bg-muted/50",
+            !selectionActive && isUnread ? "bg-primary/10" : "bg-card"
+        )}>
+            {/* Selection Overlay */}
+            {isSelected && (
+                <div className="absolute inset-0 bg-primary/20 z-10"></div>
+            )}
+            
+            {/* Avatar */}
+            <div className="relative z-20">
                 <div className={cn("avatar-frame-wrapper", partnerFrame)}>
-                  <Avatar className="relative z-[1] h-12 w-12">
-                    <AvatarImage src={partnerInfo.photoURL || undefined} />
-                    <AvatarFallback>{partnerInfo.username.charAt(0)}</AvatarFallback>
-                  </Avatar>
+                    <Avatar className="relative z-[1] h-12 w-12">
+                        <AvatarImage src={partnerInfo.photoURL || undefined} />
+                        <AvatarFallback>{partnerInfo.username.charAt(0)}</AvatarFallback>
+                    </Avatar>
                 </div>
-                {isUnread && !isSelected && (
+                {isUnread && !selectionActive && (
                     <span className="absolute bottom-0 right-0 block h-3.5 w-3.5 rounded-full bg-primary ring-2 ring-background" />
                 )}
-              </div>
-              <div className="flex-1 overflow-hidden">
+                {isSelected && (
+                     <div className="absolute -bottom-1 -right-1 flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground border-2 border-background">
+                        <Check className="h-4 w-4"/>
+                    </div>
+                )}
+            </div>
+            
+            {/* Chat Info */}
+            <div className="flex-1 overflow-hidden z-20">
                 <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                      {isPinned && <Pin className="h-4 w-4 text-primary" />}
-                      <h3 className={cn("truncate", isUnread && !isSelected ? "font-bold text-foreground" : "font-semibold")}>{partnerInfo.username}</h3>
-                  </div>
-                  <p className="text-xs text-muted-foreground shrink-0">{timeAgo}</p>
+                    <div className="flex items-center gap-2">
+                        {isPinned && <Pin className="h-4 w-4 text-primary" />}
+                        <h3 className={cn("truncate", isUnread && !isSelected ? "font-bold text-foreground" : "font-semibold")}>{partnerInfo.username}</h3>
+                    </div>
+                    <p className="text-xs text-muted-foreground shrink-0">{timeAgo}</p>
                 </div>
                 <div className="flex justify-between items-start mt-1">
-                  <p className={cn(
-                      "text-sm truncate pr-2", 
-                      isUnread && !isSelected ? "text-primary font-bold" : "text-muted-foreground"
-                  )}>
+                    <p className={cn(
+                        "text-sm truncate pr-2", 
+                        isUnread && !isSelected ? "text-primary font-bold" : "text-muted-foreground"
+                    )}>
                     {lastMessage && lastMessage.senderId === currentUserId && (
-                      <span className="inline-block mr-1">
-                          {lastMessage.read ? <CheckCheck className="h-4 w-4 text-primary" /> : <Check className="h-4 w-4 text-muted-foreground" />}
-                      </span>
+                        <span className="inline-block mr-1">
+                            {lastMessage.read ? <CheckCheck className="h-4 w-4 text-primary" /> : <Check className="h-4 w-4 text-muted-foreground" />}
+                        </span>
                     )}
                     {lastMessage?.text || 'Sohbet başlatıldı'}
-                  </p>
-                  {isUnread && !isSelected && (
-                    <Badge variant="default" className="h-6 min-w-[24px] flex items-center justify-center p-1 text-xs shrink-0">{unreadCount}</Badge>
-                  )}
+                    </p>
+                    {isUnread && !selectionActive && (
+                        <Badge variant="default" className="h-6 min-w-[24px] flex items-center justify-center p-1 text-xs shrink-0">{unreadCount}</Badge>
+                    )}
                 </div>
-              </div>
             </div>
-          </div>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-            <DropdownMenuItem onClick={handleTogglePin} disabled={isProcessing}>
-                {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : (isPinned ? <PinOff className="mr-2 h-4 w-4"/> : <Pin className="mr-2 h-4 w-4"/>)}
-                <span>{isPinned ? 'Sabitlemeyi Kaldır' : 'Sohbeti Sabitle'}</span>
-            </DropdownMenuItem>
-             <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-destructive focus:text-destructive">
-                <Trash2 className="mr-2 h-4 w-4" />
-                <span>Sohbeti Sil</span>
-            </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Sohbeti Sil?</AlertDialogTitle>
-                <AlertDialogDescription>Bu sohbet gelen kutunuzdan kaldırılacak. Bu işlem geri alınamaz. Karşı taraf bu durumdan etkilenmez.</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel disabled={isProcessing}>İptal</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteChat} disabled={isProcessing} className="bg-destructive hover:bg-destructive/90">
-                    {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Sil
-                </AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
-    </>
+        </div>
+    </div>
   );
 }

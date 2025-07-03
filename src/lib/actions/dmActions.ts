@@ -319,7 +319,7 @@ export async function toggleReaction(chatId: string, messageId: string, emoji: s
   }
 }
 
-export async function togglePinChat(chatId: string, userId: string) {
+export async function togglePinChat(chatId: string, userId: string, pinState?: boolean) {
   if (!chatId || !userId) throw new Error("Sohbet ID ve Kullanıcı ID gerekli.");
 
   const metadataRef = doc(db, 'directMessagesMetadata', chatId);
@@ -328,14 +328,19 @@ export async function togglePinChat(chatId: string, userId: string) {
     if (!docSnap.exists()) throw new Error("Sohbet bulunamadı.");
     
     const pinnedBy: string[] = docSnap.data().pinnedBy || [];
-    const isPinned = pinnedBy.includes(userId);
+    const isCurrentlyPinned = pinnedBy.includes(userId);
 
-    await updateDoc(metadataRef, {
-      pinnedBy: isPinned ? arrayRemove(userId) : arrayUnion(userId)
-    });
+    // If pinState is provided, use it. Otherwise, toggle.
+    const shouldBePinned = pinState !== undefined ? pinState : !isCurrentlyPinned;
+
+    if (shouldBePinned && !isCurrentlyPinned) {
+      await updateDoc(metadataRef, { pinnedBy: arrayUnion(userId) });
+    } else if (!shouldBePinned && isCurrentlyPinned) {
+      await updateDoc(metadataRef, { pinnedBy: arrayRemove(userId) });
+    }
     
     revalidatePath('/dm');
-    return { success: true, newState: !isPinned };
+    return { success: true, newState: shouldBePinned };
   } catch (error: any) {
     console.error("Sohbet sabitlenirken hata oluştu:", error);
     return { success: false, error: error.message };
