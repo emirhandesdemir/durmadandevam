@@ -89,12 +89,11 @@ export default function CallPage() {
   const [partner, setPartner] = useState<UserInfo | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(true);
-  const [partnerVideoOn, setPartnerVideoOn] = useState(false);
   
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
-  const didSetupWebRTC = useRef(false);
+  const signalingStateRef = useRef<string | null>(null); // To track signaling state changes
 
   const getCallStatusText = () => {
       if (!callData) return 'Yükleniyor...';
@@ -105,8 +104,10 @@ export default function CallPage() {
       }
   }
 
-  const cleanupCall = useCallback(() => {
-    console.log("Arama temizleniyor...");
+  const cleanupAndLeave = useCallback(async (shouldUpdateStatus = false) => {
+    if (shouldUpdateStatus && callId) {
+      await updateCallStatus(callId, 'ended');
+    }
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
@@ -119,127 +120,127 @@ export default function CallPage() {
         (remoteVideoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
         remoteVideoRef.current.srcObject = null;
     }
-    router.push('/dm');
-  }, [router]);
+    router.replace('/dm');
+  }, [callId, router]);
 
 
-  const hangUp = useCallback(async () => {
-    if (!callId) return;
-    await updateCallStatus(callId, 'ended');
-    cleanupCall();
-  }, [callId, cleanupCall]);
-
-  const setupWebRTC = useCallback(async (isCaller: boolean, initialCallData: Call) => {
-    if (!user) return;
-    
-    peerConnectionRef.current = new RTCPeerConnection(ICE_SERVERS);
-    const pc = peerConnectionRef.current;
-    
-    const initialVideoState = initialCallData.videoStatus?.[user.uid] ?? false;
-    setIsVideoOff(!initialVideoState);
-
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: initialVideoState, audio: true });
-        localStreamRef.current = stream;
-        stream.getTracks().forEach(track => pc.addTrack(track, stream));
-    } catch(err) {
-        console.error("getUserMedia error:", err);
-        toast({ variant: "destructive", title: "İzin Hatası", description: "Arama için kamera/mikrofon izni gerekli." });
-        hangUp();
-        return () => {};
-    }
-    
-    pc.ontrack = (event) => {
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = event.streams[0];
-      }
-    };
-    
-    const target = isCaller ? 'receiver' : 'caller';
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        sendIceCandidate(callId, event.candidate.toJSON(), target);
-      }
-    };
-
-    const candidatesCollection = collection(db, 'calls', callId, isCaller ? 'callerCandidates' : 'receiverCandidates');
-    const unsubscribeCandidates = onSnapshot(candidatesCollection, async (snapshot) => {
-        for (const change of snapshot.docChanges()) {
-            if (change.type === 'added') {
-                try {
-                    await pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
-                    await deleteDoc(change.doc.ref);
-                } catch(e) {
-                    console.error("Error adding received ice candidate", e);
-                }
-            }
-        }
-    });
-    
-    return unsubscribeCandidates;
-  }, [user, callId, hangUp, toast]);
-
+  // Effect for setting up WebRTC and handling signals
   useEffect(() => {
     if (!user || !callId) return;
+
+    let unsubCall: (() => void) | null = null;
+    let unsubCandidates: (() => void) | null = null;
+
+    const setup = async () => {
+        // Step 1: Get user media
+        try {
+            const videoEnabled = callData ? callData.videoStatus?.[user.uid] ?? false : false;
+            const stream = await navigator.mediaDevices.getUserMedia({ video: videoEnabled, audio: true });
+            localStreamRef.current = stream;
+            setIsVideoOff(!videoEnabled);
+        } catch(err) {
+            console.error("getUserMedia error:", err);
+            toast({ variant: "destructive", title: "İzin Hatası", description: "Arama için kamera/mikrofon izni gerekli." });
+            cleanupAndLeave(true);
+            return;
+        }
+
+        // Step 2: Create Peer Connection
+        peerConnectionRef.current = new RTCPeerConnection(ICE_SERVERS);
+        const pc = peerConnectionRef.current;
+
+        // Step 3: Add local tracks to PC
+        localStreamRef.current.getTracks().forEach(track => {
+            pc.addTrack(track, localStreamRef.current!);
+        });
+        
+        // Step 4: Setup event listeners for PC
+        pc.ontrack = (event) => {
+            if (remoteVideoRef.current) {
+                remoteVideoRef.current.srcObject = event.streams[0];
+            }
+        };
+
+        pc.onicecandidate = (event) => {
+            if (event.candidate && callData) {
+                const targetId = user.uid === callData.callerId ? callData.receiverId : callData.callerId;
+                sendIceCandidate(callId, event.candidate.toJSON(), targetId);
+            }
+        };
+
+        pc.onsignalingstatechange = () => {
+             signalingStateRef.current = pc.signalingState;
+        };
+
+        // Step 5: Listen for signals
+        unsubCall = onSnapshot(doc(db, 'calls', callId), async (snapshot) => {
+            const data = snapshot.data() as Call;
+            if (!snapshot.exists() || ['ended', 'declined', 'missed'].includes(data.status)) {
+                toast({ description: "Arama sonlandırıldı." });
+                cleanupAndLeave();
+                return;
+            }
+            
+            setCallData(data);
+            const isCaller = data.callerId === user.uid;
+
+            // Offer-Answer flow
+            if (isCaller && data.status === 'ringing' && pc.signalingState === 'stable') {
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                await sendOffer(callId, offer);
+            }
+
+            if (!isCaller && data.offer && pc.signalingState !== 'have-remote-offer') {
+                await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                await sendAnswer(callId, answer);
+            }
+
+            if (isCaller && data.answer && pc.signalingState === 'have-local-offer') {
+                await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+            }
+        });
+
+        // Step 6: Listen for ICE candidates
+        const otherPeerId = callData ? (user.uid === callData.callerId ? callData.receiverId : callData.callerId) : null;
+        if(otherPeerId) {
+            unsubCandidates = onSnapshot(collection(db, 'calls', callId, `${user.uid}Candidates`), async (snapshot) => {
+                for (const change of snapshot.docChanges()) {
+                    if (change.type === 'added') {
+                        try {
+                           if (pc.remoteDescription) {
+                             await pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+                             await deleteDoc(change.doc.ref);
+                           }
+                        } catch(e) { console.error("Error adding received ice candidate", e); }
+                    }
+                }
+            });
+        }
+    };
     
-    let unsubCandidates: (() => void) | undefined;
-    const unsubCall = onSnapshot(doc(db, 'calls', callId), async (snapshot) => {
-      if (!snapshot.exists()) {
-        toast({ variant: 'destructive', description: "Arama bulunamadı veya sonlandırıldı." });
-        cleanupCall();
-        return;
-      }
-      
-      const data = { id: snapshot.id, ...snapshot.data() } as Call;
-      setCallData(data);
-      
-      const derivedPartner = user.uid === data.callerId ? data.receiverInfo : data.callerInfo;
-      setPartner(derivedPartner);
-      
-      const partnerId = data.callerId === user.uid ? data.receiverId : data.callerId;
-      setPartnerVideoOn(data.videoStatus?.[partnerId] ?? false);
-
-      if (data.status === 'ended' || data.status === 'declined' || data.status === 'missed') {
-        toast({ description: "Arama sonlandırıldı." });
-        cleanupCall();
-        return;
-      }
-      
-      // --- WebRTC Setup and Signaling ---
-      if (!didSetupWebRTC.current) {
-          didSetupWebRTC.current = true;
-          unsubCandidates = await setupWebRTC(data.callerId === user.uid, data);
-      }
-      
-      const pc = peerConnectionRef.current;
-      if (!pc) return;
-      
-      const isCaller = data.callerId === user.uid;
-
-      if (isCaller && data.status === 'ringing' && pc.signalingState === 'stable') {
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          await sendOffer(callId, offer);
-      }
-      
-      if (!isCaller && data.offer && pc.signalingState !== 'have-remote-offer') {
-          await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
-          await sendAnswer(callId, answer);
-      }
-      
-      if (isCaller && data.answer && pc.signalingState === 'have-local-offer') {
-        await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-      }
+    // Initial data fetch before setting up WebRTC
+    const callDocRef = doc(db, 'calls', callId);
+    getDoc(callDocRef).then(initialSnap => {
+        if(initialSnap.exists()) {
+            const data = initialSnap.data() as Call;
+            setCallData(data);
+            setPartner(user?.uid === data.callerId ? data.receiverInfo : data.callerInfo);
+            setup();
+        } else {
+            toast({ variant: "destructive", description: "Arama bulunamadı." });
+            router.replace('/dm');
+        }
     });
 
     return () => {
-      unsubCall();
-      if (unsubCandidates) unsubCandidates();
+        if (unsubCall) unsubCall();
+        if (unsubCandidates) unsubCandidates();
+        cleanupAndLeave();
     };
-  }, [user, callId, toast, cleanupCall, setupWebRTC]);
-
+  }, [user, callId, router, toast, cleanupAndLeave]);
 
   const toggleMute = () => {
     if (localStreamRef.current) {
@@ -271,7 +272,8 @@ export default function CallPage() {
     );
   }
 
-  const showRemoteVideo = partnerVideoOn && callData.type === 'video' && callData.status === 'active';
+  const partnerId = callData.callerId === user?.uid ? callData.receiverId : callData.callerId;
+  const showRemoteVideo = callData.videoStatus?.[partnerId] && callData.status === 'active';
 
   return (
     <div className="relative h-full w-full bg-gradient-to-br from-slate-800 via-black to-slate-900 text-white overflow-hidden">
@@ -312,7 +314,7 @@ export default function CallPage() {
         </AnimatePresence>
         
         <CallControls 
-            onHangUp={hangUp}
+            onHangUp={() => cleanupAndLeave(true)}
             onToggleMute={toggleMute}
             isMuted={isMuted}
             onToggleVideo={toggleVideo}

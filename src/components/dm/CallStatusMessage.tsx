@@ -15,30 +15,32 @@ export default function CallStatusMessage({ message }: CallStatusMessageProps) {
   const { status, duration } = message.callData;
   let Icon = Phone;
   let text = 'Arama';
+  let color = 'text-muted-foreground';
 
   switch (status) {
-    case 'started':
-      Icon = Phone;
-      text = 'Arama başlatıldı';
-      break;
     case 'ended':
       Icon = PhoneOff;
       text = `Arama bitti · ${duration || ''}`;
+      color = 'text-muted-foreground';
       break;
     case 'missed':
       Icon = PhoneMissed;
       text = 'Cevapsız arama';
+      color = 'text-destructive';
       break;
     case 'declined':
         Icon = PhoneOff;
         text = 'Arama reddedildi';
+        color = 'text-destructive';
         break;
+    default:
+       return null; // Don't show for 'started' or other statuses
   }
 
   return (
     <div className="flex justify-center items-center my-2">
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-full text-xs text-muted-foreground">
-        <Icon className={cn("h-4 w-4", status === 'missed' && 'text-destructive')} />
+      <div className={cn("flex items-center gap-2 px-3 py-1.5 bg-muted rounded-full text-xs", color)}>
+        <Icon className="h-4 w-4" />
         <span>{text}</span>
       </div>
     </div>

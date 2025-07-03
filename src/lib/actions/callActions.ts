@@ -26,6 +26,12 @@ export async function initiateCall(caller: UserInfo, receiver: UserInfo, type: '
   const callsRef = collection(db, 'calls');
   const newCallRef = doc(callsRef);
 
+  // Set the initial video status based on the call type
+  const initialVideoStatus = {
+    [caller.uid]: type === 'video',
+    [receiver.uid]: false, // Receiver always starts with video off
+  };
+
   await setDoc(newCallRef, {
     callerId: caller.uid,
     callerInfo: {
@@ -39,10 +45,7 @@ export async function initiateCall(caller: UserInfo, receiver: UserInfo, type: '
     },
     status: 'ringing',
     type: type,
-    videoStatus: {
-        [caller.uid]: type === 'video',
-        [receiver.uid]: type === 'video',
-    },
+    videoStatus: initialVideoStatus,
     createdAt: serverTimestamp(),
   });
 
@@ -99,12 +102,13 @@ export async function updateCallStatus(callId: string, status: 'declined' | 'end
         await addCallSystemMessageToDm(chatId, status, duration);
     }
     
+    // Send a missed call notification to the original caller if the receiver misses it
     if (status === 'missed') {
          await createNotification({
-            recipientId: callData.receiverId,
-            senderId: callData.callerId,
-            senderUsername: callData.callerInfo.username,
-            senderAvatar: callData.callerInfo.photoURL,
+            recipientId: callData.callerId,
+            senderId: callData.receiverId,
+            senderUsername: callData.receiverInfo.username,
+            senderAvatar: callData.receiverInfo.photoURL,
             type: 'call_missed',
             callId: callId,
             callType: callData.type,
@@ -123,7 +127,7 @@ export async function sendAnswer(callId: string, answer: RTCSessionDescriptionIn
     await updateDoc(callRef, { answer: answer, status: 'active', startedAt: serverTimestamp() });
 }
 
-export async function sendIceCandidate(callId: string, candidate: RTCIceCandidateInit, target: 'caller' | 'receiver') {
-    const candidatesCol = collection(db, 'calls', callId, `${target}Candidates`);
+export async function sendIceCandidate(callId: string, candidate: RTCIceCandidateInit, targetId: string) {
+    const candidatesCol = collection(db, 'calls', callId, `${targetId}Candidates`);
     await addDoc(candidatesCol, candidate);
 }

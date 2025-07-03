@@ -1,7 +1,7 @@
 // src/components/dm/ChatListItem.tsx
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -29,27 +29,21 @@ export default function ChatListItem({ chat, currentUserId, isSelected }: ChatLi
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  
-  const pressTimer = useRef<NodeJS.Timeout | null>(null);
 
-  const handlePointerDown = () => {
-    pressTimer.current = setTimeout(() => {
-        setIsMenuOpen(true);
-        pressTimer.current = null; // Timer fired, it's a long press
-    }, 500);
-  };
-
-  const handlePointerUp = () => {
-    if (pressTimer.current) {
-        clearTimeout(pressTimer.current);
-        pressTimer.current = null;
-        // If timer didn't fire, it's a short press/click
-        if (!isMenuOpen) {
-            router.push(`/dm/${chat.id}`);
-        }
+  const handleClick = () => {
+    // Menü açıkken tıklanırsa, sadece menüyü kapat.
+    if (isMenuOpen) {
+        setIsMenuOpen(false);
+        return;
     }
+    router.push(`/dm/${chat.id}`);
   };
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsMenuOpen(true);
+  };
+  
   const partnerId = chat.participantUids.find(uid => uid !== currentUserId);
   if (!partnerId) return null;
   const partnerInfo = chat.participantInfo[partnerId];
@@ -100,12 +94,8 @@ export default function ChatListItem({ chat, currentUserId, isSelected }: ChatLi
       <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
         <DropdownMenuTrigger asChild>
           <div 
-            onPointerDown={handlePointerDown}
-            onPointerUp={handlePointerUp}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              setIsMenuOpen(true);
-            }} 
+            onClick={handleClick}
+            onContextMenu={handleContextMenu} 
             className="w-full cursor-pointer rounded-lg"
           >
             <div className={cn(

@@ -22,7 +22,7 @@ export default function IncomingCallManager() {
   useEffect(() => {
     if (!user) return;
     
-    // Check for calls that have been ringing for more than 30 seconds and mark them as missed
+    // Automatically mark calls as missed if they ring for too long.
     const checkMissedCalls = () => {
         const thirtySecondsAgo = Timestamp.fromMillis(Date.now() - 30000);
         const missedCallQuery = query(
@@ -34,12 +34,15 @@ export default function IncomingCallManager() {
 
         onSnapshot(missedCallQuery, (snapshot) => {
             snapshot.forEach(async (doc) => {
-                await updateCallStatus(doc.id, 'missed');
+                // Check again to avoid race conditions
+                if (doc.data().status === 'ringing') {
+                    await updateCallStatus(doc.id, 'missed');
+                }
             });
         });
     };
 
-    const intervalId = setInterval(checkMissedCalls, 15000); // Check every 15 seconds
+    const intervalId = setInterval(checkMissedCalls, 10000); // Check every 10 seconds
 
     const q = query(
       collection(db, 'calls'),
@@ -51,17 +54,7 @@ export default function IncomingCallManager() {
       const calls = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Call));
       const latestCall = calls.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis())[0];
       
-      if (latestCall) {
-          const isExpired = (latestCall.createdAt.toMillis() + 30000) < Date.now();
-          if(!isExpired) {
-            setIncomingCall(latestCall);
-          } else {
-            updateCallStatus(latestCall.id, 'missed');
-            setIncomingCall(null);
-          }
-      } else {
-        setIncomingCall(null);
-      }
+      setIncomingCall(latestCall || null);
     });
 
     return () => {
@@ -83,10 +76,12 @@ export default function IncomingCallManager() {
     }
   }, [incomingCall]);
 
-  const handleAccept = () => {
+  const handleAccept = async () => {
     if (!incomingCall) return;
-    router.push(`/call/${incomingCall.id}`);
+    const callId = incomingCall.id;
     setIncomingCall(null);
+    await updateCallStatus(callId, 'active');
+    router.push(`/call/${callId}`);
   };
 
   const handleDecline = async () => {
