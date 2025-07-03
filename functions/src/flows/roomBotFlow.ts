@@ -1,5 +1,5 @@
 import { functionAi } from '../genkit-config';
-import { z } from 'genkit/zod';
+import { z } from 'genkit';
 
 const RoomBotInputSchema = z.object({
   history: z.array(z.object({
@@ -40,7 +40,7 @@ export const roomBotFlow = functionAi.defineFlow(
           Your response as Walk:`;
       }
 
-      const { output } = await functionAi.generate({
+      const response = await functionAi.generate({
         prompt,
         config: {
             // Adjust temperature for more creative/less repetitive responses
@@ -49,7 +49,6 @@ export const roomBotFlow = functionAi.defineFlow(
             repetitionPenalty: 1.1,
         }
       });
-      return output ?? "Üzgünüm, şu anda cevap veremiyorum.";
+      return response.text ?? "Üzgünüm, şu anda cevap veremiyorum.";
     }
   );
-  

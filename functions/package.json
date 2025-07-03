@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@genkit-ai/firebase": "^1.14.0",
-    "@genkit-ai/vertexai": "^1.14.0",
+    "@genkit-ai/googleai": "^1.8.0",
     "axios": "^1.7.2",
     "express": "^5.1.0",
     "firebase-admin": "^12.6.0",
