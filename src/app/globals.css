@@ -58,6 +58,9 @@
   * {
     @apply border-border; /* Tüm elemanların kenarlık rengini tema değişkeninden al */
   }
+  html, body {
+    overscroll-behavior-y: contain; /* Prevent pull-to-refresh */
+  }
   body {
     @apply bg-background text-foreground;
     /* Kullanıcının metin seçmesini ve dokunma vurgusunu engelle (mobil uygulama hissi için) */
@@ -79,6 +82,17 @@
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
+  }
+
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .hide-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
   }
 }
 

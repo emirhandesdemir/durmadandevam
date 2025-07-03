@@ -139,6 +139,23 @@ export default function MainAppLayout({
     exit: { opacity: 0, x: -20, transition: { duration: 0.2 } },
   };
 
+  // Prevent context menu on long-press for a more native feel on touch devices
+  useEffect(() => {
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+    const handleContextMenu = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    if (isTouchDevice) {
+        document.addEventListener('contextmenu', handleContextMenu);
+        return () => {
+            document.removeEventListener('contextmenu', handleContextMenu);
+        };
+    }
+  }, []);
+
   return (
     <VoiceChatProvider>
       {/* Bildirim izni ve PWA yükleme gibi genel işlemleri yöneten bileşenler. */}
@@ -154,7 +171,7 @@ export default function MainAppLayout({
         <main 
           ref={scrollRef} 
           className={cn(
-            "flex-1 flex flex-col",
+            "flex-1 flex flex-col hide-scrollbar",
             isFullPageLayout ? "overflow-hidden" : "overflow-y-auto pb-24" // Tam ekran sayfalarda kaydırmayı engelle.
           )}
         >
