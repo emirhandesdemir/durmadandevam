@@ -19,50 +19,29 @@ export default function PostsFeed() {
     const [clientHiddenIds, setClientHiddenIds] = useState<string[]>([]);
 
     const sortedPosts = useMemo(() => {
-        let postsData = [...posts];
-
         const allHiddenIds = new Set([...(userData?.hiddenPostIds || []), ...clientHiddenIds]);
-        
-        // Filter out posts from blocked users and hidden posts
-        postsData = postsData.filter(post => 
+
+        // Filter out blocked and hidden posts first
+        const filteredPosts = posts.filter(post => 
             !userData?.blockedUsers?.includes(post.uid) && !allHiddenIds.has(post.id)
         );
-        
-        // Language-based sorting
-        const postsInUserLanguage = postsData.filter(p => p.language === i18n.language);
-        const otherLanguagePosts = postsData.filter(p => p.language !== i18n.language);
 
-        let languageSortedFeed = [];
-        let langIndex = 0;
-        let otherIndex = 0;
-        while (langIndex < postsInUserLanguage.length || otherIndex < otherLanguagePosts.length) {
-             // Add 3 posts from user's language
-            for (let i = 0; i < 3 && langIndex < postsInUserLanguage.length; i++) {
-                languageSortedFeed.push(postsInUserLanguage[langIndex++]);
-            }
-            // Add 1 post from other languages
-            if (otherIndex < otherLanguagePosts.length) {
-                languageSortedFeed.push(otherLanguagePosts[otherIndex++]);
-            }
-        }
+        // Prioritize by language
+        const postsInUserLanguage = filteredPosts.filter(p => p.language === i18n.language);
+        const otherLanguagePosts = filteredPosts.filter(p => p.language !== i18n.language);
 
-        // Apply gender-based sorting if the user is male
+        // If the user is male, further prioritize female posts within the user's language group
         if (userData?.gender === 'male') {
-            const femalePosts = languageSortedFeed.filter(p => p.userGender === 'female');
-            const otherPosts = languageSortedFeed.filter(p => p.userGender !== 'female');
-            const finalFeed = [];
-            let fIndex = 0, oIndex = 0;
+            const femalePosts = postsInUserLanguage.filter(p => p.userGender === 'female');
+            const otherSameLanguagePosts = postsInUserLanguage.filter(p => p.userGender !== 'female');
             
-            // Interleave posts with a 2:1 female-to-other ratio
-            while(fIndex < femalePosts.length || oIndex < otherPosts.length) {
-                if (fIndex < femalePosts.length) finalFeed.push(femalePosts[fIndex++]);
-                if (fIndex < femalePosts.length) finalFeed.push(femalePosts[fIndex++]);
-                if (oIndex < otherPosts.length) finalFeed.push(otherPosts[oIndex++]);
-            }
-            return finalFeed;
-        } else {
-            return languageSortedFeed;
+            // Combine with female posts first, then other same-language posts, then other-language posts
+            return [...femalePosts, ...otherSameLanguagePosts, ...otherLanguagePosts];
         }
+
+        // For female users or users with no gender set, just combine by language
+        return [...postsInUserLanguage, ...otherLanguagePosts];
+
     }, [posts, userData, i18n.language, clientHiddenIds]);
     
     const handleHidePost = async (postId: string) => {

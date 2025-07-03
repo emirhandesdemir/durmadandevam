@@ -1,4 +1,3 @@
-
 // Bu dosya, uygulamanın ana giriş sayfasıdır (`/`).
 // Kullanıcı giriş yapmamışsa veya ilk kez ziyaret ediyorsa bu sayfa gösterilir.
 "use client";
