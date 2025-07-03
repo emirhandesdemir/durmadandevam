@@ -5,19 +5,22 @@ import type { Metadata, Viewport } from 'next';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import './globals.css';
-import { Plus_Jakarta_Sans } from 'next/font/google'; // Changed from Inter
+import { Plus_Jakarta_Sans, Inter, Poppins, Lato } from 'next/font/google'; 
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/layout/ThemeProvider';
 import NetworkStatusNotifier from '@/components/common/NetworkStatusNotifier';
 import I18nProvider from '@/components/common/I18nProvider';
 import DynamicTheme from '@/components/layout/DynamicTheme';
 
-// Google Fonts'tan Plus Jakarta Sans font ailesini yüklüyoruz.
-const fontSans = Plus_Jakarta_Sans({ 
+// Google Fonts'tan font ailelerini yüklüyoruz.
+const jakarta = Plus_Jakarta_Sans({ 
   subsets: ['latin'], 
-  variable: '--font-sans', // CSS'te bu değişken adıyla kullanılabilir.
+  variable: '--font-jakarta',
   weight: ['400', '500', '600', '700', '800']
 });
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+const poppins = Poppins({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-poppins' });
+const lato = Lato({ subsets: ['latin'], weight: ['400', '700'], variable: '--font-lato' });
 
 // Sayfa meta verileri (SEO ve PWA için önemli).
 export const metadata: Metadata = {
@@ -61,7 +64,10 @@ export default function RootLayout({
       <body
         className={cn(
           'min-h-screen bg-background font-sans antialiased font-medium',
-          fontSans.variable // Plus Jakarta Sans fontunu tüm body'e uygula.
+           jakarta.variable,
+           inter.variable,
+           poppins.variable,
+           lato.variable
         )}
       >
         {/* Tema Sağlayıcısı (Aydınlık/Karanlık Mod) */}

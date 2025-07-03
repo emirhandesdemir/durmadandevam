@@ -2,24 +2,14 @@
 import { getThemeSettings } from "@/lib/actions/themeActions";
 import type { ColorTheme } from "@/lib/types";
 
-/**
- * Veritabanındaki tema ayarlarını alıp CSS değişkenlerine dönüştüren yardımcı fonksiyon.
- * @param theme - Aydınlık veya karanlık mod için renkleri içeren nesne.
- * @param selector - CSS seçicisi (örn: ':root' veya '.dark').
- * @returns Oluşturulan CSS string'i.
- */
-function generateCssVariables(theme: ColorTheme, selector: string) {
-    let css = `${selector} {\n`;
-    for (const [key, value] of Object.entries(theme)) {
-        // camelCase (js) formatını kebab-case (css) formatına dönüştürür.
-        // Örn: 'primaryForeground' -> '--primary-foreground'
-        const cssVarName = key.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2').toLowerCase();
-        if (value) {
-            css += `  --${cssVarName}: ${value};\n`;
-        }
-    }
-    css += '}\n';
-    return css;
+function generateCssVariablesString(theme: ColorTheme): string {
+    return Object.entries(theme)
+        .map(([key, value]) => {
+            const cssVarName = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+            return value ? `  --${cssVarName}: ${value};` : '';
+        })
+        .filter(Boolean)
+        .join('\n');
 }
 
 /**
@@ -29,10 +19,20 @@ function generateCssVariables(theme: ColorTheme, selector: string) {
 export default async function DynamicTheme() {
     const themeSettings = await getThemeSettings();
 
-    const lightThemeCss = generateCssVariables(themeSettings.light, ':root');
-    const darkThemeCss = generateCssVariables(themeSettings.dark, '.dark');
+    const lightThemeCss = generateCssVariablesString(themeSettings.light);
+    const darkThemeCss = generateCssVariablesString(themeSettings.dark);
 
-    const combinedCss = `${lightThemeCss}\n${darkThemeCss}`;
+    const combinedCss = `
+:root {
+${lightThemeCss}
+  --radius: ${themeSettings.radius || '1rem'};
+  --font-sans: ${themeSettings.font || 'var(--font-jakarta)'};
+}
+
+.dark {
+${darkThemeCss}
+}
+`;
 
     // Oluşturulan CSS'i doğrudan HTML'e enjekte et.
     return <style dangerouslySetInnerHTML={{ __html: combinedCss }} />;

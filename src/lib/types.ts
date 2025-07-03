@@ -26,6 +26,8 @@ export interface ColorTheme {
 export interface ThemeSettings {
     light: ColorTheme;
     dark: ColorTheme;
+    radius: string; // e.g. "0.5rem"
+    font: string; // e.g. "var(--font-inter)"
 }
 
 export interface UserProfile {
@@ -49,6 +51,7 @@ export interface UserProfile {
     following: string[];
     followRequests: FollowRequest[];
     diamonds: number;
+    matchmakingRights?: number;
     referredBy?: string | null;
     referralCount?: number;
     selectedBubble?: string;
@@ -61,6 +64,8 @@ export interface UserProfile {
     reportCount?: number;
     isOnline?: boolean;
     lastSeen?: Timestamp;
+    matchRoomId?: string | null;
+    matchmakingStatus?: 'idle' | 'searching' | 'matched';
 }
 
 export interface ProfileViewer {
@@ -168,7 +173,7 @@ export interface Room {
     };
     moderators: string[]; // List of moderator UIDs
     createdAt: Timestamp;
-    expiresAt?: Timestamp; // Only for rooms
+    expiresAt?: Timestamp; // Only for public rooms
     portalExpiresAt?: Timestamp; // For public announcements
     participants: { uid: string, username: string, photoURL?: string | null }[];
     maxParticipants: number;
@@ -178,7 +183,10 @@ export interface Room {
     welcomeMessage: string | null;
     pinnedMessageId: string | null;
     language?: string;
-    type?: 'public' | 'private';
+    type?: 'public' | 'private' | 'match';
+    matchConfirmation?: { [key: string]: 'pending' | 'accepted' | 'declined' };
+    confirmationExpiresAt?: Timestamp;
+    status?: 'pending' | 'active' | 'converting' | 'closed';
     // Music Player State
     djUid?: string | null;
     isMusicPlaying?: boolean;
@@ -230,6 +238,7 @@ export interface GameSettings {
     imageUploadQuality: number;
     audioBitrate: number;
     videoBitrate: number;
+    matchmakingCost: number;
 }
 
 export interface ActiveGame {

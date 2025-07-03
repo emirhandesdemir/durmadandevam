@@ -62,7 +62,9 @@ export async function getThemeSettings(): Promise<ThemeSettings> {
             border: "217.2 32.6% 17.5%",
             input: "217.2 32.6% 17.5%",
             ring: "262.1 83.3% 57.8%",
-        }
+        },
+        radius: "1rem",
+        font: "var(--font-jakarta)"
     };
 }
 

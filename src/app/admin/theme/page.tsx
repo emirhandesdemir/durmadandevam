@@ -5,10 +5,10 @@ import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Palette, Loader2 } from "lucide-react";
+import { Palette, Loader2, Type, Scaling } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getThemeSettings, updateThemeSettings } from "@/lib/actions/themeActions";
-import type { ThemeSettings, ColorTheme } from "@/lib/types";
+import type { ThemeSettings } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +16,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 // HSL renk formatını doğrulayan regex
 const hslRegex = /^\d{1,3}(\.\d+)?\s\d{1,3}(\.\d+)?%\s\d{1,3}(\.\d+)?%$/;
@@ -44,27 +48,36 @@ const colorThemeSchema = z.object({
   ring: z.string().regex(hslRegex, { message: hslErrorMessage }),
 });
 
-// Ana tema şeması (aydınlık ve karanlık mod)
+// Ana tema şeması (aydınlık ve karanlık mod, radius, font)
 const themeSettingsSchema = z.object({
   light: colorThemeSchema,
   dark: colorThemeSchema,
+  radius: z.string().regex(/^\d(\.\d+)?rem$/, "Değer '0.5rem' gibi bir formatta olmalıdır."),
+  font: z.string().min(1, "Bir yazı tipi seçilmelidir."),
 });
 
+const fontOptions = [
+    { name: 'Plus Jakarta Sans', value: 'var(--font-jakarta)' },
+    { name: 'Inter', value: 'var(--font-inter)' },
+    { name: 'Poppins', value: 'var(--font-poppins)' },
+    { name: 'Lato', value: 'var(--font-lato)' },
+];
 
-// Renk düzenleme alanını oluşturan yardımcı bileşen
 const ColorInput = ({ control, name, label }: { control: any, name: any, label: string }) => (
-    <Controller
-        name={name}
+    <FormField
         control={control}
-        render={({ field, fieldState: { error } }) => (
-            <div className="space-y-1.5">
-                <Label htmlFor={name} className="capitalize">{label.replace(/([A-Z])/g, ' $1')}</Label>
-                <div className="flex items-center gap-2">
-                     <div className="h-10 w-10 shrink-0 rounded-md border" style={{ backgroundColor: `hsl(${field.value})` }} />
-                    <Input id={name} {...field} placeholder="H S% L%" className={cn(error && "border-destructive")} />
-                </div>
-                {error && <p className="text-xs text-destructive">{error.message}</p>}
-            </div>
+        name={name}
+        render={({ field, fieldState }) => (
+            <FormItem>
+                <FormLabel className="capitalize text-xs">{label.replace(/([A-Z])/g, ' $1')}</FormLabel>
+                <FormControl>
+                    <div className="flex items-center gap-2">
+                        <div className="h-10 w-10 shrink-0 rounded-md border" style={{ backgroundColor: `hsl(${field.value})` }} />
+                        <Input placeholder="H S% L%" {...field} />
+                    </div>
+                </FormControl>
+                <FormMessage />
+            </FormItem>
         )}
     />
 );
@@ -105,43 +118,98 @@ export default function ThemeSettingsPage() {
     }
 
     return (
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                    <Palette className="h-8 w-8 text-primary" />
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Tema Editörü</h1>
-                        <p className="text-muted-foreground mt-1">
-                            Uygulamanın renk paletini buradan yönetin. HSL formatında değerler girin (örn: 262.1 83.3% 57.8%).
-                        </p>
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+                <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                        <Palette className="h-8 w-8 text-primary" />
+                        <div>
+                            <h1 className="text-3xl font-bold tracking-tight">Tema Editörü</h1>
+                            <p className="text-muted-foreground mt-1">
+                                Uygulamanın renk paletini, yazı tipini ve yerleşimini buradan yönetin.
+                            </p>
+                        </div>
                     </div>
+                    <Button type="submit" disabled={form.formState.isSubmitting}>
+                        {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Değişiklikleri Kaydet
+                    </Button>
                 </div>
-                <Button type="submit" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Değişiklikleri Kaydet
-                </Button>
-            </div>
 
-            <Tabs defaultValue="light" className="mt-8">
-                <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="light">Aydınlık Tema</TabsTrigger>
-                    <TabsTrigger value="dark">Karanlık Tema</TabsTrigger>
-                </TabsList>
-                <TabsContent value="light">
-                    <Card><CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {Object.keys(colorThemeSchema.shape).map(key => (
-                            <ColorInput key={key} control={form.control} name={`light.${key}`} label={key}/>
-                        ))}
-                    </CardContent></Card>
-                </TabsContent>
-                 <TabsContent value="dark">
-                    <Card><CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                         {Object.keys(colorThemeSchema.shape).map(key => (
-                            <ColorInput key={key} control={form.control} name={`dark.${key}`} label={key}/>
-                        ))}
-                    </CardContent></Card>
-                </TabsContent>
-            </Tabs>
-        </form>
+                 <Card className="mt-8">
+                    <CardHeader>
+                        <div className="flex items-center gap-3">
+                            <Scaling className="h-6 w-6 text-muted-foreground" />
+                            <CardTitle>Yerleşim & Tipografi</CardTitle>
+                        </div>
+                        <CardDescription>Uygulamanın köşe yuvarlaklığı ve yazı tipi gibi temel stil ayarları.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8">
+                        <FormField
+                            control={form.control}
+                            name="radius"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Köşe Yuvarlaklığı ({parseFloat(field.value).toFixed(1)}rem)</FormLabel>
+                                    <FormControl>
+                                        <Slider
+                                            value={[parseFloat(field.value)]}
+                                            onValueChange={(vals) => field.onChange(`${vals[0].toFixed(1)}rem`)}
+                                            min={0} max={2} step={0.1}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="font"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Yazı Tipi</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Bir yazı tipi seçin" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {fontOptions.map(opt => (
+                                                <SelectItem key={opt.value} value={opt.value}>
+                                                    <span style={{ fontFamily: opt.value.replace(/var\((--font-\w+)\)/, "var($1)") }}>{opt.name}</span>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </CardContent>
+                </Card>
+                
+                <Tabs defaultValue="light" className="mt-8">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="light">Aydınlık Tema Renkleri</TabsTrigger>
+                        <TabsTrigger value="dark">Karanlık Tema Renkleri</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="light">
+                        <Card><CardContent className="p-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-8">
+                            {Object.keys(colorThemeSchema.shape).map(key => (
+                                <ColorInput key={`light.${key}`} control={form.control} name={`light.${key}`} label={key}/>
+                            ))}
+                        </CardContent></Card>
+                    </TabsContent>
+                    <TabsContent value="dark">
+                        <Card><CardContent className="p-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-8">
+                            {Object.keys(colorThemeSchema.shape).map(key => (
+                                <ColorInput key={`dark.${key}`} control={form.control} name={`dark.${key}`} label={key}/>
+                            ))}
+                        </CardContent></Card>
+                    </TabsContent>
+                </Tabs>
+            </form>
+        </Form>
     );
 }
