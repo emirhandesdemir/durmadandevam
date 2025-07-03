@@ -28,6 +28,9 @@ export interface ThemeSettings {
     dark: ColorTheme;
     radius: string; // e.g. "0.5rem"
     font: string; // e.g. "var(--font-inter)"
+    appName?: string;
+    appLogoUrl?: string;
+    defaultMode?: 'light' | 'dark' | 'system';
 }
 
 export interface UserProfile {

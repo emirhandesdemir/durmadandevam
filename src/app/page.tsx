@@ -66,7 +66,7 @@ function PwaInstallButton() {
 
 export default function Home() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading, themeSettings } = useAuth();
   const { t } = useTranslation();
 
   // Authentication status check.
@@ -101,7 +101,7 @@ export default function Home() {
           <Users className="h-12 w-12" />
         </div>
         <h1 className="text-5xl font-bold tracking-tight text-foreground md:text-6xl">
-          {t('welcome_to_hiwewalk')}
+          {t('welcome_to_hiwewalk', { appName: themeSettings?.appName || 'HiweWalk' })}
         </h1>
         <p className="max-w-md text-lg text-muted-foreground">
           {t('app_description')}

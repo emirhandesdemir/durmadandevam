@@ -11,6 +11,7 @@ import { ThemeProvider } from '@/components/layout/ThemeProvider';
 import NetworkStatusNotifier from '@/components/common/NetworkStatusNotifier';
 import I18nProvider from '@/components/common/I18nProvider';
 import DynamicTheme from '@/components/layout/DynamicTheme';
+import { getThemeSettings } from '@/lib/actions/themeActions';
 
 // Google Fonts'tan font ailelerini yüklüyoruz.
 const jakarta = Plus_Jakarta_Sans({ 
@@ -51,11 +52,13 @@ export const viewport: Viewport = {
   userScalable: false,
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const themeSettings = await getThemeSettings();
+
   return (
     <html lang="tr" suppressHydrationWarning>
       <head>
@@ -73,7 +76,7 @@ export default function RootLayout({
         {/* Tema Sağlayıcısı (Aydınlık/Karanlık Mod) */}
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme={themeSettings.defaultMode || "system"}
           enableSystem
           disableTransitionOnChange
         >

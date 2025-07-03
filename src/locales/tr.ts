@@ -1,8 +1,7 @@
-
 export const tr = {
   translation: {
     // Uygulama Giriş Sayfası
-    welcome_to_hiwewalk: "HiweWalk'a Hoş Geldiniz",
+    welcome_to_hiwewalk: "{{appName}}'a Hoş Geldiniz",
     app_description: "Herkese açık odalar oluşturun ve katılın. Düşüncelerinizi paylaşın, fikirler üzerinde işbirliği yapın ve başkalarıyla gerçek zamanlı olarak bağlantı kurun.",
     login: "Giriş Yap",
     signup: "Kayıt Ol",

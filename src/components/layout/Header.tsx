@@ -13,18 +13,24 @@ import { useTranslation } from "react-i18next";
  * Logo, uygulama adı, mesajlar ve bildirimler butonu içerir.
  */
 export default function Header() {
-    const { userData, totalUnreadDms } = useAuth();
+    const { userData, totalUnreadDms, themeSettings } = useAuth();
     const router = useRouter();
     const { t } = useTranslation();
 
     const hasUnreadNotifications = userData?.hasUnreadNotifications;
+    const appName = themeSettings?.appName || 'HiweWalk';
+    const appLogoUrl = themeSettings?.appLogoUrl;
 
     return (
         <header className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="container flex h-14 items-center justify-between">
                 <Link href="/home" className="flex items-center gap-3">
-                    <Users className="h-7 w-7 text-primary" />
-                    <span className="text-xl font-bold tracking-tight">HiweWalk</span>
+                    {appLogoUrl ? (
+                        <img src={appLogoUrl} alt={`${appName} Logo`} className="h-8 w-auto" />
+                    ) : (
+                        <Users className="h-7 w-7 text-primary" />
+                    )}
+                    <span className="text-xl font-bold tracking-tight">{appName}</span>
                 </Link>
                 <div className="flex items-center gap-1">
                      <Button variant="ghost" size="icon" className="rounded-full relative" onClick={() => router.push('/search')}>

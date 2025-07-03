@@ -7,13 +7,14 @@ import { doc, onSnapshot, DocumentData, collection, query, where, updateDoc, ser
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import type { FeatureFlags, UserProfile } from '@/lib/types';
+import type { FeatureFlags, UserProfile, ThemeSettings } from '@/lib/types';
 
 
 interface AuthContextType {
   user: User | null;
   userData: UserProfile | null;
   featureFlags: FeatureFlags | null;
+  themeSettings: ThemeSettings | null;
   totalUnreadDms: number;
   loading: boolean;
   handleLogout: () => Promise<void>;
@@ -23,6 +24,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   userData: null,
   featureFlags: null,
+  themeSettings: null,
   totalUnreadDms: 0,
   loading: true,
   handleLogout: async () => {},
@@ -32,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserProfile | null>(null);
   const [featureFlags, setFeatureFlags] = useState<FeatureFlags | null>(null);
+  const [themeSettings, setThemeSettings] = useState<ThemeSettings | null>(null);
   const [totalUnreadDms, setTotalUnreadDms] = useState(0);
   const [authLoading, setAuthLoading] = useState(true);
   const [firestoreLoading, setFirestoreLoading] = useState(true);
@@ -116,6 +119,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setFeatureFlags(docSnap.exists() ? docSnap.data() as FeatureFlags : { quizGameEnabled: true, postFeedEnabled: true, contentModerationEnabled: true });
     });
 
+    const themeRef = doc(db, 'config', 'theme');
+    const unsubscribeTheme = onSnapshot(themeRef, (docSnap) => {
+      if (docSnap.exists()) {
+          setThemeSettings(docSnap.data() as ThemeSettings);
+      }
+    });
+
     let unsubscribeUser: () => void = () => {};
     let unsubscribeDms: () => void = () => {};
 
@@ -169,12 +179,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubscribeUser();
       unsubscribeFeatures();
       unsubscribeDms();
+      unsubscribeTheme();
     };
   }, [user, handleLogout, toast]);
 
   const loading = authLoading || firestoreLoading;
 
-  const value = { user, userData, loading, handleLogout, featureFlags, totalUnreadDms };
+  const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

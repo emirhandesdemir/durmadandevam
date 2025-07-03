@@ -1,8 +1,7 @@
-
 export const en = {
   translation: {
     // App Landing Page
-    welcome_to_hiwewalk: "Welcome to HiweWalk",
+    welcome_to_hiwewalk: "Welcome to {{appName}}",
     app_description: "Create and join public rooms. Share your thoughts, collaborate on ideas, and connect with others in real-time.",
     login: "Log In",
     signup: "Sign Up",
