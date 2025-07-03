@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import type { DirectMessageMetadata, UserProfile } from '@/lib/types';
+import type { DirectMessageMetadata } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -18,6 +18,7 @@ import { deleteDirectMessage, togglePinChat } from '@/lib/actions/dmActions';
 import { blockUser } from '@/lib/actions/userActions';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import Link from 'next/link';
+import useLongPress from '@/hooks/useLongPress';
 
 interface ChatListItemProps {
   chat: DirectMessageMetadata;
@@ -31,6 +32,8 @@ export default function ChatListItem({ chat, currentUserId }: ChatListItemProps)
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showActions, setShowActions] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const partnerId = chat.participantUids.find(uid => uid !== currentUserId);
   if (!partnerId) return null;
@@ -46,6 +49,20 @@ export default function ChatListItem({ chat, currentUserId }: ChatListItemProps)
   const timeAgo = lastMessage
     ? formatDistanceToNow(lastMessage.timestamp.toDate(), { addSuffix: true, locale: tr })
     : '';
+
+  const handleContainerClick = () => {
+    if (showActions) {
+      setShowActions(false);
+    } else {
+      router.push(`/dm/${chat.id}`);
+    }
+  };
+
+  const handleLongPress = () => {
+    setShowActions(true);
+  };
+  
+  const longPressEvents = useLongPress(handleLongPress, handleContainerClick, { delay: 400 });
 
   const handleAction = async (action: () => Promise<any>, successMessage: string) => {
     setIsProcessing(true);
@@ -87,11 +104,11 @@ export default function ChatListItem({ chat, currentUserId }: ChatListItemProps)
   return (
     <>
       <div 
-        onClick={() => router.push(`/dm/${chat.id}`)}
-        onContextMenu={(e) => e.preventDefault()}
+        {...longPressEvents}
         className={cn(
             "group relative flex items-center gap-4 p-3 border-b transition-colors cursor-pointer",
             isUnread ? "bg-primary/10" : "bg-card hover:bg-muted/50",
+            showActions && "bg-muted/80"
         )}
       >
         <div className="relative z-20">
@@ -133,10 +150,15 @@ export default function ChatListItem({ chat, currentUserId }: ChatListItemProps)
           </div>
         </div>
         
-        <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-            <DropdownMenu>
+        <div className={cn("ml-auto transition-opacity", showActions ? "opacity-100" : "opacity-0")}>
+            <DropdownMenu open={isMenuOpen} onOpenChange={(open) => { setIsMenuOpen(open); if (!open) setShowActions(false); }}>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={e => e.stopPropagation()}>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 rounded-full" 
+                        onClick={e => e.stopPropagation()}
+                    >
                         {isProcessing ? <Loader2 className="h-4 w-4 animate-spin"/> : <MoreHorizontal className="h-4 w-4" />}
                     </Button>
                 </DropdownMenuTrigger>
