@@ -1,22 +1,27 @@
-
+// Bu dosya, Firebase projesinin sunucu tarafı mantığını içerir.
+// Veritabanındaki belirli olaylara (örn: yeni bildirim oluşturma) tepki vererek
+// anlık bildirim gönderme gibi işlemleri gerçekleştirir.
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
+// Firebase Admin SDK'sını başlat. Bu, sunucu tarafında Firebase servislerine erişim sağlar.
 admin.initializeApp();
 
+// Firestore veritabanı örneğini al.
 const db = admin.firestore();
 
 /**
- * Triggers when a new notification document is created for a user.
- * Fetches the user's FCM tokens and sends a push notification.
+ * Yeni bir bildirim dokümanı oluşturulduğunda tetiklenir.
+ * Kullanıcının FCM jetonlarını alır ve Firebase Cloud Messaging API (V1) kullanarak
+ * bir anlık bildirim gönderir.
  */
 export const sendPushNotification = functions
-    .region("us-central1") // Specify a region for the function
+    .region("us-central1") // Fonksiyonun çalışacağı bölgeyi belirt.
     .firestore.document("users/{userId}/notifications/{notificationId}")
     .onCreate(async (snapshot: functions.firestore.QueryDocumentSnapshot, context: functions.EventContext) => {
         const notificationData = snapshot.data();
         if (!notificationData) {
-            console.log("No notification data found.");
+            console.log("Bildirim verisi bulunamadı.");
             return;
         }
 
@@ -25,13 +30,13 @@ export const sendPushNotification = functions
         const userDoc = await userRef.get();
 
         if (!userDoc.exists) {
-            console.log(`User document not found for userId: ${userId}`);
+            console.log(`Kullanıcı dokümanı bulunamadı: ${userId}`);
             return;
         }
 
         const userData = userDoc.data();
         if (!userData || !userData.fcmTokens || userData.fcmTokens.length === 0) {
-            console.log(`User ${userId} has no FCM tokens.`);
+            console.log(`Kullanıcı ${userId} için FCM jetonu yok.`);
             return;
         }
         
@@ -39,7 +44,7 @@ export const sendPushNotification = functions
 
         let title = "Yeni bir bildiriminiz var!";
         let body = "Uygulamayı açarak kontrol edin.";
-        let link = "/notifications"; // Default link
+        let link = "/notifications"; // Varsayılan link
 
         switch (notificationData.type) {
             case "like":
@@ -87,40 +92,45 @@ export const sendPushNotification = functions
                 body = `${notificationData.senderUsername} gönderinizi retweetledi.`;
                 link = '/notifications';
                 break;
+            case "call_incoming":
+                const callType = notificationData.callType === 'video' ? 'Görüntülü' : 'Sesli';
+                title = `📞 Gelen ${callType} Arama`;
+                body = `${notificationData.senderUsername} sizi arıyor...`;
+                link = `/call/${notificationData.callId || ''}`;
+                break;
+            case "call_missed":
+                title = `📞 Cevapsız Arama`;
+                body = `${notificationData.senderUsername} sizi aradı.`;
+                link = `/dm`; // Link to DM list
+                break;
         }
 
-        const payload: admin.messaging.MessagingPayload = {
-            // Notification for foreground display
-            notification: {
-                title: title,
-                body: body,
-                icon: "/icons/icon-192x192.png",
-            },
-            // Data for background service worker
+        // Firebase Cloud Messaging API (V1) için data-only mesaj oluştur.
+        // Bu, servis çalışanına bildirim üzerinde tam kontrol sağlar.
+        const message: admin.messaging.MulticastMessage = {
+            tokens: tokens,
             data: {
                 title: title,
                 body: body,
-                icon: "/icons/icon-192x192.png",
+                icon: "/icons/icon.svg", // SVG ikonunu kullan
                 link: link,
-            },
-            webpush: {
-                fcmOptions: {
-                    link: link,
-                },
-            },
+            }
         };
 
-        const response = await admin.messaging().sendToDevice(tokens, payload);
+        // Bildirimi birden fazla cihaza gönder.
+        const response = await admin.messaging().sendEachForMulticast(message);
 
+        // Geçersiz veya süresi dolmuş jetonları temizle.
         const tokensToRemove: string[] = [];
-        response.results.forEach((result: admin.messaging.MessagingDeviceResult, index: number) => {
-            const error = result.error;
-            if (error) {
+        response.responses.forEach((result, index) => {
+            if (!result.success) {
+                const error = result.error;
                 console.error(
-                    "Failure sending notification to",
+                    "Bildirim gönderilirken hata:",
                     tokens[index],
                     error
                 );
+                // Eğer jeton geçersizse, silinecekler listesine ekle.
                 if (
                     error.code === "messaging/invalid-registration-token" ||
                     error.code === "messaging/registration-token-not-registered"
@@ -130,6 +140,7 @@ export const sendPushNotification = functions
             }
         });
 
+        // Geçersiz jetonlar varsa kullanıcı dokümanından sil.
         if (tokensToRemove.length > 0) {
             return userRef.update({
                 fcmTokens: admin.firestore.FieldValue.arrayRemove(...tokensToRemove),
@@ -140,8 +151,8 @@ export const sendPushNotification = functions
     });
 
 /**
- * Triggers when a new user is created in Firebase Authentication.
- * Creates an audit log entry for the user creation.
+ * Firebase Authentication'da yeni bir kullanıcı oluşturulduğunda tetiklenir.
+ * Kullanıcı oluşturma olayı için bir denetim kaydı (audit log) oluşturur.
  */
 export const onUserCreate = functions.auth.user().onCreate(async (user: admin.auth.UserRecord) => {
     const log = {
@@ -158,8 +169,8 @@ export const onUserCreate = functions.auth.user().onCreate(async (user: admin.au
 });
 
 /**
- * Triggers when a user is deleted from Firebase Authentication.
- * Creates an audit log entry for the user deletion.
+ * Firebase Authentication'dan bir kullanıcı silindiğinde tetiklenir.
+ * Kullanıcı silme olayı için bir denetim kaydı oluşturur.
  */
 export const onUserDelete = functions.auth.user().onDelete(async (user: admin.auth.UserRecord) => {
     const log = {
