@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import type { Notification } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Heart, MessageCircle, UserPlus, DoorOpen, Loader2, AtSign, Gem, Repeat, Gift } from 'lucide-react';
+import { Heart, MessageCircle, UserPlus, DoorOpen, Loader2, AtSign, Gem, Repeat, Gift, Phone, PhoneMissed } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -52,6 +52,8 @@ export default function NotificationItem({ notification }: NotificationItemProps
       case 'diamond_transfer': return <Gem className="h-5 w-5 text-cyan-400" />;
       case 'retweet': return <Repeat className="h-5 w-5 text-green-500" />;
       case 'referral_bonus': return <Gift className="h-5 w-5 text-green-500" />;
+      case 'call_incoming': return <Phone className="h-5 w-5 text-blue-500" />;
+      case 'call_missed': return <PhoneMissed className="h-5 w-5 text-destructive" />;
       default: return null;
     }
   };
@@ -67,6 +69,8 @@ export default function NotificationItem({ notification }: NotificationItemProps
       case 'diamond_transfer': return <> <span className="font-bold">{notification.senderUsername}</span> sana <strong className="text-cyan-400">{notification.diamondAmount} elmas</strong> gönderdi!</>;
       case 'retweet': return <> <span className="font-bold">{notification.senderUsername}</span> gönderini retweetledi.</>;
       case 'referral_bonus': return <> <span className="font-bold">{notification.senderUsername}</span> davetinle katıldı ve sana <strong className="text-cyan-400">{notification.diamondAmount} elmas</strong> kazandırdı! 🎉</>;
+      case 'call_incoming': return <> <span className="font-bold">{notification.senderUsername}</span> sizi arıyor...</>;
+      case 'call_missed': return <> <span className="font-bold">{notification.senderUsername}</span> sizi aradı.</>;
       default: return 'Bilinmeyen bildirim';
     }
   }
