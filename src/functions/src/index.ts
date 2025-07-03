@@ -1,11 +1,9 @@
 // Bu dosya, Firebase projesinin sunucu tarafı mantığını içerir.
 // Veritabanındaki belirli olaylara (örn: yeni bildirim oluşturma) tepki vererek
 // anlık bildirim gönderme gibi işlemleri gerçekleştirir.
-import * as functions from "firebase-functions";
+import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import axios from "axios";
-import { functionAi } from './genkit-config';
-import { roomBotFlow } from './flows/roomBotFlow';
 
 // Firebase Admin SDK'sını başlat. Bu, sunucu tarafında Firebase servislerine erişim sağlar.
 admin.initializeApp();
@@ -26,7 +24,7 @@ const ONE_SIGNAL_REST_API_KEY = functions.config().onesignal?.rest_api_key;
 export const sendPushNotification = functions
     .region("us-central1")
     .firestore.document("users/{userId}/notifications/{notificationId}")
-    .onCreate(async (snapshot, context) => {
+    .onCreate(async (snapshot: functions.firestore.QueryDocumentSnapshot, context: functions.EventContext) => {
         if (!ONE_SIGNAL_REST_API_KEY) {
             console.error("OneSignal REST API Key not configured. " +
                 "Set it with 'firebase functions:config:set onesignal.rest_api_key=YOUR_KEY'");
@@ -163,9 +161,9 @@ export const onUserDelete = functions.auth.user().onDelete(async (user: admin.au
 
 export const onMessageCreate = functions.firestore
   .document('rooms/{roomId}/messages/{messageId}')
-  .onCreate(async (snap, context) => {
+  .onCreate(async (snap: functions.firestore.QueryDocumentSnapshot, context: functions.EventContext) => {
     const message = snap.data();
-    const { roomId, messageId } = context.params;
+    const { roomId } = context.params;
 
     if (message.text && message.text.toLowerCase().includes('@walk')) {
       // Get recent history
@@ -186,6 +184,7 @@ export const onMessageCreate = functions.firestore
       const isGreeting = /^(selam|merhaba|hey|hi|sa)\b/i.test(message.text.replace(/@walk/i, '').trim());
 
       try {
+        const { roomBotFlow } = await import('./flows/roomBotFlow');
         const responseText = await roomBotFlow({
             history,
             currentMessage: message.text,
