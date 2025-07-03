@@ -1,10 +1,9 @@
 // Bu dosya, Firebase projesinin sunucu tarafı mantığını içerir.
 // Veritabanındaki belirli olaylara (örn: yeni bildirim oluşturma) tepki vererek
 // anlık bildirim gönderme gibi işlemleri gerçekleştirir.
-import * as functions from "firebase-functions";
+import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import axios from "axios";
-import { functionAi } from './genkit-config';
 import { roomBotFlow } from './flows/roomBotFlow';
 
 // Firebase Admin SDK'sını başlat. Bu, sunucu tarafında Firebase servislerine erişim sağlar.
@@ -26,7 +25,7 @@ const ONE_SIGNAL_REST_API_KEY = functions.config().onesignal?.rest_api_key;
 export const sendPushNotification = functions
     .region("us-central1")
     .firestore.document("users/{userId}/notifications/{notificationId}")
-    .onCreate(async (snapshot, context) => {
+    .onCreate(async (snapshot: functions.firestore.QueryDocumentSnapshot, context: functions.EventContext) => {
         if (!ONE_SIGNAL_REST_API_KEY) {
             console.error("OneSignal REST API Key not configured. " +
                 "Set it with 'firebase functions:config:set onesignal.rest_api_key=YOUR_KEY'");
@@ -163,9 +162,9 @@ export const onUserDelete = functions.auth.user().onDelete(async (user: admin.au
 
 export const onMessageCreate = functions.firestore
   .document('rooms/{roomId}/messages/{messageId}')
-  .onCreate(async (snap, context) => {
+  .onCreate(async (snap: functions.firestore.QueryDocumentSnapshot, context: functions.EventContext) => {
     const message = snap.data();
-    const { roomId, messageId } = context.params;
+    const { roomId } = context.params;
 
     if (message.text && message.text.toLowerCase().includes('@walk')) {
       // Get recent history
@@ -193,7 +192,7 @@ export const onMessageCreate = functions.firestore
             authorUsername: message.username,
         });
 
-        const svg = `<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="50" fill="url(#bot-grad)"/><rect x="25" y="45" width="50" height="20" rx="10" fill="white" fill-opacity="0.8"/><circle cx="50" cy="40" r="15" fill="white"/><circle cx="50" cy="40" r="10" fill="url(#eye-grad)"/><path d="M35 70 Q 50 80, 65 70" stroke="white" stroke-width="4" stroke-linecap="round" fill="none"/><defs><linearGradient id="bot-grad" x1="0" y1="0" x2="100" y2="100"><stop stop-color="#8b5cf6"/><stop offset="1" stop-color="#3b82f6"/></LinearGradient><radialGradient id="eye-grad"><stop offset="20%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#2563eb"/></radialGradient></defs></svg>`;
+        const svg = `<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="50" fill="url(#bot-grad)"/><rect x="25" y="45" width="50" height="20" rx="10" fill="white" fill-opacity="0.8"/><circle cx="50" cy="40" r="15" fill="white"/><circle cx="50" cy="40" r="10" fill="url(#eye-grad)"/><path d="M35 70 Q 50 80, 65 70" stroke="white" stroke-width="4" stroke-linecap="round" fill="none"/><defs><linearGradient id="bot-grad" x1="0" y1="0" x2="100" y2="100"><stop stop-color="#8b5cf6"/><stop offset="1" stop-color="#3b82f6"/></linearGradient><radialGradient id="eye-grad"><stop offset="20%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#2563eb"/></radialGradient></defs></svg>`;
         
         // Add bot's response to the chat
         await db.collection(`rooms/${roomId}/messages`).add({
