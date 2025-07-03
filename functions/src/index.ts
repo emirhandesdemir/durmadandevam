@@ -3,6 +3,7 @@
 // anlık bildirim gönderme gibi işlemleri gerçekleştirir.
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import axios from "axios";
 import { functionAi } from './genkit-config';
 import { roomBotFlow } from './flows/roomBotFlow';
 
@@ -12,15 +13,26 @@ admin.initializeApp();
 // Firestore veritabanı örneğini al.
 const db = admin.firestore();
 
+// OneSignal konfigürasyonunu ortam değişkenlerinden al.
+// Bu anahtarları `firebase functions:config:set onesignal.rest_api_key=YOUR_KEY` komutuyla ayarlamalısınız.
+const ONE_SIGNAL_APP_ID = "51c67432-a305-43fc-a4c8-9c5d9d478d1c";
+const ONE_SIGNAL_REST_API_KEY = functions.config().onesignal?.rest_api_key;
+
+
 /**
  * Yeni bir bildirim dokümanı oluşturulduğunda tetiklenir.
- * Kullanıcının FCM jetonlarını alır ve Firebase Cloud Messaging API (V1) kullanarak
- * bir anlık bildirim gönderir.
+ * OneSignal REST API'sini kullanarak bir anlık bildirim gönderir.
  */
 export const sendPushNotification = functions
-    .region("us-central1") // Fonksiyonun çalışacağı bölgeyi belirt.
+    .region("us-central1")
     .firestore.document("users/{userId}/notifications/{notificationId}")
-    .onCreate(async (snapshot: functions.firestore.QueryDocumentSnapshot, context: functions.EventContext) => {
+    .onCreate(async (snapshot, context) => {
+        if (!ONE_SIGNAL_REST_API_KEY) {
+            console.error("OneSignal REST API Key not configured. " +
+                "Set it with 'firebase functions:config:set onesignal.rest_api_key=YOUR_KEY'");
+            return;
+        }
+
         const notificationData = snapshot.data();
         if (!notificationData) {
             console.log("Bildirim verisi bulunamadı.");
@@ -28,28 +40,12 @@ export const sendPushNotification = functions
         }
 
         const userId = context.params.userId;
-        const userRef = db.collection("users").doc(userId);
-        const userDoc = await userRef.get();
-
-        if (!userDoc.exists) {
-            console.log(`Kullanıcı dokümanı bulunamadı: ${userId}`);
-            return;
-        }
-
-        const userData = userDoc.data();
-        if (!userData || !userData.fcmTokens || userData.fcmTokens.length === 0) {
-            console.log(`Kullanıcı ${userId} için FCM jetonu yok.`);
-            return;
-        }
-        
-        const tokens: string[] = userData.fcmTokens;
-
         let title = "Yeni bir bildiriminiz var!";
         let body = "Uygulamayı açarak kontrol edin.";
         let link = "/notifications"; // Varsayılan link
 
         switch (notificationData.type) {
-            case "like":
+             case "like":
                 title = "Yeni Beğeni 👍";
                 body = `${notificationData.senderUsername} gönderinizi beğendi.`;
                 link = `/notifications`;
@@ -107,49 +103,26 @@ export const sendPushNotification = functions
                 break;
         }
 
-        // Firebase Cloud Messaging API (V1) için data-only mesaj oluştur.
-        // Bu, servis çalışanına bildirim üzerinde tam kontrol sağlar.
-        const message: admin.messaging.MulticastMessage = {
-            tokens: tokens,
-            data: {
-                title: title,
-                body: body,
-                icon: "/icons/icon-192x192.png", // PNG ikonunu kullan
-                link: link,
-            }
+        const oneSignalPayload = {
+            app_id: ONE_SIGNAL_APP_ID,
+            include_external_user_ids: [userId],
+            headings: { "en": title, "tr": title },
+            contents: { "en": body, "tr": body },
+            web_url: `https://yenidendeneme-ea9ed.web.app${link}`,
         };
 
-        // Bildirimi birden fazla cihaza gönder.
-        const response = await admin.messaging().sendEachForMulticast(message);
-
-        // Geçersiz veya süresi dolmuş jetonları temizle.
-        const tokensToRemove: string[] = [];
-        response.responses.forEach((result, index) => {
-            if (!result.success) {
-                const error = result.error;
-                console.error(
-                    "Bildirim gönderilirken hata:",
-                    tokens[index],
-                    error
-                );
-                // Eğer jeton geçersizse, silinecekler listesine ekle.
-                if (
-                    error.code === "messaging/invalid-registration-token" ||
-                    error.code === "messaging/registration-token-not-registered"
-                ) {
-                    tokensToRemove.push(tokens[index]);
-                }
-            }
-        });
-
-        // Geçersiz jetonlar varsa kullanıcı dokümanından sil.
-        if (tokensToRemove.length > 0) {
-            return userRef.update({
-                fcmTokens: admin.firestore.FieldValue.arrayRemove(...tokensToRemove),
+        try {
+            await axios.post("https://onesignal.com/api/v1/notifications", oneSignalPayload, {
+                headers: {
+                    "Authorization": `Basic ${ONE_SIGNAL_REST_API_KEY}`,
+                    "Content-Type": "application/json",
+                },
             });
+            console.log(`OneSignal notification sent to user ${userId}`);
+        } catch (error: any) {
+            console.error(`Error sending OneSignal notification to user ${userId}:`,
+                error.response?.data || error.message);
         }
-
-        return null;
     });
 
 /**
@@ -210,7 +183,7 @@ export const onMessageCreate = functions.firestore
           };
       }).reverse();
 
-      const isGreeting = /^(selam|merhaba|hey|hi|sa)\b/i.test(message.text.replace(/@walk/i, '').trim());
+      const isGreeting = /^(selam|merhaba|hey|hi|sa)\\b/i.test(message.text.replace(/@walk/i, '').trim());
 
       try {
         const responseText = await roomBotFlow({

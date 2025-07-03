@@ -5,11 +5,12 @@ import type { Metadata, Viewport } from 'next';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import './globals.css';
-import { Plus_Jakarta_Sans, Inter, Poppins, Lato } from 'next/font/google'; 
+import { Inter, Plus_Jakarta_Sans, Poppins, Lato } from 'next/font/google'; 
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/layout/ThemeProvider';
 import NetworkStatusNotifier from '@/components/common/NetworkStatusNotifier';
 import I18nProvider from '@/components/common/I18nProvider';
+import Script from 'next/script';
 import DynamicTheme from '@/components/layout/DynamicTheme';
 import { getThemeSettings } from '@/lib/actions/themeActions';
 
@@ -62,6 +63,20 @@ export default async function RootLayout({
   return (
     <html lang="tr" suppressHydrationWarning>
       <head>
+        <Script
+          src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"
+          defer
+        />
+        <Script id="onesignal-init">
+          {`
+            window.OneSignalDeferred = window.OneSignalDeferred || [];
+            OneSignalDeferred.push(async function(OneSignal) {
+              await OneSignal.init({
+                appId: "51c67432-a305-43fc-a4c8-9c5d9d478d1c",
+              });
+            });
+          `}
+        </Script>
         <DynamicTheme />
       </head>
       <body
