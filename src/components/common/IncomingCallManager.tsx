@@ -101,36 +101,32 @@ export default function IncomingCallManager() {
       <AnimatePresence>
         {incomingCall && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-md flex flex-col items-center justify-center"
+            initial={{ y: "-100%", opacity: 0 }}
+            animate={{ y: "0%", opacity: 1 }}
+            exit={{ y: "-100%", opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="fixed top-4 inset-x-4 z-[200] max-w-sm mx-auto"
           >
-            <div className="flex flex-col items-center justify-center gap-4 text-white">
-              <Avatar className="h-32 w-32 border-4">
-                <AvatarImage src={incomingCall.callerInfo.photoURL || undefined} />
-                <AvatarFallback className="text-5xl">{incomingCall.callerInfo.username.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <h2 className="text-4xl font-bold">{incomingCall.callerInfo.username}</h2>
-              <p className="text-xl flex items-center gap-2">
-                  {incomingCall.type === 'video' ? <Video/> : <Phone/>}
-                  {incomingCall.type === 'video' ? 'Görüntülü arama...' : 'Sesli arama...'}
-              </p>
-            </div>
-
-            <div className="absolute bottom-20 flex w-full justify-around">
-              <div className="flex flex-col items-center gap-2">
-                  <Button onClick={handleDecline} variant="destructive" size="icon" className="h-16 w-16 rounded-full">
-                      <PhoneOff className="h-8 w-8"/>
-                  </Button>
-                  <span className="text-white">Reddet</span>
-              </div>
-              <div className="flex flex-col items-center gap-2">
-                  <Button onClick={handleAccept} variant="default" size="icon" className="h-16 w-16 rounded-full bg-green-500 hover:bg-green-600">
-                      <Phone className="h-8 w-8"/>
-                  </Button>
-                  <span className="text-white">Cevapla</span>
-              </div>
+            <div className="bg-background/80 backdrop-blur-lg rounded-2xl shadow-2xl p-4 border flex items-center gap-4">
+                <Avatar className="h-12 w-12">
+                    <AvatarImage src={incomingCall.callerInfo.photoURL || undefined} />
+                    <AvatarFallback>{incomingCall.callerInfo.username.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                    <p className="font-bold">{incomingCall.callerInfo.username}</p>
+                    <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                       {incomingCall.type === 'video' ? <Video className="h-4 w-4"/> : <Phone className="h-4 w-4"/>}
+                       {incomingCall.type === 'video' ? 'Görüntülü arama' : 'Sesli arama'}
+                    </p>
+                </div>
+                <div className="flex gap-2">
+                    <Button onClick={handleDecline} variant="destructive" size="icon" className="h-10 w-10 rounded-full">
+                        <PhoneOff className="h-5 w-5"/>
+                    </Button>
+                     <Button onClick={handleAccept} size="icon" className="h-10 w-10 rounded-full bg-green-500 hover:bg-green-600">
+                        <Phone className="h-5 w-5"/>
+                    </Button>
+                </div>
             </div>
           </motion.div>
         )}

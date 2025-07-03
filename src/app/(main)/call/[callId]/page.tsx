@@ -11,11 +11,11 @@ import type { Call } from '@/lib/types';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Mic, MicOff, PhoneOff, Video as VideoIcon, VideoOff, MoreHorizontal, Volume2, VolumeX, Loader2 } from 'lucide-react';
+import { Mic, MicOff, PhoneOff, Video as VideoIcon, VideoOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 
-// Define the UserInfo type locally as it's used for partner state
 interface UserInfo {
   username: string;
   photoURL: string | null;
@@ -26,13 +26,12 @@ const ICE_SERVERS = {
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     {
-        urls: 'turn:openrelay.metered.ca:80',
-        username: 'openrelayproject',
-        credential: 'openrelayproject',
+      urls: 'turn:openrelay.metered.ca:80',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
     },
   ],
 };
-
 
 function CallControls({ onHangUp, onToggleMute, isMuted, onToggleVideo, isVideoOff }: any) {
     return (
@@ -41,17 +40,17 @@ function CallControls({ onHangUp, onToggleMute, isMuted, onToggleVideo, isVideoO
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-            className="absolute bottom-10 inset-x-0 z-20 flex justify-center"
+            className="absolute bottom-10 left-0 right-0 z-20 flex justify-center"
         >
-            <div className="flex items-center justify-center gap-4 rounded-full bg-black/40 p-3 backdrop-blur-sm">
+            <div className="flex w-full max-w-xs items-center justify-center gap-4 rounded-full bg-black/40 p-3 backdrop-blur-sm">
                 <Button onClick={onToggleVideo} variant="ghost" size="icon" className="h-14 w-14 rounded-full text-white hover:bg-white/30">
                     {isVideoOff ? <VideoOff size={28}/> : <VideoIcon size={28}/>}
                 </Button>
                 <Button onClick={onToggleMute} variant="ghost" size="icon" className="h-14 w-14 rounded-full text-white hover:bg-white/30">
                     {isMuted ? <MicOff size={28}/> : <Mic size={28}/>}
                 </Button>
-                 <Button onClick={onHangUp} variant="destructive" size="icon" className="h-14 w-14 rounded-full">
-                    <PhoneOff size={28}/>
+                <Button onClick={onHangUp} variant="destructive" size="icon" className="h-16 w-16 rounded-full">
+                    <PhoneOff size={32}/>
                 </Button>
             </div>
         </motion.div>
@@ -86,7 +85,6 @@ export default function CallPage() {
   const { toast } = useToast();
   const callId = params.callId as string;
 
-  const [pageLoading, setPageLoading] = useState(true);
   const [callData, setCallData] = useState<Call | null>(null);
   const [partner, setPartner] = useState<UserInfo | null>(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -99,7 +97,8 @@ export default function CallPage() {
   const didSetupWebRTC = useRef(false);
 
   const getCallStatusText = () => {
-      switch (callData?.status) {
+      if (!callData) return 'Yükleniyor...';
+      switch (callData.status) {
           case 'ringing': return 'Çalıyor...';
           case 'active': return 'Bağlandı';
           default: return 'Bekleniyor...';
@@ -130,50 +129,13 @@ export default function CallPage() {
     cleanupCall();
   }, [callId, cleanupCall]);
 
-
-  useEffect(() => {
-    if (!user || !callId) return;
-
-    const callRef = doc(db, 'calls', callId);
-    const unsubscribeCall = onSnapshot(callRef, (snapshot) => {
-      if (!snapshot.exists()) {
-        toast({ variant: 'destructive', description: "Arama bulunamadı veya sonlandırıldı." });
-        cleanupCall();
-        return;
-      }
-      
-      const data = { id: snapshot.id, ...snapshot.data() } as Call;
-      const derivedPartner = user.uid === data.callerId ? data.receiverInfo : data.callerInfo;
-      
-      setCallData(data);
-      setPartner(derivedPartner);
-      
-      const partnerId = data.callerId === user.uid ? data.receiverId : data.callerId;
-      setPartnerVideoOn(data.videoStatus?.[partnerId] ?? false);
-
-      setPageLoading(false);
-
-      if (data.status === 'ended' || data.status === 'declined' || data.status === 'missed') {
-        toast({ description: "Arama sonlandırıldı." });
-        cleanupCall();
-      }
-    }, (error) => {
-        console.error("Arama verisi alınamadı:", error);
-        toast({ variant: 'destructive', description: "Arama bilgileri alınamadı. Bağlantı hatası olabilir." });
-        cleanupCall();
-    });
-
-    return () => unsubscribeCall();
-  }, [user, callId, toast, cleanupCall]);
-
-
-  const setupWebRTC = useCallback(async (isCaller: boolean) => {
-    if (!user || !callData) return;
+  const setupWebRTC = useCallback(async (isCaller: boolean, initialCallData: Call) => {
+    if (!user) return;
     
     peerConnectionRef.current = new RTCPeerConnection(ICE_SERVERS);
     const pc = peerConnectionRef.current;
     
-    const initialVideoState = callData.videoStatus?.[user.uid] ?? false;
+    const initialVideoState = initialCallData.videoStatus?.[user.uid] ?? false;
     setIsVideoOff(!initialVideoState);
 
     try {
@@ -215,85 +177,68 @@ export default function CallPage() {
     });
     
     return unsubscribeCandidates;
-
-  }, [user, callId, callData, hangUp, toast]);
-
+  }, [user, callId, hangUp, toast]);
 
   useEffect(() => {
-    // Only proceed if we have the necessary data and haven't set up yet.
-    if (!user || !callData || didSetupWebRTC.current) {
+    if (!user || !callId) return;
+    
+    let unsubCandidates: (() => void) | undefined;
+    const unsubCall = onSnapshot(doc(db, 'calls', callId), async (snapshot) => {
+      if (!snapshot.exists()) {
+        toast({ variant: 'destructive', description: "Arama bulunamadı veya sonlandırıldı." });
+        cleanupCall();
         return;
-    }
+      }
+      
+      const data = { id: snapshot.id, ...snapshot.data() } as Call;
+      setCallData(data);
+      
+      const derivedPartner = user.uid === data.callerId ? data.receiverInfo : data.callerInfo;
+      setPartner(derivedPartner);
+      
+      const partnerId = data.callerId === user.uid ? data.receiverId : data.callerId;
+      setPartnerVideoOn(data.videoStatus?.[partnerId] ?? false);
 
-    // Mark as "setting up" to prevent this effect from running again.
-    didSetupWebRTC.current = true;
-    
-    let unsubscribeCandidates: (() => void) | undefined;
-    
-    const initWebRTC = async () => {
-        // The setupWebRTC function returns the unsubscribe function for the candidate listener.
-        unsubscribeCandidates = await setupWebRTC(callData.callerId === user.uid);
-    };
+      if (data.status === 'ended' || data.status === 'declined' || data.status === 'missed') {
+        toast({ description: "Arama sonlandırıldı." });
+        cleanupCall();
+        return;
+      }
+      
+      // --- WebRTC Setup and Signaling ---
+      if (!didSetupWebRTC.current) {
+          didSetupWebRTC.current = true;
+          unsubCandidates = await setupWebRTC(data.callerId === user.uid, data);
+      }
+      
+      const pc = peerConnectionRef.current;
+      if (!pc) return;
+      
+      const isCaller = data.callerId === user.uid;
 
-    initWebRTC().catch(e => {
-        console.error("Failed to initialize WebRTC", e);
-        // If init fails, reset the flag so it can be tried again if dependencies change.
-        didSetupWebRTC.current = false;
-    });
-
-    // Cleanup function for this effect.
-    return () => {
-        if (unsubscribeCandidates) {
-            unsubscribeCandidates();
-        }
-    };
-}, [user, callData, setupWebRTC]);
-
-
-  // Effect for caller: create offer
-  useEffect(() => {
-    if (!user || !callData || !peerConnectionRef.current || callData.status !== 'ringing' || callData.callerId !== user.uid) return;
-    
-    const createOffer = async () => {
-        const pc = peerConnectionRef.current!;
-        if (pc.signalingState !== 'stable') return;
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        await sendOffer(callId, offer);
-    };
-
-    createOffer().catch(err => console.error("Error creating offer:", err));
-
-  }, [user, callData?.status, callId, callData?.callerId]);
-
-  // Effect for receiver: create answer
-  useEffect(() => {
-    if (!user || !callData || !peerConnectionRef.current || callData.status !== 'ringing' || callData.receiverId !== user.uid || !callData.offer) return;
-    
-    const createAnswer = async () => {
-        const pc = peerConnectionRef.current!;
-        if (pc.signalingState === 'stable') {
-          await pc.setRemoteDescription(new RTCSessionDescription(callData.offer!));
+      if (isCaller && data.status === 'ringing' && pc.signalingState === 'stable') {
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          await sendOffer(callId, offer);
+      }
+      
+      if (!isCaller && data.offer && pc.signalingState !== 'have-remote-offer') {
+          await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
           await sendAnswer(callId, answer);
-        }
+      }
+      
+      if (isCaller && data.answer && pc.signalingState === 'have-local-offer') {
+        await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+      }
+    });
+
+    return () => {
+      unsubCall();
+      if (unsubCandidates) unsubCandidates();
     };
-    
-    createAnswer().catch(err => console.error("Error creating answer:", err));
-
-  }, [user, callData?.offer, callData?.status, callData?.receiverId, callId]);
-
-
-  // Effect to apply received answer
-  useEffect(() => {
-    if (!user || !peerConnectionRef.current || !callData?.answer || callData.callerId !== user.uid) return;
-    
-    const pc = peerConnectionRef.current;
-    if (pc.signalingState === 'have-local-offer') {
-      pc.setRemoteDescription(new RTCSessionDescription(callData.answer)).catch(err => console.error("Error setting remote description:", err));
-    }
-  }, [user, callData?.answer, callData?.callerId]);
+  }, [user, callId, toast, cleanupCall, setupWebRTC]);
 
 
   const toggleMute = () => {
@@ -315,12 +260,13 @@ export default function CallPage() {
           await updateVideoStatus(callId, user.uid, newVideoState);
       }
   };
-
-  if (authLoading || pageLoading || !callData || !partner) {
+  
+  const isLoading = authLoading || !callData || !partner || !peerConnectionRef.current;
+  if (isLoading) {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center bg-slate-900">
         <Loader2 className="h-10 w-10 animate-spin text-white" />
-        <p className="mt-4 text-white">Arama bilgileri yükleniyor...</p>
+        <p className="mt-4 text-white">Bağlantı kuruluyor...</p>
       </div>
     );
   }
@@ -354,12 +300,8 @@ export default function CallPage() {
                         <AvatarImage src={partner.photoURL || undefined} />
                         <AvatarFallback className="text-6xl bg-gray-600">{partner.username.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    {callData.status === 'ringing' && (
-                        <>
-                            <div className="absolute inset-0 rounded-full border-2 border-white/30 animate-ping"></div>
-                            <div className="absolute inset-0 rounded-full border-2 border-white/50 animate-ping" style={{animationDelay: '0.5s'}}></div>
-                        </>
-                    )}
+                     <div className="absolute inset-0 rounded-full border-2 border-white/30 animate-ping"></div>
+                    <div className="absolute inset-0 rounded-full border-2 border-white/50 animate-ping" style={{animationDelay: '0.5s'}}></div>
                 </div>
                 <div className="text-center mt-4">
                     <h2 className="text-4xl font-bold [text-shadow:_0_2px_4px_rgba(0,0,0,0.5)]">{partner.username}</h2>
