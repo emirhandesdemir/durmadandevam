@@ -1,0 +1,20 @@
+
+=== Deploying to 'yenidendeneme-ea9ed'...
+
+i  deploying functions
+Running command: npm --prefix "$RESOURCE_DIR" install
+
+up to date, audited 932 packages in 5s
+
+176 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+Running command: npm --prefix "$RESOURCE_DIR" run build
+
+> build
+> tsc
+
+src/index.ts(187,46): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './flows/roomBotFlow.js'?
+
+Error: functions predeploy error: Command terminated with non-zero exit code 2
