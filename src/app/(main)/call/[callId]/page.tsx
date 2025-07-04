@@ -94,6 +94,7 @@ export default function CallPage() {
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const iceCandidateQueue = useRef<RTCIceCandidate[]>([]);
+  const isInitializedRef = useRef(false); // Ref to prevent double initialization
 
 
   const getCallStatusText = () => {
@@ -118,130 +119,133 @@ export default function CallPage() {
         localStreamRef.current = null;
     }
     if (remoteVideoRef.current && remoteVideoRef.current.srcObject) {
+        // This check is important as srcObject can be null
         (remoteVideoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
         remoteVideoRef.current.srcObject = null;
     }
+    isInitializedRef.current = false;
     router.replace('/dm');
   }, [callId, router]);
 
 
   useEffect(() => {
-    if (!user || !callId) return;
+    if (!user || !callId || isInitializedRef.current) return;
+    isInitializedRef.current = true;
 
     let callUnsubscribe: () => void = () => {};
     let candidatesUnsubscribe: () => void = () => {};
     
     const initCall = async () => {
-        const initialCallSnap = await getDoc(doc(db, 'calls', callId));
-        if (!initialCallSnap.exists()) {
-            toast({ variant: "destructive", description: "Arama bulunamadı." });
-            router.replace('/dm');
-            return;
-        }
-
-        const callDoc = initialCallSnap.data() as Call;
-        setCallData(callDoc);
-        setPartner(user.uid === callDoc.callerId ? callDoc.receiverInfo : callDoc.callerInfo);
-        
-        peerConnectionRef.current = new RTCPeerConnection(ICE_SERVERS);
-        const pc = peerConnectionRef.current;
-        iceCandidateQueue.current = [];
-
-        // Setup Media Stream
-        const videoEnabled = callDoc.videoStatus?.[user.uid] ?? false;
+        // Must be in a try-catch to handle errors during setup
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: videoEnabled, audio: true });
-            
-            // Re-check the connection state after async operation
-            if (!peerConnectionRef.current || peerConnectionRef.current.signalingState === 'closed') {
-                stream.getTracks().forEach(track => track.stop()); // Clean up the newly created stream
-                return; // Exit if cleanup has started
-            }
-            
-            localStreamRef.current = stream;
-            stream.getTracks().forEach(track => peerConnectionRef.current!.addTrack(track, stream));
-            setIsVideoOff(!videoEnabled);
-        } catch(err) {
-            console.error("getUserMedia error:", err);
-            toast({ variant: "destructive", title: "İzin Hatası", description: "Arama için kamera/mikrofon izni gerekli." });
-            await cleanupAndLeave(true);
-            return;
-        }
-
-        // Setup Peer Connection Listeners
-        pc.ontrack = (event) => {
-            if (remoteVideoRef.current) {
-                remoteVideoRef.current.srcObject = event.streams[0];
-            }
-        };
-
-        pc.onicecandidate = (event) => {
-            if (event.candidate && callData) {
-                const targetId = user.uid === callDoc.callerId ? callDoc.receiverId : callDoc.callerId;
-                sendIceCandidate(callId, event.candidate.toJSON(), targetId);
-            }
-        };
-
-        // Listen for call document changes (offer/answer)
-        callUnsubscribe = onSnapshot(doc(db, 'calls', callId), async (snapshot) => {
-            const data = snapshot.data() as Call;
-            if (!snapshot.exists() || ['ended', 'declined', 'missed'].includes(data.status)) {
-                toast({ description: "Arama sonlandırıldı." });
-                await cleanupAndLeave();
+            const initialCallSnap = await getDoc(doc(db, 'calls', callId));
+            if (!initialCallSnap.exists()) {
+                toast({ variant: "destructive", description: "Arama bulunamadı." });
+                router.replace('/dm');
                 return;
             }
 
-            setCallData(data);
-            const isCaller = data.callerId === user.uid;
+            const callDoc = initialCallSnap.data() as Call;
+            setCallData(callDoc);
+            setPartner(user.uid === callDoc.callerId ? callDoc.receiverInfo : callDoc.callerInfo);
+            
+            peerConnectionRef.current = new RTCPeerConnection(ICE_SERVERS);
+            const pc = peerConnectionRef.current;
+            iceCandidateQueue.current = [];
 
-            // Offer-Answer flow
-            if (pc.signalingState === 'stable' && isCaller && !data.offer) {
+            // Setup Media Stream
+            const videoEnabled = callDoc.videoStatus?.[user.uid] ?? false;
+            const stream = await navigator.mediaDevices.getUserMedia({ video: videoEnabled, audio: true });
+            
+            // Re-check the connection state after async operation. This prevents race conditions.
+            if (!peerConnectionRef.current || peerConnectionRef.current.signalingState === 'closed') {
+                stream.getTracks().forEach(track => track.stop());
+                return; 
+            }
+            
+            localStreamRef.current = stream;
+            stream.getTracks().forEach(track => pc.addTrack(track, stream));
+            setIsVideoOff(!videoEnabled);
+
+            // Setup Peer Connection Listeners
+            pc.ontrack = (event) => {
+                if (remoteVideoRef.current) {
+                    remoteVideoRef.current.srcObject = event.streams[0];
+                }
+            };
+
+            pc.onicecandidate = (event) => {
+                if (event.candidate && callDoc) {
+                    const targetId = user.uid === callDoc.callerId ? callDoc.receiverId : callDoc.callerId;
+                    sendIceCandidate(callId, event.candidate.toJSON(), targetId);
+                }
+            };
+
+            // Listen for call document changes (offer/answer)
+            callUnsubscribe = onSnapshot(doc(db, 'calls', callId), async (snapshot) => {
+                const data = snapshot.data() as Call;
+                if (!snapshot.exists() || ['ended', 'declined', 'missed'].includes(data.status)) {
+                    toast({ description: "Arama sonlandırıldı." });
+                    await cleanupAndLeave();
+                    return;
+                }
+
+                setCallData(data);
+                const isCaller = data.callerId === user.uid;
+
+                if (data.offer && pc.signalingState !== 'have-remote-offer') {
+                    await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+                    if (!isCaller) {
+                        const answer = await pc.createAnswer();
+                        await pc.setLocalDescription(answer);
+                        await sendAnswer(callId, answer);
+                    }
+                }
+
+                if (data.answer && pc.signalingState === 'have-local-offer') {
+                    await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                }
+
+                // Process queued candidates
+                if(pc.remoteDescription && iceCandidateQueue.current.length > 0) {
+                    for (const candidate of iceCandidateQueue.current) {
+                        try {
+                            await pc.addIceCandidate(candidate);
+                        } catch(e) { console.error("Error adding queued ICE candidate:", e)}
+                    }
+                    iceCandidateQueue.current = [];
+                }
+            });
+
+            // Listen for ICE candidates
+            candidatesUnsubscribe = onSnapshot(collection(db, 'calls', callId, `${user.uid}Candidates`), async (snapshot) => {
+                for (const change of snapshot.docChanges()) {
+                    if (change.type === 'added') {
+                        const candidate = new RTCIceCandidate(change.doc.data());
+                        if (pc.remoteDescription) {
+                            try {
+                            await pc.addIceCandidate(candidate);
+                            } catch(e) { console.error("Error adding received ice candidate", e); }
+                        } else {
+                            iceCandidateQueue.current.push(candidate);
+                        }
+                        await deleteDoc(change.doc.ref);
+                    }
+                }
+            });
+
+             // If caller, create offer
+            if (user.uid === callDoc.callerId) {
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
                 await sendOffer(callId, offer);
             }
 
-            if (data.offer && pc.signalingState !== 'have-remote-offer') {
-                await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-                
-                if (!isCaller) {
-                    const answer = await pc.createAnswer();
-                    await pc.setLocalDescription(answer);
-                    await sendAnswer(callId, answer);
-                }
-            }
-
-            if (data.answer && pc.signalingState === 'have-local-offer') {
-                await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-            }
-
-            // Process queued candidates
-            if(pc.remoteDescription && iceCandidateQueue.current.length > 0) {
-                 for (const candidate of iceCandidateQueue.current) {
-                    try {
-                        await pc.addIceCandidate(candidate);
-                    } catch(e) { console.error("Error adding queued ICE candidate:", e)}
-                }
-                iceCandidateQueue.current = [];
-            }
-        });
-
-        // Listen for ICE candidates
-        candidatesUnsubscribe = onSnapshot(collection(db, 'calls', callId, `${user.uid}Candidates`), async (snapshot) => {
-            for (const change of snapshot.docChanges()) {
-                if (change.type === 'added') {
-                    const candidate = new RTCIceCandidate(change.doc.data());
-                    if (pc.remoteDescription) {
-                        try {
-                           await pc.addIceCandidate(candidate);
-                        } catch(e) { console.error("Error adding received ice candidate", e); }
-                    } else {
-                        iceCandidateQueue.current.push(candidate);
-                    }
-                    await deleteDoc(change.doc.ref);
-                }
-            }
-        });
+        } catch (err) {
+            console.error("Call setup error:", err);
+            toast({ variant: "destructive", title: "İzin Hatası", description: "Arama için kamera/mikrofon izni gerekli." });
+            await cleanupAndLeave(true);
+        }
     };
 
     initCall();

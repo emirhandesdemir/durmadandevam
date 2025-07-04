@@ -49,7 +49,9 @@ export async function initiateCall(caller: UserInfo, receiver: UserInfo, type: '
     createdAt: serverTimestamp(),
   });
 
-  await createNotification({
+  // DO NOT AWAIT THIS. Let it run in the background.
+  // This allows the client to navigate to the call page immediately.
+  createNotification({
     recipientId: receiver.uid,
     senderId: caller.uid,
     senderUsername: caller.username,
