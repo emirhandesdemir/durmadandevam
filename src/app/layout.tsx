@@ -40,7 +40,7 @@ export const metadata: Metadata = {
 
 // Mobil cihazlarda tarayıcı çubuğunun rengi gibi viewport ayarları.
 export const viewport: Viewport = {
-  themeColor: '#09090B', // Karanlık mod için tema rengi.
+  themeColor: '#FFFFFF',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1, // Kullanıcının zoom yapmasını engelle (uygulama hissi için).
@@ -52,9 +52,25 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const oneSignalAppId = "51c67432-a305-43fc-a4c8-9c5d9d478d1c";
+
   return (
     <html lang="tr" suppressHydrationWarning>
-      <head />
+      <head>
+          <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" async=""></script>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                window.OneSignalDeferred = window.OneSignalDeferred || [];
+                OneSignalDeferred.push(function(OneSignal) {
+                  OneSignal.init({
+                    appId: "${oneSignalAppId}",
+                  });
+                });
+              `,
+            }}
+          />
+      </head>
       <body
         className={cn(
           'min-h-screen bg-background font-sans antialiased font-medium',
@@ -64,8 +80,8 @@ export default function RootLayout({
         {/* Tema Sağlayıcısı (Aydınlık/Karanlık Mod) */}
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="light"
+          enableSystem={false}
           disableTransitionOnChange
         >
           {/* Kimlik Doğrulama Sağlayıcısı: Tüm alt bileşenlerin kullanıcı verisine erişmesini sağlar. */}
