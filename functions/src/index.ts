@@ -1,8 +1,8 @@
 // Bu dosya, Firebase projesinin sunucu tarafı mantığını içerir.
 // Veritabanındaki belirli olaylara (örn: yeni bildirim oluşturma) tepki vererek
 // anlık bildirim gönderme gibi işlemleri gerçekleştirir.
-import { onDocumentCreated } from "firebase-functions/v2/firestore";
-import { onUserCreated, onUserDeleted } from "firebase-functions/v2/auth";
+import { onDocumentCreated, FirestoreEvent, QueryDocumentSnapshot } from "firebase-functions/v2/firestore";
+import { onUserCreated, onUserDeleted, AuthEvent } from "firebase-functions/v2/auth";
 import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
 
@@ -28,7 +28,7 @@ export const sendPushNotification = onDocumentCreated(
         document: "users/{userId}/notifications/{notificationId}",
         region: "us-central1"
     },
-    async (event) => {
+    async (event: FirestoreEvent<QueryDocumentSnapshot | undefined, { userId: string, notificationId: string }>) => {
         const snapshot = event.data;
         if (!snapshot) {
             logger.info("No data associated with the event, skipping.");
@@ -140,7 +140,7 @@ export const sendPushNotification = onDocumentCreated(
  * Firebase Authentication'da yeni bir kullanıcı oluşturulduğunda tetiklenir.
  * Kullanıcı oluşturma olayı için bir denetim kaydı (audit log) oluşturur.
  */
-export const onUserCreate = onUserCreated(async (event) => {
+export const onUserCreate = onUserCreated(async (event: AuthEvent) => {
     const user = event.data;
     const log = {
         type: "user_created",
@@ -159,7 +159,7 @@ export const onUserCreate = onUserCreated(async (event) => {
  * Firebase Authentication'dan bir kullanıcı silindiğinde tetiklenir.
  * Kullanıcı silme olayı için bir denetim kaydı oluşturur.
  */
-export const onUserDelete = onUserDeleted(async (event) => {
+export const onUserDelete = onUserDeleted(async (event: AuthEvent) => {
     const user = event.data;
     const log = {
         type: "user_deleted",
@@ -175,7 +175,7 @@ export const onUserDelete = onUserDeleted(async (event) => {
 });
 
 
-export const onMessageCreate = onDocumentCreated("rooms/{roomId}/messages/{messageId}", async (event) => {
+export const onMessageCreate = onDocumentCreated("rooms/{roomId}/messages/{messageId}", async (event: FirestoreEvent<QueryDocumentSnapshot | undefined, { roomId: string, messageId: string }>) => {
     const snapshot = event.data;
     if (!snapshot) {
       logger.info("No data in onMessageCreate event.");
