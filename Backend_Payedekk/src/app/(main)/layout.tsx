@@ -1,19 +1,20 @@
+// src/app/(main)/layout.tsx
 'use client';
 
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/Header";
 import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
-import PersistentVoiceBar from "@/components/voice/PersistentVoiceBar";
 import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
 import { useState, useRef, useEffect } from 'react';
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import NotificationPermissionManager from "@/components/common/NotificationPermissionManager";
-import InAppNotificationHandler from "@/components/common/InAppNotificationHandler";
-import IncomingCallManager from '@/components/common/IncomingCallManager'; // Import the new component
+import IncomingCallManager from '@/components/common/IncomingCallManager';
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
+import ActiveCallBar from "@/components/voice/ActiveCallBar";
+import ActiveDmCallBar from "@/components/voice/ActiveDmCallBar";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -115,50 +116,41 @@ export default function MainAppLayout({
   const [hidden, setHidden] = useState(false);
   const pathname = usePathname();
 
-  // Bazı sayfaların (oda ve dm detay) tam ekran düzen kullanması ve
-  // header göstermemesi gerekir. Bu kontrolü burada yapıyoruz.
   const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/');
   const isHeaderlessPage = isFullPageLayout;
   const isHomePage = pathname === '/home';
 
-  // Sayfa kaydırıldığında header'ı gizlemek için Framer Motion hook'u.
   useMotionValueEvent(scrollY, "change", (latest) => {
     const previous = scrollY.getPrevious() ?? 0;
-    // Sadece header'ı olan sayfalarda bu mantığı çalıştır.
     if (latest > previous && latest > 150) {
-      setHidden(true); // Aşağı kaydırırken gizle.
+      setHidden(true);
     } else {
-      setHidden(false); // Yukarı kaydırırken göster.
+      setHidden(false);
     }
   });
 
-  // Sayfa geçişleri için animasyon varyantları (daha hızlı).
   const pageVariants = {
-    initial: { opacity: 0 },
-    animate: { opacity: 1, transition: { duration: 0.25, ease: 'easeInOut' } },
-    exit: { opacity: 0, transition: { duration: 0.2, ease: 'easeInOut' } },
+    initial: { opacity: 0, x: 20 },
+    animate: { opacity: 1, x: 0, transition: { type: "spring", stiffness: 260, damping: 30 } },
+    exit: { opacity: 0, x: -20, transition: { duration: 0.2 } },
   };
 
   return (
     <VoiceChatProvider>
-      {/* Bildirim izni ve PWA yükleme gibi genel işlemleri yöneten bileşenler. */}
       <NotificationPermissionManager />
-      <InAppNotificationHandler />
       <IncomingCallManager />
       
       <div className="relative flex h-dvh w-full flex-col bg-background overflow-hidden">
-        {/* PWA yükleme çubuğu */}
+        <ActiveDmCallBar />
         <PwaInstallBar />
         
-        {/* Ana içerik alanı */}
         <main 
           ref={scrollRef} 
           className={cn(
-            "flex-1 flex flex-col",
-            isFullPageLayout ? "overflow-hidden" : "overflow-y-auto pb-24" // Tam ekran sayfalarda kaydırmayı engelle.
+            "flex-1 flex flex-col hide-scrollbar",
+            isFullPageLayout ? "overflow-hidden" : "overflow-y-auto pb-24"
           )}
         >
-           {/* Header'ı olmayan sayfalarda Header'ı render etme. */}
            {!isHeaderlessPage && (
               <motion.header
                 variants={{ visible: { y: 0 }, hidden: { y: "-100%" } }}
@@ -170,17 +162,17 @@ export default function MainAppLayout({
               </motion.header>
            )}
           
-           {/* Sayfa içeriğini animasyonlu bir şekilde render et. */}
            <AnimatePresence mode="wait">
              <motion.div
-                key={pathname} // Pathname değiştiğinde animasyon tetiklenir.
+                key={pathname}
                 variants={pageVariants}
                 initial="initial"
                 animate="animate"
                 exit="exit"
                 className={cn(
-                  isFullPageLayout ? "flex-1 flex flex-col overflow-hidden" : "",
-                  !isHomePage && !isFullPageLayout && "p-4" // Ana sayfa dışındaki normal sayfalara padding ekle.
+                  "flex-1 flex flex-col",
+                  isFullPageLayout ? "overflow-hidden" : "",
+                  !isHomePage && !isFullPageLayout && "p-4"
                 )}
              >
               {children}
@@ -188,9 +180,8 @@ export default function MainAppLayout({
            </AnimatePresence>
         </main>
         
-        {/* Her zaman aktif olan sesli sohbet bileşenleri. */}
         <VoiceAudioPlayer />
-        <PersistentVoiceBar />
+        <ActiveCallBar />
         <BottomNav />
       </div>
     </VoiceChatProvider>
