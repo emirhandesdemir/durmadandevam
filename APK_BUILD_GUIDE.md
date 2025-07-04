@@ -53,10 +53,10 @@ Google Play Store, uygulamaların güvenli ve size ait olduğunu doğrulamak iç
 Şimdi en heyecanlı kısma geldik!
 
 1.  Terminalde, projenizin ana dizinine gidin (yani `package.json` dosyasının olduğu yere).
-2.  Aşağıdaki komutu çalıştırın. `https://sitenizin-adresi.com` kısmını, uygulamanızın yayınlandığı gerçek internet adresiyle değiştirmeyi unutmayın.
+2.  Aşağıdaki komutu çalıştırın.
 
     ```bash
-    bubblewrap init --manifest https://sitenizin-adresi.com/manifest.json
+    bubblewrap init --manifest https://yenidendeneme-ea9ed.web.app/manifest.json
     ```
 3.  Bubblewrap size bir dizi soru soracaktır. Genellikle varsayılan değerler (`Enter` tuşuna basarak geçmek) yeterlidir, ancak şunlara dikkat edin:
     *   **Application name?** Uygulamanızın adı (örn: HiweWalk).
@@ -97,6 +97,6 @@ Google'ın, web sitenizin gerçekten size ait olduğundan emin olması gerekir.
 2.  Bu içeriği kopyalayın.
 3.  Projenizdeki `public` klasörünün içinde `.well-known` adında yeni bir klasör oluşturun.
 4.  `.well-known` klasörünün içine de `assetlinks.json` adında yeni bir dosya oluşturun ve kopyaladığınız içeriği bu dosyaya yapıştırın.
-5.  **Çok Önemli:** Bu değişikliği yaptıktan sonra projenizi tekrar yayınlamanız (deploy etmeniz) gerekir. Böylece `https://sitenizin-adresi.com/.well-known/assetlinks.json` adresi erişilebilir olur.
+5.  **Çok Önemli:** Bu değişikliği yaptıktan sonra projenizi tekrar yayınlamanız (deploy etmeniz) gerekir. Böylece `https://yenidendeneme-ea9ed.web.app/.well-known/assetlinks.json` adresi erişilebilir olur.
 
 Bu son adımdan sonra APK dosyanız, URL çubuğu olmadan tam ekran bir şekilde çalışacaktır. Artık bu APK dosyasını test edebilir veya Google Play Console'a yükleyerek yayınlayabilirsiniz!
