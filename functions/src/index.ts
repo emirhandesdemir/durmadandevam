@@ -1,24 +1,43 @@
+
+// Bu dosya, Firebase projesinin sunucu tarafı mantığını içerir.
+// Veritabanındaki belirli olaylara (örn: yeni bildirim oluşturma) tepki vererek
+// anlık bildirim gönderme gibi işlemleri gerçekleştirir.
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import axios from "axios";
-import { roomBotFlow } from "./flows/roomBotFlow";
+import { roomBotFlow } from './flows/roomBotFlow';
 
+// Firebase Admin SDK'sını başlat. Bu, sunucu tarafında Firebase servislerine erişim sağlar.
 admin.initializeApp();
+
+// Firestore veritabanı örneğini al.
 const db = admin.firestore();
 
+// OneSignal konfigürasyonu.
+// GÜVENLİK NOTU: Bu anahtarı kod içinde tutmak geliştirme için uygundur,
+// ancak canlıya geçerken Firebase ortam değişkenlerine taşımak en iyisidir.
+// `firebase functions:config:set onesignal.rest_api_key="YOUR_KEY"`
 const ONE_SIGNAL_APP_ID = "51c67432-a305-43fc-a4c8-9c5d9d478d1c";
 const ONE_SIGNAL_REST_API_KEY = "os_v2_app_khdhimvdavb7zjgitroz2r4ndrkixk2biw6eqrfn4oygor7fxogtw3riv5mjpu4koeuuju6ma2scefend3lqkwij53ppdzbngmbouvy";
 
+
+/**
+ * Yeni bir bildirim dokümanı oluşturulduğunda tetiklenir.
+ * OneSignal REST API'sini kullanarak bir anlık bildirim gönderir.
+ */
 export const sendPushNotification = functions
-    .region("us-central1")
     .firestore.document("users/{userId}/notifications/{notificationId}")
     .onCreate(async (snapshot: functions.firestore.QueryDocumentSnapshot, context: functions.EventContext) => {
+        console.log(`[Function Triggered] For user: ${context.params.userId}. Notification ID: ${context.params.notificationId}`);
+        
+        const notificationData = snapshot.data();
+        console.log("Notification Data:", JSON.stringify(notificationData, null, 2));
+
         if (!ONE_SIGNAL_REST_API_KEY) {
             console.error("OneSignal REST API Key not configured.");
             return;
         }
 
-        const notificationData = snapshot.data();
         if (!notificationData) {
             console.log("Bildirim verisi bulunamadı.");
             return;
@@ -27,10 +46,10 @@ export const sendPushNotification = functions
         const userId = context.params.userId;
         let title = "Yeni bir bildiriminiz var!";
         let body = "Uygulamayı açarak kontrol edin.";
-        let link = "/notifications";
+        let link = "/notifications"; // Varsayılan link
 
         switch (notificationData.type) {
-            case "like":
+             case "like":
                 title = "Yeni Beğeni 👍";
                 body = `${notificationData.senderUsername} gönderinizi beğendi.`;
                 link = `/notifications`;
@@ -59,6 +78,11 @@ export const sendPushNotification = functions
                 title = "Oda Daveti 🚪";
                 body = `${notificationData.senderUsername} sizi "${notificationData.roomName}" odasına davet etti.`;
                 link = `/rooms/${notificationData.roomId}`;
+                break;
+            case "dm_message":
+                title = `Yeni Mesaj ✉️`;
+                body = `${notificationData.senderUsername}: ${notificationData.messageText}`;
+                link = `/dm/${notificationData.chatId}`;
                 break;
             case "diamond_transfer":
                 title = "Elmas Aldınız! 💎";
@@ -95,6 +119,8 @@ export const sendPushNotification = functions
             contents: { "en": body, "tr": body },
             web_url: `https://yenidendeneme-ea9ed.web.app${link}`,
         };
+        
+        console.log("Sending payload to OneSignal:", JSON.stringify(oneSignalPayload, null, 2));
 
         try {
             const response = await axios.post("https://onesignal.com/api/v1/notifications", oneSignalPayload, {
@@ -103,13 +129,17 @@ export const sendPushNotification = functions
                     "Content-Type": "application/json",
                 },
             });
-            console.log(`OneSignal notification sent to user ${userId}. Response:`, response.data);
+            console.log(`[OneSignal Success] Sent to user ${userId}. Response:`, response.data);
         } catch (error: any) {
-            console.error(`Error sending OneSignal notification to user ${userId}:`,
+            console.error(`[OneSignal Error] Failed to send to user ${userId}:`,
                 error.response?.data || error.message);
         }
     });
 
+/**
+ * Firebase Authentication'da yeni bir kullanıcı oluşturulduğunda tetiklenir.
+ * Kullanıcı oluşturma olayı için bir denetim kaydı (audit log) oluşturur.
+ */
 export const onUserCreate = functions.auth.user().onCreate(async (user: admin.auth.UserRecord) => {
     const log = {
         type: "user_created",
@@ -124,6 +154,10 @@ export const onUserCreate = functions.auth.user().onCreate(async (user: admin.au
     await db.collection("auditLogs").add(log);
 });
 
+/**
+ * Firebase Authentication'dan bir kullanıcı silindiğinde tetiklenir.
+ * Kullanıcı silme olayı için bir denetim kaydı oluşturur.
+ */
 export const onUserDelete = functions.auth.user().onDelete(async (user: admin.auth.UserRecord) => {
     const log = {
         type: "user_deleted",

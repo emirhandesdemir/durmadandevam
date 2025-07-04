@@ -17,10 +17,12 @@ interface CreateNotificationArgs {
   senderUsername: string;
   senderAvatar: string | null;
   senderAvatarFrame?: string;
-  type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming';
+  type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'dm_message';
   postId?: string | null;
   postImage?: string | null;
   commentText?: string;
+  messageText?: string;
+  chatId?: string;
   roomId?: string;
   roomName?: string;
   diamondAmount?: number;

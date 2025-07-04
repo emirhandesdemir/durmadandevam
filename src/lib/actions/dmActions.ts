@@ -26,6 +26,7 @@ import { revalidatePath } from 'next/cache';
 import { v4 as uuidv4 } from 'uuid';
 import { getChatId } from '../utils';
 import { deleteChatWithSubcollections } from '../firestoreUtils';
+import { createNotification } from './notificationActions';
 
 interface UserInfo {
   uid: string;
@@ -154,6 +155,18 @@ export async function sendMessage(
         [`participantInfo.${receiver.uid}`]: { username: receiver.username, photoURL: receiver.photoURL || null, selectedAvatarFrame: receiver.selectedAvatarFrame || '' },
       });
     }
+  });
+
+  // Create notification for the receiver
+  await createNotification({
+    recipientId: receiver.uid,
+    senderId: sender.uid,
+    senderUsername: sender.username,
+    senderAvatar: sender.photoURL,
+    senderAvatarFrame: sender.selectedAvatarFrame,
+    type: 'dm_message',
+    messageText: content.text || (content.imageUrl ? '📷 Fotoğraf' : '🎤 Sesli Mesaj'),
+    chatId: chatId,
   });
 
   revalidatePath(`/dm/${chatId}`);
