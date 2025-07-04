@@ -65,24 +65,25 @@ export default async function RootLayout({
   return (
     <html lang="tr" suppressHydrationWarning>
       <head>
-        {!isDev && (
-            <>
-                <Script
-                    src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"
-                    defer
-                />
-                <Script id="onesignal-init">
-                {`
-                    window.OneSignalDeferred = window.OneSignalDeferred || [];
-                    OneSignalDeferred.push(async function(OneSignal) {
-                    await OneSignal.init({
-                        appId: "51c67432-a305-43fc-a4c8-9c5d9d478d1c",
-                    });
-                    });
-                `}
-                </Script>
-            </>
-        )}
+        <Script
+            src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"
+            defer
+        />
+        <Script id="onesignal-init">
+        {`
+            window.OneSignalDeferred = window.OneSignalDeferred || [];
+            OneSignalDeferred.push(function(OneSignal) {
+              OneSignal.init({
+                appId: "51c67432-a305-43fc-a4c8-9c5d9d478d1c",
+                allowLocalhostAsSecureOrigin: true, // For local development
+                autoResubscribe: true, // Re-subscribe users who clear their cache
+                notifyButton: {
+                  enable: false, // We use our own custom prompt
+                },
+              });
+            });
+        `}
+        </Script>
         <DynamicTheme />
       </head>
       <body

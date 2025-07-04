@@ -1,3 +1,4 @@
+
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { onUserCreate as onAuthUserCreate, onUserDelete as onAuthUserDelete } from "firebase-functions/v2/auth";
@@ -114,13 +115,13 @@ export const sendPushNotification = onDocumentCreated(
         };
 
         try {
-            await axios.post("https://onesignal.com/api/v1/notifications", oneSignalPayload, {
+            const response = await axios.post("https://onesignal.com/api/v1/notifications", oneSignalPayload, {
                 headers: {
                     "Authorization": `Basic ${ONE_SIGNAL_REST_API_KEY}`,
                     "Content-Type": "application/json",
                 },
             });
-            console.log(`OneSignal notification sent to user ${userId}`);
+            console.log(`OneSignal notification sent to user ${userId}. Response:`, response.data);
         } catch (error: any) {
             console.error(`Error sending OneSignal notification to user ${userId}:`,
                 error.response?.data || error.message);

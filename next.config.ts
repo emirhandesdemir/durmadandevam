@@ -1,4 +1,3 @@
-
 // Bu dosya, Next.js projesinin temel yapılandırmasını içerir.
 // PWA ayarları, TypeScript ve ESLint kuralları, ve harici resim kaynakları burada tanımlanır.
 import type {NextConfig} from 'next';
@@ -13,6 +12,9 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   disable: isDev, // Geliştirme ortamında PWA özelliklerini devre dışı bırak.
   cacheOnFrontEndNav: true,
   reloadOnOnline: true,
+  // OneSignal'ın kendi servis çalışanını PWA'nın servis çalışanına dahil et.
+  // Bu, bildirimlerin arka planda doğru bir şekilde çalışması için kritiktir.
+  importScripts: ['/OneSignalSDKWorker.js'],
 });
 
 // Next.js için ana yapılandırma nesnesi.
