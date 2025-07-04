@@ -6,14 +6,12 @@ import type { Metadata, Viewport } from 'next';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import './globals.css';
-import { Inter, Plus_Jakarta_Sans, Poppins, Lato } from 'next/font/google'; 
+import { Plus_Jakarta_Sans, Inter, Poppins, Lato } from 'next/font/google'; 
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/layout/ThemeProvider';
 import NetworkStatusNotifier from '@/components/common/NetworkStatusNotifier';
 import I18nProvider from '@/components/common/I18nProvider';
 import Script from 'next/script';
-import DynamicTheme from '@/components/layout/DynamicTheme';
-import { getThemeSettings } from '@/lib/actions/themeActions';
 
 // Google Fonts'tan font ailelerini yüklüyoruz.
 const jakarta = Plus_Jakarta_Sans({ 
@@ -54,17 +52,15 @@ export const viewport: Viewport = {
   userScalable: false,
 }
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const themeSettings = await getThemeSettings();
-  const isDev = process.env.NODE_ENV === 'development';
-
   return (
     <html lang="tr" suppressHydrationWarning>
       <head>
+        {/* OneSignal SDK'sını ve başlatma script'ini ekle */}
         <Script
             src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"
             defer
@@ -84,7 +80,6 @@ export default async function RootLayout({
             });
         `}
         </Script>
-        <DynamicTheme />
       </head>
       <body
         className={cn(
@@ -98,7 +93,7 @@ export default async function RootLayout({
         {/* Tema Sağlayıcısı (Aydınlık/Karanlık Mod) */}
         <ThemeProvider
           attribute="class"
-          defaultTheme={themeSettings.defaultMode || "system"}
+          defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
