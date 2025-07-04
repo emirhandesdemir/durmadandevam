@@ -103,22 +103,24 @@ export default function IncomingCallManager() {
             className="fixed top-4 inset-x-4 z-[200] max-w-sm mx-auto"
           >
             <div className="bg-background/80 backdrop-blur-lg rounded-2xl shadow-2xl p-4 border flex items-center gap-4">
-                <Avatar className="h-12 w-12">
-                    <AvatarImage src={incomingCall.callerInfo.photoURL || undefined} />
-                    <AvatarFallback>{incomingCall.callerInfo.username.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                    <p className="font-bold">{incomingCall.callerInfo.username}</p>
-                    <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                       {incomingCall.type === 'video' ? <Video className="h-4 w-4"/> : <Phone className="h-4 w-4"/>}
-                       {incomingCall.type === 'video' ? 'Görüntülü arama' : 'Sesli arama'}
-                    </p>
+                <div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={handleAccept}>
+                    <Avatar className="h-12 w-12">
+                        <AvatarImage src={incomingCall.callerInfo.photoURL || undefined} />
+                        <AvatarFallback>{incomingCall.callerInfo.username.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                        <p className="font-bold">{incomingCall.callerInfo.username}</p>
+                        <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                           {incomingCall.type === 'video' ? <Video className="h-4 w-4"/> : <Phone className="h-4 w-4"/>}
+                           {incomingCall.type === 'video' ? 'Görüntülü arama' : 'Sesli arama'}
+                        </p>
+                    </div>
                 </div>
                 <div className="flex gap-2">
-                    <Button onClick={handleDecline} variant="destructive" size="icon" className="h-10 w-10 rounded-full">
+                    <Button onClick={(e) => {e.stopPropagation(); handleDecline();}} variant="destructive" size="icon" className="h-10 w-10 rounded-full">
                         <PhoneOff className="h-5 w-5"/>
                     </Button>
-                     <Button onClick={handleAccept} size="icon" className="h-10 w-10 rounded-full bg-green-500 hover:bg-green-600">
+                     <Button onClick={(e) => {e.stopPropagation(); handleAccept();}} size="icon" className="h-10 w-10 rounded-full bg-green-500 hover:bg-green-600">
                         <Phone className="h-5 w-5"/>
                     </Button>
                 </div>

@@ -2,7 +2,7 @@
 // src/app/(main)/call/[callId]/page.tsx
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { doc, onSnapshot, collection, deleteDoc, getDoc, query, where } from 'firebase/firestore';
@@ -87,7 +87,6 @@ export default function CallPage() {
   const callId = params.callId as string;
 
   const [callData, setCallData] = useState<Call | null>(null);
-  const [partner, setPartner] = useState<UserInfo | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(true);
   
@@ -95,6 +94,13 @@ export default function CallPage() {
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const isInitializedRef = useRef(false);
+  const isCleaningUpRef = useRef(false);
+
+  const partner = useMemo(() => {
+    if (!callData || !user) return null;
+    return user.uid === callData.callerId ? callData.receiverInfo : callData.callerInfo;
+  }, [callData, user]);
+
 
   const getCallStatusText = () => {
       if (!callData) return 'Yükleniyor...';
@@ -106,6 +112,9 @@ export default function CallPage() {
   }
 
   const cleanupAndLeave = useCallback(async (shouldUpdateDb = false) => {
+    if (isCleaningUpRef.current) return;
+    isCleaningUpRef.current = true;
+
     if (shouldUpdateDb && callId) {
       await updateCallStatus(callId, 'ended');
     }
@@ -147,7 +156,6 @@ export default function CallPage() {
 
             const callDocData = initialCallSnap.data() as Call;
             setCallData(callDocData);
-            setPartner(user.uid === callDocData.callerId ? callDocData.receiverInfo : callDocData.callerInfo);
             
             const pc = new RTCPeerConnection(ICE_SERVERS);
             peerConnectionRef.current = pc;
@@ -161,7 +169,9 @@ export default function CallPage() {
             }
 
             localStreamRef.current = stream;
-            stream.getTracks().forEach(track => pc.addTrack(track, stream));
+             if (pc.signalingState !== 'closed') {
+                stream.getTracks().forEach(track => pc.addTrack(track, stream));
+            }
             setIsVideoOff(!videoEnabled);
 
             pc.ontrack = (event) => {
