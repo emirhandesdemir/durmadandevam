@@ -13,7 +13,7 @@
   },
   "name": "functions",
   "engines": {
-    "node": "22"
+    "node": "18"
   },
   "dependencies": {
     "@genkit-ai/firebase": "^1.14.0",
