@@ -9,7 +9,6 @@ import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-
 import { useState, useRef, useEffect } from 'react';
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import NotificationPermissionManager from "@/components/common/NotificationPermissionManager";
 import IncomingCallManager from '@/components/common/IncomingCallManager';
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
@@ -137,7 +136,6 @@ export default function MainAppLayout({
 
   return (
     <VoiceChatProvider>
-      <NotificationPermissionManager />
       <IncomingCallManager />
       
       <div className="relative flex h-dvh w-full flex-col bg-background overflow-hidden">

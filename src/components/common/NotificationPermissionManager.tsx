@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,10 +15,24 @@ declare global {
 export default function NotificationPermissionManager() {
   const { user } = useAuth();
   const { toast, dismiss } = useToast();
+  const oneSignalAppId = "51c67432-a305-43fc-a4c8-9c5d9d478d1c";
+
+  // Moved the initialization logic here
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(function(OneSignal: any) {
+      OneSignal.init({
+        appId: oneSignalAppId,
+      });
+    });
+  }, [oneSignalAppId]);
+
 
   const handleRequestPermission = useCallback(async (toastId: string) => {
     dismiss(toastId);
-    window.OneSignalDeferred.push(async function(OneSignal) {
+    window.OneSignalDeferred.push(async function(OneSignal: any) {
         await OneSignal.Notifications.requestPermission();
         const isEnabled = OneSignal.Notifications.enabled;
         
@@ -33,27 +46,23 @@ export default function NotificationPermissionManager() {
   }, [dismiss, toast]);
 
   useEffect(() => {
-    // If OneSignal scripts are not loaded (e.g., in dev mode), do nothing.
+    // If OneSignal scripts are not loaded, do nothing.
     if (typeof window.OneSignalDeferred === 'undefined') {
         console.log("[OneSignal] SDK not loaded yet. Bailing out of permission logic.");
         return;
     }
 
     if (user) {
-        console.log(`[OneSignal] User logged in: ${user.uid}. Initializing OneSignal user.`);
-        window.OneSignalDeferred.push(function(OneSignal) {
-            console.log("[OneSignal] SDK is ready. Calling OneSignal.login()");
+        window.OneSignalDeferred.push(function(OneSignal: any) {
             OneSignal.login(user.uid);
             OneSignal.User.addTag("username", user.displayName || "user");
         });
 
         // Prompt for permission if not granted
         const promptTimer = setTimeout(() => {
-             window.OneSignalDeferred.push(async function(OneSignal) {
+             window.OneSignalDeferred.push(async function(OneSignal: any) {
                 const permission = OneSignal.Notifications.permission;
-                console.log(`[OneSignal] Current notification permission state: ${permission}`);
                 if (permission === 'default') {
-                    console.log("[OneSignal] Permission is default. Prompting user.");
                     const { id } = toast({
                         title: 'Bildirimleri Etkinleştir',
                         description: 'Uygulamadan en iyi şekilde yararlanmak için anlık bildirimlere izin verin.',
@@ -70,8 +79,6 @@ export default function NotificationPermissionManager() {
         }, 8000); // wait 8 seconds before prompting
 
         return () => clearTimeout(promptTimer);
-    } else {
-        console.log("[OneSignal] No user logged in. Skipping OneSignal logic.");
     }
   }, [user, handleRequestPermission, toast]);
   
