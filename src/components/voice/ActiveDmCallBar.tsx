@@ -1,3 +1,4 @@
+
 // src/components/voice/ActiveDmCallBar.tsx
 'use client';
 
@@ -54,10 +55,12 @@ export default function ActiveDmCallBar() {
                 animate={{ y: 0 }}
                 exit={{ y: -100 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                className="fixed top-2 left-0 right-0 z-[101] p-2 pointer-events-none"
-                onClick={() => router.push(`/call/${activeCall.id}`)}
+                className="fixed top-2 left-0 right-0 z-[101] p-2"
             >
-                <div className="flex items-center justify-between gap-2 bg-green-500 text-white p-2 rounded-xl shadow-lg w-full max-w-sm mx-auto cursor-pointer pointer-events-auto">
+                <div 
+                    onClick={() => router.push(`/call/${activeCall.id}`)}
+                    className="flex items-center justify-between gap-2 bg-green-500 text-white p-2 rounded-xl shadow-lg w-full max-w-sm mx-auto cursor-pointer"
+                >
                     <div className="flex items-center gap-2 overflow-hidden flex-1">
                         <Avatar className="h-8 w-8 border-2 border-white">
                             <AvatarImage src={partner.photoURL || undefined} />

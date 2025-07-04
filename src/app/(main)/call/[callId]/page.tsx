@@ -118,15 +118,20 @@ export default function CallPage() {
     if (shouldUpdateDb && callId) {
       await updateCallStatus(callId, 'ended');
     }
-
-    if (peerConnectionRef.current) {
-        peerConnectionRef.current.close();
-        peerConnectionRef.current = null;
-    }
-
+    
+    // Stop local media tracks
     if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach(track => track.stop());
         localStreamRef.current = null;
+    }
+
+    // Close the peer connection
+    if (peerConnectionRef.current) {
+        // Unassign event handlers to prevent them from firing after cleanup
+        peerConnectionRef.current.ontrack = null;
+        peerConnectionRef.current.onicecandidate = null;
+        peerConnectionRef.current.close();
+        peerConnectionRef.current = null;
     }
 
     if (remoteVideoRef.current) {
@@ -167,7 +172,6 @@ export default function CallPage() {
                 stream.getTracks().forEach(track => track.stop());
                 return;
             }
-
             localStreamRef.current = stream;
              if (pc.signalingState !== 'closed') {
                 stream.getTracks().forEach(track => pc.addTrack(track, stream));
@@ -181,17 +185,15 @@ export default function CallPage() {
             };
 
             pc.onicecandidate = (event) => {
-                if (event.candidate && callDocData) {
+                if (event.candidate && callDocData && peerConnectionRef.current?.signalingState !== 'closed') {
                     const targetId = user.uid === callDocData.callerId ? callDocData.receiverId : callDocData.callerId;
                     sendIceCandidate(callId, event.candidate.toJSON(), targetId);
                 }
             };
 
             callUnsubscribe = onSnapshot(doc(db, 'calls', callId), async (snapshot) => {
-                const currentPc = peerConnectionRef.current;
-                if (!currentPc || currentPc.signalingState === 'closed') {
-                    return;
-                }
+                const pc = peerConnectionRef.current;
+                if (!pc || pc.signalingState === 'closed') return;
 
                 const data = snapshot.data() as Call;
                 
@@ -207,26 +209,30 @@ export default function CallPage() {
                 const isCaller = data.callerId === user.uid;
 
                 // Receiver handles the offer
-                if (data.offer && !isCaller && currentPc.signalingState !== 'have-remote-offer') {
-                    await currentPc.setRemoteDescription(new RTCSessionDescription(data.offer));
-                    const answer = await currentPc.createAnswer();
-                    await currentPc.setLocalDescription(answer);
+                if (data.offer && !isCaller && pc.signalingState !== 'have-remote-offer') {
+                    await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+                    const answer = await pc.createAnswer();
+                    await pc.setLocalDescription(answer);
                     await sendAnswer(callId, answer);
                 }
 
                 // Caller handles the answer
-                if (data.answer && isCaller && currentPc.signalingState !== 'stable') {
-                    await currentPc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                if (data.answer && isCaller && pc.signalingState !== 'stable') {
+                    if (pc.signalingState === 'have-local-offer') {
+                      await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                    }
                 }
             });
 
             candidatesUnsubscribe = onSnapshot(collection(db, 'calls', callId, `${user.uid}Candidates`), async (snapshot) => {
-                const currentPc = peerConnectionRef.current;
+                const pc = peerConnectionRef.current;
+                if (!pc || pc.signalingState === 'closed') return;
+
                 for (const change of snapshot.docChanges()) {
                     if (change.type === 'added') {
-                        if (currentPc && currentPc.signalingState !== 'closed' && currentPc.remoteDescription) {
+                        if (pc.remoteDescription) {
                             try {
-                                await currentPc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+                                await pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
                             } catch(e) { console.error("Error adding received ice candidate", e); }
                         }
                         await deleteDoc(change.doc.ref);
