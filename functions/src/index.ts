@@ -42,7 +42,7 @@ export const onBroadcastCreate = functions.firestore
             included_segments: ["Subscribed Users"],
             headings: { "en": title, "tr": title },
             contents: { "en": body, "tr": body },
-            web_url: `https://hiwewalkbeta.netlify.app${link || '/'}`,
+            web_url: `https://yenidendeneme-ea9ed.web.app${link || '/'}`,
         };
         
         console.log("Sending broadcast payload to OneSignal:", JSON.stringify(oneSignalPayload, null, 2));
@@ -159,7 +159,7 @@ export const sendPushNotification = functions
             include_external_user_ids: [userId],
             headings: { "en": title, "tr": title },
             contents: { "en": body, "tr": body },
-            web_url: `https://hiwewalkbeta.netlify.app${link}`,
+            web_url: `https://yenidendeneme-ea9ed.web.app${link}`,
         };
         
         console.log("Sending payload to OneSignal:", JSON.stringify(oneSignalPayload, null, 2));
