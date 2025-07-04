@@ -26,6 +26,7 @@ const ONE_SIGNAL_REST_API_KEY = "os_v2_app_khdhimvdavb7zjgitroz2r4ndrkixk2biw6eq
  * OneSignal REST API'sini kullanarak bir anlık bildirim gönderir.
  */
 export const sendPushNotification = functions
+    .region("us-central1")
     .firestore.document("users/{userId}/notifications/{notificationId}")
     .onCreate(async (snapshot: functions.firestore.QueryDocumentSnapshot, context: functions.EventContext) => {
         console.log(`[Function Triggered] For user: ${context.params.userId}. Notification ID: ${context.params.notificationId}`);
@@ -117,7 +118,7 @@ export const sendPushNotification = functions
             include_external_user_ids: [userId],
             headings: { "en": title, "tr": title },
             contents: { "en": body, "tr": body },
-            web_url: `https://yenidendeneme-ea9ed.web.app${link}`,
+            web_url: `https://hiwewalkbeta.netlify.app${link}`,
         };
         
         console.log("Sending payload to OneSignal:", JSON.stringify(oneSignalPayload, null, 2));
