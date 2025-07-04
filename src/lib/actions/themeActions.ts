@@ -64,7 +64,7 @@ export async function getThemeSettings(): Promise<ThemeSettings> {
             ring: "262.1 83.3% 57.8%",
         },
         radius: "1rem",
-        font: "var(--font-inter)",
+        font: "var(--font-jakarta)",
         appName: "HiweWalk",
         appLogoUrl: "",
         defaultMode: "system",
