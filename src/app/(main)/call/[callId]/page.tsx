@@ -155,6 +155,11 @@ export default function CallPage() {
             const videoEnabled = callDocData.videoStatus?.[user.uid] ?? false;
             const stream = await navigator.mediaDevices.getUserMedia({ video: videoEnabled, audio: true });
             
+            if (peerConnectionRef.current.signalingState === 'closed') {
+                stream.getTracks().forEach(track => track.stop());
+                return;
+            }
+
             localStreamRef.current = stream;
             stream.getTracks().forEach(track => pc.addTrack(track, stream));
             setIsVideoOff(!videoEnabled);
