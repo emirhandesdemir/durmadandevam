@@ -188,9 +188,14 @@ export default function CallPage() {
             };
 
             callUnsubscribe = onSnapshot(doc(db, 'calls', callId), async (snapshot) => {
+                const currentPc = peerConnectionRef.current;
+                if (!currentPc || currentPc.signalingState === 'closed') {
+                    return;
+                }
+
                 const data = snapshot.data() as Call;
                 
-                if (!pc || !snapshot.exists() || ['ended', 'declined', 'missed'].includes(data.status)) {
+                if (!snapshot.exists() || ['ended', 'declined', 'missed'].includes(data.status)) {
                     if (isInitializedRef.current){
                        toast({ description: "Arama sonlandırıldı." });
                        await cleanupAndLeave();
@@ -202,25 +207,26 @@ export default function CallPage() {
                 const isCaller = data.callerId === user.uid;
 
                 // Receiver handles the offer
-                if (data.offer && !isCaller && pc.signalingState !== 'have-remote-offer') {
-                    await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-                    const answer = await pc.createAnswer();
-                    await pc.setLocalDescription(answer);
+                if (data.offer && !isCaller && currentPc.signalingState !== 'have-remote-offer') {
+                    await currentPc.setRemoteDescription(new RTCSessionDescription(data.offer));
+                    const answer = await currentPc.createAnswer();
+                    await currentPc.setLocalDescription(answer);
                     await sendAnswer(callId, answer);
                 }
 
                 // Caller handles the answer
-                if (data.answer && isCaller && pc.signalingState !== 'stable') {
-                    await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                if (data.answer && isCaller && currentPc.signalingState !== 'stable') {
+                    await currentPc.setRemoteDescription(new RTCSessionDescription(data.answer));
                 }
             });
 
             candidatesUnsubscribe = onSnapshot(collection(db, 'calls', callId, `${user.uid}Candidates`), async (snapshot) => {
+                const currentPc = peerConnectionRef.current;
                 for (const change of snapshot.docChanges()) {
                     if (change.type === 'added') {
-                        if (pc.remoteDescription) {
+                        if (currentPc && currentPc.signalingState !== 'closed' && currentPc.remoteDescription) {
                             try {
-                                await pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+                                await currentPc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
                             } catch(e) { console.error("Error adding received ice candidate", e); }
                         }
                         await deleteDoc(change.doc.ref);
