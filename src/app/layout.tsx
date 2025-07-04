@@ -7,10 +7,8 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import './globals.css';
 import { Inter } from 'next/font/google';
 import { cn } from '@/lib/utils';
-import { ThemeProvider } from '@/components/layout/ThemeProvider';
 import NetworkStatusNotifier from '@/components/common/NetworkStatusNotifier';
 import I18nProvider from '@/components/common/I18nProvider';
-import DynamicTheme from '@/components/layout/DynamicTheme';
 
 // Google Fonts'tan Inter font ailesini yüklüyoruz.
 const inter = Inter({ 
@@ -41,7 +39,7 @@ export const metadata: Metadata = {
 
 // Mobil cihazlarda tarayıcı çubuğunun rengi gibi viewport ayarları.
 export const viewport: Viewport = {
-  themeColor: '#09090B', // Karanlık mod için tema rengi.
+  themeColor: '#FFFFFF', // Aydınlık tema için varsayılan renk.
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1, // Kullanıcının zoom yapmasını engelle (uygulama hissi için).
@@ -54,32 +52,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="tr" suppressHydrationWarning>
-      <head>
-        <DynamicTheme />
-      </head>
+    <html lang="tr">
+      <head />
       <body
         className={cn(
           'min-h-screen bg-background font-sans antialiased font-medium',
           inter.variable // Inter fontunu tüm body'e uygula.
         )}
       >
-        {/* Tema Sağlayıcısı (Aydınlık/Karanlık Mod) */}
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {/* Kimlik Doğrulama Sağlayıcısı: Tüm alt bileşenlerin kullanıcı verisine erişmesini sağlar. */}
-          <AuthProvider>
-             <I18nProvider>
-                {children}
-                <Toaster />
-                <NetworkStatusNotifier />
-            </I18nProvider>
-          </AuthProvider>
-        </ThemeProvider>
+        {/* Kimlik Doğrulama Sağlayıcısı: Tüm alt bileşenlerin kullanıcı verisine erişmesini sağlar. */}
+        <AuthProvider>
+           <I18nProvider>
+              {children}
+              <Toaster />
+              <NetworkStatusNotifier />
+          </I18nProvider>
+        </AuthProvider>
       </body>
     </html>
   );
