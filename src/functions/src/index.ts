@@ -1,3 +1,4 @@
+
 // Bu dosya, Firebase projesinin sunucu tarafı mantığını içerir.
 // Veritabanındaki belirli olaylara (örn: yeni bildirim oluşturma) tepki vererek
 // anlık bildirim gönderme gibi işlemleri gerçekleştirir.
@@ -28,12 +29,16 @@ export const sendPushNotification = functions
     .region("us-central1")
     .firestore.document("users/{userId}/notifications/{notificationId}")
     .onCreate(async (snapshot: functions.firestore.QueryDocumentSnapshot, context: functions.EventContext) => {
+        console.log(`[Function Triggered] For user: ${context.params.userId}. Notification ID: ${context.params.notificationId}`);
+        
+        const notificationData = snapshot.data();
+        console.log("Notification Data:", JSON.stringify(notificationData, null, 2));
+
         if (!ONE_SIGNAL_REST_API_KEY) {
             console.error("OneSignal REST API Key not configured.");
             return;
         }
 
-        const notificationData = snapshot.data();
         if (!notificationData) {
             console.log("Bildirim verisi bulunamadı.");
             return;
@@ -110,17 +115,19 @@ export const sendPushNotification = functions
             contents: { "en": body, "tr": body },
             web_url: `https://yenidendeneme-ea9ed.web.app${link}`,
         };
+        
+        console.log("Sending payload to OneSignal:", JSON.stringify(oneSignalPayload, null, 2));
 
         try {
-            await axios.post("https://onesignal.com/api/v1/notifications", oneSignalPayload, {
+            const response = await axios.post("https://onesignal.com/api/v1/notifications", oneSignalPayload, {
                 headers: {
                     "Authorization": `Basic ${ONE_SIGNAL_REST_API_KEY}`,
                     "Content-Type": "application/json",
                 },
             });
-            console.log(`OneSignal notification sent to user ${userId}`);
+            console.log(`[OneSignal Success] Sent to user ${userId}. Response:`, response.data);
         } catch (error: any) {
-            console.error(`Error sending OneSignal notification to user ${userId}:`,
+            console.error(`[OneSignal Error] Failed to send to user ${userId}:`,
                 error.response?.data || error.message);
         }
     });
