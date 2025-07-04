@@ -2,7 +2,7 @@
 // Veritabanındaki belirli olaylara (örn: yeni bildirim oluşturma) tepki vererek
 // anlık bildirim gönderme gibi işlemleri gerçekleştirir.
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
-import { onUserCreated, onUserDeleted } from "firebase-functions/v2/auth";
+import { onUserCreated, onUserDeleted, AuthEvent } from "firebase-functions/v2/auth";
 import * as admin from "firebase-admin";
 import axios from "axios";
 
@@ -189,7 +189,7 @@ export const sendPushNotification = onDocumentCreated("users/{userId}/notificati
  * Firebase Authentication'da yeni bir kullanıcı oluşturulduğunda tetiklenir.
  * Kullanıcı oluşturma olayı için bir denetim kaydı (audit log) oluşturur.
  */
-export const onUserCreate = onUserCreated(async (event) => {
+export const onUserCreate = onUserCreated(async (event: AuthEvent) => {
     const user = event.data;
     const log = {
         type: "user_created",
@@ -208,7 +208,7 @@ export const onUserCreate = onUserCreated(async (event) => {
  * Firebase Authentication'dan bir kullanıcı silindiğinde tetiklenir.
  * Kullanıcı silme olayı için bir denetim kaydı oluşturur.
  */
-export const onUserDelete = onUserDeleted(async (event) => {
+export const onUserDelete = onUserDeleted(async (event: AuthEvent) => {
     const user = event.data;
     const log = {
         type: "user_deleted",
