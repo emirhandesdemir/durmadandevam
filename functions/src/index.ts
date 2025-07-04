@@ -1,10 +1,9 @@
 // Bu dosya, Firebase projesinin sunucu tarafı mantığını içerir.
 // Veritabanındaki belirli olaylara (örn: yeni bildirim oluşturma) tepki vererek
 // anlık bildirim gönderme gibi işlemleri gerçekleştirir.
-import { onDocumentCreated, FirestoreEvent, QueryDocumentSnapshot } from "firebase-functions/v2/firestore";
-import { onUserCreated, onUserDeleted, AuthEvent } from "firebase-functions/v2/auth";
-import * as logger from "firebase-functions/logger";
+import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import axios from "axios";
 
 // Firebase Admin SDK'sını başlat. Bu, sunucu tarafında Firebase servislerine erişim sağlar.
 admin.initializeApp();
@@ -13,8 +12,6 @@ admin.initializeApp();
 const db = admin.firestore();
 
 // OneSignal konfigürasyonu.
-// GÜVENLİK NOTU: Bu anahtarın doğrudan koda eklenmesi, geçici bir çözümdür.
-// İdeal olarak, `firebase functions:config:set` komutuyla ayarlanmalıdır.
 const ONE_SIGNAL_APP_ID = "51c67432-a305-43fc-a4c8-9c5d9d478d1c";
 const ONE_SIGNAL_REST_API_KEY = "os_v2_app_khdhimvdavb7zjgitroz2r4ndrkixk2biw6eqrfn4oygor7fxogtw3riv5mjpu4koeuuju6ma2scefend3lqkwij53ppdzbngmbouvy";
 
@@ -23,25 +20,22 @@ const ONE_SIGNAL_REST_API_KEY = "os_v2_app_khdhimvdavb7zjgitroz2r4ndrkixk2biw6eq
  * Yeni bir bildirim dokümanı oluşturulduğunda tetiklenir.
  * OneSignal REST API'sini kullanarak bir anlık bildirim gönderir.
  */
-export const sendPushNotification = onDocumentCreated(
-    {
-        document: "users/{userId}/notifications/{notificationId}",
-        region: "us-central1"
-    },
-    async (event: FirestoreEvent<QueryDocumentSnapshot | undefined, { userId: string, notificationId: string }>) => {
-        const snapshot = event.data;
-        if (!snapshot) {
-            logger.info("No data associated with the event, skipping.");
+export const sendPushNotification = functions
+    .region("us-central1")
+    .firestore.document("users/{userId}/notifications/{notificationId}")
+    .onCreate(async (snapshot: functions.firestore.QueryDocumentSnapshot, context: functions.EventContext) => {
+        if (!ONE_SIGNAL_REST_API_KEY) {
+            console.error("OneSignal REST API Key not configured.");
             return;
         }
 
         const notificationData = snapshot.data();
         if (!notificationData) {
-            logger.info("Bildirim verisi bulunamadı.");
+            console.log("Bildirim verisi bulunamadı.");
             return;
         }
-        
-        const userId = event.params.userId;
+
+        const userId = context.params.userId;
         let title = "Yeni bir bildiriminiz var!";
         let body = "Uygulamayı açarak kontrol edin.";
         let link = "/notifications"; // Varsayılan link
@@ -114,34 +108,24 @@ export const sendPushNotification = onDocumentCreated(
         };
 
         try {
-            const response = await fetch("https://onesignal.com/api/v1/notifications", {
-                method: "POST",
+            await axios.post("https://onesignal.com/api/v1/notifications", oneSignalPayload, {
                 headers: {
                     "Authorization": `Basic ${ONE_SIGNAL_REST_API_KEY}`,
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify(oneSignalPayload),
             });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(JSON.stringify(errorData));
-            }
-
-            logger.info(`OneSignal notification sent to user ${userId}`);
-        } catch (error) {
-            logger.error(`Error sending OneSignal notification to user ${userId}:`, error);
+            console.log(`OneSignal notification sent to user ${userId}`);
+        } catch (error: any) {
+            console.error(`Error sending OneSignal notification to user ${userId}:`,
+                error.response?.data || error.message);
         }
-    }
-);
-
+    });
 
 /**
  * Firebase Authentication'da yeni bir kullanıcı oluşturulduğunda tetiklenir.
  * Kullanıcı oluşturma olayı için bir denetim kaydı (audit log) oluşturur.
  */
-export const onUserCreate = onUserCreated(async (event: AuthEvent) => {
-    const user = event.data;
+export const onUserCreate = functions.auth.user().onCreate(async (user: admin.auth.UserRecord) => {
     const log = {
         type: "user_created",
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
@@ -159,8 +143,7 @@ export const onUserCreate = onUserCreated(async (event: AuthEvent) => {
  * Firebase Authentication'dan bir kullanıcı silindiğinde tetiklenir.
  * Kullanıcı silme olayı için bir denetim kaydı oluşturur.
  */
-export const onUserDelete = onUserDeleted(async (event: AuthEvent) => {
-    const user = event.data;
+export const onUserDelete = functions.auth.user().onDelete(async (user: admin.auth.UserRecord) => {
     const log = {
         type: "user_deleted",
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
@@ -174,16 +157,11 @@ export const onUserDelete = onUserDeleted(async (event: AuthEvent) => {
      await db.collection("auditLogs").add(log);
 });
 
-
-export const onMessageCreate = onDocumentCreated("rooms/{roomId}/messages/{messageId}", async (event: FirestoreEvent<QueryDocumentSnapshot | undefined, { roomId: string, messageId: string }>) => {
-    const snapshot = event.data;
-    if (!snapshot) {
-      logger.info("No data in onMessageCreate event.");
-      return;
-    }
-    
-    const message = snapshot.data();
-    const { roomId } = event.params;
+export const onMessageCreate = functions.firestore
+  .document('rooms/{roomId}/messages/{messageId}')
+  .onCreate(async (snap: functions.firestore.QueryDocumentSnapshot, context: functions.EventContext) => {
+    const message = snap.data();
+    const { roomId } = context.params;
 
     if (message.text && message.text.toLowerCase().includes('@walk')) {
       const historySnapshot = await db.collection(`rooms/${roomId}/messages`)
@@ -203,7 +181,7 @@ export const onMessageCreate = onDocumentCreated("rooms/{roomId}/messages/{messa
       const isGreeting = /^(selam|merhaba|hey|hi|sa)\b/i.test(message.text.replace(/@walk/i, '').trim());
 
       try {
-        const { roomBotFlow } = await import('./flows/roomBotFlow.js');
+        const { roomBotFlow } = await import('./flows/roomBotFlow');
         const responseText = await roomBotFlow({
             history,
             currentMessage: message.text,
@@ -223,7 +201,7 @@ export const onMessageCreate = onDocumentCreated("rooms/{roomId}/messages/{messa
             type: 'user',
         });
       } catch (error) {
-        logger.error("Error running roomBotFlow:", error);
+        console.error("Error running roomBotFlow:", error);
       }
     }
 });

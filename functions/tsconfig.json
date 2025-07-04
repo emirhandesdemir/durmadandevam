@@ -4,7 +4,7 @@
     "src"
   ],
   "compilerOptions": {
-    "module": "NodeNext",
+    "module": "commonjs",
     "noImplicitReturns": true,
     "outDir": "lib",
     "sourceMap": true,
@@ -12,7 +12,7 @@
     "target": "es2017",
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "moduleResolution": "nodenext",
+    "moduleResolution": "node",
     "noUnusedLocals": true
   }
 }
