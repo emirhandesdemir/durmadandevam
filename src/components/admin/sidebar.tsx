@@ -2,6 +2,7 @@
 // Bu bileşen, admin panelinin sol tarafında yer alan dikey navigasyon menüsüdür.
 // Paneldeki farklı yönetim sayfalarına (Dashboard, Kullanıcılar, Odalar vb.)
 // hızlı erişim sağlar ve mobil cihazlarda gizlenip açılabilir.
+
 "use client";
 
 import Link from "next/link";
@@ -22,6 +23,7 @@ import {
   History,
   CloudUpload,
   ShieldAlert,
+  RadioTower,
 } from "lucide-react";
 import { Button } from "../ui/button";
 
@@ -34,6 +36,7 @@ const navItems = [
   { href: "/admin/reports", label: "Şikayetler", icon: ShieldAlert },
   { href: "/admin/rooms", label: "Odalar", icon: MessageSquare },
   { href: "/admin/posts", label: "Gönderiler", icon: FileText },
+  { href: "/admin/broadcast", label: "Duyurular", icon: RadioTower },
   { href: "/admin/features", label: "Özellik Yönetimi", icon: SlidersHorizontal },
   { href: "/admin/logs", label: "Olay Kayıtları", icon: History },
   { href: "/admin/theme", label: "Tema Ayarları", icon: Palette },

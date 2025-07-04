@@ -1,4 +1,3 @@
-
 // Bu dosya, Firebase projesinin sunucu tarafı mantığını içerir.
 // Veritabanındaki belirli olaylara (örn: yeni bildirim oluşturma) tepki vererek
 // anlık bildirim gönderme gibi işlemleri gerçekleştirir.
@@ -14,11 +13,54 @@ admin.initializeApp();
 const db = admin.firestore();
 
 // OneSignal konfigürasyonu.
-// GÜVENLİK NOTU: Bu anahtarı kod içinde tutmak geliştirme için uygundur,
-// ancak canlıya geçerken Firebase ortam değişkenlerine taşımak en iyisidir.
-// `firebase functions:config:set onesignal.rest_api_key="YOUR_KEY"`
 const ONE_SIGNAL_APP_ID = "51c67432-a305-43fc-a4c8-9c5d9d478d1c";
 const ONE_SIGNAL_REST_API_KEY = "os_v2_app_khdhimvdavb7zjgitroz2r4ndrkixk2biw6eqrfn4oygor7fxogtw3riv5mjpu4koeuuju6ma2scefend3lqkwij53ppdzbngmbouvy";
+
+/**
+ * Triggered when a new document is added to the 'broadcasts' collection.
+ * Sends a push notification to all subscribed users using OneSignal.
+ */
+export const onBroadcastCreate = functions.firestore
+    .document("broadcasts/{broadcastId}")
+    .onCreate(async (snapshot: functions.firestore.QueryDocumentSnapshot) => {
+        const broadcastData = snapshot.data();
+        if (!broadcastData) {
+            console.log("Broadcast data not found.");
+            return;
+        }
+
+        const { title, body, link } = broadcastData;
+        
+        console.log("New broadcast received:", JSON.stringify(broadcastData, null, 2));
+
+        if (!ONE_SIGNAL_REST_API_KEY) {
+            console.error("OneSignal REST API Key not configured.");
+            return;
+        }
+
+        const oneSignalPayload = {
+            app_id: ONE_SIGNAL_APP_ID,
+            included_segments: ["Subscribed Users"],
+            headings: { "en": title, "tr": title },
+            contents: { "en": body, "tr": body },
+            web_url: `https://hiwewalkbeta.netlify.app${link || '/'}`,
+        };
+        
+        console.log("Sending broadcast payload to OneSignal:", JSON.stringify(oneSignalPayload, null, 2));
+
+        try {
+            const response = await axios.post("https://onesignal.com/api/v1/notifications", oneSignalPayload, {
+                headers: {
+                    "Authorization": `Basic ${ONE_SIGNAL_REST_API_KEY}`,
+                    "Content-Type": "application/json",
+                },
+            });
+            console.log(`[OneSignal Success] Broadcast sent. Response:`, response.data);
+        } catch (error: any) {
+            console.error(`[OneSignal Error] Failed to send broadcast. Status: ${error.response?.status}. Response:`,
+                error.response?.data || error.message);
+        }
+    });
 
 
 /**

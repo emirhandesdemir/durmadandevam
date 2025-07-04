@@ -17,7 +17,7 @@ interface CreateNotificationArgs {
   senderUsername: string;
   senderAvatar: string | null;
   senderAvatarFrame?: string;
-  type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'dm_message';
+  type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message';
   postId?: string | null;
   postImage?: string | null;
   commentText?: string;
@@ -29,6 +29,35 @@ interface CreateNotificationArgs {
   callId?: string;
   callType?: 'video' | 'audio';
 }
+
+interface BroadcastNotificationArgs {
+    title: string;
+    body: string;
+    link?: string;
+}
+
+/**
+ * Creates a document in the `broadcasts` collection, which triggers a Cloud
+ * Function to send a notification to all subscribed users.
+ * @param data The broadcast message data.
+ */
+export async function sendBroadcastNotification(data: BroadcastNotificationArgs) {
+    if (!data.title || !data.body) {
+        return { success: false, error: "Başlık ve mesaj içeriği zorunludur." };
+    }
+    try {
+        const broadcastsRef = collection(db, 'broadcasts');
+        await addDoc(broadcastsRef, {
+            ...data,
+            sentAt: serverTimestamp(),
+        });
+        return { success: true };
+    } catch (error: any) {
+        console.error("Error creating broadcast document:", error);
+        return { success: false, error: "Duyuru gönderilirken bir hata oluştu." };
+    }
+}
+
 
 export async function createNotification(data: CreateNotificationArgs) {
   // Don't send notifications for self-actions
