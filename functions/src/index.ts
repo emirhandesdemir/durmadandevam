@@ -1,9 +1,11 @@
 // Bu dosya, Firebase projesinin sunucu tarafı mantığını içerir.
 // Veritabanındaki belirli olaylara (örn: yeni bildirim oluşturma) tepki vererek
 // anlık bildirim gönderme gibi işlemleri gerçekleştirir.
-import * as functions from "firebase-functions";
+import { onDocumentCreated } from "firebase-functions/v2/firestore";
+import { onUserCreated, onUserDeleted } from "firebase-functions/v2/auth";
 import * as admin from "firebase-admin";
 import axios from "axios";
+import { roomBotFlow } from "./flows/roomBotFlow";
 
 // Firebase Admin SDK'sını başlat. Bu, sunucu tarafında Firebase servislerine erişim sağlar.
 admin.initializeApp();
@@ -19,170 +21,177 @@ const ONE_SIGNAL_REST_API_KEY = "os_v2_app_khdhimvdavb7zjgitroz2r4ndrkixk2biw6eq
  * Triggered when a new document is added to the 'broadcasts' collection.
  * Sends a push notification to all subscribed users using OneSignal.
  */
-export const onBroadcastCreate = functions.firestore
-    .document("broadcasts/{broadcastId}")
-    .onCreate(async (snapshot: functions.firestore.QueryDocumentSnapshot) => {
-        const broadcastData = snapshot.data();
-        if (!broadcastData) {
-            console.log("Broadcast data not found.");
-            return;
-        }
+export const onBroadcastCreate = onDocumentCreated("broadcasts/{broadcastId}", async (event) => {
+    const snapshot = event.data;
+    if (!snapshot) {
+        console.log("Broadcast data not found in event.");
+        return;
+    }
+    const broadcastData = snapshot.data();
+    if (!broadcastData) {
+        console.log("Broadcast data is empty.");
+        return;
+    }
 
-        const { title, body, link } = broadcastData;
-        
-        console.log("New broadcast received:", JSON.stringify(broadcastData, null, 2));
+    const { title, body, link } = broadcastData;
+    
+    console.log("New broadcast received:", JSON.stringify(broadcastData, null, 2));
 
-        if (!ONE_SIGNAL_REST_API_KEY) {
-            console.error("OneSignal REST API Key not configured.");
-            return;
-        }
+    if (!ONE_SIGNAL_REST_API_KEY) {
+        console.error("OneSignal REST API Key not configured.");
+        return;
+    }
 
-        const oneSignalPayload = {
-            app_id: ONE_SIGNAL_APP_ID,
-            included_segments: ["Subscribed Users"],
-            headings: { "en": title, "tr": title },
-            contents: { "en": body, "tr": body },
-            web_url: `https://yenidendeneme-ea9ed.web.app${link || '/'}`,
-        };
-        
-        console.log("Sending broadcast payload to OneSignal:", JSON.stringify(oneSignalPayload, null, 2));
+    const oneSignalPayload = {
+        app_id: ONE_SIGNAL_APP_ID,
+        included_segments: ["Subscribed Users"],
+        headings: { "en": title, "tr": title },
+        contents: { "en": body, "tr": body },
+        web_url: `https://yenidendeneme-ea9ed.web.app${link || '/'}`,
+    };
+    
+    console.log("Sending broadcast payload to OneSignal:", JSON.stringify(oneSignalPayload, null, 2));
 
-        try {
-            const response = await axios.post("https://onesignal.com/api/v1/notifications", oneSignalPayload, {
-                headers: {
-                    "Authorization": `Basic ${ONE_SIGNAL_REST_API_KEY}`,
-                    "Content-Type": "application/json",
-                },
-            });
-            console.log(`[OneSignal Success] Broadcast sent. Response:`, response.data);
-        } catch (error: any) {
-            console.error(`[OneSignal Error] Failed to send broadcast. Status: ${error.response?.status}. Response:`,
-                error.response?.data || error.message);
-        }
-    });
+    try {
+        const response = await axios.post("https://onesignal.com/api/v1/notifications", oneSignalPayload, {
+            headers: {
+                "Authorization": `Basic ${ONE_SIGNAL_REST_API_KEY}`,
+                "Content-Type": "application/json",
+            },
+        });
+        console.log(`[OneSignal Success] Broadcast sent. Response:`, response.data);
+    } catch (error: any) {
+        console.error(`[OneSignal Error] Failed to send broadcast. Status: ${error.response?.status}. Response:`,
+            error.response?.data || error.message);
+    }
+});
 
 
 /**
  * Yeni bir bildirim dokümanı oluşturulduğunda tetiklenir.
  * OneSignal REST API'sini kullanarak bir anlık bildirim gönderir.
  */
-export const sendPushNotification = functions
-    .region("us-central1")
-    .firestore.document("users/{userId}/notifications/{notificationId}")
-    .onCreate(async (snapshot: functions.firestore.QueryDocumentSnapshot, context: functions.EventContext) => {
-        console.log(`[Function Triggered] For user: ${context.params.userId}. Notification ID: ${context.params.notificationId}`);
-        
-        const notificationData = snapshot.data();
-        console.log("Notification Data:", JSON.stringify(notificationData, null, 2));
+export const sendPushNotification = onDocumentCreated("users/{userId}/notifications/{notificationId}", async (event) => {
+    const snapshot = event.data;
+    if (!snapshot) {
+        console.log("Notification data not found in event.");
+        return;
+    }
 
-        if (!ONE_SIGNAL_REST_API_KEY) {
-            console.error("OneSignal REST API Key not configured.");
-            return;
-        }
+    const userId = event.params.userId;
+    console.log(`[Function Triggered] For user: ${userId}. Notification ID: ${event.params.notificationId}`);
+    
+    const notificationData = snapshot.data();
+    console.log("Notification Data:", JSON.stringify(notificationData, null, 2));
 
-        if (!notificationData) {
-            console.log("Bildirim verisi bulunamadı.");
-            return;
-        }
+    if (!ONE_SIGNAL_REST_API_KEY) {
+        console.error("OneSignal REST API Key not configured.");
+        return;
+    }
 
-        const userId = context.params.userId;
-        let title = "Yeni bir bildiriminiz var!";
-        let body = "Uygulamayı açarak kontrol edin.";
-        let link = "/notifications"; // Varsayılan link
+    if (!notificationData) {
+        console.log("Bildirim verisi bulunamadı.");
+        return;
+    }
 
-        switch (notificationData.type) {
-             case "like":
-                title = "Yeni Beğeni 👍";
-                body = `${notificationData.senderUsername} gönderinizi beğendi.`;
-                link = `/notifications`;
-                break;
-            case "comment":
-                title = "Yeni Yorum 💬";
-                body = `${notificationData.senderUsername} gönderinize yorum yaptı: "${notificationData.commentText}"`;
-                link = `/notifications`;
-                break;
-            case "follow":
-                title = "Yeni Takipçi 🎉";
-                body = `${notificationData.senderUsername} sizi takip etmeye başladı.`;
-                link = `/profile/${notificationData.senderId}`;
-                break;
-            case "follow_accept":
-                title = "Takip İsteği Kabul Edildi ✅";
-                body = `${notificationData.senderUsername} takip isteğinizi kabul etti.`;
-                link = `/profile/${notificationData.senderId}`;
-                break;
-            case "mention":
-                title = "Biri Sizden Bahsetti! 📣";
-                body = `${notificationData.senderUsername} bir gönderide sizden bahsetti.`;
-                link = `/notifications`;
-                break;
-            case "room_invite":
-                title = "Oda Daveti 🚪";
-                body = `${notificationData.senderUsername} sizi "${notificationData.roomName}" odasına davet etti.`;
-                link = `/rooms/${notificationData.roomId}`;
-                break;
-            case "dm_message":
-                title = `Yeni Mesaj ✉️`;
-                body = `${notificationData.senderUsername}: ${notificationData.messageText}`;
-                link = `/dm/${notificationData.chatId}`;
-                break;
-            case "diamond_transfer":
-                title = "Elmas Aldınız! 💎";
-                body = `${notificationData.senderUsername} size ${notificationData.diamondAmount} elmas gönderdi!`;
-                link = `/profile/${notificationData.senderId}`;
-                break;
-            case "referral_bonus":
-                title = "Davet Ödülü! 🎉";
-                body = `${notificationData.senderUsername} davetinizle katıldı ve size ${notificationData.diamondAmount} elmas kazandırdı!`;
-                link = `/profile/${notificationData.senderId}`;
-                break;
-            case "retweet":
-                title = "Yeni Retweet 🔁";
-                body = `${notificationData.senderUsername} gönderinizi retweetledi.`;
-                link = '/notifications';
-                break;
-            case "call_incoming":
-                const callType = notificationData.callType === 'video' ? 'Görüntülü' : 'Sesli';
-                title = `📞 Gelen ${callType} Arama`;
-                body = `${notificationData.senderUsername} sizi arıyor...`;
-                link = `/call/${notificationData.callId || ''}`;
-                break;
-            case "call_missed":
-                title = `📞 Cevapsız Arama`;
-                body = `${notificationData.senderUsername} sizi aradı.`;
-                link = `/dm`; // Link to DM list
-                break;
-        }
+    let title = "Yeni bir bildiriminiz var!";
+    let body = "Uygulamayı açarak kontrol edin.";
+    let link = "/notifications"; // Varsayılan link
 
-        const oneSignalPayload = {
-            app_id: ONE_SIGNAL_APP_ID,
-            include_external_user_ids: [userId],
-            headings: { "en": title, "tr": title },
-            contents: { "en": body, "tr": body },
-            web_url: `https://yenidendeneme-ea9ed.web.app${link}`,
-        };
-        
-        console.log("Sending payload to OneSignal:", JSON.stringify(oneSignalPayload, null, 2));
+    switch (notificationData.type) {
+         case "like":
+            title = "Yeni Beğeni 👍";
+            body = `${notificationData.senderUsername} gönderinizi beğendi.`;
+            link = `/notifications`;
+            break;
+        case "comment":
+            title = "Yeni Yorum 💬";
+            body = `${notificationData.senderUsername} gönderinize yorum yaptı: "${notificationData.commentText}"`;
+            link = `/notifications`;
+            break;
+        case "follow":
+            title = "Yeni Takipçi 🎉";
+            body = `${notificationData.senderUsername} sizi takip etmeye başladı.`;
+            link = `/profile/${notificationData.senderId}`;
+            break;
+        case "follow_accept":
+            title = "Takip İsteği Kabul Edildi ✅";
+            body = `${notificationData.senderUsername} takip isteğinizi kabul etti.`;
+            link = `/profile/${notificationData.senderId}`;
+            break;
+        case "mention":
+            title = "Biri Sizden Bahsetti! 📣";
+            body = `${notificationData.senderUsername} bir gönderide sizden bahsetti.`;
+            link = `/notifications`;
+            break;
+        case "room_invite":
+            title = "Oda Daveti 🚪";
+            body = `${notificationData.senderUsername} sizi "${notificationData.roomName}" odasına davet etti.`;
+            link = `/rooms/${notificationData.roomId}`;
+            break;
+        case "dm_message":
+            title = `Yeni Mesaj ✉️`;
+            body = `${notificationData.senderUsername}: ${notificationData.messageText}`;
+            link = `/dm/${notificationData.chatId}`;
+            break;
+        case "diamond_transfer":
+            title = "Elmas Aldınız! 💎";
+            body = `${notificationData.senderUsername} size ${notificationData.diamondAmount} elmas gönderdi!`;
+            link = `/profile/${notificationData.senderId}`;
+            break;
+        case "referral_bonus":
+            title = "Davet Ödülü! 🎉";
+            body = `${notificationData.senderUsername} davetinizle katıldı ve size ${notificationData.diamondAmount} elmas kazandırdı!`;
+            link = `/profile/${notificationData.senderId}`;
+            break;
+        case "retweet":
+            title = "Yeni Retweet 🔁";
+            body = `${notificationData.senderUsername} gönderinizi retweetledi.`;
+            link = '/notifications';
+            break;
+        case "call_incoming":
+            const callType = notificationData.callType === 'video' ? 'Görüntülü' : 'Sesli';
+            title = `📞 Gelen ${callType} Arama`;
+            body = `${notificationData.senderUsername} sizi arıyor...`;
+            link = `/call/${notificationData.callId || ''}`;
+            break;
+        case "call_missed":
+            title = `📞 Cevapsız Arama`;
+            body = `${notificationData.senderUsername} sizi aradı.`;
+            link = `/dm`; // Link to DM list
+            break;
+    }
 
-        try {
-            const response = await axios.post("https://onesignal.com/api/v1/notifications", oneSignalPayload, {
-                headers: {
-                    "Authorization": `Basic ${ONE_SIGNAL_REST_API_KEY}`,
-                    "Content-Type": "application/json",
-                },
-            });
-            console.log(`[OneSignal Success] Sent to user ${userId}. Response:`, response.data);
-        } catch (error: any) {
-            console.error(`[OneSignal Error] Failed to send to user ${userId}:`,
-                error.response?.data || error.message);
-        }
-    });
+    const oneSignalPayload = {
+        app_id: ONE_SIGNAL_APP_ID,
+        include_external_user_ids: [userId],
+        headings: { "en": title, "tr": title },
+        contents: { "en": body, "tr": body },
+        web_url: `https://yenidendeneme-ea9ed.web.app${link}`,
+    };
+    
+    console.log("Sending payload to OneSignal:", JSON.stringify(oneSignalPayload, null, 2));
+
+    try {
+        const response = await axios.post("https://onesignal.com/api/v1/notifications", oneSignalPayload, {
+            headers: {
+                "Authorization": `Basic ${ONE_SIGNAL_REST_API_KEY}`,
+                "Content-Type": "application/json",
+            },
+        });
+        console.log(`[OneSignal Success] Sent to user ${userId}. Response:`, response.data);
+    } catch (error: any) {
+        console.error(`[OneSignal Error] Failed to send to user ${userId}:`,
+            error.response?.data || error.message);
+    }
+});
 
 /**
  * Firebase Authentication'da yeni bir kullanıcı oluşturulduğunda tetiklenir.
  * Kullanıcı oluşturma olayı için bir denetim kaydı (audit log) oluşturur.
  */
-export const onUserCreate = functions.auth.user().onCreate(async (user: admin.auth.UserRecord) => {
+export const onUserCreate = onUserCreated(async (event) => {
+    const user = event.data;
     const log = {
         type: "user_created",
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
@@ -200,7 +209,8 @@ export const onUserCreate = functions.auth.user().onCreate(async (user: admin.au
  * Firebase Authentication'dan bir kullanıcı silindiğinde tetiklenir.
  * Kullanıcı silme olayı için bir denetim kaydı oluşturur.
  */
-export const onUserDelete = functions.auth.user().onDelete(async (user: admin.auth.UserRecord) => {
+export const onUserDelete = onUserDeleted(async (event) => {
+    const user = event.data;
     const log = {
         type: "user_deleted",
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
@@ -212,4 +222,55 @@ export const onUserDelete = functions.auth.user().onDelete(async (user: admin.au
         details: `${user.displayName || user.email || user.uid} hesabı sistemden silindi.`
     };
      await db.collection("auditLogs").add(log);
+});
+
+export const onMessageCreate = onDocumentCreated('rooms/{roomId}/messages/{messageId}', async (event) => {
+    const snap = event.data;
+    if (!snap) {
+        console.log("No data associated with the event");
+        return;
+    }
+    const message = snap.data();
+    const { roomId } = event.params;
+
+    if (message.text && message.text.toLowerCase().includes('@walk')) {
+      const historySnapshot = await db.collection(`rooms/${roomId}/messages`)
+        .orderBy('createdAt', 'desc')
+        .where('createdAt', '<', message.createdAt)
+        .limit(10)
+        .get();
+
+      const history = historySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+              author: data.uid === 'ai-bot-walk' ? 'model' : 'user',
+              content: data.text
+          };
+      }).reverse();
+
+      const isGreeting = /^(selam|merhaba|hey|hi|sa)\b/i.test(message.text.replace(/@walk/i, '').trim());
+
+      try {
+        const responseText = await roomBotFlow({
+            history,
+            currentMessage: message.text,
+            isGreeting,
+            authorUsername: message.username,
+        });
+
+        const svg = `<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="50" fill="url(#bot-grad)"/><rect x="25" y="45" width="50" height="20" rx="10" fill="white" fill-opacity="0.8"/><circle cx="50" cy="40" r="15" fill="white"/><circle cx="50" cy="40" r="10" fill="url(#eye-grad)"/><path d="M35 70 Q 50 80, 65 70" stroke="white" stroke-width="4" stroke-linecap="round" fill="none"/><defs><linearGradient id="bot-grad" x1="0" y1="0" x2="100" y2="100"><stop stop-color="#8b5cf6"/><stop offset="1" stop-color="#3b82f6"/></linearGradient><radialGradient id="eye-grad"><stop offset="20%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#2563eb"/></radialGradient></defs></svg>`;
+        
+        await db.collection(`rooms/${roomId}/messages`).add({
+            uid: 'ai-bot-walk',
+            username: 'Walk',
+            photoURL: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`,
+            selectedAvatarFrame: 'avatar-frame-tech',
+            text: responseText,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            type: 'user',
+        });
+      } catch (error) {
+        console.error("Error running roomBotFlow:", error);
+      }
+    }
 });
