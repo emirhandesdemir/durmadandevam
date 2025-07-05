@@ -100,16 +100,12 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
             "mt-4 w-full max-w-sm flex justify-center items-center gap-2"
         )}>
            {isOwnProfile ? (
-              <>
-                <Button asChild variant="secondary" className="flex-1">
-                    <Link href="/profile">Profili Düzenle</Link>
-                </Button>
-                <Button asChild variant="secondary" size="icon">
-                    <Link href="/profile">
-                        <Settings className="h-5 w-5"/>
-                    </Link>
-                </Button>
-              </>
+              <Button asChild variant="secondary" className="flex-1">
+                  <Link href="/profile">
+                    <Settings className="mr-2 h-4 w-4"/>
+                    Profili ve Ayarları Düzenle
+                  </Link>
+              </Button>
             ) : (
                 <>
                     <FollowButton currentUserData={currentUserData} targetUser={profileUser} />
