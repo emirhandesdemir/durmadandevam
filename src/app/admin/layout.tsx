@@ -12,6 +12,7 @@ import Header from "@/components/admin/header";
 import { Loader2, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import AnimatedLogoLoader from "@/components/common/AnimatedLogoLoader";
 
 export default function AdminLayout({
   children,
@@ -37,9 +38,9 @@ export default function AdminLayout({
   // Yükleme ekranı: Kullanıcı ve yetki verileri gelene kadar gösterilir.
   if (loading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="ml-4 text-lg">Yönetici bilgileri yükleniyor...</p>
+      <div className="flex h-screen w-full flex-col items-center justify-center bg-background gap-4">
+        <AnimatedLogoLoader />
+        <p className="text-lg text-muted-foreground">Yönetici bilgileri yükleniyor...</p>
       </div>
     );
   }

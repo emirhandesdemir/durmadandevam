@@ -5,6 +5,7 @@ import { useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import SignUpForm from '@/components/auth/signup-form';
+import AnimatedLogoLoader from '@/components/common/AnimatedLogoLoader';
 
 function SignUpPageContent() {
   const router = useRouter();
@@ -17,11 +18,7 @@ function SignUpPageContent() {
   }, [user, loading, router]);
 
   if (loading || user) {
-     return (
-       <div className="flex min-h-screen items-center justify-center auth-bg">
-        <div className="h-12 w-12 rounded-full border-4 border-t-white animate-spin"></div>
-      </div>
-    );
+     return <AnimatedLogoLoader fullscreen isAuthPage />;
   }
 
   return (
@@ -43,12 +40,7 @@ function SignUpPageContent() {
  */
 export default function SignUpPage() {
   return (
-    <Suspense fallback={
-      // `SignUpPageContent` yüklenirken gösterilecek olan arayüz (yükleme animasyonu).
-      <div className="flex min-h-screen items-center justify-center auth-bg">
-        <div className="h-12 w-12 rounded-full border-4 border-t-white animate-spin"></div>
-      </div>
-    }>
+    <Suspense fallback={<AnimatedLogoLoader fullscreen isAuthPage />}>
       {/* Asıl sayfa içeriği */}
       <SignUpPageContent />
     </Suspense>

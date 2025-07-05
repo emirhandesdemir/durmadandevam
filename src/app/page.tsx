@@ -6,9 +6,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Users, Loader2, Download } from "lucide-react";
+import { Users, Download } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
+import AnimatedLogoLoader from "@/components/common/AnimatedLogoLoader";
 
 // PwaInstallButton component is moved here to consolidate files.
 function PwaInstallButton() {
@@ -81,11 +82,7 @@ export default function Home() {
   // Show a loading animation while the auth state is being determined.
   // This prevents the page from changing abruptly and provides a smoother experience.
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-16 w-16 animate-spin text-primary" />
-      </div>
-    );
+    return <AnimatedLogoLoader fullscreen />;
   }
   
   // If the user is logged in, this component returns null while the redirect happens.

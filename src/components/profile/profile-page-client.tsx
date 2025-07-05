@@ -85,7 +85,7 @@ export default function ProfilePageClient() {
         }
         if (user) {
             const encodedRef = btoa(user.uid);
-            setInviteLink(`${window.location.origin}/signup?ref=${encodedRef}`);
+            setInviteLink(`https://hiwewalk.netlify.app/signup?ref=${encodedRef}`);
         }
     }, [userData, user]);
     
