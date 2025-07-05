@@ -37,7 +37,7 @@ export default function Header({ onMenuOpen }: HeaderProps) {
                                 </linearGradient>
                             </defs>
                             <rect width="100" height="100" rx="20" fill="url(#logoGradient)"/>
-                            <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" fontSize="60" fontWeight="800" fill="hsl(var(--primary-foreground))" fontFamily="Poppins, sans-serif" letterSpacing="-5">HW</text>
+                            <text x="50%" y="55%" dominantBaseline="middle" textAnchor="middle" fontSize="60" fontWeight="800" fill="hsl(var(--primary-foreground))" fontFamily="Poppins, sans-serif" letterSpacing="-5">HW</text>
                         </svg>
                         <span className="text-xl font-bold tracking-tight">{appName}</span>
                     </Link>
