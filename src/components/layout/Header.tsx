@@ -21,19 +21,25 @@ export default function Header({ onMenuOpen }: HeaderProps) {
     const appName = themeSettings?.appName || 'HiweWalk';
     const hasUnreadNotifications = userData?.hasUnreadNotifications;
     
-    // Sadece ana profil/ayarlar sayfasındayken sağdan açılır menüyü göster.
+    // Show side menu button ONLY on the main profile settings page
     const showSideMenuButton = pathname === '/profile';
 
     return (
         <>
             <header className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="container flex h-14 items-center justify-between">
-                    <Link href="/home" className="flex items-center gap-3">
+                    <Link href="/home" className="flex items-center gap-2">
                         <svg width="32" height="32" viewBox="0 0 100 100" className="h-8 w-8">
-                            <rect width="100" height="100" rx="20" fill="hsl(var(--primary))"/>
-                            <text x="50%" y="52%" dominantBaseline="middle" textAnchor="middle" fontSize="52" fontWeight="bold" fill="hsl(var(--primary-foreground))" fontFamily="sans-serif">HW</text>
+                             <defs>
+                                <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style={{ stopColor: 'hsl(var(--primary))' }} />
+                                    <stop offset="100%" style={{ stopColor: 'hsl(var(--primary))', stopOpacity: 0.7 }} />
+                                </linearGradient>
+                            </defs>
+                            <rect width="100" height="100" rx="20" fill="url(#logoGradient)"/>
+                            <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" fontSize="60" fontWeight="800" fill="hsl(var(--primary-foreground))" fontFamily="Poppins, sans-serif" letterSpacing="-5">HW</text>
                         </svg>
-                        <span className="text-xl font-semibold tracking-tight hidden sm:inline">{appName}</span>
+                        <span className="text-xl font-bold tracking-tight">{appName}</span>
                     </Link>
                     
                     <div className="flex items-center gap-1">
