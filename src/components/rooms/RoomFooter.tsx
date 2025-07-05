@@ -3,21 +3,23 @@
 
 import { Button } from '@/components/ui/button';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
-import { Mic, MicOff, Settings, Loader2, ScreenShareOff, ScreenShare, Music, Camera, CameraOff, SwitchCamera, Gamepad2 } from 'lucide-react';
+import { Mic, MicOff, Settings, Loader2, ScreenShareOff, ScreenShare, Music, Camera, CameraOff, SwitchCamera, Gamepad2, Gift } from 'lucide-react';
 import ChatMessageInput from '../chat/ChatMessageInput';
 import type { Room } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { useState } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import MusicPlayerDialog from '../voice/MusicPlayerDialog';
+import { useAuth } from '@/contexts/AuthContext';
 
 
 interface RoomFooterProps {
     room: Room;
     onGameLobbyOpen: () => void;
+    onGiveawayOpen: () => void;
 }
 
-export default function RoomFooter({ room, onGameLobbyOpen }: RoomFooterProps) {
+export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: RoomFooterProps) {
     const { 
         isConnected, 
         isConnecting, 
@@ -32,9 +34,12 @@ export default function RoomFooter({ room, onGameLobbyOpen }: RoomFooterProps) {
         stopVideo,
         switchCamera,
     } = useVoiceChat();
+    const { user } = useAuth();
     const [showVideoConfirm, setShowVideoConfirm] = useState(false);
     const [isMusicPlayerOpen, setIsMusicPlayerOpen] = useState(false);
     
+    const isHost = user?.uid === room?.createdBy.uid;
+
     const handleScreenShare = () => {
         if (isSharingScreen) {
             stopScreenShare();
@@ -83,12 +88,14 @@ export default function RoomFooter({ room, onGameLobbyOpen }: RoomFooterProps) {
                                         <Button onClick={handleScreenShare} variant="ghost" size="icon" className="rounded-full">
                                             {isSharingScreen ? <ScreenShareOff className="text-destructive"/> : <ScreenShare />}
                                         </Button>
-                                         <Button variant="ghost" size="icon" className="rounded-full" onClick={onGameLobbyOpen}>
-                                            <Gamepad2 />
-                                        </Button>
                                         <Button onClick={handleMusicButtonClick} variant="ghost" size="icon" className="rounded-full">
                                             <Music />
                                         </Button>
+                                        {isHost && room.type === 'event' && (
+                                            <Button onClick={onGiveawayOpen} variant="ghost" size="icon" className="rounded-full text-primary">
+                                                <Gift />
+                                            </Button>
+                                        )}
                                     </div>
                                 </PopoverContent>
                             </Popover>

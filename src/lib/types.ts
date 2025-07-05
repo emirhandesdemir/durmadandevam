@@ -27,7 +27,7 @@ export interface ThemeSettings {
     light: ColorTheme;
     dark: ColorTheme;
     radius: string; // e.g. "0.5rem"
-    font: string; // e.g. "var(--font-inter)"
+    font: string; // e.g. "var(--font-jakarta)"
     appName?: string;
     appLogoUrl?: string;
     defaultMode?: 'light' | 'dark' | 'system';
@@ -169,6 +169,16 @@ export interface Comment {
     } | null;
 }
 
+export interface Giveaway {
+    status: 'idle' | 'active' | 'finished';
+    prize: string;
+    participants: { uid: string, username: string, photoURL: string | null }[];
+    winner?: { uid: string, username: string, photoURL: string | null };
+    startedAt?: Timestamp;
+    endedAt?: Timestamp;
+}
+
+
 export interface Room {
     id: string;
     name: string;
@@ -202,6 +212,7 @@ export interface Room {
     isMusicPlaying?: boolean;
     currentTrackIndex?: number;
     currentTrackName?: string;
+    giveaway?: Giveaway;
 }
 
 export interface PlaylistTrack {
