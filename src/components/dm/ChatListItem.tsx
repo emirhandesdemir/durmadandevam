@@ -106,7 +106,7 @@ export default function ChatListItem({ chat, currentUserId }: ChatListItemProps)
       <div 
         {...longPressEvents}
         className={cn(
-            "group relative flex items-center gap-4 p-3 border-b transition-colors cursor-pointer",
+            "group relative flex items-center gap-4 p-3 transition-colors cursor-pointer rounded-xl",
             isUnread ? "bg-primary/10" : "bg-card hover:bg-muted/50",
             showActions && "bg-muted/80"
         )}

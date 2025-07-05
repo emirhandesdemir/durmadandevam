@@ -3,17 +3,45 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageSquare, Plus, User } from 'lucide-react';
+import { Home, MessageSquare, Plus, User, Settings, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { motion } from 'framer-motion';
+import { useMemo } from 'react';
 
 const MotionLink = motion(Link);
 
 export default function BottomNav() {
   const pathname = usePathname();
   const { user, userData } = useAuth();
+
+  const centerButtonConfig = useMemo(() => {
+    if (pathname.startsWith('/profile')) {
+      return {
+        id: 'settings',
+        href: '/profile',
+        icon: Settings,
+        label: 'Ayarlar'
+      };
+    }
+    if (pathname === '/rooms') {
+      return {
+        id: 'create-room',
+        href: '/create-room',
+        icon: PlusCircle,
+        label: 'Oda Oluştur'
+      };
+    }
+    // Default
+    return {
+      id: 'create-post',
+      href: '/create-post',
+      icon: Plus,
+      label: 'Oluştur'
+    };
+  }, [pathname]);
+
 
   if (!user) {
     return null;
@@ -23,7 +51,7 @@ export default function BottomNav() {
   if ((pathname.startsWith('/rooms/') && pathname !== '/rooms') || (pathname.startsWith('/dm/') && pathname !== '/dm') || (pathname.startsWith('/call/'))) {
     return null;
   }
-
+  
   const navItems = [
     {
       id: 'home',
@@ -41,15 +69,15 @@ export default function BottomNav() {
     },
     {
       id: 'create',
-      isActive: pathname === '/create-post',
-      href: '/create-post',
-      icon: Plus,
-      label: 'Oluştur',
+      isActive: pathname === centerButtonConfig.href,
+      href: centerButtonConfig.href,
+      icon: centerButtonConfig.icon,
+      label: centerButtonConfig.label,
     },
     {
       id: 'profile',
       isActive: pathname.startsWith('/profile'),
-      href: `/profile/${user.uid}`,
+      href: `/profile`,
       label: 'Profil',
     },
   ];
