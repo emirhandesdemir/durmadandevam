@@ -145,8 +145,8 @@ export default function MainAppLayout({
         <main 
           ref={scrollRef} 
           className={cn(
-            "flex-1 flex flex-col hide-scrollbar",
-            isFullPageLayout ? "overflow-hidden" : "overflow-y-auto pb-20"
+            "flex-1 flex flex-col hide-scrollbar pb-20",
+            isFullPageLayout ? "overflow-hidden" : "overflow-y-auto"
           )}
         >
            {!isHeaderlessPage && (
