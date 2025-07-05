@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { storage } from "@/lib/firebase";
-import { ref, uploadString, getDownloadURL } from "firebase/storage";
+import { ref, getDownloadURL, uploadBytes } from "firebase/storage";
 import { applyImageFilter } from "@/lib/actions/imageActions";
 import { checkImageSafety } from "@/lib/actions/moderationActions";
 import { createPost } from "@/lib/actions/postActions";
@@ -26,6 +26,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from "../ui/input";
 import { useTranslation } from "react-i18next";
 
+// Helper function to convert data URI to Blob for more robust uploads
+async function dataUriToBlob(dataUri: string): Promise<Blob> {
+    const response = await fetch(dataUri);
+    const blob = await response.blob();
+    return blob;
+}
 
 export default function NewPostForm() {
   const router = useRouter();
@@ -170,6 +176,36 @@ export default function NewPostForm() {
       }
   }
 
+  const handleAiEdit = async () => {
+    if (!croppedImage || !aiPrompt.trim()) return;
+
+    setIsAiEditing(false); // Close dialog
+    setIsAiLoading(true); // Show progress bar on the form
+    try {
+        const result = await applyImageFilter({
+            photoDataUri: croppedImage,
+            style: aiPrompt,
+        });
+
+        if (result.success && result.data?.styledPhotoDataUri) {
+            setCroppedImage(result.data.styledPhotoDataUri);
+            setWasEditedByAI(true);
+            toast({ description: "Resim başarıyla AI ile düzenlendi." });
+            setAiPrompt("");
+        } else {
+            throw new Error(result.error || "AI düzenlemesi başarısız oldu.");
+        }
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "AI Düzenleme Hatası",
+            description: error.message,
+        });
+    } finally {
+        setIsAiLoading(false);
+    }
+  };
+
   const handleShare = async () => {
     if (!user || !userData) {
       toast({ variant: 'destructive', description: 'Bu işlemi yapmak için giriş yapmalısınız veya verilerinizin yüklenmesini beklemelisiniz.' });
@@ -185,7 +221,6 @@ export default function NewPostForm() {
     try {
         let imageUrl = "";
         
-        // Content Moderation Check
         if (featureFlags?.contentModerationEnabled && croppedImage) {
             setIsModerating(true);
             const safetyResult = await checkImageSafety({ photoDataUri: croppedImage });
@@ -204,8 +239,11 @@ export default function NewPostForm() {
         }
         
         if (croppedImage) {
-            const imageRef = ref(storage, `upload/posts/${user.uid}/${Date.now()}_post.jpg`);
-            const snapshot = await uploadString(imageRef, croppedImage, 'data_url');
+            const imageBlob = await dataUriToBlob(croppedImage);
+            const fileExtension = imageBlob.type.split('/')[1] || 'jpg';
+            const imageRef = ref(storage, `upload/posts/${user.uid}/${Date.now()}_post.${fileExtension}`);
+            
+            const snapshot = await uploadBytes(imageRef, imageBlob);
             imageUrl = await getDownloadURL(snapshot.ref);
         }
 
@@ -235,36 +273,6 @@ export default function NewPostForm() {
         });
     } finally {
         setIsSubmitting(false);
-    }
-  };
-
-  const handleAiEdit = async () => {
-    if (!croppedImage || !aiPrompt.trim()) return;
-
-    setIsAiLoading(true);
-    try {
-        const result = await applyImageFilter({
-            photoDataUri: croppedImage,
-            style: aiPrompt,
-        });
-
-        if (result.success && result.data?.styledPhotoDataUri) {
-            setCroppedImage(result.data.styledPhotoDataUri);
-            setWasEditedByAI(true);
-            toast({ description: "Resim başarıyla AI ile düzenlendi." });
-            setIsAiEditing(false);
-            setAiPrompt("");
-        } else {
-            throw new Error(result.error || "AI düzenlemesi başarısız oldu.");
-        }
-    } catch (error: any) {
-        toast({
-            variant: "destructive",
-            title: "AI Düzenleme Hatası",
-            description: error.message,
-        });
-    } finally {
-        setIsAiLoading(false);
     }
   };
 
@@ -331,6 +339,15 @@ export default function NewPostForm() {
                     )}
                 </PopoverContent>
             </Popover>
+
+          {isAiLoading && (
+            <div className="px-5 pb-2">
+                <div className="flex items-center gap-2 text-sm text-primary p-2 bg-primary/10 rounded-lg animate-in fade-in">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Yapay zeka resmi düzenliyor, lütfen bekleyin...</span>
+                </div>
+            </div>
+          )}
 
           {croppedImage && (
             <div className="ml-0 sm:ml-16 space-y-2">
