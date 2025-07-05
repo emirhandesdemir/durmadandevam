@@ -15,6 +15,7 @@ import { Download, X } from 'lucide-react';
 import ActiveCallBar from "@/components/voice/ActiveCallBar";
 import ActiveDmCallBar from "@/components/voice/ActiveDmCallBar";
 import ExitConfirmation from "@/components/common/ExitConfirmation";
+import MainNavSheet from "@/components/layout/MainNavSheet";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -115,6 +116,7 @@ export default function MainAppLayout({
   const { scrollY } = useScroll({ container: scrollRef });
   const [hidden, setHidden] = useState(false);
   const pathname = usePathname();
+  const [isNavSheetOpen, setIsNavSheetOpen] = useState(false);
 
   const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/');
   const isHeaderlessPage = isFullPageLayout;
@@ -139,6 +141,7 @@ export default function MainAppLayout({
     <VoiceChatProvider>
       <IncomingCallManager />
       <ExitConfirmation />
+      <MainNavSheet isOpen={isNavSheetOpen} onOpenChange={setIsNavSheetOpen} />
       
       <div className="relative flex h-dvh w-full flex-col bg-background overflow-hidden">
         <ActiveDmCallBar />
@@ -158,7 +161,7 @@ export default function MainAppLayout({
                 transition={{ duration: 0.35, ease: "easeInOut" }}
                 className="sticky top-0 z-40"
               >
-                <Header />
+                <Header onMenuOpen={() => setIsNavSheetOpen(true)} />
               </motion.header>
            )}
           

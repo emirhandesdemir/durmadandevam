@@ -6,6 +6,8 @@ import {
   doc,
   runTransaction,
   increment,
+  Timestamp,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { createNotification } from './notificationActions';
 
@@ -13,6 +15,42 @@ interface NewUserInfo {
     uid: string;
     username: string;
     photoURL: string;
+}
+
+export async function getDiamondsForAd(userId: string) {
+    if (!userId) {
+        throw new Error("Kullanıcı ID'si gerekli.");
+    }
+    const userRef = doc(db, 'users', userId);
+    const adReward = 5;
+    const cooldownSeconds = 60; // 1 minute cooldown
+
+    return await runTransaction(db, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) {
+            throw new Error("Kullanıcı bulunamadı.");
+        }
+
+        const userData = userDoc.data();
+        const lastAdWatched = userData.lastAdWatchedAt as Timestamp | undefined;
+
+        if (lastAdWatched) {
+            const secondsSinceLastAd = (Timestamp.now().seconds - lastAdWatched.seconds);
+            if (secondsSinceLastAd < cooldownSeconds) {
+                const timeLeft = cooldownSeconds - secondsSinceLastAd;
+                throw new Error(`Yeni bir reklam izlemek için lütfen ${timeLeft} saniye bekleyin.`);
+            }
+        }
+        
+        transaction.update(userRef, {
+            diamonds: increment(adReward),
+            lastAdWatchedAt: serverTimestamp()
+        });
+        
+        return { success: true, reward: adReward };
+    }).catch(e => {
+        throw new Error(e.message);
+    });
 }
 
 export async function creditReferrer(referrerId: string, newUser: NewUserInfo) {

@@ -47,6 +47,7 @@ export interface UserProfile {
     country?: string;
     createdAt: Timestamp;
     lastActionTimestamp?: Timestamp; // For rate limiting
+    lastAdWatchedAt?: Timestamp; // For ad reward cooldown
     privateProfile: boolean;
     acceptsFollowRequests: boolean;
     showOnlineStatus?: boolean;

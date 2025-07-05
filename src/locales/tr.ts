@@ -7,9 +7,12 @@ export const tr = {
     signup: "Kayıt Ol",
     install_app: "Uygulamayı Yükle",
     
-    // Header
+    // Header & Nav
     messages: "Mesajlar",
     notifications: "Bildirimler",
+    store: "Mağaza",
+    settings: "Ayarlar",
+    search_user: "Kullanıcı Ara",
 
     // Profil Sayfası
     edit_profile: "Profili Düzenle",
@@ -21,5 +24,16 @@ export const tr = {
     privacy_settings: "Gizlilik Ayarları",
     invitation_system: "Davet Sistemi",
     profile_viewers: "Profilime Bakanlar",
+
+    // Mağaza Sayfası
+    watch_ad_for_diamonds: "Reklam İzle & Elmas Kazan",
+    watch_ad_desc: "Kısa bir reklam izleyerek anında {{count}} elmas kazan.",
+    watch_ad_button: "Reklam İzle (+{{count}} Elmas)",
+    premium_membership: "Premium Üyelik",
+    premium_desc: "Çok yakında özel avantajlar, çerçeveler ve daha fazlasıyla premium üyelik burada olacak!",
+    coming_soon: "Yakında...",
+    ad_cooldown_error: "Yeni bir reklam izlemek için lütfen {{seconds}} saniye bekleyin.",
+    ad_watch_success: "Tebrikler! Hesabınıza {{count}} elmas eklendi.",
+    premium_coming_soon_toast: "Premium üyelik ve getireceği harika özellikler için heyecanlıyız! Gelişmeler için takipte kalın."
   },
 };
