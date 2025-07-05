@@ -5,15 +5,13 @@ import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Search, Send, Bell, MoreVertical } from "lucide-react";
+import { Search, Send, Bell, Store } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import UserSearchDialog from "../search/UserSearchDialog";
 
-interface HeaderProps {
-    onMenuOpen: () => void;
-}
+interface HeaderProps {}
 
-export default function Header({ onMenuOpen }: HeaderProps) {
+export default function Header({}: HeaderProps) {
     const { themeSettings, userData, totalUnreadDms } = useAuth();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const pathname = usePathname();
@@ -21,8 +19,8 @@ export default function Header({ onMenuOpen }: HeaderProps) {
     const appName = themeSettings?.appName || 'HiweWalk';
     const hasUnreadNotifications = userData?.hasUnreadNotifications;
     
-    // Show side menu button ONLY on the main profile settings page
-    const showSideMenuButton = pathname === '/profile';
+    // Show store button ONLY on the main profile settings page
+    const onProfileSettingsPage = pathname === '/profile';
 
     return (
         <>
@@ -43,10 +41,12 @@ export default function Header({ onMenuOpen }: HeaderProps) {
                     </Link>
                     
                     <div className="flex items-center gap-1">
-                        {showSideMenuButton ? (
-                             <Button variant="ghost" size="icon" className="rounded-full" onClick={onMenuOpen}>
-                                <MoreVertical className="h-6 w-6" />
-                                <span className="sr-only">Menüyü Aç</span>
+                        {onProfileSettingsPage ? (
+                             <Button asChild variant="ghost">
+                                <Link href="/store">
+                                    <Store className="mr-2 h-5 w-5" />
+                                    Mağaza
+                                </Link>
                             </Button>
                         ) : (
                             <>
@@ -66,7 +66,7 @@ export default function Header({ onMenuOpen }: HeaderProps) {
                                     <Link href="/notifications">
                                         <div className="relative">
                                             <Bell className="h-5 w-5" />
-                                            {hasUnreadNotifications && <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span></span>}
+                                            {hasUnreadNotifications && <span className="absolute -top-0.5 -right-0.5 block h-2.5 w-2.5 rounded-full bg-destructive ring-2 ring-background" />}
                                         </div>
                                     </Link>
                                 </Button>

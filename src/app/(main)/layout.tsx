@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
 import ActiveCallBar from "@/components/voice/ActiveCallBar";
 import ExitConfirmation from "@/components/common/ExitConfirmation";
-import MainNavSheet from "@/components/layout/MainNavSheet";
 import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -115,7 +114,6 @@ export default function MainAppLayout({
   const { scrollY } = useScroll({ container: scrollRef });
   const [hidden, setHidden] = useState(false);
   const pathname = usePathname();
-  const [isNavSheetOpen, setIsNavSheetOpen] = useState(false);
 
   const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/');
   const isHeaderlessPage = isFullPageLayout;
@@ -139,7 +137,6 @@ export default function MainAppLayout({
   return (
     <VoiceChatProvider>
       <ExitConfirmation />
-      <MainNavSheet isOpen={isNavSheetOpen} onOpenChange={setIsNavSheetOpen} />
       <PremiumWelcomeManager />
       
       <div className="relative flex h-dvh w-full flex-col bg-background overflow-hidden">
@@ -159,7 +156,7 @@ export default function MainAppLayout({
                 transition={{ duration: 0.35, ease: "easeInOut" }}
                 className="sticky top-0 z-40"
               >
-                <Header onMenuOpen={() => setIsNavSheetOpen(true)} />
+                <Header />
               </motion.header>
            )}
           
