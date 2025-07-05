@@ -20,17 +20,17 @@ export default function ChatListSelectionHeader({ count, onClear, onPin, onDelet
     const [showPinConfirm, setShowPinConfirm] = useState(false);
 
     const handlePin = async () => {
+        setShowPinConfirm(false);
         setIsProcessing(true);
         await onPin();
         setIsProcessing(false);
-        setShowPinConfirm(false);
     }
 
     const handleDelete = async () => {
+        setShowDeleteConfirm(false);
         setIsProcessing(true);
         await onDelete();
         setIsProcessing(false);
-        setShowDeleteConfirm(false);
     }
     
     return (
@@ -57,13 +57,13 @@ export default function ChatListSelectionHeader({ count, onClear, onPin, onDelet
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Sohbetleri Sabitle?</AlertDialogTitle>
-                        <AlertDialogDescription>Seçili {count} sohbeti listenin başına sabitlemek istediğinizden emin misiniz?</AlertDialogDescription>
+                        <AlertDialogDescription>Seçili {count} sohbeti listenin başına sabitlemek/sabitlemesini kaldırmak istediğinizden emin misiniz?</AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel disabled={isProcessing}>İptal</AlertDialogCancel>
                         <AlertDialogAction onClick={handlePin} disabled={isProcessing}>
                             {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Sabitle
+                            Onayla
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -74,7 +74,7 @@ export default function ChatListSelectionHeader({ count, onClear, onPin, onDelet
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Sohbetleri Sil?</AlertDialogTitle>
-                        <AlertDialogDescription>Seçili {count} sohbeti gizlemek istediğinizden emin misiniz? Bu işlem sohbetleri kalıcı olarak silmez, sadece gelen kutunuzdan gizler.</AlertDialogDescription>
+                        <AlertDialogDescription>Seçili {count} sohbeti kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.</AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel disabled={isProcessing}>İptal</AlertDialogCancel>

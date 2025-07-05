@@ -21,7 +21,6 @@ export default function PostsFeed() {
     const sortedPosts = useMemo(() => {
         const allHiddenIds = new Set([...(userData?.hiddenPostIds || []), ...clientHiddenIds]);
 
-        // Filter out blocked and hidden posts first
         const filteredPosts = posts.filter(post => 
             !userData?.blockedUsers?.includes(post.uid) && !allHiddenIds.has(post.id)
         );
@@ -30,16 +29,7 @@ export default function PostsFeed() {
         const postsInUserLanguage = filteredPosts.filter(p => p.language === i18n.language);
         const otherLanguagePosts = filteredPosts.filter(p => p.language !== i18n.language);
 
-        // If the user is male, further prioritize female posts within the user's language group
-        if (userData?.gender === 'male') {
-            const femalePosts = postsInUserLanguage.filter(p => p.userGender === 'female');
-            const otherSameLanguagePosts = postsInUserLanguage.filter(p => p.userGender !== 'female');
-            
-            // Combine with female posts first, then other same-language posts, then other-language posts
-            return [...femalePosts, ...otherSameLanguagePosts, ...otherLanguagePosts];
-        }
-
-        // For female users or users with no gender set, just combine by language
+        // For all users, just combine by language
         return [...postsInUserLanguage, ...otherLanguagePosts];
 
     }, [posts, userData, i18n.language, clientHiddenIds]);

@@ -28,7 +28,7 @@ export default function UserSearchDialog({ isOpen, onOpenChange }: UserSearchDia
   const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(false);
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const debouncedSearchTerm = useDebounce(searchTerm, 200);
 
   useEffect(() => {
     if (debouncedSearchTerm.length > 1 && currentUser) {
