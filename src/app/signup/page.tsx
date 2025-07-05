@@ -7,7 +7,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import SignUpForm from '@/components/auth/signup-form';
 import AnimatedLogoLoader from '@/components/common/AnimatedLogoLoader';
 
-function SignUpPageContent() {
+/**
+ * Kayıt Sayfası
+ * 
+ * Bu bileşen, `Suspense` kullanarak sayfa içeriğinin yüklenmesini bekler.
+ * Bu, özellikle yavaş bağlantılarda veya büyük bileşenlerde kullanıcı deneyimini iyileştirir.
+ * İçerik yüklenene kadar bir yükleme animasyonu gösterilir.
+ */
+export default function SignUpPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
 
@@ -22,27 +29,13 @@ function SignUpPageContent() {
   }
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center p-4 auth-bg">
-      <div className="w-full animate-in zoom-in-95 duration-500">
-        <SignUpForm />
-      </div>
-    </main>
-  );
-}
-
-
-/**
- * Kayıt Sayfası
- * 
- * Bu bileşen, `Suspense` kullanarak sayfa içeriğinin yüklenmesini bekler.
- * Bu, özellikle yavaş bağlantılarda veya büyük bileşenlerde kullanıcı deneyimini iyileştirir.
- * İçerik yüklenene kadar bir yükleme animasyonu gösterilir.
- */
-export default function SignUpPage() {
-  return (
     <Suspense fallback={<AnimatedLogoLoader fullscreen isAuthPage />}>
       {/* Asıl sayfa içeriği */}
-      <SignUpPageContent />
+      <main className="relative flex min-h-screen flex-col items-center justify-center p-4 auth-bg">
+        <div className="w-full animate-in zoom-in-95 duration-500">
+          <SignUpForm />
+        </div>
+      </main>
     </Suspense>
   );
 }
