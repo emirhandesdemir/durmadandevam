@@ -1,3 +1,3 @@
-// Bu dosya artık kullanılmamaktadır. Gönderi akışı mantığı
-// `src/components/posts/PostsFeed.tsx` dosyasına taşınmıştır.
-// Karışıklığı önlemek için içeriği temizlenmiştir ve güvenle silinebilir.
+// This file is now obsolete.
+// The posts feed logic has been moved to `src/components/posts/PostsFeed.tsx`.
+// This file can be safely deleted to improve code clarity.
