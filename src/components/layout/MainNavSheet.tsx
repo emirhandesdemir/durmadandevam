@@ -1,6 +1,6 @@
 
 'use client';
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { LogOut, Settings, Store, Crown } from "lucide-react";
@@ -28,8 +28,12 @@ export default function MainNavSheet({ isOpen, onOpenChange }: MainNavSheetProps
 
     return (
         <Sheet open={isOpen} onOpenChange={onOpenChange}>
-            <SheetContent side="right" className="flex flex-col p-0 pt-8 w-full max-w-xs sm:max-w-sm">
-                <nav className="flex-1 space-y-2 p-4">
+            <SheetContent side="right" className="flex flex-col p-0 pt-4 w-full max-w-xs sm:max-w-sm">
+                 <SheetHeader className="p-4 pt-0">
+                    <SheetTitle className="sr-only">Ana Menü</SheetTitle>
+                    <SheetDescription className="sr-only">Uygulama mağazası, ayarlar ve diğer seçenekler.</SheetDescription>
+                </SheetHeader>
+                <nav className="flex-1 space-y-2 p-4 pt-0">
                     {isPremium && (
                         <NavLink href="/premium" onOpenChange={onOpenChange}>
                             <Crown className="h-5 w-5 text-yellow-500" />
