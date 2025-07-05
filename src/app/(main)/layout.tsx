@@ -9,11 +9,9 @@ import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-
 import { useState, useRef, useEffect } from 'react';
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import IncomingCallManager from '@/components/common/IncomingCallManager';
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
 import ActiveCallBar from "@/components/voice/ActiveCallBar";
-import ActiveDmCallBar from "@/components/voice/ActiveDmCallBar";
 import ExitConfirmation from "@/components/common/ExitConfirmation";
 import MainNavSheet from "@/components/layout/MainNavSheet";
 import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
@@ -140,13 +138,11 @@ export default function MainAppLayout({
 
   return (
     <VoiceChatProvider>
-      <IncomingCallManager />
       <ExitConfirmation />
       <MainNavSheet isOpen={isNavSheetOpen} onOpenChange={setIsNavSheetOpen} />
       <PremiumWelcomeManager />
       
       <div className="relative flex h-dvh w-full flex-col bg-background overflow-hidden">
-        <ActiveDmCallBar />
         <PwaInstallBar />
         
         <main 

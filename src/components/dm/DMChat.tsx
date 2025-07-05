@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { UserProfile, DirectMessage } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Loader2, Video, Phone } from 'lucide-react';
+import { ChevronLeft, Loader2 } from 'lucide-react';
 import NewMessageInput from './NewMessageInput';
 import MessageBubble from './MessageBubble';
 import Link from 'next/link';
@@ -16,10 +16,6 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { initiateCall } from '@/lib/actions/callActions';
-import { useRouter } from 'next/navigation';
-import CallStatusMessage from './CallStatusMessage';
-
 
 interface DMChatProps {
   chatId: string;
@@ -31,10 +27,8 @@ interface DMChatProps {
  */
 export default function DMChat({ chatId, partner }: DMChatProps) {
   const { user, userData } = useAuth();
-  const router = useRouter();
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isCalling, setIsCalling] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -60,23 +54,6 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
   
-  const handleInitiateCall = async (type: 'video' | 'audio') => {
-    if (!user || !userData || !partner) return;
-    setIsCalling(true);
-    try {
-      const callId = await initiateCall(
-        { uid: user.uid, username: userData.username, photoURL: userData.photoURL || null },
-        { uid: partner.uid, username: partner.username, photoURL: partner.photoURL || null },
-        type
-      );
-      router.push(`/call/${callId}`);
-    } catch (error: any) {
-      toast({ variant: 'destructive', description: error.message || "Arama başlatılamadı." });
-      setIsCalling(false);
-    }
-  }
-
-
   if (loading) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-10 w-10 animate-spin" /></div>;
   }
@@ -114,21 +91,11 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
                 </p>
             </div>
         </Link>
-        <div className="flex-1" />
-        <Button variant="ghost" size="icon" className="rounded-full" onClick={() => handleInitiateCall('audio')} disabled={isCalling}>
-            <Phone className="h-5 w-5" />
-        </Button>
-        <Button variant="ghost" size="icon" className="rounded-full" onClick={() => handleInitiateCall('video')} disabled={isCalling}>
-            {isCalling ? <Loader2 className="h-5 w-5 animate-spin"/> : <Video className="h-5 w-5" />}
-        </Button>
       </header>
 
       {/* Mesaj Alanı */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map(msg => {
-            if (msg.type === 'call') {
-                return <CallStatusMessage key={msg.id} message={msg} />;
-            }
             return <MessageBubble key={msg.id} message={msg} currentUserId={user.uid} chatId={chatId} />;
         })}
         <div ref={messagesEndRef} />
