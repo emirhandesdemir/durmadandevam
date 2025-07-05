@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, query, where, orderBy, onSnapshot, limit, getDocs, doc, updateDoc, writeBatch, Query } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Notification } from '@/lib/types';
 import NotificationItem from './NotificationItem';
@@ -20,40 +20,6 @@ export default function NotificationList({ filter }: NotificationListProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const markAllAsRead = useCallback(async () => {
-    if (!user) return;
-    
-    const unreadQuery = query(
-      collection(db, 'users', user.uid, 'notifications'), 
-      where('read', '==', false)
-    );
-    const unreadSnapshot = await getDocs(unreadQuery);
-    const userRef = doc(db, 'users', user.uid);
-
-    // If there's nothing to mark as read, we still ensure the main flag is false.
-    if (unreadSnapshot.empty) {
-      await updateDoc(userRef, { hasUnreadNotifications: false });
-      return;
-    }
-
-    const batch = writeBatch(db);
-    unreadSnapshot.forEach(doc => {
-      batch.update(doc.ref, { read: true });
-    });
-    
-    batch.update(userRef, { hasUnreadNotifications: false });
-    
-    await batch.commit();
-
-  }, [user]);
-
-  useEffect(() => {
-    if (filter === 'all') {
-      markAllAsRead();
-    }
-  }, [filter, markAllAsRead]);
-
-
   useEffect(() => {
     if (!user) {
       setLoading(false);
@@ -61,8 +27,8 @@ export default function NotificationList({ filter }: NotificationListProps) {
     }
 
     setLoading(true);
-    // This query no longer needs a composite index. It just sorts all notifications by date.
-    // Filtering will be done on the client.
+    // Bu sorgu artık sadece bildirimleri tarihe göre sıralar.
+    // Filtreleme, daha iyi performans için istemci tarafında yapılır.
     const notifsRef = collection(db, 'users', user.uid, 'notifications');
     const q = query(notifsRef, orderBy('createdAt', 'desc'), limit(50));
 
@@ -73,7 +39,7 @@ export default function NotificationList({ filter }: NotificationListProps) {
           (doc) => ({ id: doc.id, ...doc.data() } as Notification)
         );
 
-        // Apply filtering on the client-side
+        // İstemci tarafında filtreleme uygula.
         if (filter !== 'all') {
           notifsData = notifsData.filter(n => n.type === filter);
         }
@@ -88,7 +54,7 @@ export default function NotificationList({ filter }: NotificationListProps) {
     );
 
     return () => unsubscribe();
-  }, [user, filter]); // Rerun when filter changes
+  }, [user, filter]);
 
   if (loading) {
     return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>;

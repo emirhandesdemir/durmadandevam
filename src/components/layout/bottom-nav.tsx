@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageCircle, Plus, PlusCircle, Bell } from 'lucide-react';
+import { Home, MessageCircle, Plus, Swords } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -11,8 +11,7 @@ import { useMemo } from 'react';
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const { user, userData, totalUnreadDms } = useAuth();
-  const hasUnreadNotifications = userData?.hasUnreadNotifications;
+  const { user } = useAuth();
 
   if (!user) {
     return null;
@@ -23,20 +22,20 @@ export default function BottomNav() {
     return null;
   }
   
-  const navItems = [
+  const navItems = useMemo(() => [
     { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
-    { id: 'dm', href: '/dm', icon: MessageCircle, label: 'Sohbetler', badgeCount: totalUnreadDms },
+    { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
     { id: 'create-post', href: '/create-post', icon: Plus, label: 'Oluştur'},
-    { id: 'notifications', href: '/notifications', icon: Bell, label: 'Bildirimler', hasBadge: hasUnreadNotifications },
+    { id: 'matchmaking', href: '/matchmaking', icon: Swords, label: 'Eşleşme' },
     { id: 'profile', href: `/profile/${user.uid}`, icon: Avatar, label: 'Profil' },
-  ];
+  ], [user.uid]);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 w-full border-t bg-background/95 backdrop-blur-sm">
         <nav className="mx-auto flex h-16 max-w-md items-center justify-around">
             {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = item.id === 'dm' ? pathname.startsWith('/dm') : pathname === item.href;
+                const isActive = item.id === 'rooms' ? pathname.startsWith('/rooms') : item.id === 'matchmaking' ? pathname.startsWith('/matchmaking') : pathname === item.href;
                 
                 return (
                   <Link
@@ -56,13 +55,6 @@ export default function BottomNav() {
                        ) : (
                             <Icon className={cn("h-6 w-6", item.id === 'create-post' && 'h-8 w-8 text-primary bg-primary/20 p-1.5 rounded-full')} />
                        )}
-                       {item.badgeCount && item.badgeCount > 0 ? (
-                            <div className="absolute -top-1 -right-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
-                                {item.badgeCount > 9 ? '9+' : item.badgeCount}
-                            </div>
-                        ) : item.hasBadge && (
-                             <span className="absolute -top-0.5 -right-0.5 block h-2.5 w-2.5 rounded-full bg-destructive ring-2 ring-background" />
-                        )}
                     </div>
                     {item.id !== 'create-post' && (
                         <span className="text-[10px] font-medium">{item.label}</span>

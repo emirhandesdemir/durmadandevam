@@ -3,6 +3,10 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Bell, AtSign, Heart, MessageCircle, UserPlus } from 'lucide-react';
 import NotificationList from '@/components/notifications/NotificationList';
+import { useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 /**
  * Bildirimler Sayfası
@@ -12,6 +16,20 @@ import NotificationList from '@/components/notifications/NotificationList';
  * filtrelemek için sekmeli bir yapı kullanır.
  */
 export default function NotificationsPage() {
+  const { user } = useAuth();
+
+  // Bu sayfa görüntülendiğinde, kullanıcının profilindeki
+  // 'hasUnreadNotifications' bayrağını 'false' olarak güncelle.
+  // Bu, üst menüdeki kırmızı bildirim noktasını kaldırır.
+  useEffect(() => {
+    if (user) {
+      const userRef = doc(db, 'users', user.uid);
+      updateDoc(userRef, { hasUnreadNotifications: false }).catch(err => {
+        console.error("Failed to mark notifications as read:", err);
+      });
+    }
+  }, [user]);
+
 
   return (
     <div className="container mx-auto max-w-3xl py-6">
