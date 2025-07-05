@@ -6,7 +6,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
-  importScripts: ['/OneSignalSDKWorker.js'],
+  importScripts: ['https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js'],
 });
 
 const nextConfig: NextConfig = {
