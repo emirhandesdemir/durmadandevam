@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Palette, Loader2, Sparkles, Lock, Camera, Gift, Copy, Users, Globe, User as UserIcon, Shield } from "lucide-react";
+import { LogOut, Palette, Loader2, Sparkles, Lock, Camera, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown } from "lucide-react";
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
@@ -35,6 +35,7 @@ const bubbleOptions = [
     { id: "bubble-style-3", name: "Gün Batımı" },
     { id: "bubble-style-4", name: "Orman" },
     { id: "bubble-style-fire", name: "Alevli" },
+    { id: "bubble-style-premium", name: "Premium", isPremium: true },
 ];
 
 const avatarFrameOptions = [
@@ -43,6 +44,7 @@ const avatarFrameOptions = [
     { id: "avatar-frame-devil", name: "Şeytan Kanadı" },
     { id: "avatar-frame-snake", name: "Yılan" },
     { id: "avatar-frame-tech", name: "Tekno Aura" },
+    { id: "avatar-frame-premium", name: "Premium", isPremium: true },
 ];
 
 export default function ProfilePageClient() {
@@ -69,6 +71,7 @@ export default function ProfilePageClient() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [inviteLink, setInviteLink] = useState("");
 
+    const isPremium = userData?.premiumUntil && userData.premiumUntil.toDate() > new Date();
 
     useEffect(() => {
         if (userData) {
@@ -322,12 +325,13 @@ export default function ProfilePageClient() {
                             <Label className="text-base font-medium">Sohbet Baloncuğu</Label>
                             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-2">
                                 {bubbleOptions.map(option => (
-                                    <div key={option.id} onClick={() => setSelectedBubble(option.id)} className={cn("flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer p-2 aspect-square hover:bg-accent", selectedBubble === option.id ? "border-primary" : "")}>
+                                    <button key={option.id} onClick={() => setSelectedBubble(option.id)} disabled={option.isPremium && !isPremium} className={cn("flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer p-2 aspect-square hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50", selectedBubble === option.id ? "border-primary" : "")}>
                                         <div className="relative h-12 w-12 bg-muted rounded-full overflow-hidden">
                                             {option.id !== "" && (<div className={`bubble-wrapper ${option.id}`}>{Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}</div>)}
+                                            {option.isPremium && <Crown className="absolute top-1 right-1 h-4 w-4 text-red-500"/>}
                                         </div>
                                         <span className="text-xs font-bold text-center">{option.name}</span>
-                                    </div>
+                                    </button>
                                 ))}
                             </div>
                         </div>
@@ -335,10 +339,13 @@ export default function ProfilePageClient() {
                             <Label className="text-base font-medium">Avatar Çerçevesi</Label>
                              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-2">
                                 {avatarFrameOptions.map(option => (
-                                    <div key={option.id} onClick={() => setSelectedAvatarFrame(option.id)} className={cn("flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer p-2 aspect-square hover:bg-accent", selectedAvatarFrame === option.id ? "border-primary" : "")}>
-                                        <div className={cn("avatar-frame-wrapper h-12 w-12", option.id)}><Avatar className="relative z-[1] h-full w-full bg-muted" /></div>
+                                    <button key={option.id} onClick={() => setSelectedAvatarFrame(option.id)} disabled={option.isPremium && !isPremium} className={cn("flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer p-2 aspect-square hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50", selectedAvatarFrame === option.id ? "border-primary" : "")}>
+                                        <div className={cn("avatar-frame-wrapper h-12 w-12", option.id)}>
+                                            <Avatar className="relative z-[1] h-full w-full bg-muted" />
+                                            {option.isPremium && <Crown className="absolute top-0 right-0 h-4 w-4 text-red-500"/>}
+                                        </div>
                                         <span className="text-xs font-bold text-center">{option.name}</span>
-                                    </div>
+                                    </button>
                                 ))}
                             </div>
                         </div>

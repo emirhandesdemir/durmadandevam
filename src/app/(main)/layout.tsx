@@ -12,7 +12,6 @@ import { cn } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
 import ActiveCallBar from "@/components/voice/ActiveCallBar";
-import ExitConfirmation from "@/components/common/ExitConfirmation";
 import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -136,7 +135,6 @@ export default function MainAppLayout({
 
   return (
     <VoiceChatProvider>
-      <ExitConfirmation />
       <PremiumWelcomeManager />
       
       <div className="relative flex h-dvh w-full flex-col bg-background overflow-hidden">

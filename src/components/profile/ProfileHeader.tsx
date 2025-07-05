@@ -3,7 +3,7 @@
 
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff, UserCheck, BadgeCheck } from 'lucide-react';
+import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff, UserCheck, Crown } from 'lucide-react';
 import FollowButton from './FollowButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
@@ -39,6 +39,7 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
   const areMutuals = currentUserData?.following?.includes(profileUser.uid) && profileUser.following?.includes(currentUserAuth?.uid);
   const amIBlockedByThisUser = profileUser.blockedUsers?.includes(currentUserAuth?.uid);
   const haveIBlockedThisUser = currentUserData?.blockedUsers?.includes(profileUser.uid);
+  const isPremium = profileUser.premiumUntil && profileUser.premiumUntil.toDate() > new Date();
 
   const handleStatClick = (type: 'followers' | 'following') => {
     setDialogType(type);
@@ -52,7 +53,6 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
     setIsBlocking(false);
     if (result.success) {
       toast({ description: `${profileUser.username} engellendi.` });
-      // We don't need to redirect, the UI will update to show the unblock state
     } else {
       toast({ variant: 'destructive', description: result.error });
     }
@@ -86,7 +86,7 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
     <>
       <div className="flex flex-col items-center text-center p-4">
         {/* Avatar */}
-         <div className={cn("avatar-frame-wrapper", profileUser.selectedAvatarFrame)}>
+         <div className={cn("avatar-frame-wrapper", isPremium ? 'avatar-frame-premium' : profileUser.selectedAvatarFrame)}>
             <Avatar className="relative z-[1] h-24 w-24 md:h-28 md:w-28 border-4 border-background shadow-lg">
                 <AvatarImage src={profileUser.photoURL || undefined} />
                 <AvatarFallback className="text-5xl">{profileUser.username?.charAt(0).toUpperCase()}</AvatarFallback>
@@ -97,11 +97,11 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
         <div className="mt-4">
             <div className="flex items-center justify-center gap-2">
                 <h1 className="text-2xl font-bold">{profileUser.username}</h1>
-                {profileUser.role === 'admin' && (
+                {isPremium && (
                     <TooltipProvider>
                         <Tooltip>
-                            <TooltipTrigger><BadgeCheck className="h-6 w-6 text-primary fill-primary/20" /></TooltipTrigger>
-                            <TooltipContent><p>Yönetici</p></TooltipContent>
+                            <TooltipTrigger><Crown className="h-6 w-6 text-red-500" /></TooltipTrigger>
+                            <TooltipContent><p>Premium Üye</p></TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
                 )}
