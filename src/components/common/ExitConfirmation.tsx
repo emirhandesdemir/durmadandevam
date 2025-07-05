@@ -48,7 +48,7 @@ export default function ExitConfirmation() {
   };
 
   const handleCancelExit = () => {
-    // To "cancel" the back navigation, we push the dummy state back
+    // To "cancel" the back navigation, we push the state back
     // onto the history stack.
     history.pushState(null, '', location.href);
     setShowConfirm(false);
