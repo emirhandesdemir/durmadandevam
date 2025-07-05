@@ -70,6 +70,9 @@ export interface UserProfile {
     lastSeen?: Timestamp;
     matchmakingStatus?: 'idle' | 'searching' | 'matched';
     matchRoomId?: string | null;
+    premiumUntil?: Timestamp;
+    isFirstPremium?: boolean;
+    unlimitedRoomCreationUntil?: Timestamp;
 }
 
 export interface ProfileViewer {

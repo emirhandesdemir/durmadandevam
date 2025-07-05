@@ -16,6 +16,7 @@ import ActiveCallBar from "@/components/voice/ActiveCallBar";
 import ActiveDmCallBar from "@/components/voice/ActiveDmCallBar";
 import ExitConfirmation from "@/components/common/ExitConfirmation";
 import MainNavSheet from "@/components/layout/MainNavSheet";
+import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -142,6 +143,7 @@ export default function MainAppLayout({
       <IncomingCallManager />
       <ExitConfirmation />
       <MainNavSheet isOpen={isNavSheetOpen} onOpenChange={setIsNavSheetOpen} />
+      <PremiumWelcomeManager />
       
       <div className="relative flex h-dvh w-full flex-col bg-background overflow-hidden">
         <ActiveDmCallBar />

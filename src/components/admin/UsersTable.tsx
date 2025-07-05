@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { tr } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
 import { deleteUserFromFirestore, updateUserRole, banUser } from "@/lib/actions/adminActions";
-import { MoreHorizontal, Trash2, UserCheck, UserX, Loader2, ShieldCheck, Shield, Gem, Ban } from "lucide-react";
+import { MoreHorizontal, Trash2, UserCheck, UserX, Loader2, ShieldCheck, Shield, Gem, Ban, Swords, Crown } from "lucide-react";
 
 import {
   Table,
@@ -40,6 +40,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import ManageDiamondsDialog from "./ManageDiamondsDialog";
+import ManagePremiumDialog from "./ManagePremiumDialog"; // Import the new dialog
 import { cn } from "@/lib/utils";
 
 interface UsersTableProps {
@@ -54,6 +55,7 @@ export default function UsersTable({ users }: UsersTableProps) {
     const [isProcessing, setIsProcessing] = useState<string | null>(null); // Hangi kullanıcının işlendiğini tutar
     const [showDeleteConfirm, setShowDeleteConfirm] = useState<UserData | null>(null);
     const [showDiamondDialog, setShowDiamondDialog] = useState<UserData | null>(null);
+    const [showPremiumDialog, setShowPremiumDialog] = useState<UserData | null>(null); // State for the premium dialog
 
     const handleDeleteUser = async (user: UserData) => {
         setIsProcessing(user.uid);
@@ -111,70 +113,84 @@ export default function UsersTable({ users }: UsersTableProps) {
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {users.map((user) => (
-                <TableRow key={user.uid} className={cn(user.reportCount && user.reportCount > 2 && "bg-destructive/10 hover:bg-destructive/20")}>
-                    <TableCell>
-                        <div className="flex items-center gap-3">
-                            <Avatar>
-                                <AvatarImage src={user.photoURL || undefined} />
-                                <AvatarFallback>{user.username?.charAt(0).toUpperCase()}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                                <p className="font-medium">{user.username}</p>
-                            </div>
-                        </div>
-                    </TableCell>
-                    <TableCell>
-                        <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                           {user.role === 'admin' ? <ShieldCheck className="mr-1 h-3 w-3" /> : <Shield className="mr-1 h-3 w-3" />}
-                           {user.role}
-                        </Badge>
-                    </TableCell>
-                    <TableCell>
-                         <Badge variant={user.isBanned ? 'destructive' : 'secondary'}>
-                            {user.isBanned ? 'Yasaklı' : 'Aktif'}
-                        </Badge>
-                    </TableCell>
-                    <TableCell>
-                        <div className="flex items-center font-semibold">
-                            <Gem className="mr-2 h-4 w-4 text-cyan-400" />
-                            {user.diamonds || 0}
-                        </div>
-                    </TableCell>
-                    <TableCell>
-                        {user.createdAt ? format(user.createdAt.toDate(), 'PPpp', { locale: tr }) : 'Bilinmiyor'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" disabled={isProcessing === user.uid}>
-                                    {isProcessing === user.uid ? <Loader2 className="h-4 w-4 animate-spin"/> : <MoreHorizontal className="h-4 w-4" />}
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Eylemler</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => setShowDiamondDialog(user)}>
-                                    <Gem className="mr-2 h-4 w-4" />
-                                    <span>Elmasları Yönet</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleToggleAdmin(user)}>
-                                    {user.role === 'admin' ? <UserX className="mr-2 h-4 w-4" /> : <UserCheck className="mr-2 h-4 w-4" />}
-                                    <span>{user.role === 'admin' ? 'Admin Yetkisini Al' : 'Admin Yap'}</span>
-                                </DropdownMenuItem>
-                                 <DropdownMenuItem onClick={() => handleToggleBan(user)}>
-                                    <Ban className="mr-2 h-4 w-4" />
-                                    <span>{user.isBanned ? 'Yasağı Kaldır' : 'Kullanıcıyı Yasakla'}</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => setShowDeleteConfirm(user)} className="text-destructive focus:text-destructive">
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    <span>Kullanıcıyı Sil</span>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </TableCell>
-                </TableRow>
-                ))}
+                {users.map((user) => {
+                    const isPremium = user.premiumUntil && user.premiumUntil.toDate() > new Date();
+                    return (
+                        <TableRow key={user.uid} className={cn(user.reportCount && user.reportCount > 2 && "bg-destructive/10 hover:bg-destructive/20")}>
+                            <TableCell>
+                                <div className="flex items-center gap-3">
+                                    <Avatar>
+                                        <AvatarImage src={user.photoURL || undefined} />
+                                        <AvatarFallback>{user.username?.charAt(0).toUpperCase()}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <p className="font-medium">{user.username}</p>
+                                    </div>
+                                </div>
+                            </TableCell>
+                            <TableCell>
+                                {isPremium ? (
+                                    <Badge variant="destructive" className="bg-red-600 hover:bg-red-700">
+                                        <Crown className="mr-1 h-3 w-3" />
+                                        Premium
+                                    </Badge>
+                                ) : (
+                                    <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                                        {user.role === 'admin' ? <ShieldCheck className="mr-1 h-3 w-3" /> : <Shield className="mr-1 h-3 w-3" />}
+                                        {user.role}
+                                    </Badge>
+                                )}
+                            </TableCell>
+                            <TableCell>
+                                <Badge variant={user.isBanned ? 'destructive' : 'secondary'}>
+                                    {user.isBanned ? 'Yasaklı' : 'Aktif'}
+                                </Badge>
+                            </TableCell>
+                            <TableCell>
+                                <div className="flex items-center font-semibold">
+                                    <Gem className="mr-2 h-4 w-4 text-cyan-400" />
+                                    {user.diamonds || 0}
+                                </div>
+                            </TableCell>
+                            <TableCell>
+                                {user.createdAt ? format(user.createdAt.toDate(), 'PPpp', { locale: tr }) : 'Bilinmiyor'}
+                            </TableCell>
+                            <TableCell className="text-right">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" disabled={isProcessing === user.uid}>
+                                            {isProcessing === user.uid ? <Loader2 className="h-4 w-4 animate-spin"/> : <MoreHorizontal className="h-4 w-4" />}
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>Eylemler</DropdownMenuLabel>
+                                         <DropdownMenuItem onClick={() => setShowPremiumDialog(user)}>
+                                            <Crown className="mr-2 h-4 w-4" />
+                                            <span>Premium'u Yönet</span>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setShowDiamondDialog(user)}>
+                                            <Gem className="mr-2 h-4 w-4" />
+                                            <span>Elmasları Yönet</span>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleToggleAdmin(user)}>
+                                            {user.role === 'admin' ? <UserX className="mr-2 h-4 w-4" /> : <UserCheck className="mr-2 h-4 w-4" />}
+                                            <span>{user.role === 'admin' ? 'Admin Yetkisini Al' : 'Admin Yap'}</span>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleToggleBan(user)}>
+                                            <Ban className="mr-2 h-4 w-4" />
+                                            <span>{user.isBanned ? 'Yasağı Kaldır' : 'Kullanıcıyı Yasakla'}</span>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem onClick={() => setShowDeleteConfirm(user)} className="text-destructive focus:text-destructive">
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            <span>Kullanıcıyı Sil</span>
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </TableCell>
+                        </TableRow>
+                    );
+                })}
             </TableBody>
         </Table>
 
@@ -182,6 +198,12 @@ export default function UsersTable({ users }: UsersTableProps) {
             isOpen={!!showDiamondDialog}
             setIsOpen={() => setShowDiamondDialog(null)}
             user={showDiamondDialog}
+        />
+        
+        <ManagePremiumDialog
+            isOpen={!!showPremiumDialog}
+            setIsOpen={() => setShowPremiumDialog(null)}
+            user={showPremiumDialog}
         />
 
         {/* Silme Onay Dialogu */}

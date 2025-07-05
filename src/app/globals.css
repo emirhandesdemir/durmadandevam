@@ -144,6 +144,24 @@
     50% { transform: scale(1.1); box-shadow: 0 0 15px #fef08a, 0 0 30px #f97316; }
     100% { transform: scale(1); box-shadow: 0 0 10px #fef08a, 0 0 20px #f97316; }
   }
+
+  /* NEW: Premium Red Bubble */
+  .bubble-style-premium .bubble {
+    animation-name: float, premium-flicker;
+    animation-duration: 4s, 2s;
+    animation-timing-function: ease-in-out, ease-in-out;
+    animation-iteration-count: infinite, infinite;
+  }
+  .bubble-style-premium .bubble:nth-child(1) { @apply bg-red-500 w-3 h-3 top-[10%] left-[80%]; animation-delay: 0s; }
+  .bubble-style-premium .bubble:nth-child(2) { @apply bg-rose-500 w-4 h-4 top-[75%] left-[10%]; animation-delay: 1s; }
+  .bubble-style-premium .bubble:nth-child(3) { @apply bg-red-400 w-2 h-2 top-[90%] left-[90%]; animation-delay: 2s; }
+  .bubble-style-premium .bubble:nth-child(4) { @apply bg-rose-400 w-3 h-3 top-[35%] left-[20%]; animation-delay: 3s; }
+  .bubble-style-premium .bubble:nth-child(5) { @apply bg-red-300 w-2 h-2 top-[5%] left-[30%]; animation-delay: 1.5s; }
+
+  @keyframes premium-flicker {
+    0%, 100% { box-shadow: 0 0 5px #f87171, 0 0 10px #ef4444; }
+    50% { box-shadow: 0 0 10px #f87171, 0 0 20px #ef4444; }
+  }
 }
 
 /* Avatar Frame Styles */
@@ -154,7 +172,8 @@
   .avatar-frame-angel::before, .avatar-frame-angel::after,
   .avatar-frame-devil::before, .avatar-frame-devil::after,
   .avatar-frame-snake::before,
-  .avatar-frame-tech::before {
+  .avatar-frame-tech::before,
+  .avatar-frame-premium::before {
     content: '';
     position: absolute;
     pointer-events: none;
@@ -227,6 +246,24 @@
     inset: -6px;
     background-size: 100% 100%;
     background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3cfilter id='tech-glow'%3e%3cfeGaussianBlur in='SourceGraphic' stdDeviation='2' /%3e%3c/filter%3e%3c/defs%3e%3ccircle cx='60' cy='60' r='55' stroke='%230ea5e9' stroke-width='4' stroke-dasharray='15 25' fill='none' filter='url(%23tech-glow)'%3e%3canimateTransform attributeName='transform' type='rotate' from='0 60 60' to='360 60 60' dur='10s' repeatCount='indefinite' /%3e%3c/circle%3e%3ccircle cx='60' cy='60' r='50' stroke='%2334d399' stroke-width='2' stroke-dasharray='5 15' fill='none'%3e%3canimateTransform attributeName='transform' type='rotate' from='360 60 60' to='0 60 60' dur='15s' repeatCount='indefinite' /%3e%3c/circle%3e%3c/svg%3e");
+  }
+
+  /* Premium Red Avatar Frame */
+  .avatar-frame-premium::before {
+    inset: -5px;
+    border-radius: 9999px;
+    border: 2px solid;
+    border-color: #ef4444;
+    animation: premium-glow 2s ease-in-out infinite alternate;
+  }
+
+  @keyframes premium-glow {
+    from {
+      box-shadow: 0 0 2px #ef4444, 0 0 4px #ef4444, 0 0 6px #dc2626;
+    }
+    to {
+      box-shadow: 0 0 4px #ef4444, 0 0 8px #dc2626, 0 0 12px #b91c1c;
+    }
   }
 }
 

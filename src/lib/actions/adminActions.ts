@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { doc, deleteDoc, updateDoc, increment } from 'firebase/firestore';
+import { doc, deleteDoc, updateDoc, increment, runTransaction, Timestamp } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
 
 /**
@@ -80,4 +80,39 @@ export async function banUser(uid: string, ban: boolean) {
         console.error(`Kullanıcı ${ban ? 'yasaklanırken' : 'yasağı kaldırılırken'} hata:`, error);
         return { success: false, error: 'İşlem gerçekleştirilemedi.' };
     }
+}
+
+export async function manageUserPremium(userId: string, durationDays: number | null) {
+    if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
+
+    const userRef = doc(db, 'users', userId);
+
+    return await runTransaction(db, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) throw new Error("Kullanıcı bulunamadı.");
+
+        const userData = userDoc.data();
+        const updates: { [key: string]: any } = {};
+
+        if (durationDays !== null) {
+            // Granting or extending premium
+            const newExpiry = Timestamp.fromMillis(Date.now() + durationDays * 24 * 60 * 60 * 1000);
+            updates.premiumUntil = newExpiry;
+            
+            // Grant first-time bonus if applicable
+            if (!userData.isFirstPremium) {
+                updates.isFirstPremium = true;
+                updates.diamonds = increment(100);
+                // Add 3 days of unlimited room creation
+                updates.unlimitedRoomCreationUntil = Timestamp.fromMillis(Date.now() + 3 * 24 * 60 * 60 * 1000);
+            }
+        } else {
+            // Revoking premium
+            updates.premiumUntil = null;
+        }
+
+        transaction.update(userRef, updates);
+        revalidatePath('/admin/users');
+        return { success: true };
+    });
 }
