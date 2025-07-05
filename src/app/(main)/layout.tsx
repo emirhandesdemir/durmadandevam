@@ -128,10 +128,11 @@ export default function MainAppLayout({
   });
 
   const pageVariants = {
-    initial: { opacity: 0, x: 20 },
-    animate: { opacity: 1, x: 0, transition: { type: "spring", stiffness: 260, damping: 30 } },
-    exit: { opacity: 0, x: -20, transition: { duration: 0.2 } },
+    initial: { opacity: 0 },
+    animate: { opacity: 1, transition: { duration: 0.4, ease: "easeInOut" } },
+    exit: { opacity: 0, transition: { duration: 0.2, ease: "easeOut" } },
   };
+
 
   return (
     <VoiceChatProvider>

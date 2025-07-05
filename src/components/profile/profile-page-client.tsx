@@ -134,20 +134,22 @@ export default function ProfilePageClient() {
         try {
             const userDocUpdates: { [key: string]: any } = {};
             const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
-            const postUpdates: { [key: string]: any } = {};
+            const postAndCommentUpdates: { username?: string; userAvatar?: string; userAvatarFrame?: string; } = {};
     
+            // Process Avatar
             if (newAvatar) {
-                const newAvatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.png`);
-                const snapshot = await uploadString(newAvatarRef, newAvatar, 'data_url');
-                const finalPhotoURL = await getDownloadURL(snapshot.ref);
+                const newAvatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.jpg`);
+                await uploadString(newAvatarRef, newAvatar, 'data_url');
+                const finalPhotoURL = await getDownloadURL(newAvatarRef);
                 userDocUpdates.photoURL = finalPhotoURL;
                 authProfileUpdates.photoURL = finalPhotoURL;
-                postUpdates.userAvatar = finalPhotoURL;
+                postAndCommentUpdates.userAvatar = finalPhotoURL;
             }
     
+            // Process Username
             if (username !== userData?.username) {
-                 if (!username.startsWith('@') || !/^@\w+$/.test(username)) {
-                    toast({ variant: "destructive", title: "Geçersiz Kullanıcı Adı", description: "Kullanıcı adı '@' ile başlamalı ve sadece harf, rakam veya alt çizgi içermelidir." });
+                if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+                    toast({ variant: "destructive", title: "Geçersiz Kullanıcı Adı", description: "Kullanıcı adı 3-20 karakter uzunluğunda olmalı ve sadece harf, rakam veya alt çizgi içermelidir." });
                     setIsSaving(false); return;
                 }
                 const existingUser = await findUserByUsername(username);
@@ -157,14 +159,16 @@ export default function ProfilePageClient() {
                 }
                 userDocUpdates.username = username;
                 authProfileUpdates.displayName = username;
-                postUpdates.username = username;
+                postAndCommentUpdates.username = username;
             }
-
+            
+            // Process Avatar Frame
             if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || "")) {
                 userDocUpdates.selectedAvatarFrame = selectedAvatarFrame;
-                postUpdates.userAvatarFrame = selectedAvatarFrame;
+                postAndCommentUpdates.userAvatarFrame = selectedAvatarFrame;
             }
 
+            // Other fields
             if (bio !== userData?.bio) userDocUpdates.bio = bio;
             if (age !== userData?.age) userDocUpdates.age = Number(age);
             if (city !== userData?.city) userDocUpdates.city = city;
@@ -175,8 +179,10 @@ export default function ProfilePageClient() {
             if (showOnlineStatus !== (userData?.showOnlineStatus ?? true)) userDocUpdates.showOnlineStatus = showOnlineStatus;
             if (selectedBubble !== (userData?.selectedBubble || "")) userDocUpdates.selectedBubble = selectedBubble;
 
+
+            // Execute database updates
+            const userDocRef = doc(db, 'users', user.uid);
             if (Object.keys(userDocUpdates).length > 0) {
-                const userDocRef = doc(db, 'users', user.uid);
                 await updateDoc(userDocRef, userDocUpdates);
             }
     
@@ -184,17 +190,12 @@ export default function ProfilePageClient() {
                  await updateProfile(auth.currentUser, authProfileUpdates);
             }
 
-            if (Object.keys(postUpdates).length > 0) {
-                await updateUserPosts(user.uid, postUpdates);
-            }
-
-            const commentUpdates: { userAvatar?: string; userAvatarFrame?: string; username?: string } = {};
-            if (postUpdates.userAvatar) commentUpdates.userAvatar = postUpdates.userAvatar;
-            if (postUpdates.userAvatarFrame) commentUpdates.userAvatarFrame = postUpdates.userAvatarFrame;
-            if (postUpdates.username) commentUpdates.username = postUpdates.username;
-
-            if (Object.keys(commentUpdates).length > 0) {
-                await updateUserComments(user.uid, commentUpdates);
+            // Propagate visual changes to all posts and comments
+            if (Object.keys(postAndCommentUpdates).length > 0) {
+                await Promise.all([
+                    updateUserPosts(user.uid, postAndCommentUpdates),
+                    updateUserComments(user.uid, postAndCommentUpdates)
+                ]);
             }
 
             toast({

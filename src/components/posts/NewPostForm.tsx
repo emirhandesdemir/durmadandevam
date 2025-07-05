@@ -305,7 +305,7 @@ export default function NewPostForm() {
                             value={text}
                             onChange={handleTextChange}
                             onKeyDown={handleKeyDown}
-                            placeholder="Aklında ne var? (#etiket) veya (@kullanıcı) bahset..."
+                            placeholder="Aklında ne var? Birinden bahsetmek için @kullaniciadi kullan."
                             className="min-h-[60px] flex-1 resize-none border-0 bg-transparent p-0 text-base placeholder:text-muted-foreground/80 focus-visible:ring-0"
                             rows={2}
                             disabled={isLoading}

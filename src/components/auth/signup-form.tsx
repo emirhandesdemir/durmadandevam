@@ -36,9 +36,9 @@ import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 
 const formSchema = z.object({
   username: z.string()
-    .min(4, { message: "Kullanıcı adı '@' dahil en az 4 karakter olmalıdır." })
-    .max(21, { message: "Kullanıcı adı '@' dahil en fazla 21 karakter olabilir."})
-    .regex(/^@\w+$/, { message: "Kullanıcı adı '@' ile başlamalı ve sadece harf, rakam veya alt çizgi içermelidir." }),
+    .min(3, { message: "Kullanıcı adı en az 3 karakter olmalıdır." })
+    .max(20, { message: "Kullanıcı adı en fazla 20 karakter olabilir."})
+    .regex(/^[a-zA-Z0-9_]+$/, { message: "Kullanıcı adı sadece harf, rakam ve alt çizgi içerebilir." }),
   email: z.string().email({ message: "Geçersiz e-posta adresi." }),
   password: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır." }),
   gender: z.enum(['male', 'female'], { required_error: "Cinsiyet seçimi zorunludur." }),
@@ -90,7 +90,7 @@ export default function SignUpForm() {
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            username: "@",
+            username: "",
             email: "",
             password: "",
             city: "",
@@ -230,7 +230,7 @@ export default function SignUpForm() {
                                 <FormItem>
                                     <FormLabel>Kullanıcı Adı</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="@kullaniciadi" {...field} />
+                                        <Input placeholder="kullanici_adi" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
