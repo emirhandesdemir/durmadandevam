@@ -9,7 +9,8 @@ import ProfilePosts from '@/components/profile/ProfilePosts';
 import ProfileViewLogger from '@/components/profile/ProfileViewLogger';
 import { Separator } from '@/components/ui/separator';
 import { deepSerialize } from '@/lib/server-utils';
-import { Grid3x3 } from 'lucide-react';
+import { Grid3x3, FileText } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface UserProfilePageProps {
   params: { uid: string };
@@ -53,18 +54,33 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
         
         <Separator className="my-4" />
 
-        {/* Gönderiler Bölümü */}
-        <div className="w-full border-t">
-            <div className="flex justify-center items-center p-3 text-sm font-semibold text-primary border-b-2 border-primary">
-                <Grid3x3 className="h-5 w-5 mr-2" />
-                <span>GÖNDERİLER</span>
-            </div>
-            {/* Kullanıcının gönderilerini grid formatında gösteren bileşen. */}
-            <ProfilePosts 
-                userId={uid} 
-                profileUser={serializableProfileUser} 
-            />
-        </div>
+        {/* Sekmeli Gönderiler Bölümü */}
+        <Tabs defaultValue="posts" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="posts">
+                    <Grid3x3 className="h-5 w-5 mr-2" />
+                    Gönderiler
+                </TabsTrigger>
+                <TabsTrigger value="texts">
+                    <FileText className="h-5 w-5 mr-2" />
+                    Metinler
+                </TabsTrigger>
+            </TabsList>
+            <TabsContent value="posts" className="mt-4">
+                <ProfilePosts 
+                    userId={uid} 
+                    profileUser={serializableProfileUser} 
+                    postType="image"
+                />
+            </TabsContent>
+            <TabsContent value="texts" className="mt-4">
+                 <ProfilePosts 
+                    userId={uid} 
+                    profileUser={serializableProfileUser} 
+                    postType="text"
+                />
+            </TabsContent>
+        </Tabs>
       </div>
     </>
   );
