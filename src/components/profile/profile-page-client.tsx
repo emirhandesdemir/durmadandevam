@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Palette, Loader2, Sparkles, Lock, Camera, Gift, Copy, Users, Globe, User as UserIcon } from "lucide-react";
+import { LogOut, Palette, Loader2, Sparkles, Lock, Camera, Gift, Copy, Users, Globe, User as UserIcon, Shield } from "lucide-react";
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
@@ -26,6 +26,7 @@ import { findUserByUsername, updateUserPosts, updateUserComments } from "@/lib/a
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../common/LanguageSwitcher";
 import { AnimatePresence, motion } from "framer-motion";
+import Link from 'next/link';
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -415,6 +416,24 @@ export default function ProfilePageClient() {
                     </CardContent>
                 </Card>
                 
+                {userData.role === 'admin' && (
+                    <Card>
+                        <CardHeader>
+                            <div className="flex items-center gap-3">
+                                <Shield className="h-6 w-6 text-primary" />
+                                <CardTitle>Yönetim</CardTitle>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <Button asChild>
+                                <Link href="/admin">
+                                    <Shield className="mr-2 h-4 w-4" />
+                                    Yönetim Paneline Git
+                                </Link>
+                            </Button>
+                        </CardContent>
+                    </Card>
+                )}
                  {/* Logout Card */}
                 <Card>
                     <CardHeader>

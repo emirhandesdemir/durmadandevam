@@ -22,7 +22,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Send } from "lucide-react";
 import { Post } from "../posts/PostsFeed";
-import CommentItem, { type Comment } from "./CommentItem";
+import CommentItem from "./CommentItem";
+import type { Comment } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface CommentSheetProps {
@@ -83,6 +84,7 @@ export default function CommentSheet({ open, onOpenChange, post }: CommentSheetP
                     displayName: userData.username,
                     photoURL: userData.photoURL || null,
                     userAvatarFrame: userData.selectedAvatarFrame || '',
+                    role: userData.role,
                 },
                 replyTo: replyingTo || undefined
             });

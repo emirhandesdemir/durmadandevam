@@ -68,6 +68,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo, options?: { 
                 uid: user.uid,
                 username: user.displayName || 'Anonim',
                 photoURL: user.photoURL,
+                role: userData.role || 'user',
                 isMuted: options?.initialMuteState ?? false,
                 isSharingScreen: false,
                 isSharingVideo: false,

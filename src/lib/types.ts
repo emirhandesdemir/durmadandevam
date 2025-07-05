@@ -161,6 +161,7 @@ export interface Comment {
     username: string;
     userAvatar?: string;
     userAvatarFrame?: string;
+    userRole?: 'admin' | 'user';
     text: string;
     createdAt: Timestamp;
     replyTo?: {
@@ -230,6 +231,7 @@ export interface VoiceParticipant {
     uid: string;
     username: string;
     photoURL?: string | null;
+    role?: 'admin' | 'user';
     isSpeaker: boolean;
     isMuted: boolean;
     canSpeak: boolean; // Permission to speak in request-to-speak mode

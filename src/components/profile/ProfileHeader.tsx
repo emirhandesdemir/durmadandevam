@@ -3,7 +3,7 @@
 
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff, UserCheck } from 'lucide-react';
+import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff, UserCheck, BadgeCheck } from 'lucide-react';
 import FollowButton from './FollowButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { blockUser, unblockUser } from '@/lib/actions/userActions';
 import ReportDialog from '../common/ReportDialog';
 import { Loader2 } from 'lucide-react';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 
 interface ProfileHeaderProps {
   profileUser: any;
@@ -94,7 +95,17 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
 
         {/* User Info */}
         <div className="mt-4">
-          <h1 className="text-2xl font-bold">{profileUser.username}</h1>
+            <div className="flex items-center justify-center gap-2">
+                <h1 className="text-2xl font-bold">{profileUser.username}</h1>
+                {profileUser.role === 'admin' && (
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger><BadgeCheck className="h-6 w-6 text-primary fill-primary/20" /></TooltipTrigger>
+                            <TooltipContent><p>Yönetici</p></TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                )}
+            </div>
           {isOwnProfile && (
             <div className="flex items-center justify-center gap-2 mt-1 text-cyan-400 font-bold">
                 <Gem className="h-5 w-5"/>

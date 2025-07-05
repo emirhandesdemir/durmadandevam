@@ -4,7 +4,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Trash2, Reply, Loader2 } from "lucide-react";
+import { MoreHorizontal, Trash2, Reply, Loader2, BadgeCheck } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
 import { useState } from "react";
@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { deleteComment } from "@/lib/actions/commentActions";
 import Link from 'next/link';
 import type { Comment } from '@/lib/types';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
 import {
@@ -82,10 +83,20 @@ export default function CommentItem({ comment, postId, onReply }: CommentItemPro
             </Link>
             <div className="flex-1">
                 <div className="flex items-center justify-between">
-                     <Link href={`/profile/${comment.uid}`} className="flex items-center gap-2 text-sm group">
-                        <span className="font-bold group-hover:underline">{comment.username}</span>
+                     <div className="flex items-center gap-2 text-sm">
+                         <Link href={`/profile/${comment.uid}`} className="group">
+                             <span className="font-bold group-hover:underline">{comment.username}</span>
+                         </Link>
+                        {comment.userRole === 'admin' && (
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger><BadgeCheck className="h-4 w-4 text-primary" /></TooltipTrigger>
+                                    <TooltipContent><p>Yönetici</p></TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
                         <span className="text-xs text-muted-foreground">{timeAgo}</span>
-                    </Link>
+                    </div>
                     {isOwner && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
