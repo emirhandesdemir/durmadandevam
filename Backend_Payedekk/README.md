@@ -1,6 +1,1 @@
-
-u# Firebase Studio
-
-This is a NextJS starter in Firebase Studio.
-
-To get started, take a look at src/app/page.tsx.
+// Bu dosya artık kullanılmamaktadır ve ana proje yapısının bir parçası değildir. Güvenle silinebilir.

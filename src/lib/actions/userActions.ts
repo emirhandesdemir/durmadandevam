@@ -243,7 +243,10 @@ export async function blockUser(blockerId: string, targetId: string) {
         const batch = writeBatch(db);
         
         // Add target to blocker's list
-        batch.update(blockerRef, { blockedUsers: arrayUnion(targetId) });
+        batch.update(blockerRef, { 
+            blockedUsers: arrayUnion(targetId),
+            lastActionTimestamp: serverTimestamp()
+        });
         
         // Force unfollow both ways
         batch.update(blockerRef, { following: arrayRemove(targetId) });
@@ -268,7 +271,8 @@ export async function unblockUser(blockerId: string, targetId: string) {
 
     try {
         await updateDoc(blockerRef, {
-            blockedUsers: arrayRemove(targetId)
+            blockedUsers: arrayRemove(targetId),
+            lastActionTimestamp: serverTimestamp()
         });
         revalidatePath(`/profile/${targetId}`);
         return { success: true };

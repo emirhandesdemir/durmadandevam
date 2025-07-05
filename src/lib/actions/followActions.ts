@@ -1,3 +1,4 @@
+// src/lib/actions/followActions.ts
 'use server';
 
 import { db } from '@/lib/firebase';
@@ -9,6 +10,7 @@ import {
   serverTimestamp,
   runTransaction,
   getDoc,
+  updateDoc,
 } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
 import { createNotification } from './notificationActions';
@@ -35,6 +37,10 @@ export async function followUser(currentUserId: string, targetUserId: string, cu
     if (!currentUserDoc.exists()) throw new Error("İşlem yapan kullanıcı bulunamadı.");
 
     const targetUserData = targetUserDoc.data();
+    
+    // Update last action timestamp for rate limiting
+    transaction.update(currentUserRef, { lastActionTimestamp: serverTimestamp() });
+
     if (targetUserData.privateProfile) {
        if (targetUserData.acceptsFollowRequests === false) {
           throw new Error('Bu kullanıcı şu anda takip isteği kabul etmiyor.');
@@ -74,6 +80,7 @@ export async function followUser(currentUserId: string, targetUserId: string, cu
   }
 
   revalidatePath(`/profile/${targetUserId}`);
+  revalidatePath(`/profile/${currentUserId}`);
 }
 
 export async function unfollowUser(currentUserId: string, targetUserId: string) {
@@ -83,6 +90,7 @@ export async function unfollowUser(currentUserId: string, targetUserId: string) 
   await runTransaction(db, async (transaction) => {
     transaction.update(currentUserRef, {
         following: arrayRemove(targetUserId),
+        lastActionTimestamp: serverTimestamp()
     });
     transaction.update(targetUserRef, {
         followers: arrayRemove(currentUserId),
@@ -90,6 +98,7 @@ export async function unfollowUser(currentUserId: string, targetUserId: string) 
   });
 
   revalidatePath(`/profile/${targetUserId}`);
+  revalidatePath(`/profile/${currentUserId}`);
 }
 
 export async function handleFollowRequest(currentUserId: string, requesterId: string, action: 'accept' | 'deny') {
@@ -111,6 +120,7 @@ export async function handleFollowRequest(currentUserId: string, requesterId: st
     if (requestToRemove) {
       transaction.update(currentUserRef, {
         followRequests: arrayRemove(requestToRemove),
+        lastActionTimestamp: serverTimestamp()
       });
     }
 
