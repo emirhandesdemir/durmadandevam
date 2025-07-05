@@ -48,13 +48,12 @@ Google Play Store, uygulamaların güvenli ve size ait olduğunu doğrulamak iç
 
 ---
 
-## Adım 3: Projenizi Paketleme (APK Oluşturma)
+## Adım 3: Projeyi Hazırlama (`init`)
 
-Şimdi en heyecanlı kısma geldik!
+**ÇOK ÖNEMLİ:** `build` komutunu çalıştırmadan önce, projenizi Android için hazırlamanız gerekir. Bu `init` (başlatma) işlemi, gerekli Android proje dosyalarını oluşturur.
 
 1.  Terminalde, projenizin ana dizinine gidin (yani `package.json` dosyasının olduğu yere).
-2.  Aşağıdaki komutu çalıştırın.
-
+2.  Aşağıdaki `init` komutunu çalıştırın:
     ```bash
     bubblewrap init --manifest https://yenidendeneme-ea9ed.web.app/manifest.json
     ```
@@ -66,19 +65,27 @@ Google Play Store, uygulamaların güvenli ve size ait olduğunu doğrulamak iç
     *   **Key alias?** `my-key-alias` olarak belirlediğiniz takma adı girin.
     *   Sizden **şifrelerinizi** girmeniz istenecektir.
 
-4.  İşlem tamamlandığında, projenizde yeni dosyalar oluşacaktır. Şimdi APK'yı oluşturma zamanı:
-
-    ```bash
-    bubblewrap build
-    ```
-
-5.  İşlem başarılı olursa, projenizin ana dizininde `app-release-signed.apk` adında bir dosya bulacaksınız. Tebrikler! İşte bu sizin APK dosyanız.
+`init` işlemi tamamlandığında, projenizde Android projesi için gerekli dosyalar (`twa-manifest.json` vb.) oluşturulmuş olacaktır.
 
 ---
 
-## Adım 4: Domain Doğrulama (Son ve Önemli Adım)
+## Adım 4: APK'yı Oluşturma (`build`)
 
-Google'ın, web sitenizin gerçekten size ait olduğundan emin olması gerekir.
+Hazırlık adımı tamamlandığına göre, artık APK dosyasını oluşturabilirsiniz.
+
+1.  Terminalde, yine projenizin ana dizininde olduğunuzdan emin olun.
+2.  Aşağıdaki `build` komutunu çalıştırın:
+    ```bash
+    bubblewrap build
+    ```
+3.  İşlem başarılı olursa, projenizin ana dizininde `app-release-signed.apk` adında bir dosya bulacaksınız. Tebrikler! İşte bu sizin APK dosyanız.
+
+
+---
+
+## Adım 5: Domain Doğrulama (Son ve Önemli Adım)
+
+Google'ın, web sitenizin gerçekten size ait olduğundan emin olması gerekir. Bu adım, uygulama içindeki üst Chrome barının kalkmasını sağlar.
 
 1.  `bubblewrap build` komutundan sonra, terminal size `assetlinks.json` adında bir dosyanın içeriğini gösterecektir. Buna benzer bir yapısı vardır:
 
