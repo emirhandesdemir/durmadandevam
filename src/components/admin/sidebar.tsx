@@ -23,6 +23,8 @@ import {
   History,
   CloudUpload,
   ShieldAlert,
+  RadioTower,
+  Gift,
 } from "lucide-react";
 import { Button } from "../ui/button";
 
@@ -34,9 +36,11 @@ const navItems = [
   { href: "/admin/users", label: "Kullanıcılar", icon: Users },
   { href: "/admin/reports", label: "Şikayetler", icon: ShieldAlert },
   { href: "/admin/rooms", label: "Odalar", icon: MessageSquare },
+  { href: "/admin/events", label: "Etkinlik Odaları", icon: Gift },
   { href: "/admin/posts", label: "Gönderiler", icon: FileText },
   { href: "/admin/features", label: "Özellik Yönetimi", icon: SlidersHorizontal },
   { href: "/admin/logs", label: "Olay Kayıtları", icon: History },
+  { href: "/admin/broadcast", label: "Toplu Duyuru", icon: RadioTower },
   { href: "/admin/theme", label: "Tema Ayarları", icon: Palette },
   { href: "/admin/system", label: "Sistem Ayarları", icon: Settings },
   { href: "/admin/deploy", label: "Dağıtımlar", icon: CloudUpload },
