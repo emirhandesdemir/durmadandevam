@@ -1,3 +1,4 @@
+
 // src/lib/actions/voiceActions.ts
 'use server';
 
@@ -12,7 +13,8 @@ import {
     updateDoc,
     Timestamp,
     deleteDoc,
-    setDoc
+    setDoc,
+    arrayUnion
 } from 'firebase/firestore';
 import type { Room, VoiceParticipant } from '../types';
 
@@ -23,6 +25,13 @@ interface UserInfo {
 }
 
 const voiceStatsRef = doc(db, 'config', 'voiceStats');
+const BOT_USER_INFO = {
+    uid: 'ai-bot-walk',
+    username: 'Walk',
+    photoURL: `data:image/svg+xml;base64,${btoa(`<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="50" fill="url(#bot-grad)"/><rect x="25" y="45" width="50" height="20" rx="10" fill="white" fill-opacity="0.8"/><circle cx="50" cy="40" r="15" fill="white"/><circle cx="50" cy="40" r="10" fill="url(#eye-grad)"/><path d="M35 70 Q 50 80, 65 70" stroke="white" stroke-width="4" stroke-linecap="round" fill="none"/><defs><linearGradient id="bot-grad" x1="0" y1="0" x2="100" y2="100"><stop stop-color="#8b5cf6"/><stop offset="1" stop-color="#3b82f6"/></linearGradient><radialGradient id="eye-grad"><stop offset="20%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#2563eb"/></radialGradient></defs></svg>`)}`,
+    role: 'user',
+    selectedAvatarFrame: 'avatar-frame-tech'
+};
 
 /**
  * Kullanıcının bir odanın sesli sohbetine katılması için sunucu eylemi.
@@ -36,7 +45,6 @@ export async function joinVoiceChat(roomId: string, user: UserInfo, options?: { 
 
     try {
         await runTransaction(db, async (transaction) => {
-            // Fetch documents sequentially to avoid initialization errors.
             const roomDoc = await transaction.get(roomRef);
             if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
 
@@ -70,6 +78,29 @@ export async function joinVoiceChat(roomId: string, user: UserInfo, options?: { 
                 selectedAvatarFrame: userData.selectedAvatarFrame || '',
             };
             
+            // NEW: Also add to main participants list if not there
+            const isMainParticipant = roomData.participants?.some((p: any) => p.uid === user.uid);
+            if (!isMainParticipant) {
+                transaction.update(roomRef, {
+                    participants: arrayUnion({
+                        uid: user.uid,
+                        username: user.displayName || "Anonim",
+                        photoURL: user.photoURL || null
+                    })
+                });
+
+                const messagesRef = collection(db, "rooms", roomId, "messages");
+                transaction.set(doc(messagesRef), {
+                    type: 'user',
+                    uid: BOT_USER_INFO.uid,
+                    username: BOT_USER_INFO.username,
+                    photoURL: BOT_USER_INFO.photoURL,
+                    selectedAvatarFrame: BOT_USER_INFO.selectedAvatarFrame,
+                    text: `Hoş geldin, ${user.displayName}!`,
+                    createdAt: serverTimestamp()
+                });
+            }
+
             transaction.set(userVoiceRef, participantData);
             transaction.update(roomRef, { voiceParticipantsCount: increment(1) });
             transaction.set(voiceStatsRef, { totalUsers: increment(1) }, { merge: true });

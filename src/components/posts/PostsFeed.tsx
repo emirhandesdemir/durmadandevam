@@ -1,3 +1,4 @@
+
 // src/components/posts/PostsFeed.tsx
 'use client';
 
@@ -25,11 +26,40 @@ export default function PostsFeed() {
             !userData?.blockedUsers?.includes(post.uid) && !allHiddenIds.has(post.id)
         );
 
-        // Prioritize by language
+        // First, separate posts by language
         const postsInUserLanguage = filteredPosts.filter(p => p.language === i18n.language);
         const otherLanguagePosts = filteredPosts.filter(p => p.language !== i18n.language);
 
-        // For all users, just combine by language
+        // Then, sort each language group by gender if applicable
+        if (userData?.gender) {
+            const currentUserGender = userData.gender;
+            
+            const sortWithGender = (postsToSort: Post[]) => {
+                const oppositeGenderPosts: Post[] = [];
+                const sameGenderPosts: Post[] = [];
+                const unspecifiedGenderPosts: Post[] = [];
+
+                postsToSort.forEach(post => {
+                    if (!post.userGender) {
+                        unspecifiedGenderPosts.push(post);
+                    } else if (post.userGender === currentUserGender) {
+                        sameGenderPosts.push(post);
+                    } else {
+                        oppositeGenderPosts.push(post);
+                    }
+                });
+                
+                return [
+                    ...oppositeGenderPosts, 
+                    ...sameGenderPosts, 
+                    ...unspecifiedGenderPosts
+                ];
+            };
+
+            return [...sortWithGender(postsInUserLanguage), ...sortWithGender(otherLanguagePosts)];
+        }
+
+        // For non-logged-in users or users without gender, just sort by language
         return [...postsInUserLanguage, ...otherLanguagePosts];
 
     }, [posts, userData, i18n.language, clientHiddenIds]);

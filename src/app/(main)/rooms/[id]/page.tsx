@@ -51,30 +51,12 @@ export default function RoomPage() {
     const [activeGameSession, setActiveGameSession] = useState<ActiveGameSession | null>(null);
 
     const isHost = user?.uid === room?.createdBy.uid;
-    const isParticipant = useMemo(() => room?.participants.some(p => p.uid === user?.uid), [room, user]);
 
     useEffect(() => {
         if (roomId) setActiveRoomId(roomId);
         return () => setActiveRoomId(null);
     }, [roomId, setActiveRoomId]);
     
-    useEffect(() => {
-        if (user && userData && room && !isParticipant ) {
-            const autoJoin = async () => {
-                try {
-                    await joinRoom(room.id, {
-                        uid: user.uid,
-                        username: userData.username,
-                        photoURL: userData.photoURL || null,
-                    });
-                } catch (error: any) {
-                    toast({ variant: 'destructive', description: `Odaya katılırken hata: ${error.message}` });
-                    router.push('/rooms');
-                }
-            };
-            autoJoin();
-        }
-    }, [user, userData, room, isParticipant, router, toast]);
 
     useEffect(() => {
         if (!room || !featureFlags?.quizGameEnabled || !user) return;
