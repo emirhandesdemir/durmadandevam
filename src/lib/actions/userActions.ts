@@ -237,11 +237,22 @@ export async function blockUser(blockerId: string, targetId: string) {
     if (blockerId === targetId) throw new Error("Kendinizi engelleyemezsiniz.");
 
     const blockerRef = doc(db, 'users', blockerId);
+    const targetRef = doc(db, 'users', targetId);
 
     try {
-        await updateDoc(blockerRef, {
-            blockedUsers: arrayUnion(targetId)
-        });
+        const batch = writeBatch(db);
+        
+        // Add target to blocker's list
+        batch.update(blockerRef, { blockedUsers: arrayUnion(targetId) });
+        
+        // Force unfollow both ways
+        batch.update(blockerRef, { following: arrayRemove(targetId) });
+        batch.update(targetRef, { followers: arrayRemove(blockerId) });
+        batch.update(targetRef, { following: arrayRemove(blockerId) });
+        batch.update(blockerRef, { followers: arrayRemove(targetId) });
+
+        await batch.commit();
+
         revalidatePath(`/profile/${targetId}`);
         revalidatePath(`/home`);
         return { success: true };

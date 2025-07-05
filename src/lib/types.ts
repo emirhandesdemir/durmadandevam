@@ -241,12 +241,16 @@ export interface VoiceParticipant {
     selectedAvatarFrame?: string;
 }
 
-export interface GameQuestion {
+export interface ActiveGame {
     id: string;
+    questionId: string;
     question: string;
     options: string[];
     correctOptionIndex: number;
-    createdAt: Timestamp;
+    startTime: Timestamp;
+    status: 'active' | 'finished';
+    answeredBy: string[];
+    winner?: string;
 }
 
 export interface GameSettings {
@@ -262,17 +266,6 @@ export interface GameSettings {
     matchmakingCost: number;
 }
 
-export interface ActiveGame {
-    id: string;
-    questionId: string;
-    question: string;
-    options: string[];
-    correctOptionIndex: number;
-    startTime: Timestamp;
-    status: 'active' | 'finished';
-    answeredBy: string[];
-    winner?: string;
-}
 
 export interface FeatureFlags {
     quizGameEnabled: boolean;

@@ -3,7 +3,7 @@
 
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff } from 'lucide-react';
+import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff, UserCheck } from 'lucide-react';
 import FollowButton from './FollowButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
@@ -15,8 +15,9 @@ import { cn } from '@/lib/utils';
 import SendDiamondDialog from '../diamond/SendDiamondDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import { blockUser } from '@/lib/actions/userActions';
+import { blockUser, unblockUser } from '@/lib/actions/userActions';
 import ReportDialog from '../common/ReportDialog';
+import { Loader2 } from 'lucide-react';
 
 interface ProfileHeaderProps {
   profileUser: any;
@@ -35,6 +36,8 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
 
   const isOwnProfile = currentUserAuth?.uid === profileUser.uid;
   const areMutuals = currentUserData?.following?.includes(profileUser.uid) && profileUser.following?.includes(currentUserAuth?.uid);
+  const amIBlockedByThisUser = profileUser.blockedUsers?.includes(currentUserAuth?.uid);
+  const haveIBlockedThisUser = currentUserData?.blockedUsers?.includes(profileUser.uid);
 
   const handleStatClick = (type: 'followers' | 'following') => {
     setDialogType(type);
@@ -48,13 +51,35 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
     setIsBlocking(false);
     if (result.success) {
       toast({ description: `${profileUser.username} engellendi.` });
-      router.push('/home');
+      // We don't need to redirect, the UI will update to show the unblock state
     } else {
       toast({ variant: 'destructive', description: result.error });
     }
   };
+
+  const handleUnblockUser = async () => {
+      if (!currentUserData) return;
+      setIsBlocking(true);
+      const result = await unblockUser(currentUserData.uid, profileUser.uid);
+      setIsBlocking(false);
+      if (result.success) {
+          toast({ description: `${profileUser.username} kullanıcısının engeli kaldırıldı.` });
+      } else {
+          toast({ variant: 'destructive', description: result.error });
+      }
+  };
   
   const userIdsToShow = dialogType === 'followers' ? profileUser.followers : profileUser.following;
+  
+  if (amIBlockedByThisUser) {
+    return (
+        <div className="flex flex-col items-center justify-center text-center p-8 h-64">
+          <ShieldOff className="h-16 w-16 text-muted-foreground" />
+          <h2 className="mt-4 text-2xl font-bold">Erişim Engellendi</h2>
+          <p className="mt-2 text-muted-foreground">Bu kullanıcının profilini görüntüleyemezsiniz.</p>
+        </div>
+    );
+  }
 
   return (
     <>
@@ -106,6 +131,11 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
                     Profili ve Ayarları Düzenle
                   </Link>
               </Button>
+            ) : haveIBlockedThisUser ? (
+                 <Button onClick={handleUnblockUser} variant="destructive" className="w-full" disabled={isBlocking}>
+                    {isBlocking ? <Loader2 className="animate-spin mr-2"/> : <UserCheck className="mr-2 h-4 w-4"/>}
+                    Engeli Kaldır
+                </Button>
             ) : (
                 <>
                     <FollowButton currentUserData={currentUserData} targetUser={profileUser} />

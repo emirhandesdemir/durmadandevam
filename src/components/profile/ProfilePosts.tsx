@@ -7,7 +7,7 @@ import type { Post } from '@/lib/types';
 import { Card, CardContent } from '../ui/card';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, CameraOff, FileText } from 'lucide-react';
+import { Loader2, CameraOff, FileText, ShieldOff } from 'lucide-react';
 import Image from 'next/image';
 import { Heart, MessageCircle, Images } from 'lucide-react';
 import PostViewerDialog from '@/components/posts/PostViewerDialog';
@@ -26,12 +26,13 @@ export default function ProfilePosts({ userId, profileUser }: ProfilePostsProps)
     const isOwnProfile = currentUser?.uid === userId;
     const isFollower = (profileUser.followers || []).includes(currentUser?.uid || '');
     const canViewContent = !profileUser.privateProfile || isFollower || isOwnProfile;
+    const amIBlockedByThisUser = profileUser.blockedUsers?.includes(currentUser?.uid);
 
     useEffect(() => {
         if (authLoading) {
             return;
         }
-        if (!canViewContent) {
+        if (!canViewContent || amIBlockedByThisUser) {
             setLoading(false);
             return;
         }
@@ -60,10 +61,14 @@ export default function ProfilePosts({ userId, profileUser }: ProfilePostsProps)
         };
 
         fetchPosts();
-    }, [userId, canViewContent, authLoading]);
+    }, [userId, canViewContent, authLoading, amIBlockedByThisUser]);
     
     if (authLoading || loading) {
         return <div className="flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    }
+
+    if (amIBlockedByThisUser) {
+        return null;
     }
 
     if (!canViewContent) {

@@ -125,6 +125,9 @@ export default function UsersTable({ users }: UsersTableProps) {
                                     </Avatar>
                                     <div>
                                         <p className="font-medium">{user.username}</p>
+                                        {user.reportCount && user.reportCount > 0 && (
+                                            <span className="text-xs text-destructive font-bold">{user.reportCount} şikayet</span>
+                                        )}
                                     </div>
                                 </div>
                             </TableCell>

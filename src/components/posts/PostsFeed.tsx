@@ -1,4 +1,3 @@
-
 // src/components/posts/PostsFeed.tsx
 'use client';
 
