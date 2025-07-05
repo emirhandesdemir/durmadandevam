@@ -110,8 +110,9 @@ export async function findUserByUsername(username: string): Promise<UserProfile 
 
 export async function searchUsers(searchTerm: string, currentUserId: string): Promise<UserProfile[]> {
     if (!searchTerm.trim()) return [];
-    
+
     const usersRef = collection(db, 'users');
+    // Query for usernames that start with the search term.
     const q = query(
         usersRef,
         orderBy('username'),
@@ -121,13 +122,14 @@ export async function searchUsers(searchTerm: string, currentUserId: string): Pr
     );
 
     const snapshot = await getDocs(q);
-
+    
     const users = snapshot.docs
         .map(doc => ({ ...doc.data(), uid: doc.id } as UserProfile))
-        .filter(user => user.uid !== currentUserId);
+        .filter(user => user.uid !== currentUserId); // Filter out the current user from results
 
-    return deepSerialize(users);
+    return deepSerialize(users); // Ensure data is client-safe
 }
+
 
 export async function saveFCMToken(userId: string, token: string) {
   if (!userId || !token) {

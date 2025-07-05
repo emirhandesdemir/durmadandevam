@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
 import ActiveCallBar from "@/components/voice/ActiveCallBar";
 import ActiveDmCallBar from "@/components/voice/ActiveDmCallBar";
+import ExitConfirmation from "@/components/common/ExitConfirmation";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -137,6 +138,7 @@ export default function MainAppLayout({
   return (
     <VoiceChatProvider>
       <IncomingCallManager />
+      <ExitConfirmation />
       
       <div className="relative flex h-dvh w-full flex-col bg-background overflow-hidden">
         <ActiveDmCallBar />
