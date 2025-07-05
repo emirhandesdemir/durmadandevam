@@ -74,10 +74,13 @@ export async function createNotification(data: CreateNotificationArgs) {
       read: false,
     });
 
-    // Also update the hasUnreadNotifications flag for immediate UI feedback.
-    await updateDoc(recipientUserRef, {
-      hasUnreadNotifications: true,
-    });
+    // DO NOT set the general notification flag for DM messages.
+    // The DM unread count is handled separately.
+    if (data.type !== 'dm_message') {
+        await updateDoc(recipientUserRef, {
+          hasUnreadNotifications: true,
+        });
+    }
 
   } catch (error) {
     console.error("Error creating notification document:", error);
