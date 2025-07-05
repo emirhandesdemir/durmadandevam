@@ -28,7 +28,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Eye, EyeOff, Swords } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 
 // Form alanlarının validasyonunu (doğrulamasını) yöneten Zod şeması.
 const formSchema = z.object({
@@ -112,7 +112,16 @@ export default function LoginForm() {
     return (
         <Card className="w-full max-w-sm mx-auto shadow-2xl rounded-2xl bg-card/80 backdrop-blur-lg border-white/20">
             <CardHeader className="text-center space-y-4">
-                 <Swords className="mx-auto h-12 w-12 text-primary" />
+                <svg width="100" height="100" viewBox="0 0 100 100" className="h-16 w-16 mx-auto">
+                    <defs>
+                    <linearGradient id="logoGradientForm" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style={{ stopColor: 'hsl(var(--primary))' }} />
+                        <stop offset="100%" style={{ stopColor: 'hsl(var(--primary))', stopOpacity: 0.7 }} />
+                    </linearGradient>
+                    </defs>
+                    <rect width="100" height="100" rx="20" fill="url(#logoGradientForm)"/>
+                    <text x="50%" y="55%" dominantBaseline="middle" textAnchor="middle" fontSize="60" fontWeight="800" fill="hsl(var(--primary-foreground))" fontFamily="Poppins, sans-serif" letterSpacing="-5">HW</text>
+                </svg>
                 <CardTitle className="text-3xl font-bold">Tekrar Hoş Geldin!</CardTitle>
                 <CardDescription>
                     Hesabınıza erişmek için bilgilerinizi girin.
