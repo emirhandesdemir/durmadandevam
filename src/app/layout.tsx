@@ -1,3 +1,4 @@
+
 // Bu dosya, uygulamanın en dış katmanını oluşturan kök düzendir (root layout).
 // Tüm sayfalar bu düzenin içinde render edilir.
 // HTML ve BODY etiketlerini, temel fontları, tema ve kimlik doğrulama sağlayıcılarını içerir.
@@ -42,10 +43,13 @@ export const metadata: Metadata = {
 
 // Mobil cihazlarda tarayıcı çubuğunun rengi gibi viewport ayarları.
 export const viewport: Viewport = {
-  themeColor: '#FFFFFF',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: 'white' },
+    { media: '(prefers-color-scheme: dark)', color: 'black' },
+  ],
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1, // Kullanıcının zoom yapmasını engelle (uygulama hissi için).
+  maximumScale: 1,
   userScalable: false,
 }
 
@@ -89,3 +93,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+    
