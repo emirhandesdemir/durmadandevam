@@ -1,9 +1,8 @@
-
 // src/components/rooms/RoomListItem.tsx
 'use client';
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowRight, Clock, Users, XCircle, Zap } from "lucide-react";
+import { ArrowRight, Clock, Users, XCircle, Zap, Gift } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -31,9 +30,13 @@ export default function RoomListItem({ room }: RoomListItemProps) {
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
     const hasPortal = room.portalExpiresAt && (room.portalExpiresAt as Timestamp).toDate() > new Date();
+    const isEvent = room.type === 'event';
 
     useEffect(() => {
-        if (!room.expiresAt) return;
+        if (!room.expiresAt) {
+            setTimeLeft(null); // No expiration for event rooms
+            return;
+        }
 
         const expiresAtMs = (room.expiresAt as Timestamp).toMillis();
 
@@ -82,11 +85,17 @@ export default function RoomListItem({ room }: RoomListItemProps) {
             </TooltipProvider>
         );
     }
+    
+    const cardBorder = hasPortal 
+    ? "border-primary/50 shadow-primary/10" 
+    : isEvent 
+        ? "border-amber-400/50 shadow-amber-400/10" 
+        : "border-border";
 
     return (
         <Card onClick={handleCardClick} className={cn(
-            "group overflow-hidden transition-all duration-300 flex flex-col rounded-2xl shadow-lg border",
-            hasPortal ? "border-primary/50 shadow-primary/10" : "border-border",
+            "group overflow-hidden transition-all duration-300 flex flex-col rounded-2xl shadow-lg",
+            cardBorder,
             isDisabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:shadow-xl hover:-translate-y-1",
             isParticipant && !isDisabled && "hover:border-green-500/50"
         )}>
@@ -95,17 +104,17 @@ export default function RoomListItem({ room }: RoomListItemProps) {
                     <p className="font-bold text-lg text-muted-foreground">Süresi Doldu</p>
                 </div>
             )}
-             {hasPortal && (
+             {(hasPortal || isEvent) && (
                 <div className="absolute top-3 right-3 z-10">
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <div className="relative p-1.5 bg-background/50 backdrop-blur-sm rounded-full">
-                                    <Zap className="h-5 w-5 text-primary"/>
-                                    <div className="absolute inset-0 -z-10 animate-ping bg-primary blur-md rounded-full"></div>
+                                    {hasPortal ? <Zap className="h-5 w-5 text-primary"/> : <Gift className="h-5 w-5 text-amber-500"/>}
+                                    {hasPortal && <div className="absolute inset-0 -z-10 animate-ping bg-primary blur-md rounded-full"></div>}
                                 </div>
                             </TooltipTrigger>
-                            <TooltipContent><p>Bu odaya bir portal açık!</p></TooltipContent>
+                            <TooltipContent><p>{hasPortal ? 'Bu odaya bir portal açık!' : 'Etkinlik Odası'}</p></TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
                 </div>

@@ -33,7 +33,11 @@ export default function RoomList({ searchTerm }: RoomListProps) {
       setLoading(false);
       return;
     }
-    const q = query(collection(db, "rooms"), where('type', '!=', 'match'), orderBy("type"), orderBy("createdAt", "desc"));
+    const q = query(
+        collection(db, "rooms"), 
+        where('type', 'in', ['public', 'event']),
+        orderBy("createdAt", "desc")
+    );
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const roomsData: Room[] = [];
       querySnapshot.forEach((doc) => {
@@ -50,13 +54,22 @@ export default function RoomList({ searchTerm }: RoomListProps) {
 
   const sortedAndFilteredRooms = useMemo(() => {
     return rooms
-      .filter(room => !room.expiresAt || (room.expiresAt as Timestamp).toDate() > new Date())
+      .filter(room => room.type === 'event' || !room.expiresAt || (room.expiresAt as Timestamp).toMillis() > new Date())
       .sort((a, b) => {
+          // 1. Events on top
+          if (a.type === 'event' && b.type !== 'event') return -1;
+          if (a.type !== 'event' && b.type === 'event') return 1;
+
+          // 2. User's language first
           const langA = a.language === i18n.language;
           const langB = b.language === i18n.language;
           if (langA && !langB) return -1;
           if (!langA && langB) return 1;
-          return 0;
+          
+          // 3. Newest first (for non-events)
+          const timeA = a.createdAt ? (a.createdAt as Timestamp).toMillis() : 0;
+          const timeB = b.createdAt ? (b.createdAt as Timestamp).toMillis() : 0;
+          return timeB - timeA;
       })
       .filter(room => room.name.toLowerCase().includes(searchTerm.toLowerCase()));
   }, [rooms, i18n.language, searchTerm]);
@@ -66,7 +79,7 @@ export default function RoomList({ searchTerm }: RoomListProps) {
     if (!user) return;
     setIsJoiningRandom(true);
     const availableRooms = rooms.filter(r => {
-        const isExpired = r.expiresAt && (r.expiresAt as Timestamp).toDate() < new Date();
+        const isExpired = r.type !== 'event' && r.expiresAt && (r.expiresAt as Timestamp).toDate() < new Date();
         const isFull = (r.participants?.length || 0) >= r.maxParticipants;
         const isParticipant = r.participants?.some(p => p.uid === user.uid);
         return !isExpired && !isFull && !isParticipant;

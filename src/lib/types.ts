@@ -183,7 +183,7 @@ export interface Room {
     };
     moderators: string[]; // List of moderator UIDs
     createdAt: Timestamp;
-    expiresAt?: Timestamp; // Only for public rooms
+    expiresAt?: Timestamp | null;
     portalExpiresAt?: Timestamp; // For public announcements
     participants: { uid: string, username: string, photoURL?: string | null }[];
     maxParticipants: number;
@@ -193,7 +193,7 @@ export interface Room {
     welcomeMessage: string | null;
     pinnedMessageId: string | null;
     language?: string;
-    type?: 'public' | 'private' | 'match';
+    type?: 'public' | 'private' | 'match' | 'event';
     // Matchmaking-specific fields
     confirmationExpiresAt?: Timestamp;
     matchConfirmation?: { [uid: string]: 'pending' | 'accepted' | 'declined' };

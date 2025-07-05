@@ -19,6 +19,56 @@ const BOT_USER_INFO = {
     selectedAvatarFrame: 'avatar-frame-tech'
 };
 
+export async function createEventRoom(
+    creatorId: string,
+    roomData: { name: string, description: string, language: string },
+    creatorInfo: { username: string, photoURL: string | null, role: string, selectedAvatarFrame: string }
+) {
+    if (!creatorId) throw new Error("Kullanıcı ID'si gerekli.");
+    if (creatorInfo.role !== 'admin') throw new Error("Bu işlemi yapma yetkiniz yok.");
+
+    const newRoomRef = doc(collection(db, 'rooms'));
+
+    const newRoom: Omit<Room, 'id'> = {
+        name: roomData.name,
+        description: roomData.description,
+        language: roomData.language,
+        type: 'event', // Mark as an event room
+        createdAt: serverTimestamp() as Timestamp,
+        expiresAt: null, // Event rooms do not expire
+        createdBy: {
+            uid: creatorId,
+            username: creatorInfo.username,
+            photoURL: creatorInfo.photoURL,
+            role: creatorInfo.role,
+            selectedAvatarFrame: creatorInfo.selectedAvatarFrame,
+        },
+        moderators: [creatorId],
+        participants: [],
+        maxParticipants: 50, // Higher limit for events
+        voiceParticipantsCount: 0,
+        rules: null,
+        welcomeMessage: null,
+        pinnedMessageId: null,
+    };
+
+    await setDoc(newRoomRef, newRoom);
+    return { success: true, roomId: newRoomRef.id };
+}
+
+export async function deleteEventRoom(roomId: string, adminId: string) {
+    if (!roomId || !adminId) throw new Error("Gerekli bilgiler eksik.");
+    
+    const adminUserDoc = await getDoc(doc(db, 'users', adminId));
+    if (!adminUserDoc.exists() || adminUserDoc.data().role !== 'admin') {
+        throw new Error("Bu işlemi yapma yetkiniz yok.");
+    }
+    
+    await deleteRoomWithSubcollections(roomId);
+    
+    return { success: true };
+}
+
 export async function createPrivateMatchRoom(user1: UserInfo, user2: UserInfo) {
     if (!user1?.uid || !user2?.uid) throw new Error("Kullanıcı bilgileri eksik.");
 

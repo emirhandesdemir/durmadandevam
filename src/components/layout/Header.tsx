@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Menu, Search, Send, Bell } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,10 +16,14 @@ interface HeaderProps {
 export default function Header({ onMenuOpen }: HeaderProps) {
     const { themeSettings, userData, totalUnreadDms } = useAuth();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const pathname = usePathname();
 
     const appName = themeSettings?.appName || 'HiweWalk';
     const appLogoUrl = themeSettings?.appLogoUrl;
     const hasUnreadNotifications = userData?.hasUnreadNotifications;
+    
+    // Profil ayarları sayfası veya bir kullanıcının profil sayfası
+    const isProfilePage = pathname === '/profile' || pathname.startsWith('/profile/');
 
     return (
         <>
@@ -32,31 +37,37 @@ export default function Header({ onMenuOpen }: HeaderProps) {
                         )}
                         <span className="text-xl font-bold tracking-tight hidden sm:inline">{appName}</span>
                     </Link>
+                    
                     <div className="flex items-center gap-1">
-                         <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setIsSearchOpen(true)}>
-                            <Search className="h-5 w-5" />
-                            <span className="sr-only">Kullanıcı Ara</span>
-                        </Button>
-                        <Button variant="ghost" size="icon" className="rounded-full" asChild>
-                            <Link href="/dm">
-                                <div className="relative">
-                                    <Send className="h-5 w-5" />
-                                    {totalUnreadDms > 0 && <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span></span>}
-                                </div>
-                            </Link>
-                        </Button>
-                        <Button variant="ghost" size="icon" className="rounded-full" asChild>
-                            <Link href="/notifications">
-                                <div className="relative">
-                                    <Bell className="h-5 w-5" />
-                                    {hasUnreadNotifications && <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span></span>}
-                                </div>
-                            </Link>
-                        </Button>
-                        <Button variant="ghost" size="icon" className="rounded-full" onClick={onMenuOpen}>
-                            <Menu className="h-6 w-6" />
-                            <span className="sr-only">Menüyü Aç</span>
-                        </Button>
+                        {isProfilePage ? (
+                             <Button variant="ghost" size="icon" className="rounded-full" onClick={onMenuOpen}>
+                                <Menu className="h-6 w-6" />
+                                <span className="sr-only">Menüyü Aç</span>
+                            </Button>
+                        ) : (
+                            <>
+                                <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setIsSearchOpen(true)}>
+                                    <Search className="h-5 w-5" />
+                                    <span className="sr-only">Kullanıcı Ara</span>
+                                </Button>
+                                <Button variant="ghost" size="icon" className="rounded-full" asChild>
+                                    <Link href="/dm">
+                                        <div className="relative">
+                                            <Send className="h-5 w-5" />
+                                            {totalUnreadDms > 0 && <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span></span>}
+                                        </div>
+                                    </Link>
+                                </Button>
+                                <Button variant="ghost" size="icon" className="rounded-full" asChild>
+                                    <Link href="/notifications">
+                                        <div className="relative">
+                                            <Bell className="h-5 w-5" />
+                                            {hasUnreadNotifications && <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span></span>}
+                                        </div>
+                                    </Link>
+                                </Button>
+                            </>
+                        )}
                     </div>
                 </div>
             </header>
