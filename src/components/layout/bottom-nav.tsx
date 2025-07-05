@@ -17,14 +17,8 @@ export default function BottomNav() {
   const { user, userData } = useAuth();
 
   const centerButtonConfig = useMemo(() => {
-    if (pathname.startsWith('/profile')) {
-      return {
-        id: 'settings',
-        href: '/profile',
-        icon: Settings,
-        label: 'Ayarlar'
-      };
-    }
+    // Note: The logic for showing 'Settings' on profile pages was removed
+    // to keep the create button consistent, per user feedback.
     if (pathname === '/rooms') {
       return {
         id: 'create-room',
@@ -76,8 +70,8 @@ export default function BottomNav() {
     },
     {
       id: 'profile',
-      isActive: pathname.startsWith('/profile'),
-      href: `/profile`,
+      isActive: pathname === '/profile' || pathname === `/profile/${user.uid}`,
+      href: `/profile/${user.uid}`,
       label: 'Profil',
     },
   ];
