@@ -81,8 +81,32 @@ export async function sendMessage(
     throw new Error('Mesaj içeriği boş olamaz.');
   }
 
+  // Security check: Verify that neither user has blocked the other.
+  const senderDocRef = doc(db, 'users', sender.uid);
+  const receiverDocRef = doc(db, 'users', receiver.uid);
+
+  const [senderDoc, receiverDoc] = await Promise.all([
+    getDoc(senderDocRef),
+    getDoc(receiverDocRef),
+  ]);
+
+  if (!senderDoc.exists() || !receiverDoc.exists()) {
+    throw new Error("Kullanıcı bulunamadı.");
+  }
+
+  const senderData = senderDoc.data();
+  const receiverData = receiverDoc.data();
+
+  if (senderData.blockedUsers?.includes(receiver.uid)) {
+    throw new Error(`${receiver.username} adlı kullanıcıyı engellediğiniz için mesaj gönderemezsiniz.`);
+  }
+
+  if (receiverData.blockedUsers?.includes(sender.uid)) {
+    throw new Error("Bu kullanıcı tarafından engellendiniz.");
+  }
+
+
   const metadataDocRef = doc(db, 'directMessagesMetadata', chatId);
-  const senderUserRef = doc(db, 'users', sender.uid);
   
   let finalImageUrl: string | undefined;
   if (imageUrl) {
@@ -135,7 +159,7 @@ export async function sendMessage(
     transaction.set(newMessageRef, messageData);
     
     // Update sender's last action timestamp for rate limiting
-    transaction.update(senderUserRef, { lastActionTimestamp: serverTimestamp() });
+    transaction.update(senderDocRef, { lastActionTimestamp: serverTimestamp() });
     
     if (!metadataDoc.exists()) {
       transaction.set(metadataDocRef, {
