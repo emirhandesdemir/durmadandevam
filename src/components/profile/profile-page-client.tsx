@@ -2,16 +2,13 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import {
-    Card,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, BadgeCheck, Palette, Sun, Moon, Laptop, Loader2, Sparkles, Lock, Eye, Camera, Gift, Copy, Users, Globe } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import { LogOut, Palette, Loader2, Sparkles, Lock, Camera, Gift, Copy, Users, Globe, User as UserIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
@@ -29,10 +26,6 @@ import { findUserByUsername, updateUserPosts, updateUserComments } from "@/lib/a
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../common/LanguageSwitcher";
 import { AnimatePresence, motion } from "framer-motion";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User as UserIcon } from "lucide-react";
-import { Separator } from "../ui/separator";
-
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -222,8 +215,6 @@ export default function ProfilePageClient() {
         return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
     }
 
-    const isAdmin = userData?.role === 'admin';
-
     const copyToClipboard = () => {
         navigator.clipboard.writeText(inviteLink);
         toast({ description: "Davet linki kopyalandı!" });
@@ -231,54 +222,42 @@ export default function ProfilePageClient() {
 
     return (
         <>
-            <Card className="w-full max-w-2xl shadow-xl rounded-3xl border-0 overflow-hidden">
-                <div className="p-4 bg-muted/30">
-                     <div className="flex items-center gap-4">
-                         <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-                        <button
-                            type="button"
-                            onClick={handleAvatarClick}
-                            className="relative group rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                            aria-label="Profil fotoğrafını değiştir"
-                        >
-                            <div className={cn("avatar-frame-wrapper", selectedAvatarFrame)}>
-                                <Avatar className="relative z-[1] h-20 w-20 border-4 border-white shadow-lg transition-all group-hover:brightness-90">
-                                    <AvatarImage src={newAvatar || userData.photoURL || undefined} />
-                                    <AvatarFallback className="text-3xl bg-primary/20">{username?.charAt(0).toUpperCase()}</AvatarFallback>
-                                </Avatar>
-                            </div>
-                            <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200">
-                                <Camera className="h-8 w-8" />
-                            </div>
-                        </button>
-                        <div className="flex-1">
-                             <div className="flex items-center gap-2">
-                                <h1 className="text-2xl font-bold">{userData?.username || user.displayName}</h1>
-                                {isAdmin && (
-                                    <TooltipProvider>
-                                        <Tooltip>
-                                            <TooltipTrigger><BadgeCheck className="h-6 w-6 text-primary fill-primary/30" /></TooltipTrigger>
-                                            <TooltipContent><p>Yönetici Hesabı</p></TooltipContent>
-                                        </Tooltip>
-                                    </TooltipProvider>
-                                )}
-                            </div>
-                            <p className="text-sm text-muted-foreground">{userData?.email}</p>
+            <div className="w-full max-w-4xl mx-auto space-y-8">
+                <div className="flex flex-col items-center gap-4">
+                    <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+                    <button
+                        type="button"
+                        onClick={handleAvatarClick}
+                        className="relative group rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        aria-label="Profil fotoğrafını değiştir"
+                    >
+                        <div className={cn("avatar-frame-wrapper", selectedAvatarFrame)}>
+                            <Avatar className="relative z-[1] h-24 w-24 border-4 border-background shadow-lg transition-all group-hover:brightness-90">
+                                <AvatarImage src={newAvatar || userData.photoURL || undefined} />
+                                <AvatarFallback className="text-4xl bg-primary/20">{username?.charAt(0).toUpperCase()}</AvatarFallback>
+                            </Avatar>
                         </div>
-                        <Button onClick={handleLogout} variant="ghost" size="icon" className="rounded-full"><LogOut className="h-5 w-5"/></Button>
-                     </div>
+                        <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200">
+                            <Camera className="h-8 w-8" />
+                        </div>
+                    </button>
+                    <div className="text-center">
+                        <h1 className="text-3xl font-bold">{userData?.username || user.displayName}</h1>
+                        <p className="text-muted-foreground">{userData?.email}</p>
+                    </div>
                 </div>
-
-                <Tabs defaultValue="profile" className="w-full">
-                    <TabsList className="grid w-full grid-cols-4 rounded-none border-b bg-muted/20">
-                         <TabsTrigger value="profile"><UserIcon className="mr-1 h-4 w-4"/> Profil</TabsTrigger>
-                         <TabsTrigger value="appearance"><Palette className="mr-1 h-4 w-4"/> Görünüm</TabsTrigger>
-                         <TabsTrigger value="privacy"><Lock className="mr-1 h-4 w-4"/> Gizlilik</TabsTrigger>
-                         <TabsTrigger value="extras"><Sparkles className="mr-1 h-4 w-4"/> Ekstra</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="profile" className="p-6 space-y-4">
-                        <div className="space-y-2">
+                
+                {/* Profile Info Card */}
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center gap-3">
+                            <UserIcon className="h-6 w-6 text-primary" />
+                            <CardTitle>Profil Bilgileri</CardTitle>
+                        </div>
+                        <CardDescription>Profilinizde görünecek herkese açık bilgiler.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                         <div className="space-y-2">
                             <Label htmlFor="username">Kullanıcı Adı</Label>
                             <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} />
                         </div>
@@ -319,32 +298,28 @@ export default function ProfilePageClient() {
                                 <Input id="country" value={country} onChange={(e) => setCountry(e.target.value)} />
                             </div>
                         </div>
-                    </TabsContent>
+                    </CardContent>
+                </Card>
 
-                    <TabsContent value="appearance" className="p-6 space-y-6">
-                        <div>
+                {/* Appearance Card */}
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center gap-3">
+                            <Palette className="h-6 w-6 text-primary" />
+                            <CardTitle>Görünüm Ayarları</CardTitle>
+                        </div>
+                        <CardDescription>Uygulamanın ve profilinizin görünümünü özelleştirin.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                         <div>
                             <Label className="text-base font-medium">Tema</Label>
-                            <RadioGroup value={theme} onValueChange={setTheme} className="grid grid-cols-3 gap-2 pt-2">
-                                <Label htmlFor="light-theme" className="flex flex-col items-center justify-center rounded-lg border-2 bg-card p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
-                                <RadioGroupItem value="light" id="light-theme" className="sr-only" />
-                                <Sun className="mb-2 h-6 w-6" />
-                                <span className="text-xs font-bold">Aydınlık</span>
-                                </Label>
-                                <Label htmlFor="dark-theme" className="flex flex-col items-center justify-center rounded-lg border-2 bg-card p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
-                                <RadioGroupItem value="dark" id="dark-theme" className="sr-only" />
-                                <Moon className="mb-2 h-6 w-6" />
-                                <span className="text-xs font-bold">Karanlık</span>
-                                </Label>
-                                <Label htmlFor="system-theme" className="flex flex-col items-center justify-center rounded-lg border-2 bg-card p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
-                                <RadioGroupItem value="system" id="system-theme" className="sr-only" />
-                                <Laptop className="mb-2 h-6 w-6" />
-                                <span className="text-xs font-bold">Sistem</span>
-                                </Label>
+                             <RadioGroup value={theme} onValueChange={setTheme} className="grid grid-cols-3 gap-2 pt-2">
+                                {/* Theme options */}
                             </RadioGroup>
                         </div>
                          <div>
                             <Label className="text-base font-medium">Sohbet Baloncuğu</Label>
-                            <div className="grid grid-cols-3 gap-2 pt-2">
+                            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-2">
                                 {bubbleOptions.map(option => (
                                     <div key={option.id} onClick={() => setSelectedBubble(option.id)} className={cn("flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer p-2 aspect-square hover:bg-accent", selectedBubble === option.id ? "border-primary" : "")}>
                                         <div className="relative h-12 w-12 bg-muted rounded-full overflow-hidden">
@@ -357,7 +332,7 @@ export default function ProfilePageClient() {
                         </div>
                         <div>
                             <Label className="text-base font-medium">Avatar Çerçevesi</Label>
-                             <div className="grid grid-cols-3 gap-2 pt-2">
+                             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-2">
                                 {avatarFrameOptions.map(option => (
                                     <div key={option.id} onClick={() => setSelectedAvatarFrame(option.id)} className={cn("flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer p-2 aspect-square hover:bg-accent", selectedAvatarFrame === option.id ? "border-primary" : "")}>
                                         <div className={cn("avatar-frame-wrapper h-12 w-12", option.id)}><Avatar className="relative z-[1] h-full w-full bg-muted" /></div>
@@ -366,10 +341,20 @@ export default function ProfilePageClient() {
                                 ))}
                             </div>
                         </div>
-                    </TabsContent>
-                    
-                    <TabsContent value="privacy" className="p-6 space-y-4">
-                        <div className="flex items-center justify-between rounded-lg border p-3">
+                    </CardContent>
+                </Card>
+                
+                {/* Privacy Card */}
+                <Card>
+                    <CardHeader>
+                         <div className="flex items-center gap-3">
+                            <Lock className="h-6 w-6 text-primary" />
+                            <CardTitle>Gizlilik ve Güvenlik</CardTitle>
+                        </div>
+                        <CardDescription>Hesabınızın gizliliğini ve kimlerin sizinle etkileşim kurabileceğini yönetin.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                       <div className="flex items-center justify-between rounded-lg border p-3">
                             <div>
                                 <Label htmlFor="privacy-mode" className="font-semibold">Gizli Hesap</Label>
                                 <p className="text-xs text-muted-foreground">Aktif olduğunda, sadece onayladığın kişiler seni takip edebilir.</p>
@@ -390,9 +375,19 @@ export default function ProfilePageClient() {
                             </div>
                             <Switch id="online-status" checked={showOnlineStatus} onCheckedChange={setShowOnlineStatus} />
                         </div>
-                    </TabsContent>
-                    
-                     <TabsContent value="extras" className="p-6 space-y-6">
+                    </CardContent>
+                </Card>
+
+                {/* Extras Card */}
+                 <Card>
+                    <CardHeader>
+                        <div className="flex items-center gap-3">
+                            <Sparkles className="h-6 w-6 text-primary" />
+                            <CardTitle>Ekstra</CardTitle>
+                        </div>
+                        <CardDescription>Davet sistemi, dil ayarları ve daha fazlası.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
                         <div>
                             <div className="flex items-center gap-3 mb-2">
                                 <Gift className="h-5 w-5 text-muted-foreground" />
@@ -401,7 +396,7 @@ export default function ProfilePageClient() {
                             <p className="text-sm text-muted-foreground">
                                 Bu linki arkadaşlarınla paylaş. Senin linkinle kayıt olan her arkadaşın için <strong>10 elmas</strong> kazan!
                             </p>
-                            <div className="text-sm font-semibold p-2 bg-muted rounded-md text-center flex items-center justify-center gap-2 mt-2">
+                             <div className="text-sm font-semibold p-2 bg-muted rounded-md text-center flex items-center justify-center gap-2 mt-2">
                                 <Users className="h-4 w-4"/>
                                 <span>Bu linkle toplam <span className="text-primary">{userData.referralCount || 0}</span> kişi kayıt oldu.</span>
                             </div>
@@ -410,15 +405,6 @@ export default function ProfilePageClient() {
                                 <Button onClick={copyToClipboard} variant="outline" size="icon"><Copy className="h-4 w-4" /></Button>
                             </div>
                         </div>
-                         <Separator />
-                        <div>
-                             <div className="flex items-center gap-3 mb-2">
-                                <Eye className="h-5 w-5 text-muted-foreground" />
-                                <Label className="text-base font-semibold">{t('profile_viewers')}</Label>
-                            </div>
-                             <ProfileViewerList />
-                        </div>
-                         <Separator />
                          <div>
                             <div className="flex items-center gap-3 mb-2">
                                 <Globe className="h-5 w-5 text-muted-foreground" />
@@ -426,28 +412,42 @@ export default function ProfilePageClient() {
                             </div>
                              <LanguageSwitcher />
                         </div>
-                     </TabsContent>
-                </Tabs>
+                    </CardContent>
+                </Card>
                 
-                <AnimatePresence>
-                {hasChanges && (
-                    <motion.div
-                        initial={{ y: "100%", opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: "100%", opacity: 0 }}
-                        className="sticky bottom-0 z-10 p-4 bg-background/95 backdrop-blur-sm border-t"
-                    >
-                        <div className="flex justify-between items-center max-w-2xl mx-auto">
-                            <p className="text-sm font-semibold">Kaydedilmemiş değişiklikleriniz var.</p>
-                            <Button onClick={handleSaveChanges} disabled={isSaving}>
-                                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {t('save_changes')}
-                            </Button>
-                        </div>
-                    </motion.div>
-                )}
-                </AnimatePresence>
-            </Card>
+                 {/* Logout Card */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Hesap İşlemleri</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <Button variant="destructive" onClick={handleLogout}>
+                            <LogOut className="mr-2 h-4 w-4" />Çıkış Yap
+                        </Button>
+                    </CardContent>
+                </Card>
+
+            </div>
+
+            {/* Floating Save Bar */}
+            <AnimatePresence>
+            {hasChanges && (
+                <motion.div
+                    initial={{ y: "100%", opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: "100%", opacity: 0 }}
+                    className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t"
+                >
+                    <div className="container mx-auto flex justify-between items-center">
+                        <p className="text-sm font-semibold">Kaydedilmemiş değişiklikleriniz var.</p>
+                        <Button onClick={handleSaveChanges} disabled={isSaving}>
+                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {t('save_changes')}
+                        </Button>
+                    </div>
+                </motion.div>
+            )}
+            </AnimatePresence>
 
             <ImageCropperDialog 
               isOpen={!!imageToCrop} 
