@@ -1,3 +1,4 @@
+
 'use client';
 import { Sheet, SheetContent, SheetHeader } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -5,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
-import { Bell, Gem, LogOut, Search, Send, Settings, Store } from "lucide-react";
+import { Bell, Gem, LogOut, Search, Send, Settings, Store, Crown } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import UserSearchDialog from "../search/UserSearchDialog";
@@ -28,6 +29,7 @@ export default function MainNavSheet({ isOpen, onOpenChange }: MainNavSheetProps
     const [isSearchOpen, setIsSearchOpen] = useState(false);
 
     const hasUnreadNotifications = userData?.hasUnreadNotifications;
+    const isPremium = userData?.premiumUntil && userData.premiumUntil.toDate() > new Date();
 
     if (!user || !userData) return null;
 
@@ -57,6 +59,14 @@ export default function MainNavSheet({ isOpen, onOpenChange }: MainNavSheetProps
                            <Search className="h-5 w-5 text-muted-foreground" /> {t('search_user')}
                         </Button>
                         <Separator />
+                        {isPremium && (
+                            <NavLink href="/premium" onOpenChange={onOpenChange}>
+                                <div className="relative">
+                                     <Crown className="h-5 w-5 text-yellow-500" />
+                                </div>
+                                {t('premium_status')}
+                            </NavLink>
+                        )}
                         <NavLink href="/store" onOpenChange={onOpenChange}><Store className="h-5 w-5 text-muted-foreground" /> {t('store')}</NavLink>
                         <NavLink href="/dm" onOpenChange={onOpenChange}>
                             <div className="relative">

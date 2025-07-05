@@ -1,3 +1,4 @@
+
 export const tr = {
   translation: {
     // Uygulama Giriş Sayfası
@@ -13,6 +14,7 @@ export const tr = {
     store: "Mağaza",
     settings: "Ayarlar",
     search_user: "Kullanıcı Ara",
+    premium_status: "Premium Durumu",
 
     // Profil Sayfası
     edit_profile: "Profili Düzenle",
@@ -34,6 +36,17 @@ export const tr = {
     coming_soon: "Yakında...",
     ad_cooldown_error: "Yeni bir reklam izlemek için lütfen {{seconds}} saniye bekleyin.",
     ad_watch_success: "Tebrikler! Hesabınıza {{count}} elmas eklendi.",
-    premium_coming_soon_toast: "Premium üyelik ve getireceği harika özellikler için heyecanlıyız! Gelişmeler için takipte kalın."
+    premium_coming_soon_toast: "Premium üyelik ve getireceği harika özellikler için heyecanlıyız! Gelişmeler için takipte kalın.",
+    
+    // Premium Sayfası
+    premium_benefits: "Premium Avantajların",
+    premium_badge_desc: "Profilinde ve sohbetlerde kullanıcı adının yanında özel bir kırmızı kral tacı rozeti görünür.",
+    premium_visuals_desc: "Profil resmin için kırmızı parlayan bir çerçeve ve sohbetlerde kullanabileceğin özel kırmızı baloncuk efekti.",
+    free_room_perks_desc: "Sahip olduğun odaların katılımcı limitini elmas harcamadan ücretsiz olarak artırabilirsin.",
+    first_time_bonus_desc: "İlk premium üyeliğine özel olarak hesabına 100 elmas ve 3 gün boyunca sınırsız oda oluşturma hakkı tanımlandı!",
+    days_left: "{{count}} gün kaldı",
+    hours_left: "{{count}} saat kaldı",
+    expired: "Süresi Doldu",
+    unlimited: "Sınırsız",
   },
 };
