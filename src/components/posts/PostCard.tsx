@@ -193,63 +193,79 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
             : "az önce";
 
         return (
-             <>
-                <div 
-                    className={cn("relative flex flex-col pt-4 transition-colors", !isStandalone && "border-b")}
-                >
-                     {showLikeAnimation && (
+            <>
+                <div className={cn("relative flex flex-col pt-3 transition-colors", !isStandalone && "border-b")}>
+                    
+                    {/* Like animation on double click */}
+                    {showLikeAnimation && (
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                             <Heart className="text-white h-24 w-24 drop-shadow-lg animate-like-pop" fill="currentColor" />
                         </div>
                     )}
-
-                    <div className="px-4 pb-2">
-                        <div className="text-xs text-muted-foreground flex items-center gap-2 mb-2">
-                            <Repeat className="h-4 w-4" />
-                            <Link href={`/profile/${post.uid}`} className="font-bold hover:underline">{post.username}</Link> retweetledi
+                    
+                    {/* Retweeter's Info and Quote */}
+                    <div className="flex items-start gap-3 px-4 pb-2">
+                        <Link href={`/profile/${post.uid}`}>
+                            <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
+                                <Avatar className="relative z-[1] h-10 w-10">
+                                    <AvatarImage src={post.userAvatar || undefined} />
+                                    <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                            </div>
+                        </Link>
+                        <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5">
+                                    <Link href={`/profile/${post.uid}`}><p className="font-bold text-sm hover:underline">{post.username}</p></Link>
+                                    <span className="text-xs text-muted-foreground">{timeAgo}</span>
+                                </div>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full -mr-2">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        {isOwner ? (
+                                            <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Sil</span></DropdownMenuItem>
+                                        ) : (
+                                            <DropdownMenuItem onClick={handleHide}><EyeOff className="mr-2 h-4 w-4" /><span>İlgilenmiyorum</span></DropdownMenuItem>
+                                        )}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                            {post.text && <p className="whitespace-pre-wrap text-sm mt-1">{post.text}</p>}
                         </div>
-
-                         {/* The QUOTE TEXT from the retweeter */}
-                        {post.text && (
-                          <div className="flex gap-3">
-                             <div className="w-10 flex-shrink-0" />
-                             <p className="whitespace-pre-wrap text-sm">{post.text}</p>
-                          </div>
-                        )}
                     </div>
 
-                    {/* Original Post Content in a nested box */}
-                    <div className="border rounded-lg mx-4 mt-2 overflow-hidden">
-                        <div className="flex items-center gap-3 p-3">
-                            <Link href={`/profile/${originalPost.uid}`}>
-                                <div className={cn("avatar-frame-wrapper", originalPost.userAvatarFrame)}>
-                                    <Avatar className="relative z-[1] h-9 w-9">
+                    {/* Embedded Original Post */}
+                    <div className="border rounded-xl mx-4 mb-2 overflow-hidden bg-card/50 cursor-pointer" onClick={() => {/* TODO: Open original post */}}>
+                        <div className="p-3">
+                            <div className="flex items-center gap-2">
+                                <Link href={`/profile/${originalPost.uid}`}>
+                                    <Avatar className="h-5 w-5">
                                         <AvatarImage src={originalPost.userAvatar || undefined} />
-                                        <AvatarFallback>{originalPost.username?.charAt(0)}</AvatarFallback>
+                                        <AvatarFallback className="text-xs">{originalPost.username?.charAt(0)}</AvatarFallback>
                                     </Avatar>
-                                </div>
-                            </Link>
-                            <div className="flex-1">
-                                <Link href={`/profile/${originalPost.uid}`}><p className="font-bold text-sm hover:underline">{originalPost.username}</p></Link>
-                                <span className="text-xs text-muted-foreground">{originalTimeAgo}</span>
+                                </Link>
+                                <Link href={`/profile/${originalPost.uid}`} className="font-bold text-xs hover:underline truncate">{originalPost.username}</Link>
+                                <span className="text-xs text-muted-foreground shrink-0">{originalTimeAgo}</span>
                             </div>
+                            {originalPost.text && <p className="whitespace-pre-wrap text-sm mt-2 line-clamp-4">{originalPost.text}</p>}
                         </div>
-                        
-                        {originalPost.text && <p className="whitespace-pre-wrap text-sm px-3 pb-2">{originalPost.text}</p>}
-                        
                         {originalPost.imageUrl && (
-                            <div className="relative w-full bg-muted cursor-pointer" onDoubleClick={handleDoubleClick}>
+                             <div className="relative w-full aspect-video bg-muted" onDoubleClick={handleDoubleClick}>
                                 <Image 
                                     src={originalPost.imageUrl} 
                                     alt="Retweeted post" 
-                                    width={800} height={800} 
-                                    className="h-auto w-full object-cover"
+                                    fill
+                                    className="object-cover"
                                     onContextMenu={(e) => e.preventDefault()}
                                 />
                             </div>
                         )}
                     </div>
-
+                    
                     {/* Action buttons for the retweet */}
                     <div className="px-2 pt-1 pb-2">
                         <div className="flex items-center gap-1">
