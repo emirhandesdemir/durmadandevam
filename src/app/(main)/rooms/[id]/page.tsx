@@ -152,9 +152,9 @@ export default function RoomPage() {
         };
     }, [roomId, gameSettings]);
 
-    // Game starting timer (host-only)
+    // Game starting timer (triggers for any user, action is idempotent)
     useEffect(() => {
-        if (!isHost || !room?.nextGameTimestamp || !featureFlags?.quizGameEnabled) {
+        if (!room?.nextGameTimestamp || !featureFlags?.quizGameEnabled) {
             setShowGameCountdown(false);
             return;
         }
@@ -176,7 +176,6 @@ export default function RoomPage() {
             if (remainingSeconds <= 0) {
                 setShowGameCountdown(false);
                 clearInterval(interval);
-                // Check if there is no active game before starting a new one
                 if (!activeGameRef.current) {
                     startGameInRoom(roomId).catch(err => console.error("Failed to start game:", err));
                 }
@@ -187,7 +186,7 @@ export default function RoomPage() {
         interval = setInterval(updateCountdown, 1000);
         
         return () => clearInterval(interval);
-    }, [room?.nextGameTimestamp, isHost, roomId, featureFlags?.quizGameEnabled]);
+    }, [room?.nextGameTimestamp, roomId, featureFlags?.quizGameEnabled]);
 
     const handleAnswerSubmit = useCallback(async (answerIndex: number) => {
         if (!activeGame || !user) return;
@@ -202,17 +201,6 @@ export default function RoomPage() {
 
     const isLoading = authLoading || !room;
     if (isLoading) return <div className="flex h-full items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
-
-    const getGameComponent = () => {
-        if (!featureFlags?.quizGameEnabled) return null;
-        if (finishedGame) return <GameResultCard game={finishedGame} key="finished-game" />;
-        if (activeGame && gameSettings) return <RoomGameCard game={activeGame} settings={gameSettings} onAnswerSubmit={handleAnswerSubmit} onTimerEnd={() => {}} currentUserId={user!.uid} key="active-game" />;
-        if (showGameCountdown && !activeGame) return <GameCountdownCard timeLeft={countdownTime} key="countdown"/>;
-        if (room.giveaway && room.giveaway.status !== 'idle') return <GiveawayCard giveaway={room.giveaway} roomId={roomId} isHost={isHost} key="giveaway" />;
-        return null;
-    }
-
-    const GameComponent = getGameComponent();
 
     return (
         <>
@@ -242,11 +230,26 @@ export default function RoomPage() {
                 <main ref={chatScrollRef} className="flex-1 flex flex-col overflow-y-auto">
                     <div className="p-4">
                         <AnimatePresence mode="wait">
-                            {GameComponent && (
-                                <motion.div key={GameComponent.key} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                                    {GameComponent}
-                                </motion.div>
-                            )}
+                            {
+                                !featureFlags?.quizGameEnabled ? null :
+                                finishedGame ? (
+                                    <motion.div key="finished-game" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                                         <GameResultCard game={finishedGame} />
+                                    </motion.div>
+                                ) : activeGame && gameSettings ? (
+                                    <motion.div key="active-game" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                                        <RoomGameCard game={activeGame} settings={gameSettings} onAnswerSubmit={handleAnswerSubmit} onTimerEnd={() => {}} currentUserId={user!.uid} />
+                                    </motion.div>
+                                ) : showGameCountdown && !activeGame ? (
+                                     <motion.div key="countdown" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                                        <GameCountdownCard timeLeft={countdownTime} />
+                                    </motion.div>
+                                ) : room.giveaway && room.giveaway.status !== 'idle' ? (
+                                     <motion.div key="giveaway" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                                        <GiveawayCard giveaway={room.giveaway} roomId={roomId} isHost={isHost} />
+                                    </motion.div>
+                                ) : null
+                            }
                         </AnimatePresence>
                     </div>
                     <RoomInfoCards room={room} isOwner={isHost} />
