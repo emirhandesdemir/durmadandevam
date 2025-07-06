@@ -1,3 +1,4 @@
+
 // Bu dosya, Firebase projesinin sunucu tarafı mantığını içerir.
 // Veritabanındaki belirli olaylara (örn: yeni bildirim oluşturma) tepki vererek
 // anlık bildirim gönderme gibi işlemleri gerçekleştirir.
@@ -157,13 +158,22 @@ export const sendPushNotification = functions.region("us-central1").firestore
                 break;
         }
 
-        const oneSignalPayload = {
+        const oneSignalPayload: { [key: string]: any } = {
             app_id: ONE_SIGNAL_APP_ID,
             include_external_user_ids: [userId],
             headings: { "en": title, "tr": title },
             contents: { "en": body, "tr": body },
             web_url: `https://hiwewalkbeta.netlify.app${link}`,
+            data: { // Add custom data for in-app navigation
+                notificationType: notificationData.type,
+                relatedId: notificationData.postId || notificationData.roomId || notificationData.chatId || notificationData.senderId
+            }
         };
+
+        if (notificationData.postImage) {
+            oneSignalPayload.big_picture = notificationData.postImage;
+            oneSignalPayload.chrome_web_image = notificationData.postImage;
+        }
         
         console.log("Yük OneSignal'a gönderiliyor:", JSON.stringify(oneSignalPayload, null, 2));
 

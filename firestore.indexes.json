@@ -1,3 +1,4 @@
+
 {
   "indexes": [
     {
@@ -144,14 +145,6 @@
           "fieldPath": "username",
           "order": "ASCENDING"
         }
-      ]
-    },
-    {
-      "collectionGroup": "lives",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "viewerCount", "order": "DESCENDING" }
       ]
     }
   ],

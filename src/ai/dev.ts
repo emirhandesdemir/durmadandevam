@@ -1,3 +1,4 @@
+
 // Bu dosya, geliştirme ortamında Genkit akışlarını (flows)
 // başlatmak ve test etmek için kullanılır.
 // Yan etkileri (side effects) için akışları buraya import ederiz,

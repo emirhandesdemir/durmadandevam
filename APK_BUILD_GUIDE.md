@@ -1,3 +1,4 @@
+
 # Web Uygulamanızı Android (APK) Paketine Dönüştürme Rehberi
 
 ## Giriş: Modern Yaklaşım - PWA'dan APK'ya

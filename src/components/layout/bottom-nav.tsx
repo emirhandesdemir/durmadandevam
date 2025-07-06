@@ -1,3 +1,4 @@
+
 // src/components/layout/bottom-nav.tsx
 'use client';
 
