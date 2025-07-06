@@ -1,51 +1,48 @@
 'use client';
 
 import { useEffect } from 'react';
-import { registerServiceWorker } from '@/lib/workbox';
+import { Workbox } from 'workbox-window';
 
+/**
+ * Bu bileşen, PWA'nın servis çalışanını (service worker) tarayıcıya kaydeder
+ * ve güncelleme döngüsünü yönetir.
+ * Root layout'a eklenerek uygulamanın her açılışında çalışması sağlanır.
+ */
 export default function ServiceWorkerRegistrar() {
   useEffect(() => {
-    // This function sets up the service worker and its listeners.
-    registerServiceWorker();
-
-    // --- Register sync tasks for PWABuilder detection ---
-    const registerSyncs = async () => {
-        if (!('serviceWorker' in navigator)) return;
-        
-        const registration = await navigator.serviceWorker.ready;
-        
-        // Background Sync Registration
-        if ('sync' in registration) {
-            try {
-                await registration.sync.register('my-background-sync');
-                console.log('Background sync registered');
-            } catch (err) {
-                // This might fail if permissions are not granted, which is okay.
-                // We are just signaling the intent to use it.
-                console.warn('Background sync registration failed:', err);
-            }
-        }
-
-        // Periodic Sync Registration
-        if ('periodicSync' in (registration as any)) {
-             try {
-                 // @ts-ignore
-                const status = await navigator.permissions.query({ name: 'periodic-background-sync' });
-                if (status.state === 'granted') {
-                    // @ts-ignore
-                    await registration.periodicSync.register('my-periodic-sync', {
-                        minInterval: 24 * 60 * 60 * 1000, // 24 hours
-                    });
-                    console.log('Periodic sync registered');
-                }
-            } catch (err) {
-                 console.warn('Periodic sync registration failed:', err);
-            }
-        }
+    // Geliştirme ortamında servis çalışanını kaydetme.
+    if (process.env.NODE_ENV === 'development') {
+      return;
     }
-    
-    registerSyncs();
+
+    if ('serviceWorker' in navigator) {
+      const wb = new Workbox('/sw.js');
+
+      // 'waiting' olayı, yeni bir servis çalışanının aktif olmak için beklediğini gösterir.
+      // Kullanıcıya "güncelleme var" bildirimi göstermek yerine,
+      // otomatik olarak yeni sürümü aktif ediyoruz.
+      wb.addEventListener('waiting', () => {
+        console.log('New service worker is waiting to be activated.');
+        wb.messageSkipWaiting();
+      });
+
+      // 'activated' olayı, yeni servis çalışanının kontrolü ele aldığını gösterir.
+      // Eğer bu bir güncelleme ise, sayfayı yeniden yükleyerek kullanıcının
+      // en yeni varlıkları (assets) kullanmasını sağlıyoruz.
+      wb.addEventListener('activated', (event) => {
+        if (event.isUpdate) {
+          console.log('Service worker has been updated. Reloading page...');
+          window.location.reload();
+        } else {
+          console.log('Service worker activated for the first time!');
+        }
+      });
+      
+      // Servis çalışanını kaydet.
+      wb.register();
+    }
   }, []);
 
-  return null; // This component doesn't render anything visible
+  // Bu bileşen arayüzde bir şey render etmez.
+  return null; 
 }

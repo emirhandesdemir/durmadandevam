@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -64,7 +65,7 @@
     overscroll-behavior-y: contain;
   }
   .auth-bg {
-    background: linear-gradient(-45deg, #ef4444, #dc2626, #3b82f6, #2563eb);
+    background: linear-gradient(-45deg, #73A580, #E9967A, #F5F5DC, #73A580);
     background-size: 400% 400%;
     animation: gradientBG 15s ease infinite;
   }
@@ -323,3 +324,4 @@
     background-repeat: repeat;
   }
 }
+

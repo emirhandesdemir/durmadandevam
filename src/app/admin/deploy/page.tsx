@@ -63,7 +63,7 @@ export default function DeployPage() {
                     <div>
                         <CardTitle className="text-yellow-900 dark:text-yellow-200">Manuel İşlem Gerekli</CardTitle>
                         <CardDescription className="text-yellow-800 dark:text-blue-300">
-                            Bazı özelliklerin tam olarak çalışabilmesi için, kodun Google sunucularına bir defaya mahsus yüklenmesi (dağıtılması) gerekir. Bu işlem benim yeteneklerimin dışındadır ve terminal üzerinden yapılmalıdır.
+                            Anlık bildirim gibi bazı özelliklerin tam olarak çalışabilmesi için, kodun Google sunucularına bir defaya mahsus yüklenmesi (dağıtılması) gerekir. Bu işlem benim yeteneklerimin dışındadır ve terminal üzerinden yapılmalıdır.
                         </CardDescription>
                     </div>
                 </CardHeader>
@@ -107,7 +107,7 @@ export default function DeployPage() {
                         Bildirim Servisini Test Et
                     </CardTitle>
                     <CardDescription>
-                        Fonksiyonun doğru şekilde tetiklendiğini ve OneSignal'ın çalıştığını kontrol etmek için kendinize bir test bildirimi gönderin. Bu butona tıkladığınızda, bildirim fonksiyonu sizin için tetiklenir.
+                        Dağıtım yaptıktan sonra, fonksiyonun doğru şekilde tetiklendiğini ve OneSignal'ın çalıştığını kontrol etmek için kendinize bir test bildirimi gönderin.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
