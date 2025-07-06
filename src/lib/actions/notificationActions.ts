@@ -8,6 +8,7 @@ import {
   serverTimestamp,
   doc,
   updateDoc,
+  getDoc,
 } from 'firebase/firestore';
 import type { UserProfile } from '../types';
 
@@ -17,7 +18,7 @@ interface CreateNotificationArgs {
   senderUsername: string;
   senderAvatar: string | null;
   senderAvatarFrame?: string;
-  type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message';
+  type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile';
   postId?: string | null;
   postImage?: string | null;
   commentText?: string;
@@ -35,6 +36,33 @@ interface BroadcastNotificationArgs {
     body: string;
     link?: string;
 }
+
+export async function triggerProfileCompletionNotification(userId: string) {
+    if (!userId) return;
+
+    const userRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) {
+        const userData = userSnap.data();
+        // Check if bio is missing and if we haven't sent this notification before
+        if (!userData.bio && !userData.profileCompletionNotificationSent) {
+            // Send the notification
+            await createNotification({
+                recipientId: userId,
+                senderId: 'system-profile',
+                senderUsername: 'HiweWalk',
+                senderAvatar: 'https://placehold.co/100x100.png',
+                type: 'complete_profile',
+            });
+            // Mark the notification as sent to prevent duplicates
+            await updateDoc(userRef, {
+                profileCompletionNotificationSent: true
+            });
+        }
+    }
+}
+
 
 /**
  * Creates a document in the `broadcasts` collection, which triggers a Cloud

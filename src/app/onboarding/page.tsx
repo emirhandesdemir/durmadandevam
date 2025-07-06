@@ -8,7 +8,6 @@ import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import Step1Welcome from '@/components/onboarding/Step1Welcome';
 import Step2Bio from '@/components/onboarding/Step2Bio';
-import Step3Follow from '@/components/onboarding/Step3Follow';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { updateOnboardingData } from '@/lib/actions/userActions';
@@ -25,7 +24,6 @@ export default function OnboardingPage() {
   // Her adımdan gelen verileri tutan state'ler.
   const [avatarDataUrl, setAvatarDataUrl] = useState<string | null>(null);
   const [bio, setBio] = useState('');
-  const [followingUids, setFollowingUids] = useState<string[]>([]);
   
   useEffect(() => {
     // Auth yüklemesi bittiğinde ve kullanıcı yoksa, kayıt sayfasına yönlendir.
@@ -50,7 +48,7 @@ export default function OnboardingPage() {
             userId: user.uid,
             avatarDataUrl,
             bio,
-            followingUids
+            followingUids: [] // This is now empty
         });
         toast({
             title: "Kurulum Tamamlandı!",
@@ -80,7 +78,7 @@ export default function OnboardingPage() {
   }
 
   // İlerleme çubuğu için yüzde hesaplaması.
-  const progress = (step / 3) * 100;
+  const progress = (step / 2) * 100;
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
@@ -91,7 +89,6 @@ export default function OnboardingPage() {
                 {/* Mevcut adıma göre ilgili bileşeni render et. */}
                 {step === 1 && <Step1Welcome onAvatarChange={setAvatarDataUrl} />}
                 {step === 2 && <Step2Bio bio={bio} setBio={setBio} />}
-                {step === 3 && <Step3Follow selectedUids={followingUids} onSelectionChange={setFollowingUids} />}
             </div>
 
             <div className="mt-8 grid grid-cols-2 gap-4">
@@ -101,7 +98,7 @@ export default function OnboardingPage() {
                     // İlk adımda kullanıcı atlayabilir.
                     <Button variant="outline" onClick={() => router.push('/home')}>Atla</Button>
                 )}
-                {step < 3 ? (
+                {step < 2 ? (
                     <Button onClick={nextStep}>İleri</Button>
                 ) : (
                     // Son adımda "Bitir" butonu.

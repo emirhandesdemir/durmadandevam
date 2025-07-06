@@ -150,6 +150,11 @@ export const sendPushNotification = functions.region("us-central1").firestore
                 body = `${notificationData.senderUsername} sizi aradı.`;
                 link = `/dm`; // Link to DM list
                 break;
+            case "complete_profile":
+                title = "Profilini Tamamla! ✨";
+                body = "Profiline bir biyografi ekleyerek insanların seni daha iyi tanımasını sağla.";
+                link = "/profile";
+                break;
         }
 
         const oneSignalPayload = {

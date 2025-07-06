@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import type { Notification } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Heart, MessageCircle, UserPlus, DoorOpen, Loader2, AtSign, Gem, Repeat, Gift, Phone, PhoneMissed } from 'lucide-react';
+import { Heart, MessageCircle, UserPlus, DoorOpen, Loader2, AtSign, Gem, Repeat, Gift, Phone, PhoneMissed, UserCog } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -31,7 +31,13 @@ export default function NotificationItem({ notification }: NotificationItemProps
     locale: tr,
   });
 
+  const isSystemNotification = notification.senderId.startsWith('system');
+
   const handleWrapperClick = () => {
+    if (notification.type === 'complete_profile') {
+        router.push('/profile');
+        return;
+    }
     if (notification.type === 'diamond_transfer') return; // Diamond transfer notifications are not clickable
     if (notification.postId) {
       // TODO: Implement opening a post dialog/modal
@@ -54,6 +60,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
       case 'referral_bonus': return <Gift className="h-5 w-5 text-green-500" />;
       case 'call_incoming': return <Phone className="h-5 w-5 text-blue-500" />;
       case 'call_missed': return <PhoneMissed className="h-5 w-5 text-destructive" />;
+      case 'complete_profile': return <UserCog className="h-5 w-5 text-indigo-500" />;
       default: return null;
     }
   };
@@ -71,6 +78,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
       case 'referral_bonus': return <> <span className="font-bold">{notification.senderUsername}</span> davetinle katıldı ve sana <strong className="text-cyan-400">{notification.diamondAmount} elmas</strong> kazandırdı! 🎉</>;
       case 'call_incoming': return <> <span className="font-bold">{notification.senderUsername}</span> sizi arıyor...</>;
       case 'call_missed': return <> <span className="font-bold">{notification.senderUsername}</span> sizi aradı.</>;
+      case 'complete_profile': return <>Profilini bir adım ileri taşı! Kendinden bahseden kısa bir <span className="font-bold">biyografi</span> ekle.</>;
       default: return 'Bilinmeyen bildirim';
     }
   }
@@ -79,7 +87,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
     <div 
       className={cn(
         "flex items-start gap-4 p-3 rounded-lg transition-colors",
-        !['diamond_transfer', 'referral_bonus'].includes(notification.type) && "cursor-pointer hover:bg-muted/50",
+        !['diamond_transfer', 'referral_bonus', 'complete_profile'].includes(notification.type) && "cursor-pointer hover:bg-muted/50",
         !notification.read && "bg-primary/5"
       )}
       onClick={handleWrapperClick}
@@ -88,14 +96,21 @@ export default function NotificationItem({ notification }: NotificationItemProps
         <div className="flex-shrink-0">{getIcon()}</div>
         {!notification.read && <span className="absolute -top-1 -right-1 block h-2 w-2 rounded-full bg-primary" />}
       </div>
-       <Link href={`/profile/${notification.senderId}`} onClick={(e) => e.stopPropagation()}>
-            <div className={cn("avatar-frame-wrapper", notification.senderAvatarFrame)}>
-                <Avatar className="relative z-[1] h-10 w-10">
-                    <AvatarImage src={notification.senderAvatar || undefined} />
-                    <AvatarFallback>{notification.senderUsername?.charAt(0)}</AvatarFallback>
-                </Avatar>
-            </div>
-       </Link>
+       {isSystemNotification ? (
+             <Avatar className="h-10 w-10">
+                <AvatarImage src={notification.senderAvatar || undefined} />
+                <AvatarFallback>HW</AvatarFallback>
+            </Avatar>
+       ) : (
+            <Link href={`/profile/${notification.senderId}`} onClick={(e) => e.stopPropagation()}>
+                    <div className={cn("avatar-frame-wrapper", notification.senderAvatarFrame)}>
+                        <Avatar className="relative z-[1] h-10 w-10">
+                            <AvatarImage src={notification.senderAvatar || undefined} />
+                            <AvatarFallback>{notification.senderUsername?.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                    </div>
+            </Link>
+       )}
        <div className="flex-1 text-sm">
           <p>{getText()}</p>
           <p className="text-xs text-muted-foreground">{timeAgo}</p>

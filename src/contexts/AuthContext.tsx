@@ -8,6 +8,7 @@ import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import type { FeatureFlags, UserProfile, ThemeSettings } from '@/lib/types';
+import { triggerProfileCompletionNotification } from '@/lib/actions/notificationActions';
 
 
 interface AuthContextType {
@@ -145,6 +146,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 return;
             }
             setUserData(data);
+
+            // Trigger profile completion notification check
+            if (!data.bio && !data.profileCompletionNotificationSent) {
+                triggerProfileCompletionNotification(user.uid);
+            }
         } else {
             setUserData(null);
         }
