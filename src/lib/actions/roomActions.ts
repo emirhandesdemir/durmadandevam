@@ -8,6 +8,7 @@ import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storag
 import { createNotification } from './notificationActions';
 import type { Room, Message, PlaylistTrack } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import { revalidatePath } from 'next/cache';
 
 const voiceStatsRef = doc(db, 'config', 'voiceStats');
 
@@ -595,7 +596,8 @@ export async function addTrackToPlaylist(
     if (!roomDoc.data()?.djUid) {
         await controlPlayback(roomId, userInfo.uid, { action: 'play' });
     }
-
+    
+    revalidatePath(`/rooms/${roomId}`);
     return { success: true };
 }
 

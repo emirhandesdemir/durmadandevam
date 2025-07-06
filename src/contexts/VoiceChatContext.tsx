@@ -49,7 +49,6 @@ interface VoiceChatContextType {
     currentTrack: (PlaylistTrack & { isPlaying: boolean }) | null;
     isCurrentUserDj: boolean;
     isDjActive: boolean;
-    isMusicLoading: boolean;
     addTrackToPlaylist: (data: { fileName: string, fileDataUrl: string }) => Promise<void>;
     removeTrackFromPlaylist: (trackId: string) => Promise<void>;
     togglePlayback: () => Promise<void>;
@@ -82,7 +81,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     
     // Music Player State (Live)
     const [livePlaylist, setLivePlaylist] = useState<PlaylistTrack[]>([]);
-    const [isMusicLoading, setIsMusicLoading] = useState(false);
 
     const peerConnections = useRef<Record<string, RTCPeerConnection>>({});
     const screenSenderRef = useRef<Record<string, RTCRtpSender>>({});
@@ -323,59 +321,43 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     }, [isConnected, localStream, isSharingVideo, facingMode, toast, stopVideo]);
 
 
-    // ... (Music Player Actions remain the same)
+    // Music Player Actions
     const addTrackToPlaylist = useCallback(async (data: { fileName: string, fileDataUrl: string }) => {
-        if (!user || !activeRoomId || !userData) return;
-        setIsMusicLoading(true);
-        try {
-            await addTrackAction({
-                roomId: activeRoomId,
-                fileName: data.fileName,
-                fileDataUrl: data.fileDataUrl,
-            }, { 
-                uid: user.uid, 
-                username: userData.username 
-            });
-        } catch (e: any) {
-            toast({ variant: 'destructive', description: e.message });
-        } finally {
-            setIsMusicLoading(false);
-        }
-    }, [user, activeRoomId, userData, toast]);
+        if (!user || !activeRoomId || !userData) throw new Error("Gerekli bilgi eksik.");
+        await addTrackAction({
+            roomId: activeRoomId,
+            fileName: data.fileName,
+            fileDataUrl: data.fileDataUrl,
+        }, { 
+            uid: user.uid, 
+            username: userData.username 
+        });
+    }, [user, activeRoomId, userData]);
 
     const removeTrackFromPlaylist = useCallback(async (trackId: string) => {
         if (!user || !activeRoomId) return;
-        setIsMusicLoading(true);
         try {
             await removeTrackAction(activeRoomId, trackId, user.uid);
         } catch(e: any) {
              toast({ variant: 'destructive', description: e.message });
-        } finally {
-            setIsMusicLoading(false);
         }
     }, [user, activeRoomId, toast]);
 
     const togglePlayback = useCallback(async () => {
         if (!user || !activeRoomId || (!isCurrentUserDj && isDjActive)) return;
-        setIsMusicLoading(true);
         try {
             await controlPlaybackAction(activeRoomId, user.uid, { action: 'toggle' });
         } catch (e: any) {
             toast({ variant: 'destructive', description: e.message });
-        } finally {
-            setIsMusicLoading(false);
         }
     }, [user, activeRoomId, isCurrentUserDj, isDjActive, toast]);
 
     const skipTrack = useCallback(async (direction: 'next' | 'previous') => {
         if (!user || !activeRoomId || !isCurrentUserDj) return;
-        setIsMusicLoading(true);
         try {
             await controlPlaybackAction(activeRoomId, user.uid, { action: 'skip', direction });
         } catch(e: any) {
             toast({ variant: 'destructive', description: e.message });
-        } finally {
-            setIsMusicLoading(false);
         }
     }, [user, activeRoomId, isCurrentUserDj, toast]);
 
@@ -591,7 +573,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         activeRoom, participants: memoizedParticipants, self, isConnecting, isConnected, remoteAudioStreams, remoteScreenStreams, remoteVideoStreams, localStream, isSharingScreen, isSharingVideo,
         setActiveRoomId, joinRoom, leaveRoom: handleLeaveRoom, leaveVoiceOnly, toggleSelfMute, startScreenShare, stopScreenShare, startVideo, stopVideo, switchCamera,
         // Music Player values
-        livePlaylist, currentTrack, isCurrentUserDj, isDjActive, isMusicLoading,
+        livePlaylist, currentTrack, isCurrentUserDj, isDjActive,
         addTrackToPlaylist, removeTrackFromPlaylist, togglePlayback, skipTrack
     };
 

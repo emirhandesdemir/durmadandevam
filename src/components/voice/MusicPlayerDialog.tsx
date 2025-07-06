@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
 import { ScrollArea } from '../ui/scroll-area';
 import { Music, Plus, Play, Pause, SkipForward, SkipBack, Trash2, ListMusic, User, Loader2 } from 'lucide-react';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -30,7 +30,6 @@ export default function MusicPlayerDialog({ isOpen, onOpenChange, roomId }: Musi
         isCurrentUserDj,
         isDjActive,
         currentTrack,
-        isMusicLoading,
         addTrackToPlaylist,
         removeTrackFromPlaylist,
         togglePlayback,
@@ -38,66 +37,61 @@ export default function MusicPlayerDialog({ isOpen, onOpenChange, roomId }: Musi
     } = useVoiceChat();
     const musicInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
+    const [isAdding, setIsAdding] = useState(false);
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files;
-        if (!files) return;
-
+        if (!files || files.length === 0) return;
+    
+        setIsAdding(true);
         const filesArray = Array.from(files);
-        const totalFiles = filesArray.length;
-        let addedCount = 0;
-
-        if (totalFiles > 0) {
-            toast({
-                description: `${totalFiles} şarkı ekleniyor...`
-            });
-        }
-        
-        for (const file of filesArray) {
+    
+        const uploadPromises = filesArray.map(file => {
             if (file.size > 15 * 1024 * 1024) {
                 toast({
                     variant: "destructive",
                     title: "Dosya Çok Büyük",
-                    description: `"${file.name}" (15MB'dan büyük) eklenemedi.`
+                    description: `"${file.name}" (15MB'dan büyük) atlandı.`
                 });
-                continue;
+                return Promise.resolve(null); // Başarısız dosyalar için null döndür
             }
-
-            try {
-                const base64Data = await new Promise<string>((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.readAsDataURL(file);
-                    reader.onloadend = () => resolve(reader.result as string);
-                    reader.onerror = error => reject(error);
-                });
-
-                if (base64Data) {
-                    await addTrackToPlaylist({
-                        fileName: file.name,
-                        fileDataUrl: base64Data,
-                    });
-                    addedCount++;
-                }
-            } catch (error) {
-                console.error("Müzik işlenirken hata:", error);
-                toast({ variant: "destructive", description: `"${file.name}" eklenirken bir hata oluştu.` });
-            }
-        }
-        
-        if (addedCount > 0 && addedCount < totalFiles) {
-             toast({
-                title: "İşlem Kısmen Tamamlandı",
-                description: `${addedCount}/${totalFiles} şarkı çalma listesine eklendi.`
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onloadend = async () => {
+                    try {
+                        await addTrackToPlaylist({
+                            fileName: file.name,
+                            fileDataUrl: reader.result as string,
+                        });
+                        resolve(file.name);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.onerror = error => reject(error);
             });
-        } else if (addedCount === totalFiles && totalFiles > 0) {
+        });
+    
+        try {
+            const results = await Promise.all(uploadPromises);
+            const addedCount = results.filter(r => r !== null).length;
+            if (addedCount > 0) {
+                toast({
+                    title: "Başarılı",
+                    description: `${addedCount} şarkı çalma listesine eklendi.`
+                });
+            }
+        } catch (error: any) {
             toast({
-                title: "Başarılı",
-                description: `${addedCount} şarkı çalma listesine eklendi.`
+                variant: "destructive",
+                description: "Şarkılar eklenirken bir hata oluştu: " + error.message,
             });
-        }
-
-        if (event.target) {
-            event.target.value = "";
+        } finally {
+            setIsAdding(false);
+            if (event.target) {
+                event.target.value = ""; // Input'u temizle
+            }
         }
     };
     
@@ -112,9 +106,7 @@ export default function MusicPlayerDialog({ isOpen, onOpenChange, roomId }: Musi
             <div className="flex-1 flex flex-col gap-4 py-4 overflow-hidden">
                 {/* Player Controls */}
                 <div className="p-3 rounded-lg bg-muted flex flex-col items-center justify-center min-h-[120px]">
-                    {isMusicLoading ? (
-                        <Loader2 className="h-8 w-8 animate-spin" />
-                    ) : currentTrack ? (
+                    {currentTrack ? (
                         <p className="font-semibold text-center truncate">{currentTrack.name}</p>
                     ) : (
                         <p className="text-sm text-muted-foreground">Şu anda çalan bir şey yok.</p>
@@ -134,9 +126,10 @@ export default function MusicPlayerDialog({ isOpen, onOpenChange, roomId }: Musi
 
                  <div className="flex justify-between items-center">
                     <h4 className="font-semibold">Sıradaki Şarkılar</h4>
-                    <input type="file" ref={musicInputRef} onChange={handleFileChange} accept="audio/*" className="hidden" multiple />
-                    <Button variant="outline" size="sm" onClick={() => musicInputRef.current?.click()}>
-                        <Plus className="mr-2 h-4 w-4" /> Müzik Ekle
+                    <input type="file" ref={musicInputRef} onChange={handleFileChange} accept="audio/*,.mp3,.m4a,.wav,.ogg" className="hidden" multiple />
+                    <Button variant="outline" size="sm" onClick={() => musicInputRef.current?.click()} disabled={isAdding}>
+                        {isAdding ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Plus className="mr-2 h-4 w-4" /> }
+                         Müzik Ekle
                     </Button>
                 </div>
                 
