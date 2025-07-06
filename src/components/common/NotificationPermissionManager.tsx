@@ -106,17 +106,11 @@ export default function NotificationPermissionManager() {
         }
 
         if (user) {
-            const externalId = OneSignal.User.getExternalId();
-            if (externalId !== user.uid) {
-                console.log(`[OneSignal] Auth state changed. Logging in user: ${user.uid}`);
-                OneSignal.login(user.uid);
-            }
+            console.log(`[OneSignal] Auth state changed. Logging in user: ${user.uid}`);
+            OneSignal.login(user.uid);
         } else {
-            const externalId = OneSignal.User.getExternalId();
-            if (externalId) {
-                console.log("[OneSignal] Auth state changed. User is null, logging out from OneSignal.");
-                OneSignal.logout();
-            }
+            console.log("[OneSignal] Auth state changed. User is null, logging out from OneSignal.");
+            OneSignal.logout();
         }
      });
   }, [user]);
