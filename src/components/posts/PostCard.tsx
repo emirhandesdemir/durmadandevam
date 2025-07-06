@@ -194,7 +194,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
 
         return (
             <>
-                <div className={cn("relative flex flex-col pt-3 transition-colors", !isStandalone && "border-b")}>
+                <div className={cn("relative flex flex-col pt-3 bg-background", !isStandalone && "border-b")}>
                     
                     {/* Like animation on double click */}
                     {showLikeAnimation && (
@@ -296,7 +296,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     
     return (
         <>
-            <div className={cn("relative flex flex-col transition-colors", !isStandalone && "border-b")}>
+            <div className={cn("relative flex flex-col bg-background", !isStandalone && "border-b")}>
                 {showLikeAnimation && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                         <Heart className="text-white h-24 w-24 drop-shadow-lg animate-like-pop" fill="currentColor" />
