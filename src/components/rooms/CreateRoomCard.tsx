@@ -100,7 +100,7 @@ export default function CreateRoomCard() {
 
     return (
         <>
-            <Card className="bg-gradient-to-br from-purple-500 via-fuchsia-500 to-pink-500 text-primary-foreground shadow-2xl shadow-primary/20 rounded-3xl">
+            <Card className="bg-gradient-to-br from-red-500 via-blue-500 to-sky-400 text-primary-foreground shadow-2xl shadow-primary/20 rounded-3xl">
                 <CardHeader className="flex flex-col items-center justify-between gap-4 text-center md:flex-row md:text-left p-8">
                     <div className="space-y-2">
                         <CardTitle className="text-3xl font-bold">Hoş geldin, {username}!</CardTitle>

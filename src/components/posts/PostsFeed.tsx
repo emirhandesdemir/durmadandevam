@@ -115,7 +115,7 @@ export default function PostsFeed() {
     
     return (
         <div className="w-full">
-             <div className="bg-card/50">
+             <div className="bg-background">
                 {sortedPosts.map(post => (
                     <PostCard key={post.id} post={post} onHide={handleHidePost} />
                 ))}

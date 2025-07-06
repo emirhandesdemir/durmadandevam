@@ -108,7 +108,7 @@ export default function CreateRoomForm() {
                             </FormItem>
                         )} />
                         
-                        <Button type="submit" size="lg" className="w-full rounded-full py-6 text-lg font-semibold bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg transition-transform hover:scale-105 disabled:opacity-75" disabled={isLoading}>
+                        <Button type="submit" size="lg" className="w-full rounded-full py-6 text-lg font-semibold bg-gradient-to-r from-red-500 to-blue-600 text-white shadow-lg transition-transform hover:scale-105 disabled:opacity-75" disabled={isLoading}>
                              {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
                              Oluştur (10 Elmas)
                         </Button>
