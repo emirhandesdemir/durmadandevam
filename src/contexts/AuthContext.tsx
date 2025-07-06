@@ -50,12 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 isOnline: false,
                 lastSeen: serverTimestamp()
             }, { merge: true });
-
-            // Logout from OneSignal
-            window.OneSignalDeferred.push(function(OneSignal: any) {
-                 console.log("[OneSignal] Logging out user.");
-                 OneSignal.logout();
-            });
+            // OneSignal logout will be handled by the effect in NotificationPermissionManager
         }
         await signOut(auth);
         toast({
@@ -82,30 +77,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  // Presence and OneSignal User Identification Management
+  // Presence Management (OneSignal logic removed)
   useEffect(() => {
-    // This ensures that we don't try to access window.OneSignalDeferred before it's initialized.
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-
-    if (!user) {
-        // If user logs out, ensure OneSignal is also logged out.
-         window.OneSignalDeferred.push(function(OneSignal: any) {
-            if (OneSignal.User.isSubscribed()) {
-                console.log("[OneSignal] User is null, logging out from OneSignal.");
-                OneSignal.logout();
-            }
-        });
-        return;
-    }
-
-    // Identify user to OneSignal
-    window.OneSignalDeferred.push(function(OneSignal: any) {
-        console.log(`[OneSignal] Identifying user with external ID: ${user.uid}`);
-        OneSignal.login(user.uid);
-        OneSignal.User.addTag("username", user.displayName || "user");
-    });
+    if (!user) return;
     
-    // Manage online presence
     const userStatusRef = doc(db, 'users', user.uid);
     const updateStatus = (online: boolean) => {
         setDoc(userStatusRef, {
