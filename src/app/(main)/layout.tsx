@@ -25,24 +25,32 @@ interface BeforeInstallPromptEvent extends Event {
 
 function PwaInstallBar() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [showIosInstall, setShowIosInstall] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
+    // Check if running in standalone mode or if the user has already dismissed the banner
+    const isStandalone = typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches;
+    if (isStandalone || sessionStorage.getItem('pwaInstallDismissed') === 'true') {
+      return;
+    }
+    
+    // Handler for browsers that support 'beforeinstallprompt'
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setInstallPrompt(e as BeforeInstallPromptEvent);
-      
-      if (sessionStorage.getItem('pwaInstallDismissed') !== 'true') {
-        setIsVisible(true);
-      }
+      setIsVisible(true);
     };
-
-    if (typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches) {
-      return;
-    }
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
+    // Handler for iOS devices
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    if(isIos) {
+        setShowIosInstall(true);
+        setIsVisible(true);
+    }
+    
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
@@ -50,16 +58,10 @@ function PwaInstallBar() {
 
   const handleInstallClick = () => {
     if (!installPrompt) return;
-    
     installPrompt.prompt();
-    installPrompt.userChoice.then((choiceResult) => {
-      if (choiceResult.outcome === 'accepted') {
-        console.log('User accepted the A2HS prompt');
-      } else {
-        console.log('User dismissed the A2HS prompt');
-      }
+    installPrompt.userChoice.then(() => {
       setIsVisible(false);
-      setInstallPrompt(null);
+      setInstallPrompt(null); // Clear the prompt once used
     });
   };
 
@@ -68,30 +70,42 @@ function PwaInstallBar() {
     sessionStorage.setItem('pwaInstallDismissed', 'true');
   };
   
+  if (!isVisible) {
+    return null;
+  }
+
   return (
     <AnimatePresence>
-      {isVisible && installPrompt && (
-        <motion.div
-          initial={{ y: -100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: -100, opacity: 0 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          className="relative z-[100] flex items-center justify-center gap-x-4 gap-y-2 bg-secondary text-secondary-foreground p-3 text-sm font-medium flex-wrap"
+      <motion.div
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: -100, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        className="relative z-[100] flex items-center justify-center gap-x-4 gap-y-2 bg-primary text-primary-foreground p-3 text-sm font-medium flex-wrap"
+      >
+        {installPrompt && (
+          <>
+            <span>Uygulama deneyimini bir üst seviyeye taşı!</span>
+            <Button size="sm" onClick={handleInstallClick} className="shrink-0 bg-primary-foreground text-primary hover:bg-primary-foreground/90">
+              <Download className="mr-2 h-4 w-4"/>
+              Uygulamayı Yükle
+            </Button>
+          </>
+        )}
+        {showIosInstall && !installPrompt && (
+            <div className="flex items-center gap-2 text-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 hidden sm:inline-block"><path d="M12 20v-8"/><path d="M9 15l3-3 3 3"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/></svg>
+                <span>Uygulamayı ana ekrana eklemek için <strong>Paylaş</strong> simgesine, ardından <strong>"Ana Ekrana Ekle"</strong>ye dokunun.</span>
+            </div>
+        )}
+        <button 
+          onClick={handleDismiss} 
+          className="absolute top-1 right-1 sm:top-1/2 sm:-translate-y-1/2 rounded-full p-1.5 text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+          aria-label="Kapat"
         >
-          <span>Uygulama deneyimini bir üst seviyeye taşı!</span>
-          <Button size="sm" onClick={handleInstallClick} className="shrink-0">
-            <Download className="mr-2 h-4 w-4"/>
-            Uygulamayı Yükle
-          </Button>
-          <button 
-            onClick={handleDismiss} 
-            className="absolute top-1 right-1 sm:top-1/2 sm:-translate-y-1/2 rounded-full p-1.5 text-secondary-foreground/70 hover:text-secondary-foreground hover:bg-black/10 transition-colors"
-            aria-label="Kapat"
-          >
-            <X className="h-4 w-4"/>
-          </button>
-        </motion.div>
-      )}
+          <X className="h-4 w-4"/>
+        </button>
+      </motion.div>
     </AnimatePresence>
   );
 }
