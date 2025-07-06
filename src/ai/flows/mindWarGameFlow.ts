@@ -108,7 +108,7 @@ export const initializeMindWar = ai.defineFlow(
       1.  **Assign Secret Roles**: Secretly assign one unique, intriguing role to each player from a list like: "Lider", "Hain", "Casus", "Doktor", "Mühendis", "Psikolog", "Asker", "Nöbetçi". Do NOT assign the same role to multiple players.
       2.  **Create Secret Objectives**: For each player, create a secret, personal objective related to their role and the theme. For example, the traitor's objective might be to sabotage the group's efforts without being discovered.
       3.  **Write the Opening Narrative**: Write a gripping opening story that sets the scene, introduces the conflict, and presents the initial situation. The narrative must be in TURKISH.
-      4.  **Determine the First Actor**: Decide who makes the first move. This can be a specific player or a group decision (represented by making the `activePlayerUid` null and presenting choices to the group).
+      4.  **Determine the First Actor**: Decide who makes the first move. This can be a specific player or a group decision (represented by making the 'activePlayerUid' null and presenting choices to the group).
       5.  **Create First Choices**: Based on the narrative, create 2 to 4 compelling choices for the first actor.
 
       Your entire response MUST be in the specified JSON format.
