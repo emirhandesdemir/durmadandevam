@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageCircle, Plus, Store } from 'lucide-react';
+import { Home, MessageCircle, Plus, Store, Waves } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -25,8 +25,8 @@ export default function BottomNav() {
   const navItems = useMemo(() => [
     { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
     { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
-    { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
-    { id: 'store', href: '/store', icon: Store, label: 'Mağaza' },
+    { id: 'create', href: '/create-post', icon: Plus, label: 'Oluştur'},
+    { id: 'surf', href: '/surf', icon: Waves, label: 'Sörf' },
     { id: 'profile', href: `/profile/${user.uid}`, icon: Avatar, label: 'Profil' },
   ], [user.uid]);
 
@@ -35,7 +35,11 @@ export default function BottomNav() {
         <nav className="mx-auto flex h-16 max-w-md items-center justify-around">
             {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = item.id === 'create' ? pathname.startsWith('/create') : item.id === 'rooms' ? pathname.startsWith('/rooms') : pathname === item.href;
+                const isActive = item.id === 'create' 
+                    ? pathname.startsWith('/create') 
+                    : item.id === 'rooms' 
+                    ? pathname.startsWith('/rooms') 
+                    : pathname === item.href;
                 
                 return (
                   <Link

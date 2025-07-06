@@ -140,7 +140,7 @@ export default function ImageCropperDialog({
     
     setIsCropping(true);
     try {
-        const quality = 0.95; // Increased quality
+        const quality = 0.8; // Reduced quality for optimization
         const croppedImageUrl = await getCroppedImg(imgRef.current, completedCrop, quality, circularCrop);
         onCropComplete(croppedImageUrl);
         setIsOpen(false);
