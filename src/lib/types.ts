@@ -55,6 +55,19 @@ export interface MindWarSession {
   createdAt: Timestamp; // Başlangıç zamanı
 }
 
+export interface LiveSession {
+    id: string;
+    hostId: string;
+    hostUsername: string;
+    hostPhotoURL: string | null;
+    title: string;
+    status: 'live' | 'ended';
+    viewerCount: number;
+    createdAt: Timestamp;
+    endedAt?: Timestamp;
+}
+
+
 // Mevcut Tiplere Eklemeler
 // ==========================
 

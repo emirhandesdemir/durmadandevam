@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageCircle, Plus, Store, Waves } from 'lucide-react';
+import { Home, MessageCircle, Plus, Radio, Waves } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -18,15 +18,15 @@ export default function BottomNav() {
   }
 
   // Hide nav on specific full-screen pages
-  if ((pathname.startsWith('/rooms/') && pathname !== '/rooms') || (pathname.startsWith('/call/'))) {
+  if ((pathname.startsWith('/rooms/') && pathname !== '/rooms') || (pathname.startsWith('/call/')) || pathname.startsWith('/live/')) {
     return null;
   }
   
   const navItems = useMemo(() => [
     { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
     { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
-    { id: 'create', href: '/create-post', icon: Plus, label: 'Oluştur'},
-    { id: 'surf', href: '/surf', icon: Waves, label: 'Sörf' },
+    { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
+    { id: 'live', href: '/live', icon: Radio, label: 'Canlı' },
     { id: 'profile', href: `/profile/${user.uid}`, icon: Avatar, label: 'Profil' },
   ], [user.uid]);
 
@@ -38,7 +38,9 @@ export default function BottomNav() {
                 const isActive = item.id === 'create' 
                     ? pathname.startsWith('/create') 
                     : item.id === 'rooms' 
-                    ? pathname.startsWith('/rooms') 
+                    ? pathname.startsWith('/rooms')
+                    : item.id === 'live'
+                    ? pathname.startsWith('/live') 
                     : pathname === item.href;
                 
                 return (
