@@ -10,6 +10,7 @@ import { Users, Download } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import AnimatedLogoLoader from "@/components/common/AnimatedLogoLoader";
+import Image from "next/image";
 
 // PwaInstallButton component is moved here to consolidate files.
 function PwaInstallButton() {
@@ -94,9 +95,7 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500">
       <div className="flex flex-col items-center gap-4">
-        <div className="rounded-full bg-primary/20 p-4 text-primary">
-          <Users className="h-12 w-12" />
-        </div>
+        <Image src="/icons/icon.svg" alt="HiweWalk Logo" width={80} height={80} className="h-20 w-20" />
         <h1 className="text-5xl font-bold tracking-tight text-foreground md:text-6xl">
           {t('welcome_to_hiwewalk', { appName: themeSettings?.appName || 'HiweWalk' })}
         </h1>
