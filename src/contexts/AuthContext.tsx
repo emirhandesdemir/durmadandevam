@@ -84,6 +84,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Presence and OneSignal User Identification Management
   useEffect(() => {
+    // This ensures that we don't try to access window.OneSignalDeferred before it's initialized.
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+
     if (!user) {
         // If user logs out, ensure OneSignal is also logged out.
          window.OneSignalDeferred.push(function(OneSignal: any) {
