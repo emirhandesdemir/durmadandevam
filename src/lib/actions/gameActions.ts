@@ -74,6 +74,7 @@ export async function updateGameSettings(settings: Partial<GameSettings>) {
 export async function startGameInRoom(roomId: string) {
     const roomRef = doc(db, 'rooms', roomId);
     
+    // Sunucu tarafında aktif bir oyun olup olmadığını kontrol et.
     const activeGamesQuery = query(collection(roomRef, 'games'), where('status', '==', 'active'), limit(1));
     const activeGamesSnapshot = await getDocs(activeGamesQuery);
     if (!activeGamesSnapshot.empty) {

@@ -24,7 +24,6 @@ import { cn } from '@/lib/utils';
 import GiveawayDialog from '@/components/rooms/GiveawayDialog';
 
 // Import new game components and actions
-import GameCountdownCard from '@/components/game/GameCountdownCard';
 import RoomGameCard from '@/components/game/RoomGameCard';
 import { startGameInRoom, submitAnswer, endGameWithoutWinner } from '@/lib/actions/gameActions';
 import GameLobbyDialog from '@/components/game/GameLobbyDialog';
@@ -55,17 +54,12 @@ export default function RoomPage() {
     const [finishedQuizGame, setFinishedQuizGame] = useState<any>(null);
     const [activeQuizGame, setActiveQuizGame] = useState<ActiveGame | null>(null);
     const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
-    const [showGameCountdown, setShowGameCountdown] = useState(false);
-    const [countdownTime, setCountdownTime] = useState(20);
     
     // New Interactive Game State
     const [activeGameSession, setActiveGameSession] = useState<ActiveGameSession | null>(null);
     const [activeMindWarSession, setActiveMindWarSession] = useState<MindWarSession | null>(null);
 
     const isHost = user?.uid === room?.createdBy.uid;
-
-    const activeQuizGameRef = useRef(activeQuizGame);
-    activeQuizGameRef.current = activeQuizGame;
 
     useEffect(() => {
         if (roomId) setActiveRoomId(roomId);
@@ -141,10 +135,13 @@ export default function RoomPage() {
         const gamesQuery = query(collection(db, 'rooms', roomId, 'games'), where('status', '==', 'active'), limit(1));
         let gameTimeout: NodeJS.Timeout;
 
+        const activeGameRef = { current: activeQuizGame };
+
         const unsubscribe = onSnapshot(gamesQuery, (snapshot) => {
             clearTimeout(gameTimeout);
             if (!snapshot.empty) {
                 const gameData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ActiveGame;
+                activeGameRef.current = gameData;
                 setActiveQuizGame(gameData);
 
                 const startTime = (gameData.startTime as Timestamp).toMillis();
@@ -154,7 +151,7 @@ export default function RoomPage() {
 
                 if (timeLeftMs > 0) {
                     gameTimeout = setTimeout(() => {
-                        if (activeQuizGameRef.current?.id === gameData.id) {
+                        if (activeGameRef.current?.id === gameData.id) {
                             endGameWithoutWinner(roomId, gameData.id);
                         }
                     }, timeLeftMs);
@@ -162,47 +159,49 @@ export default function RoomPage() {
                     endGameWithoutWinner(roomId, gameData.id);
                 }
             } else {
+                activeGameRef.current = null;
                 setActiveQuizGame(null);
             }
         });
         return () => { unsubscribe(); clearTimeout(gameTimeout); };
-    }, [roomId, gameSettings]);
+    }, [roomId, gameSettings, activeQuizGame]);
 
-    // Quiz Game starting timer
+    // Autostart quiz game based on timestamp
     useEffect(() => {
-        if (!room?.nextGameTimestamp || !featureFlags?.quizGameEnabled) {
-            setShowGameCountdown(false);
+        // Conditions to not run the effect
+        if (!room || !user || !featureFlags?.quizGameEnabled || activeQuizGame) {
+            return;
+        }
+
+        // Only the host is responsible for triggering the game
+        const isHost = user.uid === room.createdBy.uid;
+        if (!isHost) {
+            return;
+        }
+        
+        // Ensure timestamp exists before trying to use it
+        if (!room.nextGameTimestamp) {
             return;
         }
 
         const nextGameTime = (room.nextGameTimestamp as Timestamp).toMillis();
-        let interval: NodeJS.Timeout;
-
-        const updateCountdown = () => {
-            const now = Date.now();
-            const remainingSeconds = Math.round((nextGameTime - now) / 1000);
-            
-            if (remainingSeconds <= 20 && remainingSeconds > 0) {
-                setCountdownTime(remainingSeconds);
-                setShowGameCountdown(true);
-            } else {
-                setShowGameCountdown(false);
-            }
-
-            if (remainingSeconds <= 0) {
-                setShowGameCountdown(false);
-                clearInterval(interval);
-                if (!activeQuizGameRef.current) {
-                    startGameInRoom(roomId).catch(err => console.error("Failed to start game:", err));
-                }
-            }
-        };
+        const now = Date.now();
         
-        updateCountdown();
-        interval = setInterval(updateCountdown, 1000);
-        
-        return () => clearInterval(interval);
-    }, [room?.nextGameTimestamp, roomId, featureFlags?.quizGameEnabled]);
+        const delay = nextGameTime - now;
+
+        if (delay <= 0) {
+            // Time is up, start immediately.
+            startGameInRoom(roomId).catch(err => console.error("Failed to auto-start game:", err));
+        } else {
+            // Time is in the future, set a timeout.
+            const timer = setTimeout(() => {
+                startGameInRoom(roomId).catch(err => console.error("Failed to auto-start game with timer:", err));
+            }, delay);
+
+            // Cleanup the timeout if the component unmounts or deps change.
+            return () => clearTimeout(timer);
+        }
+    }, [room, user, featureFlags?.quizGameEnabled, activeQuizGame, roomId]);
 
     const handleAnswerSubmit = useCallback(async (answerIndex: number) => {
         if (!activeQuizGame || !user) return;
@@ -230,9 +229,6 @@ export default function RoomPage() {
         }
         if (activeQuizGame && gameSettings) {
             return <RoomGameCard game={activeQuizGame} settings={gameSettings} onAnswerSubmit={handleAnswerSubmit} onTimerEnd={() => {}} currentUserId={user!.uid} />;
-        }
-        if (showGameCountdown && !activeQuizGame) {
-            return <GameCountdownCard timeLeft={countdownTime} />;
         }
         if (room.giveaway && room.giveaway.status !== 'idle') {
             return <GiveawayCard giveaway={room.giveaway} roomId={roomId} isHost={isHost} />;
