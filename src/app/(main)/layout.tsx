@@ -1,4 +1,3 @@
-
 // src/app/(main)/layout.tsx
 'use client';
 
@@ -6,7 +5,6 @@ import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/Header";
 import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
 import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
-import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
 import { useState, useRef, useEffect } from 'react';
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -76,12 +74,7 @@ function PwaInstallBar() {
   }
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ y: -100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: -100, opacity: 0 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      <div
         className="relative z-[100] flex items-center justify-center gap-x-4 gap-y-2 bg-primary text-primary-foreground p-3 text-sm font-medium flex-wrap"
       >
         {installPrompt && (
@@ -106,8 +99,7 @@ function PwaInstallBar() {
         >
           <X className="h-4 w-4"/>
         </button>
-      </motion.div>
-    </AnimatePresence>
+      </div>
   );
 }
 
@@ -124,30 +116,11 @@ export default function MainAppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const scrollRef = useRef<HTMLElement>(null);
-  const { scrollY } = useScroll({ container: scrollRef });
-  const [hidden, setHidden] = useState(false);
   const pathname = usePathname();
 
   const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/');
   const isHeaderlessPage = isFullPageLayout;
   const isHomePage = pathname === '/home';
-
-  useMotionValueEvent(scrollY, "change", (latest) => {
-    const previous = scrollY.getPrevious() ?? 0;
-    if (latest > previous && latest > 150) {
-      setHidden(true);
-    } else {
-      setHidden(false);
-    }
-  });
-
-  const pageVariants = {
-    initial: { opacity: 0 },
-    animate: { opacity: 1, transition: { duration: 0.4, ease: "easeInOut" } },
-    exit: { opacity: 0, transition: { duration: 0.2, ease: "easeOut" } },
-  };
-
 
   return (
     <VoiceChatProvider>
@@ -157,30 +130,18 @@ export default function MainAppLayout({
         <PwaInstallBar />
         
         <main 
-          ref={scrollRef} 
           className={cn(
             "flex-1 flex flex-col hide-scrollbar pb-20",
             isFullPageLayout ? "overflow-hidden" : "overflow-y-auto"
           )}
         >
            {!isHeaderlessPage && (
-              <motion.header
-                variants={{ visible: { y: 0 }, hidden: { y: "-100%" } }}
-                animate={hidden ? "hidden" : "visible"}
-                transition={{ duration: 0.35, ease: "easeInOut" }}
-                className="sticky top-0 z-40"
-              >
+              <header className="sticky top-0 z-40">
                 <Header />
-              </motion.header>
+              </header>
            )}
           
-           <AnimatePresence mode="wait">
-             <motion.div
-                key={pathname}
-                variants={pageVariants}
-                initial="initial"
-                animate="animate"
-                exit="exit"
+             <div
                 className={cn(
                   "flex-1 flex flex-col",
                   isFullPageLayout ? "overflow-hidden" : "",
@@ -188,8 +149,7 @@ export default function MainAppLayout({
                 )}
              >
               {children}
-             </motion.div>
-           </AnimatePresence>
+             </div>
         </main>
         
         <VoiceAudioPlayer />
