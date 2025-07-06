@@ -4,7 +4,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { storage } from "@/lib/firebase";
 import { ref, getDownloadURL, uploadBytes } from "firebase/storage";
@@ -38,6 +38,7 @@ export default function NewPostForm() {
   const { user, userData, featureFlags } = useAuth();
   const { toast } = useToast();
   const { i18n } = useTranslation();
+  const searchParams = useSearchParams();
   
   const [text, setText] = useState("");
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
@@ -60,6 +61,26 @@ export default function NewPostForm() {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isModerating, setIsModerating] = useState(false);
 
+  useEffect(() => {
+    const sharedTitle = searchParams.get('title');
+    const sharedText = searchParams.get('text');
+    const sharedUrl = searchParams.get('url');
+
+    let initialText = '';
+    if (sharedTitle) {
+      initialText += sharedTitle + '\n';
+    }
+    if (sharedText) {
+      initialText += sharedText + '\n';
+    }
+    if (sharedUrl) {
+      initialText += sharedUrl;
+    }
+
+    if (initialText) {
+      setText(initialText.trim());
+    }
+  }, [searchParams]);
 
   const fetchSuggestions = useCallback(async () => {
     if (!userData || suggestions.length > 0) return;
