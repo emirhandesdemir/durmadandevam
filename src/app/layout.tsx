@@ -13,7 +13,6 @@ import { ThemeProvider } from '@/components/layout/ThemeProvider';
 import NetworkStatusNotifier from '@/components/common/NetworkStatusNotifier';
 import I18nProvider from '@/components/common/I18nProvider';
 import NotificationPermissionManager from '@/components/common/NotificationPermissionManager';
-import ServiceWorkerRegistrar from '@/components/common/ServiceWorkerRegistrar';
 
 // Google Fonts'tan Inter font ailesini yüklüyoruz.
 const inter = Inter({ 
@@ -84,7 +83,6 @@ export default function RootLayout({
           <AuthProvider>
              <I18nProvider>
                 <NotificationPermissionManager />
-                <ServiceWorkerRegistrar />
                 {children}
                 <Toaster />
                 <NetworkStatusNotifier />
