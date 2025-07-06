@@ -1,2 +1,2 @@
-// Bu dosya, next-pwa yapılandırmasındaki değişiklikle birlikte gereksiz hale gelmiştir ve artık kullanılmamaktadır.
-// Bildirim işlevselliği artık doğrudan next.config.js üzerinden yönetilmektedir.
+// Bu dosya, yeni özel servis çalışanı (`public/sw.js`) yapısıyla gereksiz hale gelmiştir.
+// Çakışmaları önlemek için içeriği temizlenmiştir ve güvenle silinebilir.
