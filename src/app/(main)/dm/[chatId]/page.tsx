@@ -1,3 +1,4 @@
+
 // src/app/(main)/dm/[chatId]/page.tsx
 'use client'; // Bu sayfa, kullanıcı etkileşimine ve anlık güncellemelere dayalı olduğu için bir istemci bileşenidir.
 

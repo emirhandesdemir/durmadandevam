@@ -1,3 +1,4 @@
+
 // Bu sayfa, /admin kök dizinine gelen kullanıcıları otomatik olarak
 // /admin/dashboard sayfasına yönlendirmek için kullanılır.
 // Bu, kullanıcıların boş bir sayfa görmesini engeller.

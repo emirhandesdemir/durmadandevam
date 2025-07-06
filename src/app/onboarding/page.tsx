@@ -1,3 +1,4 @@
+
 // Bu dosya, yeni kayıt olan kullanıcıların profil kurulumunu yaptığı "Onboarding" (Alıştırma) sayfasını yönetir.
 // Kullanıcıyı adım adım profil resmi, biyografi ve takip edeceği kişileri seçmeye yönlendirir.
 'use client';

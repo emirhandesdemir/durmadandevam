@@ -1,3 +1,4 @@
+
 // Bu sayfa, kullanıcıların yeni bir sohbet odası oluşturması için kullanılır.
 // Oda oluşturma formunu içerir ve ana sayfaya geri dönme bağlantısı sunar.
 import CreateRoomForm from "@/components/rooms/CreateRoomForm";

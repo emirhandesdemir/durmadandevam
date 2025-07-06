@@ -21,7 +21,7 @@ interface CreateNotificationArgs {
   senderUsername: string;
   senderAvatar: string | null;
   senderAvatarFrame?: string;
-  type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile';
+  type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message';
   postId?: string | null;
   postImage?: string | null;
   commentText?: string;
@@ -40,38 +40,6 @@ interface BroadcastNotificationArgs {
     link?: string;
 }
 
-export async function triggerProfileCompletionNotification(userId: string) {
-    if (!userId) return;
-
-    const userRef = doc(db, 'users', userId);
-    const userSnap = await getDoc(userRef);
-
-    if (userSnap.exists()) {
-        const userData = userSnap.data();
-        // Check if bio is missing and if we haven't sent this notification before
-        if (!userData.bio && !userData.profileCompletionNotificationSent) {
-            // Send the notification
-            await createNotification({
-                recipientId: userId,
-                senderId: 'system-profile',
-                senderUsername: 'HiweWalk',
-                senderAvatar: 'https://placehold.co/100x100.png',
-                type: 'complete_profile',
-            });
-            // Mark the notification as sent to prevent duplicates
-            await updateDoc(userRef, {
-                profileCompletionNotificationSent: true
-            });
-        }
-    }
-}
-
-
-/**
- * Creates a document in the `broadcasts` collection, which triggers a Cloud
- * Function to send a notification to all subscribed users.
- * @param data The broadcast message data.
- */
 export async function sendBroadcastNotification(data: BroadcastNotificationArgs) {
     if (!data.title || !data.body) {
         return { success: false, error: "Başlık ve mesaj içeriği zorunludur." };

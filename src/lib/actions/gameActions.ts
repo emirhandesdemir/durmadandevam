@@ -1,3 +1,4 @@
+
 // src/lib/actions/gameActions.ts
 'use server';
 
@@ -16,11 +17,9 @@ import {
     Timestamp,
     increment,
     where,
-    setDoc,
-    arrayUnion,
-    getDocs
+    setDoc
 } from "firebase/firestore";
-import type { GameQuestion, GameSettings, ActiveGame, Room } from "../types";
+import type { GameQuestion, GameSettings, ActiveGame } from "../types";
 import { revalidatePath } from "next/cache";
 import { generateQuizQuestion } from '@/ai/flows/generateQuizQuestionFlow';
 
@@ -72,22 +71,13 @@ export async function updateGameSettings(settings: Partial<GameSettings>) {
  * @param roomId Oyunun başlatılacağı odanın ID'si.
  */
 export async function startGameInRoom(roomId: string) {
-    const roomRef = doc(db, 'rooms', roomId);
-    
-    // Sunucu tarafında aktif bir oyun olup olmadığını kontrol et.
-    const activeGamesQuery = query(collection(roomRef, 'games'), where('status', '==', 'active'), limit(1));
-    const activeGamesSnapshot = await getDocs(activeGamesQuery);
-    if (!activeGamesSnapshot.empty) {
-        console.warn("Zaten aktif bir oyun var, yeni oyun başlatılamadı.");
-        return { success: false, error: "Zaten aktif bir oyun var."};
-    }
-
     // AI'dan soru al
     const questionData = await generateQuizQuestion({});
     if (!questionData || !questionData.question || !questionData.options || typeof questionData.correctOptionIndex !== 'number') {
         throw new Error("AI'dan geçerli bir soru alınamadı.");
     }
 
+    const roomRef = doc(db, 'rooms', roomId);
     const gamesRef = collection(roomRef, 'games');
     const newGame = {
         questionId: `ai-${Date.now()}`,
@@ -100,6 +90,7 @@ export async function startGameInRoom(roomId: string) {
     };
     await addDoc(gamesRef, newGame);
     
+    const messagesRef = collection(roomRef, 'messages');
     const systemMessage = {
         type: 'game',
         text: `Yeni bir oyun başlıyor!`,
@@ -107,11 +98,8 @@ export async function startGameInRoom(roomId: string) {
         uid: 'system',
         username: 'System'
     };
-    await addDoc(collection(roomRef, 'messages'), systemMessage);
-
-    return { success: true };
+    await addDoc(messagesRef, systemMessage);
 }
-
 
 /**
  * Bir sonraki oyunun başlama zamanını ayarlar.
@@ -158,7 +146,7 @@ export async function submitAnswer(roomId: string, gameId: string, userId: strin
                 throw new Error("Bu soruya zaten cevap verdin.");
             }
 
-            transaction.update(gameRef, { answeredBy: arrayUnion(userId) });
+            transaction.update(gameRef, { answeredBy: [userId, ...(gameData.answeredBy || [])] });
             
             if (gameData.correctOptionIndex === answerIndex) {
                 // Oyunu bitir ve kazananı belirle
@@ -227,74 +215,4 @@ export async function endGameWithoutWinner(roomId: string, gameId: string) {
     } catch (error) {
         console.error("Oyun bitirilirken hata:", error);
     }
-}
-
-
-export async function initiateGameInvite(
-    roomId: string, 
-    host: { uid: string, username: string, photoURL: string | null }, 
-    gameType: string,
-    gameName: string,
-    invitedPlayers: { uid: string, username: string, photoURL: string | null }[]
-) {
-    const messagesRef = collection(db, "rooms", roomId, "messages");
-    const gameInviteMessage = {
-        type: 'gameInvite',
-        createdAt: serverTimestamp(),
-        uid: 'system',
-        username: 'System',
-        gameInviteData: {
-            host,
-            gameName,
-            gameType,
-            invitedPlayers: [host, ...invitedPlayers],
-            acceptedPlayers: [host], // Host auto-accepts
-            declinedPlayers: [],
-            status: 'pending',
-        }
-    };
-    await addDoc(messagesRef, gameInviteMessage);
-    return { success: true };
-}
-
-
-export async function respondToGameInvite(
-    roomId: string,
-    messageId: string,
-    player: { uid: string, username: string, photoURL: string | null },
-    accepted: boolean
-) {
-    const messageRef = doc(db, 'rooms', roomId, 'messages', messageId);
-    
-    await runTransaction(db, async (transaction) => {
-        const messageDoc = await transaction.get(messageRef);
-        if (!messageDoc.exists()) throw new Error("Davet mesajı bulunamadı.");
-        
-        const inviteData = messageDoc.data().gameInviteData;
-        if (inviteData.status !== 'pending') throw new Error("Bu davet artık geçerli değil.");
-        
-        if (accepted) {
-            transaction.update(messageRef, {
-                'gameInviteData.acceptedPlayers': arrayUnion(player)
-            });
-        } else {
-            transaction.update(messageRef, {
-                'gameInviteData.declinedPlayers': arrayUnion(player),
-                'gameInviteData.status': 'declined'
-            });
-        }
-    });
-}
-
-
-export async function playGameMove(
-    roomId: string,
-    gameSessionId: string,
-    playerId: string,
-    move: string | number
-) {
-    const gameSessionRef = doc(db, 'rooms', roomId, 'game_sessions', gameSessionId);
-    await updateDoc(gameSessionRef, {
-        [`moves.${playerId}`]: move
-    });
 }

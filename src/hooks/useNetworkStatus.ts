@@ -1,3 +1,4 @@
+
 // Bu custom hook, kullanıcının internet bağlantısının
 // durumunu (çevrimiçi/çevrimdışı) takip eder.
 'use client';

@@ -1,3 +1,4 @@
+
 // Bu dosya, uygulamanın giriş sayfasını oluşturur.
 "use client";
 

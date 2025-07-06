@@ -1,3 +1,4 @@
+
 // src/lib/actions/userActions.ts
 'use server';
 
@@ -315,22 +316,5 @@ export async function submitReport(reportData: Omit<Report, 'id' | 'timestamp'>)
     } catch (error: any) {
         console.error("Error submitting report:", error);
         return { success: false, error: "Rapor gönderilirken bir hata oluştu." };
-    }
-}
-
-
-export async function hidePost(userId: string, postId: string) {
-    if (!userId || !postId) throw new Error("Kullanıcı ve gönderi ID'leri gereklidir.");
-
-    const userRef = doc(db, 'users', userId);
-    try {
-        await updateDoc(userRef, {
-            hiddenPostIds: arrayUnion(postId)
-        });
-        revalidatePath('/home');
-        return { success: true };
-    } catch (error: any) {
-        console.error("Gönderi gizlenirken hata:", error);
-        return { success: false, error: "Gönderi gizlenemedi." };
     }
 }

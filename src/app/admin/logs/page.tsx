@@ -1,3 +1,4 @@
+
 // src/app/admin/logs/page.tsx
 "use client";
 

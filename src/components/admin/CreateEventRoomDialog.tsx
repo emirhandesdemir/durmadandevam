@@ -50,7 +50,7 @@ export default function CreateEventRoomDialog({ isOpen, setIsOpen, room }: Creat
     },
   });
 
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+  const onSubmit = async (data: z.infer<typeof formSchema>>) => {
     if (!user || !userData || userData.role !== 'admin') {
       toast({ variant: 'destructive', description: "Bu işlemi yapma yetkiniz yok." });
       return;

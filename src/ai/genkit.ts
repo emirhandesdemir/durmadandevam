@@ -1,3 +1,4 @@
+
 // Bu dosya, Genkit kütüphanesini yapılandırır ve başlatır.
 // Proje genelinde kullanılacak olan AI (yapay zeka) modelini
 // ve eklentileri burada tanımlarız.

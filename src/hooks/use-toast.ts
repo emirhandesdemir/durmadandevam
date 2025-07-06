@@ -1,3 +1,4 @@
+
 // Bu dosya, react-hot-toast kütüphanesinden esinlenerek oluşturulmuş
 // özel bir toast (bildirim) yönetim sistemidir.
 // Uygulama genelinde tutarlı ve yönetilebilir bildirimler göstermeyi sağlar.

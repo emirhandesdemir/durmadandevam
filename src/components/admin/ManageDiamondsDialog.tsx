@@ -46,7 +46,7 @@ export default function ManageDiamondsDialog({ isOpen, setIsOpen, user }: Manage
   if (!user) return null;
 
   // Form gönderildiğinde çalışacak fonksiyon.
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+  const onSubmit = async (data: z.infer<typeof formSchema>>) => {
     setIsSubmitting(true);
     try {
       const result = await modifyUserDiamonds(user.uid, data.amount);

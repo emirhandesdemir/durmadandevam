@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Rastgele ve eğlenceli bir quiz sorusu üreten bir Genkit akışı.

@@ -1,3 +1,4 @@
+
 // Bu sayfa, kullanıcıların yeni bir gönderi oluşturması için tasarlanmıştır.
 // Gönderi oluşturma formunu içerir ve ana sayfaya geri dönmek için bir buton sunar.
 import NewPostForm from "@/components/posts/NewPostForm";
