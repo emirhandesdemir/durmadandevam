@@ -45,7 +45,7 @@ function PwaInstallBar() {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
     // Handler for iOS devices
-    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const isIos = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     if(isIos) {
         setShowIosInstall(true);
         setIsVisible(true);

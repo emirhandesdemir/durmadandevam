@@ -39,7 +39,7 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
   const areMutuals = currentUserData?.following?.includes(profileUser.uid) && profileUser.following?.includes(currentUserAuth?.uid);
   const amIBlockedByThisUser = profileUser.blockedUsers?.includes(currentUserAuth?.uid);
   const haveIBlockedThisUser = currentUserData?.blockedUsers?.includes(profileUser.uid);
-  const isPremium = profileUser.premiumUntil && profileUser.premiumUntil.toDate() > new Date();
+  const isPremium = profileUser.premiumUntil && new Date(profileUser.premiumUntil) > new Date();
 
   const handleStatClick = (type: 'followers' | 'following') => {
     setDialogType(type);
@@ -100,7 +100,7 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
                 {isPremium && (
                     <TooltipProvider>
                         <Tooltip>
-                            <TooltipTrigger><Crown className="h-6 w-6 text-amber-500" /></TooltipTrigger>
+                            <TooltipTrigger><Crown className="h-6 w-6 text-yellow-500" /></TooltipTrigger>
                             <TooltipContent><p>Premium Üye</p></TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
