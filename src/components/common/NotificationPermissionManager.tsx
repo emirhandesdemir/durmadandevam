@@ -49,42 +49,46 @@ export default function NotificationPermissionManager() {
 
   // Effect for initializing OneSignal and setting up listeners. Runs only once.
   useEffect(() => {
-    if (isInitialized.current || typeof window === 'undefined') return;
+    if (typeof window === 'undefined') return;
     
-    isInitialized.current = true; // Mark as initialized immediately
-    
+    // Ensure the deferred queue exists
     window.OneSignalDeferred = window.OneSignalDeferred || [];
+    
     window.OneSignalDeferred.push(function(OneSignal: any) {
-      console.log('[OneSignal] Initializing SDK...');
-      OneSignal.init({
-        appId: oneSignalAppId,
-        allowLocalhostAsSecureOrigin: true,
-        serviceWorkerPath: 'sw.js',
-      }).then(() => {
-        console.log("[OneSignal] SDK Initialized.");
+        // Prevent re-initialization
+        if (isInitialized.current) return;
+        isInitialized.current = true;
         
-        // Check for permission after init
-        if (OneSignal.Notifications.permission === 'default') {
-          promptForPermission();
-        }
-      });
+        console.log('[OneSignal] Initializing SDK...');
+        OneSignal.init({
+            appId: oneSignalAppId,
+            allowLocalhostAsSecureOrigin: true,
+            serviceWorkerPath: 'sw.js',
+        }).then(() => {
+            console.log("[OneSignal] SDK Initialized.");
+            
+            // Check for permission after init
+            if (OneSignal.Notifications.permission === 'default') {
+            promptForPermission();
+            }
+        });
 
-      // Listener for notification permission changes
-      OneSignal.Notifications.addEventListener('permissionChange', (permission: boolean) => {
-        console.log("[OneSignal] New permission state:", permission);
-        if (permission) {
-            toast({
-                title: 'Teşekkürler!',
-                description: 'Artık önemli etkinlikler için bildirim alacaksınız.',
-            });
-        } else {
-            toast({
-                title: 'Bildirimler Engellendi',
-                description: 'Bildirimleri etkinleştirmek için tarayıcı ayarlarınızı kontrol edebilirsiniz.',
-                variant: 'destructive'
-            });
-        }
-      });
+        // Listener for notification permission changes
+        OneSignal.Notifications.addEventListener('permissionChange', (permission: boolean) => {
+            console.log("[OneSignal] New permission state:", permission);
+            if (permission) {
+                toast({
+                    title: 'Teşekkürler!',
+                    description: 'Artık önemli etkinlikler için bildirim alacaksınız.',
+                });
+            } else {
+                toast({
+                    title: 'Bildirimler Engellendi',
+                    description: 'Bildirimleri etkinleştirmek için tarayıcı ayarlarınızı kontrol edebilirsiniz.',
+                    variant: 'destructive'
+                });
+            }
+        });
     });
   }, [oneSignalAppId, promptForPermission, toast]);
   
@@ -92,7 +96,9 @@ export default function NotificationPermissionManager() {
   useEffect(() => {
      if (typeof window === 'undefined') return;
      
+     // Ensure the deferred queue exists
      window.OneSignalDeferred = window.OneSignalDeferred || [];
+
      window.OneSignalDeferred.push(function(OneSignal: any) {
         if (!isInitialized.current) {
             // Wait for initialization logic to run
@@ -100,12 +106,14 @@ export default function NotificationPermissionManager() {
         }
 
         if (user) {
-            if (!OneSignal.User.hasExternalId() || OneSignal.User.getExternalId() !== user.uid) {
+            const externalId = OneSignal.User.getExternalId();
+            if (externalId !== user.uid) {
                 console.log(`[OneSignal] Auth state changed. Logging in user: ${user.uid}`);
                 OneSignal.login(user.uid);
             }
         } else {
-            if (OneSignal.User.hasExternalId()) {
+            const externalId = OneSignal.User.getExternalId();
+            if (externalId) {
                 console.log("[OneSignal] Auth state changed. User is null, logging out from OneSignal.");
                 OneSignal.logout();
             }
