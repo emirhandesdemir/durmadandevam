@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils";
 import { storage } from "@/lib/firebase";
 import { ref, getDownloadURL, uploadBytes } from "firebase/storage";
 import { applyImageFilter } from "@/lib/actions/imageActions";
-import { checkImageSafety } from "@/lib/actions/moderationActions";
 import { createPost } from "@/lib/actions/postActions";
 import { getFollowingForSuggestions } from "@/lib/actions/userActions";
 import type { UserProfile } from "@/lib/types";
@@ -37,7 +36,7 @@ async function dataUriToBlob(dataUri: string): Promise<Blob> {
 
 export default function NewPostForm() {
   const router = useRouter();
-  const { user, userData, featureFlags } = useAuth();
+  const { user, userData } = useAuth();
   const { toast } = useToast();
   const { i18n } = useTranslation();
   const searchParams = useSearchParams();
@@ -65,7 +64,6 @@ export default function NewPostForm() {
   const [isAiEditing, setIsAiEditing] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
-  const [isModerating, setIsModerating] = useState(false);
 
   useEffect(() => {
     const sharedTitle = searchParams.get('title');
@@ -248,23 +246,6 @@ export default function NewPostForm() {
     try {
         let imageUrl = "";
         
-        if (featureFlags?.contentModerationEnabled && croppedImage) {
-            setIsModerating(true);
-            const safetyResult = await checkImageSafety({ photoDataUri: croppedImage });
-            setIsModerating(false);
-
-            if (!safetyResult.success || !safetyResult.data?.isSafe) {
-                toast({
-                    variant: "destructive",
-                    title: "Uygunsuz İçerik Tespit Edildi",
-                    description: safetyResult.data?.reason || "Bu resim topluluk kurallarını ihlal ettiği için paylaşılamadı.",
-                    duration: 7000,
-                });
-                setIsSubmitting(false);
-                return;
-            }
-        }
-        
         if (croppedImage) {
             const imageBlob = await dataUriToBlob(croppedImage);
             const fileExtension = imageBlob.type.split('/')[1] || 'jpg';
@@ -314,7 +295,7 @@ export default function NewPostForm() {
   };
 
 
-  const isLoading = isSubmitting || isAiLoading || isModerating;
+  const isLoading = isSubmitting || isAiLoading;
 
   return (
     <>
@@ -439,8 +420,8 @@ export default function NewPostForm() {
             onClick={handleShare}
             disabled={isLoading || (!text.trim() && !croppedImage)}
           >
-            {isSubmitting || isModerating ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-            <span className="ml-2 hidden sm:inline">{isModerating ? 'Kontrol Ediliyor...' : (isSubmitting ? 'Paylaşılıyor...' : 'Paylaş')}</span>
+            {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+            <span className="ml-2 hidden sm:inline">{isSubmitting ? 'Paylaşılıyor...' : 'Paylaş'}</span>
           </Button>
         </div>
       </Card>
