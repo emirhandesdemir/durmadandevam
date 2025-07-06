@@ -12,7 +12,7 @@ import { LogOut, Palette, Loader2, Sparkles, Lock, Camera, Gift, Copy, Users, Gl
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { auth, db, storage } from "@/lib/firebase";
 import { updateProfile } from "firebase/auth";
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
@@ -89,14 +89,14 @@ export default function ProfilePageClient() {
         }
         if (user) {
             const encodedRef = btoa(user.uid);
-            setInviteLink(`https://hiwewalk.netlify.app/signup?ref=${encodedRef}`);
+            setInviteLink(`${window.location.origin}/signup?ref=${encodedRef}`);
         }
     }, [userData, user]);
     
-    const hasChanges = 
+    const hasChanges = useMemo(() => 
         username !== (userData?.username || "") || 
         bio !== (userData?.bio || "") ||
-        age !== (userData?.age || undefined) ||
+        (age || undefined) !== (userData?.age || undefined) ||
         city !== (userData?.city || "") ||
         country !== (userData?.country || "") ||
         gender !== (userData?.gender || undefined) ||
@@ -105,7 +105,8 @@ export default function ProfilePageClient() {
         showOnlineStatus !== (userData?.showOnlineStatus ?? true) ||
         newAvatar !== null || 
         selectedBubble !== (userData?.selectedBubble || "") || 
-        selectedAvatarFrame !== (userData?.selectedAvatarFrame || "");
+        selectedAvatarFrame !== (userData?.selectedAvatarFrame || ""),
+    [username, bio, age, city, country, gender, privateProfile, acceptsFollowRequests, showOnlineStatus, newAvatar, selectedBubble, selectedAvatarFrame, userData]);
     
     const handleAvatarClick = () => { fileInputRef.current?.click(); };
 
@@ -227,7 +228,7 @@ export default function ProfilePageClient() {
 
     return (
         <>
-            <div className="w-full max-w-4xl mx-auto space-y-8">
+            <div className="w-full max-w-4xl mx-auto space-y-8 pb-24">
                 <div className="flex flex-col items-center gap-4">
                     <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
                     <button
@@ -463,9 +464,10 @@ export default function ProfilePageClient() {
                     initial={{ y: "100%", opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     exit={{ y: "100%", opacity: 0 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t"
                 >
-                    <div className="container mx-auto flex justify-between items-center">
+                    <div className="container mx-auto flex justify-between items-center max-w-4xl">
                         <p className="text-sm font-semibold">Kaydedilmemiş değişiklikleriniz var.</p>
                         <Button onClick={handleSaveChanges} disabled={isSaving}>
                             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

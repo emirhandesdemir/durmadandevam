@@ -1,49 +1,68 @@
 'use client';
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, MouseEvent, TouchEvent } from 'react';
 
-type Event = React.MouseEvent | React.TouchEvent;
+type Event = MouseEvent | TouchEvent;
+
+// A type guard to check if an event is a touch event.
+function isTouchEvent(event: Event): event is TouchEvent {
+  return "touches" in event;
+}
+
+// A type guard to check if an event is a mouse event.
+function isMouseEvent(event: Event): event is MouseEvent {
+  return "button" in event;
+}
+
 
 export const useLongPress = (
   onLongPress: (event: Event) => void,
   onClick: (event: Event) => void,
-  { delay = 400 } = {}
+  { delay = 300 } = {}
 ) => {
   const timeout = useRef<NodeJS.Timeout>();
   const longPressTriggered = useRef(false);
 
-  const start = useCallback((event: Event) => {
-    // If we're using a mouse, we can ignore the event if it's not the left button.
-    if ('button' in event && (event as React.MouseEvent).button !== 0) {
-      return;
-    }
-    longPressTriggered.current = false;
-    timeout.current = setTimeout(() => {
-      onLongPress(event);
-      longPressTriggered.current = true;
-    }, delay);
-  }, [onLongPress, delay]);
+  const start = useCallback(
+    (event: Event) => {
+      // Prevent activating on right-click
+      if (isMouseEvent(event) && event.button !== 0) {
+        return;
+      }
+      
+      longPressTriggered.current = false;
+      timeout.current = setTimeout(() => {
+        onLongPress(event);
+        longPressTriggered.current = true;
+      }, delay);
+    },
+    [onLongPress, delay]
+  );
 
-  const clear = useCallback((event: Event) => {
-    timeout.current && clearTimeout(timeout.current);
-    if (longPressTriggered.current === false) {
-      onClick(event);
-    }
-  }, [onClick]);
-
-  const handleContextMenu = (e: React.MouseEvent) => {
+  const clear = useCallback(
+    (event: Event) => {
+      timeout.current && clearTimeout(timeout.current);
+      // Prevent click from firing after a long press
+      if (longPressTriggered.current === false) {
+        onClick(event);
+      }
+    },
+    [onClick]
+  );
+  
+   const handleContextMenu = (e: MouseEvent) => {
+      // This will be handled by the start/clear logic for left-click-and-hold
       e.preventDefault();
-      onLongPress(e);
   };
 
   return {
-    onMouseDown: (e: React.MouseEvent) => start(e),
-    onTouchStart: (e: React.TouchEvent) => start(e),
-    onMouseUp: (e: React.MouseEvent) => clear(e),
-    onMouseLeave: (e: React.MouseEvent) => {
-      timeout.current && clearTimeout(timeout.current);
+    onMouseDown: (e: MouseEvent) => start(e),
+    onTouchStart: (e: TouchEvent) => start(e),
+    onMouseUp: (e: MouseEvent) => clear(e),
+    onTouchEnd: (e: TouchEvent) => clear(e),
+    onMouseLeave: (e: MouseEvent) => {
+        timeout.current && clearTimeout(timeout.current);
     },
-    onTouchEnd: (e: React.TouchEvent) => clear(e),
-    onContextMenu: handleContextMenu,
+    onContextMenu: handleContextMenu
   };
 };
 
