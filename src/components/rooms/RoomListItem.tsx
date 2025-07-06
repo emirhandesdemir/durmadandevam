@@ -29,7 +29,7 @@ export default function RoomListItem({ room }: RoomListItemProps) {
     const router = useRouter();
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
-    const hasPortal = room.portalExpiresAt && (room.portalExpiresAt as Timestamp).toDate() > new Date();
+    const hasPortal = room.portalExpiresAt && (room.portalExpiresAt as Timestamp).toMillis() > new Date();
     const isEvent = room.type === 'event';
 
     useEffect(() => {
@@ -55,8 +55,13 @@ export default function RoomListItem({ room }: RoomListItemProps) {
     const isFull = participants.length >= room.maxParticipants;
     const isParticipant = participants.some(p => p.uid === currentUser?.uid);
     const isExpired = timeLeft === 0;
+
+    // If the room has expired, don't render it at all.
+    if (isExpired && !isEvent) {
+        return null;
+    }
     
-    const isDisabled = (isFull && !isParticipant) || isExpired;
+    const isDisabled = (isFull && !isParticipant);
 
     const handleCardClick = () => {
         if (!isDisabled) {
@@ -65,13 +70,6 @@ export default function RoomListItem({ room }: RoomListItemProps) {
     };
 
     const StatusIndicator = () => {
-        if (isExpired) {
-            return (
-                <TooltipProvider>
-                    <Tooltip><TooltipTrigger><XCircle className="h-5 w-5 text-muted-foreground" /></TooltipTrigger><TooltipContent><p>Süresi Doldu</p></TooltipContent></Tooltip>
-                </TooltipProvider>
-            );
-        }
         if (isFull && !isParticipant) {
              return (
                 <TooltipProvider>
@@ -99,11 +97,6 @@ export default function RoomListItem({ room }: RoomListItemProps) {
             isDisabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:shadow-xl hover:-translate-y-1",
             isParticipant && !isDisabled && "hover:border-green-500/50"
         )}>
-             {isExpired && (
-                <div className="absolute inset-0 bg-background/80 z-20 flex items-center justify-center">
-                    <p className="font-bold text-lg text-muted-foreground">Süresi Doldu</p>
-                </div>
-            )}
              {(hasPortal || isEvent) && (
                 <div className="absolute top-3 right-3 z-10">
                     <TooltipProvider>
@@ -161,7 +154,7 @@ export default function RoomListItem({ room }: RoomListItemProps) {
             <CardFooter className="bg-muted/50 p-3 flex justify-between items-center text-sm mt-auto border-t">
                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1.5"><Users className="h-4 w-4"/><span>{participants.length} / {room.maxParticipants}</span></div>
-                    {timeLeft !== null && !isExpired && (
+                    {timeLeft !== null && (
                         <div className="flex items-center gap-1.5"><Clock className="h-4 w-4"/><span>{formatTime(timeLeft)}</span></div>
                     )}
                 </div>
