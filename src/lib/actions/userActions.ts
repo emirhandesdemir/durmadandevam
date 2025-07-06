@@ -2,7 +2,7 @@
 'use server';
 
 import { db, storage } from '@/lib/firebase';
-import type { Report, UserProfile } from '@/lib/types';
+import type { Report, UserProfile } from '../types';
 import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, orderBy, setDoc, collectionGroup } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
@@ -66,6 +66,7 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
         revalidatePath(`/profile/${uid}`);
     } catch (error) {
         console.error("Kullanıcı gönderileri güncellenirken hata:", error);
+        throw error;
     }
 }
 
@@ -80,6 +81,7 @@ export async function updateUserComments(uid: string, updates: { userAvatar?: st
         await processQueryInBatches(commentsQuery, updates);
     } catch (error) {
         console.error("Kullanıcı yorumları güncellenirken hata:", error);
+        throw error;
     }
 }
 
