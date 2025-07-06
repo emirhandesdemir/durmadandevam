@@ -1,79 +1,95 @@
 {
-  "$schema": "https://json.schemastore.org/web-manifest-combined.json",
   "name": "HiweWalk",
   "short_name": "HiweWalk",
-  "description": "Herkese açık odalar oluşturun ve katılın.",
-  "start_url": "/",
+  "lang": "tr",
+  "orientation": "any",
+  "start_url": "/?utm_source=pwa",
   "id": "/?v=1.0.0",
+  "scope": "/",
   "display": "standalone",
-  "display_override": [
-    "window-controls-overlay",
-    "standalone"
-  ],
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
-  "orientation": "portrait",
-  "categories": [
-    "social",
-    "entertainment"
-  ],
+  "background_color": "#000000",
+  "theme_color": "#2563eb",
+  "description": "Herkese açık odalar oluşturun ve katılın.",
   "icons": [
+    {
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png"
+    },
     {
       "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
       "type": "image/png"
     },
     {
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
-    },
-    {
-      "src": "/icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/maskable_icon_x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/icons/maskable_icon_x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
     }
   ],
   "screenshots": [
     {
-      "src": "/screenshots/screenshot1.png",
+      "src": "https://placehold.co/1080x1920.png",
       "sizes": "1080x1920",
       "type": "image/png",
       "form_factor": "narrow",
       "label": "Ana Akış"
     },
     {
-      "src": "/screenshots/screenshot2.png",
+      "src": "https://placehold.co/1080x1920.png",
       "sizes": "1080x1920",
       "type": "image/png",
       "form_factor": "narrow",
       "label": "Sohbet Odası"
     }
   ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+hiwewalk",
+      "url": "/?q=%s"
+    }
+  ],
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "handle_links": "auto",
   "shortcuts": [
     {
       "name": "Yeni Gönderi Oluştur",
-      "short_name": "Yeni Gönderi",
-      "description": "Yeni bir gönderi oluştur",
+      "short_name": "Oluştur",
+      "description": "Yeni bir gönderi paylaş",
       "url": "/create-post",
       "icons": [
         {
-          "src": "/icons/shortcut-new-post.png",
-          "sizes": "96x96",
-          "type": "image/png"
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
         }
       ]
     },
@@ -84,9 +100,8 @@
       "url": "/rooms",
       "icons": [
         {
-          "src": "/icons/shortcut-rooms.png",
-          "sizes": "96x96",
-          "type": "image/png"
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
         }
       ]
     }
@@ -94,19 +109,13 @@
   "share_target": {
     "action": "/create-post",
     "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
     "params": {
       "title": "title",
       "text": "text",
       "url": "url"
     }
   },
-  "handle_links": "auto",
-  "protocol_handlers": [
-    {
-      "protocol": "web+hiwewalk",
-      "url": "/profile/%s"
-    }
-  ],
   "related_applications": [],
   "prefer_related_applications": false,
   "iarc_rating_id": ""
