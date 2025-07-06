@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -39,35 +40,62 @@ export default function MusicPlayerDialog({ isOpen, onOpenChange, roomId }: Musi
     const { toast } = useToast();
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
+        const files = event.target.files;
+        if (!files) return;
 
-        if (file.size > 15 * 1024 * 1024) {
+        const filesArray = Array.from(files);
+        const totalFiles = filesArray.length;
+        let addedCount = 0;
+
+        if (totalFiles > 0) {
             toast({
-                variant: "destructive",
-                title: "Dosya Çok Büyük",
-                description: "Müzik dosyası 15MB'dan büyük olamaz."
+                description: `${totalFiles} şarkı ekleniyor...`
             });
-            if (event.target) event.target.value = "";
-            return;
+        }
+        
+        for (const file of filesArray) {
+            if (file.size > 15 * 1024 * 1024) {
+                toast({
+                    variant: "destructive",
+                    title: "Dosya Çok Büyük",
+                    description: `"${file.name}" (15MB'dan büyük) eklenemedi.`
+                });
+                continue;
+            }
+
+            try {
+                const base64Data = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onloadend = () => resolve(reader.result as string);
+                    reader.onerror = error => reject(error);
+                });
+
+                if (base64Data) {
+                    await addTrackToPlaylist({
+                        fileName: file.name,
+                        fileDataUrl: base64Data,
+                    });
+                    addedCount++;
+                }
+            } catch (error) {
+                console.error("Müzik işlenirken hata:", error);
+                toast({ variant: "destructive", description: `"${file.name}" eklenirken bir hata oluştu.` });
+            }
+        }
+        
+        if (addedCount > 0 && addedCount < totalFiles) {
+             toast({
+                title: "İşlem Kısmen Tamamlandı",
+                description: `${addedCount}/${totalFiles} şarkı çalma listesine eklendi.`
+            });
+        } else if (addedCount === totalFiles && totalFiles > 0) {
+            toast({
+                title: "Başarılı",
+                description: `${addedCount} şarkı çalma listesine eklendi.`
+            });
         }
 
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onloadend = async () => {
-            const base64Data = reader.result as string;
-            if (base64Data) {
-                await addTrackToPlaylist({
-                    fileName: file.name,
-                    fileDataUrl: base64Data,
-                });
-            }
-        };
-        reader.onerror = (error) => {
-            console.error("Error reading file:", error);
-            toast({ variant: "destructive", description: "Dosya okunurken bir hata oluştu." });
-        };
-        
         if (event.target) {
             event.target.value = "";
         }
@@ -106,7 +134,7 @@ export default function MusicPlayerDialog({ isOpen, onOpenChange, roomId }: Musi
 
                  <div className="flex justify-between items-center">
                     <h4 className="font-semibold">Sıradaki Şarkılar</h4>
-                    <input type="file" ref={musicInputRef} onChange={handleFileChange} accept="audio/*" className="hidden" />
+                    <input type="file" ref={musicInputRef} onChange={handleFileChange} accept="audio/*" className="hidden" multiple />
                     <Button variant="outline" size="sm" onClick={() => musicInputRef.current?.click()}>
                         <Plus className="mr-2 h-4 w-4" /> Müzik Ekle
                     </Button>
