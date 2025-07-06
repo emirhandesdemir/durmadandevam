@@ -11,21 +11,20 @@ export const registerServiceWorker = () => {
     if ('serviceWorker' in navigator && typeof window !== 'undefined') {
         wb = new Workbox('/sw.js');
         
-        // Listen for the 'waiting' event, which indicates a new version is ready.
-        wb.addEventListener('waiting', () => {
-            // Dispatch a custom event that the UI can listen for.
-            // Pass the workbox instance so the UI can call messageSkipWaiting.
-            const event = new CustomEvent('sw-update', { detail: wb });
-            window.dispatchEvent(event);
+        wb.addEventListener('waiting', (event) => {
+            // An an 'update' is available, we can ask it to take control immediately.
+            console.log('A new service worker is waiting to be activated.');
+            wb?.messageSkipWaiting();
         });
 
         wb.addEventListener('activated', (event) => {
-            if (!event.isUpdate) {
-                console.log('Service worker activated for the first time!');
-            } else {
-                console.log('Service worker has been updated.');
-                // Reload the page to make sure the user gets the latest version.
+            // This event is fired when the new service worker has taken control.
+            // It's a good time to reload the page to use the new assets.
+            if (event.isUpdate) {
+                console.log('Service worker has been updated. Reloading page...');
                 window.location.reload();
+            } else {
+                console.log('Service worker activated for the first time!');
             }
         });
 
