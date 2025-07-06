@@ -7,6 +7,7 @@ import RoomList from "@/components/rooms/RoomList";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import LeadershipBoard from "@/components/rooms/LeadershipBoard";
+import { cn } from "@/lib/utils";
 
 /**
  * Odalar Sayfası
@@ -19,7 +20,7 @@ export default function RoomsPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className={cn("min-h-screen bg-background text-foreground", "rooms-page-bg")}>
       <main className="container mx-auto max-w-7xl px-4 py-6 md:py-8">
         <div className="flex flex-col gap-8">
           {/* Yeni oda oluşturma veya mevcut odayı yönetme kartı. */}
