@@ -50,7 +50,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 isOnline: false,
                 lastSeen: serverTimestamp()
             }, { merge: true });
-            // OneSignal logout will be handled by the effect in NotificationPermissionManager
+            
+            window.OneSignalDeferred = window.OneSignalDeferred || [];
+            window.OneSignalDeferred.push(function(OneSignal: any) {
+                const externalId = OneSignal.User.getExternalId();
+                if (externalId) {
+                    console.log("[OneSignal] Auth state changed. User is null, logging out from OneSignal.");
+                    OneSignal.logout();
+                }
+            });
         }
         await signOut(auth);
         toast({
@@ -77,11 +85,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  // Presence Management (OneSignal logic removed)
+  // Presence Management
   useEffect(() => {
-    if (!user) return;
+    if (!user || !userData) return;
     
     const userStatusRef = doc(db, 'users', user.uid);
+    
+    if (userData.showOnlineStatus === false) {
+      setDoc(userStatusRef, { isOnline: false }, { merge: true });
+      return; 
+    }
+
     const updateStatus = (online: boolean) => {
         setDoc(userStatusRef, {
             isOnline: online,
@@ -98,12 +112,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    
+    const handleBeforeUnload = () => {
+        updateStatus(false);
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
         updateStatus(false);
         document.removeEventListener("visibilitychange", handleVisibilityChange);
+        window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [user]);
+  }, [user, userData]); // Rerun when userData (including showOnlineStatus) changes
+
 
   useEffect(() => {
     setFirestoreLoading(true);
