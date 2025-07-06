@@ -44,13 +44,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const handleLogout = useCallback(async () => {
     try {
-        if (user) { // Ensure user exists before trying to update status
+        if (user) { 
             const userStatusRef = doc(db, 'users', user.uid);
-            // Use setDoc with merge to prevent error if doc is deleted from admin panel
             await setDoc(userStatusRef, {
                 isOnline: false,
                 lastSeen: serverTimestamp()
             }, { merge: true });
+
+            // Logout from OneSignal
+            window.OneSignalDeferred.push(function(OneSignal: any) {
+                 console.log("[OneSignal] Logging out user.");
+                 OneSignal.logout();
+            });
         }
         await signOut(auth);
         toast({
@@ -77,24 +82,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  // Presence management
+  // Presence and OneSignal User Identification Management
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+        // If user logs out, ensure OneSignal is also logged out.
+         window.OneSignalDeferred.push(function(OneSignal: any) {
+            if (OneSignal.User.isSubscribed()) {
+                console.log("[OneSignal] User is null, logging out from OneSignal.");
+                OneSignal.logout();
+            }
+        });
+        return;
+    }
 
+    // Identify user to OneSignal
+    window.OneSignalDeferred.push(function(OneSignal: any) {
+        console.log(`[OneSignal] Identifying user with external ID: ${user.uid}`);
+        OneSignal.login(user.uid);
+        OneSignal.User.addTag("username", user.displayName || "user");
+    });
+    
+    // Manage online presence
     const userStatusRef = doc(db, 'users', user.uid);
-
     const updateStatus = (online: boolean) => {
-        // Use setDoc with merge: true. This prevents an error if the user document
-        // hasn't been created yet (e.g., during signup race condition).
         setDoc(userStatusRef, {
             isOnline: online,
             lastSeen: serverTimestamp()
         }, { merge: true }).catch(err => console.error("Presence update failed:", err));
     };
     
-    // Go online when connected
     updateStatus(true);
-
     const handleVisibilityChange = () => {
         if (document.visibilityState === 'hidden') {
             updateStatus(false);
@@ -102,11 +119,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             updateStatus(true);
         }
     };
-    
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-        // This might not run on tab close, but runs on component unmount/logout
         updateStatus(false);
         document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
@@ -147,7 +162,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
             setUserData(data);
 
-            // Trigger profile completion notification check
             if (!data.bio && !data.profileCompletionNotificationSent) {
                 triggerProfileCompletionNotification(user.uid);
             }
@@ -161,7 +175,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setFirestoreLoading(false);
       });
 
-      // Listen for unread DM count
       const dmsQuery = query(
         collection(db, 'directMessagesMetadata'),
         where('participantUids', 'array-contains', user.uid)

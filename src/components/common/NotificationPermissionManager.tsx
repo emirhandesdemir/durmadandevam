@@ -1,7 +1,6 @@
 
 'use client';
 
-import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '../ui/button';
@@ -16,7 +15,6 @@ declare global {
 
 // Manages OneSignal initialization and permission requests.
 export default function NotificationPermissionManager() {
-  const { user } = useAuth();
   const { toast, dismiss } = useToast();
   const oneSignalAppId = "51c67432-a305-43fc-a4c8-9c5d9d478d1c";
 
@@ -59,39 +57,25 @@ export default function NotificationPermissionManager() {
   }, [toast, dismiss, requestPermission]);
 
   useEffect(() => {
-    // Ensure this runs only in the browser
     if (typeof window === 'undefined') return;
 
-    // Standard OneSignal initialization
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     window.OneSignalDeferred.push(function(OneSignal: any) {
       OneSignal.init({
         appId: oneSignalAppId,
-        allowLocalhostAsSecureOrigin: true, // For development
+        allowLocalhostAsSecureOrigin: true,
       }).then(() => {
-        // This block runs after OneSignal is initialized
-        if (user) {
-          console.log("[OneSignal] User is logged in. Setting external user ID.");
-          OneSignal.login(user.uid);
-          OneSignal.User.addTag("username", user.displayName || "user");
-
-          // Check permission status after user is identified
-          const permission = OneSignal.Notifications.permission;
-          console.log("[OneSignal] Notification permission status:", permission);
-          if (permission === 'default') {
-            promptForPermission();
-          }
-        } else {
-            console.log("[OneSignal] User is not logged in. Logging out of OneSignal.");
-            if (OneSignal.User.isSubscribed()) {
-                OneSignal.logout();
-            }
+        console.log("[OneSignal] SDK Initialized.");
+        const permission = OneSignal.Notifications.permission;
+        console.log("[OneSignal] Notification permission status:", permission);
+        
+        // If permission has not been asked, prompt the user.
+        if (permission === 'default') {
+          promptForPermission();
         }
       });
     });
-
-    // Cleanup function not needed as OneSignal manages its own state
-  }, [user, oneSignalAppId, promptForPermission]);
+  }, [oneSignalAppId, promptForPermission]);
   
   return null; // This component does not render anything
 }
