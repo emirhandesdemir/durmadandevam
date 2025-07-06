@@ -1,69 +1,86 @@
 {
   "name": "HiweWalk",
   "short_name": "HiweWalk",
-  "id": "/?v=1.0.3",
-  "start_url": "/home",
+  "description": "Herkese açık odalar oluşturun ve katılın.",
+  "lang": "tr",
+  "dir": "ltr",
+  "start_url": "/",
+  "id": "/?v=1.0.0",
+  "scope": "/",
+  "background_color": "#000000",
+  "theme_color": "#121212",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "display_override": [
     "window-controls-overlay"
   ],
-  "background_color": "#F5F5DC",
-  "theme_color": "#73A580",
-  "description": "Herkese açık odalar oluşturun ve katılın. Düşüncelerinizi paylaşın, fikirler üzerinde işbirliği yapın ve başkalarıyla gerçek zamanlı olarak bağlantı kurun.",
-  "orientation": "any",
-  "lang": "tr",
-  "dir": "ltr",
-  "scope": "/",
-  "categories": [
-    "social",
-    "communication",
-    "lifestyle"
-  ],
   "icons": [
     {
-      "src": "/icons/icon.svg",
-      "type": "image/svg+xml",
+      "src": "/icons/icon-any.svg",
       "sizes": "any",
-      "purpose": "any maskable"
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://placehold.co/512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
-  "shortcuts": [
+  "launch_handler": {
+    "client_mode": [
+      "navigate-existing",
+      "auto"
+    ]
+  },
+  "screenshots": [
     {
-      "name": "Yeni Gönderi Oluştur",
-      "short_name": "Oluştur",
-      "description": "Yeni bir gönderi oluştur",
-      "url": "/create-post",
-      "icons": [
-        {
-          "src": "/icons/icon.svg",
-          "sizes": "any"
-        }
-      ]
+      "src": "https://placehold.co/540x720.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Ana Sayfa"
     },
+    {
+      "src": "https://placehold.co/1280x720.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Oda Görünümü"
+    }
+  ],
+  "iarc_rating_id": "your-iarc-id-here",
+  "categories": [
+    "social",
+    "entertainment"
+  ],
+  "shortcuts": [
     {
       "name": "Sohbet Odaları",
       "short_name": "Odalar",
       "description": "Aktif sohbet odalarına göz at",
       "url": "/rooms",
       "icons": [
-        {
-          "src": "/icons/icon.svg",
-          "sizes": "any"
-        }
+        { "src": "/icons/icon.svg", "sizes": "any" }
+      ]
+    },
+    {
+      "name": "Yeni Gönderi Oluştur",
+      "short_name": "Oluştur",
+      "description": "Yeni bir gönderi paylaş",
+      "url": "/create-post",
+       "icons": [
+        { "src": "/icons/icon.svg", "sizes": "any" }
       ]
     }
   ],
-  "share_target": {
-    "action": "/create-post",
-    "method": "GET",
-    "enctype": "application/x-www-form-urlencoded",
-    "params": {
-      "title": "title",
-      "text": "text",
-      "url": "url"
-    }
-  },
-  "handle_links": "auto",
-  "prefer_related_applications": false,
-  "iarc_rating_id": ""
+  "related_applications": [],
+  "prefer_related_applications": false
 }
