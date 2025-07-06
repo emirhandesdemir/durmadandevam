@@ -198,6 +198,8 @@ export interface Post {
     likeCount: number;
     commentCount: number;
     language?: string;
+    commentsDisabled?: boolean;
+    likesHidden?: boolean;
     retweetOf?: {
         postId: string;
         uid: string;

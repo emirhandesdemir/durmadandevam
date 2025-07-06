@@ -60,6 +60,8 @@ export async function createPost(postData: {
     imageUrl: string;
     editedWithAI?: boolean;
     language: string;
+    commentsDisabled?: boolean;
+    likesHidden?: boolean;
 }) {
     const newPostRef = doc(collection(db, 'posts'));
     const userRef = doc(db, 'users', postData.uid);
@@ -78,6 +80,8 @@ export async function createPost(postData: {
             likes: [],
             likeCount: 0,
             commentCount: 0,
+            commentsDisabled: postData.commentsDisabled ?? false,
+            likesHidden: postData.likesHidden ?? false,
         };
         transaction.set(newPostRef, newPostData);
         

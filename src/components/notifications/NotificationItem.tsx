@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import type { Notification } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Heart, MessageCircle, UserPlus, DoorOpen, Loader2, AtSign, Gem, Repeat, Gift, Phone, PhoneMissed, UserCog } from 'lucide-react';
+import { Heart, MessageCircle, UserPlus, DoorOpen, Loader2, AtSign, Gem, Repeat, Gift, Phone, PhoneMissed, UserCog, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,6 +15,7 @@ import { useState } from 'react';
 import { joinRoom } from '@/lib/actions/roomActions';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
+import { deleteNotification } from '@/lib/actions/notificationActions';
 
 interface NotificationItemProps {
   notification: Notification;
@@ -25,6 +26,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
   const { user } = useAuth();
   const { toast } = useToast();
   const [isJoining, setIsJoining] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const timeAgo = formatDistanceToNow(notification.createdAt.toDate(), {
     addSuffix: true,
@@ -45,6 +47,20 @@ export default function NotificationItem({ notification }: NotificationItemProps
     } else if (['follow', 'mention', 'follow_accept', 'referral_bonus'].includes(notification.type)) {
        router.push(`/profile/${notification.senderId}`);
     }
+  };
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent the main click handler from firing
+    if (!user) return;
+    setIsDeleting(true);
+    try {
+        await deleteNotification(user.uid, notification.id);
+        toast({ description: "Bildirim silindi." });
+    } catch (error: any) {
+        toast({ variant: 'destructive', description: "Bildirim silinemedi." });
+        setIsDeleting(false);
+    }
+    // No need to set isDeleting to false on success, as the component will unmount
   };
 
   const getIcon = () => {
@@ -86,40 +102,52 @@ export default function NotificationItem({ notification }: NotificationItemProps
   return (
     <div 
       className={cn(
-        "flex items-start gap-4 p-3 rounded-lg transition-colors",
+        "flex items-center gap-4 p-3 rounded-lg transition-colors group",
         !['diamond_transfer', 'referral_bonus', 'complete_profile'].includes(notification.type) && "cursor-pointer hover:bg-muted/50",
         !notification.read && "bg-primary/5"
       )}
       onClick={handleWrapperClick}
     >
-      <div className="relative">
-        <div className="flex-shrink-0">{getIcon()}</div>
-        {!notification.read && <span className="absolute -top-1 -right-1 block h-2 w-2 rounded-full bg-primary" />}
-      </div>
-       {isSystemNotification ? (
-             <Avatar className="h-10 w-10">
-                <AvatarImage src={notification.senderAvatar || undefined} />
-                <AvatarFallback>HW</AvatarFallback>
-            </Avatar>
-       ) : (
-            <Link href={`/profile/${notification.senderId}`} onClick={(e) => e.stopPropagation()}>
-                    <div className={cn("avatar-frame-wrapper", notification.senderAvatarFrame)}>
-                        <Avatar className="relative z-[1] h-10 w-10">
-                            <AvatarImage src={notification.senderAvatar || undefined} />
-                            <AvatarFallback>{notification.senderUsername?.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                    </div>
-            </Link>
-       )}
-       <div className="flex-1 text-sm">
-          <p>{getText()}</p>
-          <p className="text-xs text-muted-foreground">{timeAgo}</p>
-       </div>
-        {notification.postImage && (
-            <div className="relative h-12 w-12 rounded-md object-cover">
-                <Image src={notification.postImage} alt="Post preview" fill className="rounded-md object-cover" />
+        <div className="flex items-start gap-4 flex-1">
+            <div className="relative">
+                <div className="flex-shrink-0">{getIcon()}</div>
+                {!notification.read && <span className="absolute -top-1 -right-1 block h-2 w-2 rounded-full bg-primary" />}
             </div>
-        )}
+            {isSystemNotification ? (
+                    <Avatar className="h-10 w-10">
+                        <AvatarImage src={notification.senderAvatar || undefined} />
+                        <AvatarFallback>HW</AvatarFallback>
+                    </Avatar>
+            ) : (
+                    <Link href={`/profile/${notification.senderId}`} onClick={(e) => e.stopPropagation()}>
+                            <div className={cn("avatar-frame-wrapper", notification.senderAvatarFrame)}>
+                                <Avatar className="relative z-[1] h-10 w-10">
+                                    <AvatarImage src={notification.senderAvatar || undefined} />
+                                    <AvatarFallback>{notification.senderUsername?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                            </div>
+                    </Link>
+            )}
+            <div className="flex-1 text-sm">
+                <p>{getText()}</p>
+                <p className="text-xs text-muted-foreground">{timeAgo}</p>
+            </div>
+                {notification.postImage && (
+                    <div className="relative h-12 w-12 rounded-md object-cover">
+                        <Image src={notification.postImage} alt="Post preview" fill className="rounded-md object-cover" />
+                    </div>
+                )}
+        </div>
+         <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={handleDelete}
+            disabled={isDeleting}
+            aria-label="Bildirimi sil"
+        >
+            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 text-muted-foreground" />}
+        </Button>
     </div>
   );
 }

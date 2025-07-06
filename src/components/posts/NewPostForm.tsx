@@ -20,11 +20,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
-import { Image as ImageIcon, Send, Loader2, X, Sparkles, RefreshCcw } from "lucide-react";
+import { Image as ImageIcon, Send, Loader2, X, Sparkles, RefreshCcw, MessageCircleOff, HeartOff } from "lucide-react";
 import { ScrollArea } from "../ui/scroll-area";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
 import { Input } from "../ui/input";
 import { useTranslation } from "react-i18next";
+import { Switch } from "../ui/switch";
+import { Label } from "../ui/label";
 
 // Helper function to convert data URI to Blob for more robust uploads
 async function dataUriToBlob(dataUri: string): Promise<Blob> {
@@ -54,6 +56,10 @@ export default function NewPostForm() {
   const [suggestionLoading, setSuggestionLoading] = useState(false);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Post Settings
+  const [commentsDisabled, setCommentsDisabled] = useState(false);
+  const [likesHidden, setLikesHidden] = useState(false);
 
   // AI Edit States
   const [isAiEditing, setIsAiEditing] = useState(false);
@@ -279,6 +285,8 @@ export default function NewPostForm() {
             imageUrl: imageUrl || "",
             editedWithAI: wasEditedByAI,
             language: i18n.language,
+            commentsDisabled: commentsDisabled,
+            likesHidden: likesHidden,
         });
 
         toast({ title: "Başarıyla Paylaşıldı!", description: "Gönderiniz ana sayfada görünecektir." });
@@ -395,6 +403,22 @@ export default function NewPostForm() {
                 </div>
             </div>
           )}
+           <div className="ml-0 sm:ml-16 space-y-3 pt-2">
+                <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                    <div className="space-y-0.5">
+                        <Label htmlFor="disable-comments" className="font-semibold flex items-center gap-2"><MessageCircleOff className="h-4 w-4"/> Yorumları Kapat</Label>
+                        <p className="text-xs text-muted-foreground pl-6">Bu gönderiye kimse yorum yapamaz.</p>
+                    </div>
+                    <Switch id="disable-comments" checked={commentsDisabled} onCheckedChange={setCommentsDisabled} />
+                </div>
+                <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                    <div className="space-y-0.5">
+                         <Label htmlFor="hide-likes" className="font-semibold flex items-center gap-2"><HeartOff className="h-4 w-4"/> Beğeni Sayısını Gizle</Label>
+                        <p className="text-xs text-muted-foreground pl-6">Diğerleri bu gönderiyi kaç kişinin beğendiğini göremez.</p>
+                    </div>
+                    <Switch id="hide-likes" checked={likesHidden} onCheckedChange={setLikesHidden} />
+                </div>
+            </div>
         </div>
         
         <div className="flex items-center justify-between border-t border-border/50 bg-muted/20 px-4 py-2">

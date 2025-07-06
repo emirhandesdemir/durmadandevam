@@ -226,14 +226,12 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
             <>
                 <div className={cn("relative flex flex-col pt-3 bg-background", !isStandalone && "border-b")}>
                     
-                    {/* Like animation on double click */}
                     {showLikeAnimation && (
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                             <Heart className="text-white h-24 w-24 drop-shadow-lg animate-like-pop" fill="currentColor" />
                         </div>
                     )}
                     
-                    {/* Retweeter's Info and Quote */}
                     <div className="flex items-start gap-3 px-4 pb-2">
                         <Link href={`/profile/${post.uid}`}>
                             <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
@@ -268,7 +266,6 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                         </div>
                     </div>
 
-                    {/* Embedded Original Post */}
                     <div className="border rounded-xl mx-4 mb-2 overflow-hidden bg-card/50 cursor-pointer" onClick={() => {/* TODO: Open original post */}}>
                         <div className="p-3">
                             <div className="flex items-center gap-2">
@@ -296,24 +293,29 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                         )}
                     </div>
                     
-                    {/* Action buttons for the retweet */}
                     <div className="px-2 pt-1 pb-2">
                         <div className="flex items-center gap-1">
                             <Button variant="ghost" size="icon" className={cn("rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive", optimisticLiked && "text-destructive")} onClick={handleLike} disabled={!currentUser}>
                                 <Heart className={cn("h-5 w-5", optimisticLiked && "fill-current")} />
                             </Button>
-                            <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary" onClick={() => setShowComments(true)}>
-                                <MessageCircle className="h-5 w-5" />
-                            </Button>
+                            {!post.commentsDisabled && (
+                                <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary" onClick={() => setShowComments(true)}>
+                                    <MessageCircle className="h-5 w-5" />
+                                </Button>
+                            )}
                             <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground" disabled>
                                 <Repeat className="h-5 w-5" />
                             </Button>
                         </div>
-                        {(optimisticLikeCount > 0 || post.commentCount > 0) && (
+                         {(optimisticLikeCount > 0 || post.commentCount > 0) && (
                              <div className="mt-1 px-2 text-xs text-muted-foreground">
-                                <span>{post.commentCount || 0} yanıt</span>
-                                <span className="mx-1">·</span>
-                                <span>{optimisticLikeCount || 0} beğeni</span>
+                                {!post.commentsDisabled && post.commentCount > 0 && <span>{post.commentCount || 0} yanıt</span>}
+                                {(!post.likesHidden && optimisticLikeCount > 0) && (
+                                    <>
+                                        {!post.commentsDisabled && post.commentCount > 0 && <span className="mx-1">·</span>}
+                                        <span>{optimisticLikeCount || 0} beğeni</span>
+                                    </>
+                                )}
                             </div>
                         )}
                     </div>
@@ -333,7 +335,6 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                     </div>
                 )}
             
-                {/* Header: Avatar, Name, Time, Menu */}
                 <div className="flex items-start gap-3 p-4">
                     <Link href={`/profile/${post.uid}`}>
                         <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
@@ -394,7 +395,6 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                     </div>
                 </div>
 
-                {/* Content: Text */}
                  {(post.text || isEditing) && (
                     <div className="px-4 pb-3 text-sm text-foreground/90">
                         {isEditing ? (
@@ -414,7 +414,6 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                     </div>
                  )}
                 
-                {/* Image */}
                 {post.imageUrl && !isEditing && (
                     <div className="relative w-full bg-muted cursor-pointer" onDoubleClick={handleDoubleClick}>
                         <Image
@@ -428,25 +427,32 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                     </div>
                 )}
                 
-                {/* Actions and Stats */}
                 <div className="px-2 pt-1 pb-2">
                     <div className="flex items-center gap-1">
                         <Button variant="ghost" size="icon" className={cn("rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive", optimisticLiked && "text-destructive")} onClick={handleLike} disabled={!currentUser}>
                            <Heart className={cn("h-5 w-5", optimisticLiked && "fill-current")} />
                         </Button>
-                        <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary" onClick={() => setShowComments(true)}>
-                            <MessageCircle className="h-5 w-5" />
-                        </Button>
+                        {!post.commentsDisabled && (
+                            <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary" onClick={() => setShowComments(true)}>
+                                <MessageCircle className="h-5 w-5" />
+                            </Button>
+                        )}
                         <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-green-500/10 hover:text-green-500" onClick={handleRetweet} disabled={!currentUser || isOwner}>
                            <Repeat className="h-5 w-5" />
                         </Button>
                     </div>
 
-                    {(optimisticLikeCount > 0 || post.commentCount > 0) && (
+                    {(optimisticLikeCount > 0 || (post.commentCount > 0 && !post.commentsDisabled)) && (
                          <div className="mt-1 px-2 text-xs text-muted-foreground">
-                            <span>{optimisticLikeCount || 0} beğeni</span>
-                            <span className="mx-1">·</span>
-                            <span>{post.commentCount || 0} yanıt</span>
+                            {!post.likesHidden && optimisticLikeCount > 0 && (
+                                <span>{optimisticLikeCount || 0} beğeni</span>
+                            )}
+                             {(!post.likesHidden && optimisticLikeCount > 0) && (!post.commentsDisabled && post.commentCount > 0) && (
+                                <span className="mx-1">·</span>
+                            )}
+                            {!post.commentsDisabled && post.commentCount > 0 && (
+                                <span>{post.commentCount || 0} yanıt</span>
+                            )}
                         </div>
                     )}
                 </div>

@@ -9,8 +9,10 @@ import {
   doc,
   updateDoc,
   getDoc,
+  deleteDoc,
 } from 'firebase/firestore';
 import type { UserProfile } from '../types';
+import { revalidatePath } from 'next/cache';
 
 interface CreateNotificationArgs {
   recipientId: string;
@@ -113,4 +115,20 @@ export async function createNotification(data: CreateNotificationArgs) {
   } catch (error) {
     console.error("Error creating notification document:", error);
   }
+}
+
+
+export async function deleteNotification(userId: string, notificationId: string) {
+    if (!userId || !notificationId) {
+        throw new Error("Kullanıcı ID ve Bildirim ID'si gerekli.");
+    }
+    const notificationRef = doc(db, 'users', userId, 'notifications', notificationId);
+    try {
+        await deleteDoc(notificationRef);
+        revalidatePath('/notifications');
+        return { success: true };
+    } catch (error: any) {
+        console.error("Bildirim silinirken hata:", error);
+        return { success: false, error: "Bildirim silinemedi." };
+    }
 }
