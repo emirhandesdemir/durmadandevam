@@ -3,35 +3,48 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageCircle, Plus, Radio, Waves, User } from 'lucide-react';
+import { Home, MessageCircle, Plus, Radio, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { useMemo } from 'react';
 
 export default function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
 
+  const navItems = useMemo(() => [
+    { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
+    { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
+    { id: 'create', href: '/create-post', icon: Plus, label: 'Oluştur'},
+    { id: 'live', href: '/live', icon: Radio, label: 'Canlı' },
+    { id: 'profile', href: `/profile/${user?.uid}`, icon: Avatar, label: 'Profil' },
+  ], [user?.uid]);
+  
   if (!user) {
     return null;
   }
   
-  const navItems = [
-    { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
-    { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
-    { id: 'create', href: '/create-post', icon: Plus, label: 'Oluştur'},
-    { id: 'surf', href: '/surf', icon: Waves, label: 'Sörf' },
-    { id: 'profile', href: `/profile/${user.uid}`, icon: Avatar, label: 'Profil' },
-  ];
+  // A clearer, more robust way to determine the active link.
+  const getIsActive = (itemId: string, itemHref: string, currentPathname: string) => {
+    // For dynamic routes, we check if the path starts with the base.
+    if (itemId === 'profile') {
+      return currentPathname.startsWith('/profile');
+    }
+    if (itemId === 'rooms') {
+      return currentPathname.startsWith('/rooms');
+    }
+    // For all other routes, we want an exact match.
+    return currentPathname === itemHref;
+  };
+
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 w-full border-t bg-background/95 backdrop-blur-sm">
         <nav className="mx-auto flex h-16 max-w-md items-center justify-around">
             {navItems.map((item) => {
                 const Icon = item.icon;
-                // Simplified active check
-                const isActive = (item.id === 'create' && pathname === item.href) || 
-                               (item.id !== 'create' && pathname.startsWith(item.href) && (pathname.length === item.href.length || pathname[item.href.length] === '/'));
+                const isActive = getIsActive(item.id, item.href, pathname);
 
                 return (
                   <Link
