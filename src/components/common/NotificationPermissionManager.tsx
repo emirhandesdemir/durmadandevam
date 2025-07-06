@@ -2,9 +2,9 @@
 
 import { useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '../ui/button';
 import { BellRing } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 declare global {
   interface Window {
@@ -52,9 +52,12 @@ export default function NotificationPermissionManager() {
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     window.OneSignalDeferred.push(function(OneSignal: any) {
       if (!OneSignal.isInitialized()) {
+        console.log('[OneSignal] Initializing SDK...');
         OneSignal.init({
           appId: oneSignalAppId,
           allowLocalhostAsSecureOrigin: true,
+          // Explicitly define the service worker path. next-pwa generates sw.js in public root.
+          serviceWorkerPath: 'sw.js',
         }).then(() => {
           console.log("[OneSignal] SDK Initialized.");
           
@@ -67,26 +70,8 @@ export default function NotificationPermissionManager() {
           if (user) {
             console.log(`[OneSignal] Identifying user with external ID: ${user.uid}`);
             OneSignal.login(user.uid);
-          } else {
-            if (OneSignal.User.hasExternalId()) {
-                console.log("[OneSignal] User is null, logging out from OneSignal.");
-                OneSignal.logout();
-            }
           }
         });
-      } else {
-          // If already initialized, just handle login/logout
-          if (user) {
-            if (!OneSignal.User.hasExternalId() || OneSignal.User.getExternalId() !== user.uid) {
-                console.log(`[OneSignal] Re-identifying user with external ID: ${user.uid}`);
-                OneSignal.login(user.uid);
-            }
-          } else {
-            if (OneSignal.User.hasExternalId()) {
-                console.log("[OneSignal] User is null, logging out from OneSignal.");
-                OneSignal.logout();
-            }
-          }
       }
 
       // Listener for notification permission changes
@@ -107,6 +92,27 @@ export default function NotificationPermissionManager() {
       });
     });
   }, [oneSignalAppId, promptForPermission, toast, user]);
+  
+  // This separate effect handles user login/logout after the initial setup.
+  useEffect(() => {
+     window.OneSignalDeferred = window.OneSignalDeferred || [];
+     window.OneSignalDeferred.push(function(OneSignal: any) {
+        if (!OneSignal.isInitialized()) {
+            return; // Wait for initialization to complete
+        }
+        if (user) {
+            if (!OneSignal.User.hasExternalId() || OneSignal.User.getExternalId() !== user.uid) {
+                console.log(`[OneSignal] Auth state changed. Logging in user: ${user.uid}`);
+                OneSignal.login(user.uid);
+            }
+        } else {
+            if (OneSignal.User.hasExternalId()) {
+                console.log("[OneSignal] Auth state changed. User is null, logging out from OneSignal.");
+                OneSignal.logout();
+            }
+        }
+     });
+  }, [user]);
 
   return null; // This component does not render anything
 }

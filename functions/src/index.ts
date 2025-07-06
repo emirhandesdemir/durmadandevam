@@ -163,6 +163,10 @@ export const sendPushNotification = functions.region("us-central1").firestore
             headings: { "en": title, "tr": title },
             contents: { "en": body, "tr": body },
             web_url: `https://hiwewalkbeta.netlify.app${link}`,
+            data: { // Add custom data for in-app navigation
+                notificationType: notificationData.type,
+                relatedId: notificationData.postId || notificationData.roomId || notificationData.chatId || notificationData.senderId
+            }
         };
 
         if (notificationData.postImage) {
