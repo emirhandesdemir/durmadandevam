@@ -1,3 +1,4 @@
+
 // Bu, bir kullanıcının profil sayfasını oluşturan sunucu bileşenidir.
 // Sayfa yüklendiğinde sunucuda çalışır, veritabanından gerekli verileri
 // (kullanıcı profili, gönderi sayısı vb.) çeker ve sayfayı oluşturur.
@@ -69,14 +70,12 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
             <TabsContent value="posts" className="mt-4">
                 <ProfilePosts 
                     userId={uid} 
-                    profileUser={serializableProfileUser} 
                     postType="image"
                 />
             </TabsContent>
             <TabsContent value="texts" className="mt-4">
                  <ProfilePosts 
                     userId={uid} 
-                    profileUser={serializableProfileUser} 
                     postType="text"
                 />
             </TabsContent>

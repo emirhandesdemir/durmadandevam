@@ -1,9 +1,10 @@
+
 // src/components/profile/ProfilePosts.tsx
 "use client";
 
-import { collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
+import { collection, query, where, Timestamp, orderBy, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Post } from '@/lib/types';
+import type { Post, UserProfile } from '@/lib/types';
 import { Card, CardContent } from '../ui/card';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,48 +17,61 @@ import { tr } from 'date-fns/locale';
 
 interface ProfilePostsProps {
   userId: string;
-  profileUser: any;
   postType: 'image' | 'text';
 }
 
-export default function ProfilePosts({ userId, profileUser, postType }: ProfilePostsProps) {
-    const { userData: currentUser, loading: authLoading } = useAuth();
+export default function ProfilePosts({ userId, postType }: ProfilePostsProps) {
+    const { userData: currentUserData, loading: authLoading } = useAuth();
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
+    const [profileUser, setProfileUser] = useState<UserProfile | null>(null);
     const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+    
+    // Listen for real-time updates on the profile user's document
+    useEffect(() => {
+        const userDocRef = doc(db, 'users', userId);
+        const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                setProfileUser(docSnap.data() as UserProfile);
+            } else {
+                setProfileUser(null);
+            }
+        });
+        return () => unsubscribe();
+    }, [userId]);
 
-    const isOwnProfile = currentUser?.uid === userId;
-    const isFollower = (profileUser.followers || []).includes(currentUser?.uid || '');
-    const canViewContent = !profileUser.privateProfile || isFollower || isOwnProfile;
-    const amIBlockedByThisUser = profileUser.blockedUsers?.includes(currentUser?.uid);
+    const isOwnProfile = currentUserData?.uid === userId;
+    const isFollower = profileUser?.followers?.includes(currentUserData?.uid || '') || false;
+    const canViewContent = !profileUser?.privateProfile || isFollower || isOwnProfile;
+    const amIBlockedByThisUser = profileUser?.blockedUsers?.includes(currentUserData?.uid || '');
 
     useEffect(() => {
-        if (authLoading) {
+        if (authLoading || !profileUser) {
+            // Wait for auth and profile data to be loaded
             return;
         }
+
         if (!canViewContent || amIBlockedByThisUser) {
             setLoading(false);
+            setPosts([]);
             return;
         }
 
-        const fetchPosts = async () => {
-            setLoading(true);
-            try {
-                const postsRef = collection(db, 'posts');
-                const q = query(postsRef, where('uid', '==', userId), orderBy('createdAt', 'desc'));
-                const querySnapshot = await getDocs(q);
-                
-                const fetchedPosts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post));
-                setPosts(fetchedPosts);
-            } catch (error) {
-                console.error("Gönderiler çekilirken hata:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
+        setLoading(true);
+        const postsRef = collection(db, 'posts');
+        const q = query(postsRef, where('uid', '==', userId), orderBy('createdAt', 'desc'));
+        
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const fetchedPosts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post));
+            setPosts(fetchedPosts);
+            setLoading(false);
+        }, (error) => {
+            console.error("Gönderiler çekilirken hata:", error);
+            setLoading(false);
+        });
 
-        fetchPosts();
-    }, [userId, canViewContent, authLoading, amIBlockedByThisUser]);
+        return () => unsubscribe();
+    }, [userId, canViewContent, authLoading, amIBlockedByThisUser, profileUser]);
 
     const filteredPosts = posts.filter(post => {
         return postType === 'image' ? !!post.imageUrl : !post.imageUrl;
