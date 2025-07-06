@@ -1,1 +1,1 @@
-// Bu dosya, kaldırılan "Keşfet" özelliğiyle ilgili olduğu için artık kullanılmamaktadır ve güvenle silinebilir.
+// This file is obsolete and has been removed to clean up the project.
