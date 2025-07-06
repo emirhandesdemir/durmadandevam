@@ -1,12 +1,13 @@
 // src/components/comments/CommentSheet.tsx
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { collection, onSnapshot, query, orderBy, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { addComment } from "@/lib/actions/commentActions";
+import { getFollowingForSuggestions } from "@/lib/actions/userActions";
 
 import {
   Sheet,
@@ -21,9 +22,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Send } from "lucide-react";
-import { Post } from "../posts/PostsFeed";
+import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
+import type { Post } from "@/lib/types";
 import CommentItem from "./CommentItem";
-import type { Comment } from "@/lib/types";
+import type { Comment, UserProfile } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface CommentSheetProps {
@@ -44,9 +46,90 @@ export default function CommentSheet({ open, onOpenChange, post }: CommentSheetP
     const [loading, setLoading] = useState(true);
     const [newCommentText, setNewCommentText] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [replyingTo, setReplyingTo] = useState<{ commentId: string; username: string } | null>(null);
+    
+    // Mention States
+    const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+    const [suggestions, setSuggestions] = useState<Pick<UserProfile, 'uid' | 'username' | 'photoURL'>[]>([]);
+    const [suggestionLoading, setSuggestionLoading] = useState(false);
+    const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const fetchSuggestions = useCallback(async () => {
+        if (!userData || suggestions.length > 0) return;
+        setSuggestionLoading(true);
+        try {
+            const followingList = await getFollowingForSuggestions(userData.uid);
+            setSuggestions(followingList);
+        } catch (error) {
+            console.error("Error fetching suggestions:", error);
+        } finally {
+            setSuggestionLoading(false);
+        }
+    }, [userData, suggestions.length]);
+
+    const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const value = e.target.value;
+        setNewCommentText(value);
+
+        const cursorPos = e.target.selectionStart;
+        const textUpToCursor = value.substring(0, cursorPos);
+        const mentionMatch = textUpToCursor.match(/@(\w*)$/);
+
+        if (mentionMatch) {
+            setMentionQuery(mentionMatch[1]);
+            fetchSuggestions();
+        } else {
+            setMentionQuery(null);
+        }
+        setActiveSuggestionIndex(0);
+    };
+
+    const handleMentionSelect = (username: string) => {
+        if (!textareaRef.current) return;
+        const value = textareaRef.current.value;
+        const cursorPos = textareaRef.current.selectionStart;
+        const textUpToCursor = value.substring(0, cursorPos);
+
+        const startIndex = textUpToCursor.lastIndexOf('@');
+        if (startIndex === -1) return;
+
+        const prefix = value.substring(0, startIndex);
+        const suffix = value.substring(cursorPos);
+        const newText = `${prefix}@${username} ${suffix}`;
+        
+        setNewCommentText(newText);
+        setMentionQuery(null);
+
+        const newCursorPos = prefix.length + username.length + 2;
+        setTimeout(() => {
+            textareaRef.current?.focus();
+            textareaRef.current?.setSelectionRange(newCursorPos, newCursorPos);
+        }, 0);
+    };
+
+    const filteredSuggestions = mentionQuery !== null
+    ? suggestions.filter(s => s.username.toLowerCase().includes(mentionQuery.toLowerCase()))
+    : [];
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (mentionQuery !== null && filteredSuggestions.length > 0) {
+          if (e.key === 'ArrowDown') {
+              e.preventDefault();
+              setActiveSuggestionIndex(prev => (prev + 1) % filteredSuggestions.length);
+          } else if (e.key === 'ArrowUp') {
+              e.preventDefault();
+              setActiveSuggestionIndex(prev => (prev - 1 + filteredSuggestions.length) % filteredSuggestions.length);
+          } else if (e.key === 'Enter' || e.key === 'Tab') {
+              e.preventDefault();
+              handleMentionSelect(filteredSuggestions[activeSuggestionIndex].username);
+          } else if (e.key === 'Escape') {
+              e.preventDefault();
+              setMentionQuery(null);
+          }
+      }
+    };
+
 
     // Yorumları Firestore'dan gerçek zamanlı olarak çek
     useEffect(() => {
@@ -85,11 +168,9 @@ export default function CommentSheet({ open, onOpenChange, post }: CommentSheetP
                     photoURL: userData.photoURL || null,
                     userAvatarFrame: userData.selectedAvatarFrame || '',
                     role: userData.role,
-                },
-                replyTo: replyingTo || undefined
+                }
             });
             setNewCommentText("");
-            setReplyingTo(null); // Cevap modunu temizle
             toast({ description: "Yorumunuz eklendi." });
         } catch (error) {
             console.error("Yorum eklenirken hata:", error);
@@ -101,8 +182,7 @@ export default function CommentSheet({ open, onOpenChange, post }: CommentSheetP
     
     // Cevaplama modunu başlatan fonksiyon
     const handleReply = (commentId: string, username: string) => {
-        setReplyingTo({ commentId, username });
-        setNewCommentText(`@${username} `);
+        setNewCommentText(prev => `${prev} @${username} `);
         textareaRef.current?.focus();
     };
 
@@ -142,38 +222,63 @@ export default function CommentSheet({ open, onOpenChange, post }: CommentSheetP
                 
                 {/* Yeni yorum giriş alanı */}
                 <SheetFooter className="mt-auto pt-4 border-t bg-background -mx-6 px-6 pb-2">
-                    {replyingTo && (
-                        <div className="text-sm text-muted-foreground p-2 bg-muted rounded-md flex justify-between items-center">
-                            <span>@{replyingTo.username} adlı kullanıcıya cevap veriliyor...</span>
-                            <Button variant="ghost" size="sm" onClick={() => { setReplyingTo(null); setNewCommentText(""); }}>İptal</Button>
-                        </div>
-                    )}
-                    <div className="flex items-start gap-2">
-                         <div className={cn("avatar-frame-wrapper", userData?.selectedAvatarFrame)}>
-                            <Avatar className="relative z-[1] h-9 w-9">
-                                <AvatarImage src={user?.photoURL || undefined} />
-                                <AvatarFallback>{user?.displayName?.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                        </div>
-                        <div className="flex-1 relative">
-                            <Textarea
-                                ref={textareaRef}
-                                value={newCommentText}
-                                onChange={(e) => setNewCommentText(e.target.value)}
-                                placeholder="Yorumunu ekle..."
-                                className="pr-12 min-h-[40px] max-h-32"
-                                disabled={isSubmitting}
-                            />
-                            <Button
-                                size="icon"
-                                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full"
-                                onClick={handleAddComment}
-                                disabled={isSubmitting || !newCommentText.trim()}
-                            >
-                                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                            </Button>
-                        </div>
-                    </div>
+                    <Popover open={mentionQuery !== null}>
+                        <PopoverAnchor asChild>
+                            <div className="flex items-start gap-2">
+                                <div className={cn("avatar-frame-wrapper", userData?.selectedAvatarFrame)}>
+                                    <Avatar className="relative z-[1] h-9 w-9">
+                                        <AvatarImage src={user?.photoURL || undefined} />
+                                        <AvatarFallback>{user?.displayName?.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                </div>
+                                <div className="flex-1 relative">
+                                    <Textarea
+                                        ref={textareaRef}
+                                        value={newCommentText}
+                                        onChange={handleTextChange}
+                                        onKeyDown={handleKeyDown}
+                                        placeholder="Yorumunu ekle..."
+                                        className="pr-12 min-h-[40px] max-h-32"
+                                        disabled={isSubmitting}
+                                    />
+                                    <Button
+                                        size="icon"
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full"
+                                        onClick={handleAddComment}
+                                        disabled={isSubmitting || !newCommentText.trim()}
+                                    >
+                                        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                    </Button>
+                                </div>
+                            </div>
+                        </PopoverAnchor>
+                        <PopoverContent className="w-64 p-1">
+                            {suggestionLoading ? (
+                                <div className="flex items-center justify-center p-2"><Loader2 className="h-4 w-4 animate-spin" /></div>
+                            ) : filteredSuggestions.length > 0 ? (
+                                <ScrollArea className="max-h-48">
+                                    <div className="p-1">
+                                    {filteredSuggestions.map((user, index) => (
+                                        <button
+                                            key={user.uid}
+                                            onClick={() => handleMentionSelect(user.username)}
+                                            onMouseMove={() => setActiveSuggestionIndex(index)}
+                                            className={cn(
+                                                "w-full text-left flex items-center gap-2 p-2 rounded-md hover:bg-accent",
+                                                index === activeSuggestionIndex && "bg-accent"
+                                            )}
+                                        >
+                                            <Avatar className="h-7 w-7"><AvatarImage src={user.photoURL || undefined} /><AvatarFallback>{user.username.charAt(0)}</AvatarFallback></Avatar>
+                                            <span className="font-medium text-sm">{user.username}</span>
+                                        </button>
+                                    ))}
+                                    </div>
+                                </ScrollArea>
+                            ) : (
+                                <p className="text-center text-sm text-muted-foreground p-2">Kullanıcı bulunamadı.</p>
+                            )}
+                        </PopoverContent>
+                    </Popover>
                 </SheetFooter>
             </SheetContent>
         </Sheet>

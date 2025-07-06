@@ -38,7 +38,7 @@ async function handleMentions(text: string, postId: string, sender: { uid: strin
     if (mentions) {
         const usernames = new Set(mentions);
         for (const username of usernames) {
-            const mentionedUser = await findUserByUsername(username);
+            const mentionedUser = await findUserByUsername(username.substring(1)); // Remove @
             if (mentionedUser && mentionedUser.uid !== sender.uid) {
                 await createNotification({
                     recipientId: mentionedUser.uid,
@@ -103,7 +103,12 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
     }
     
     // Yorumdaki bahsetmeleri işle
-    await handleMentions(text, postId, user);
+    await handleMentions(text, postId, {
+        uid: user.uid,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        selectedAvatarFrame: user.userAvatarFrame
+    });
 
     await batch.commit();
 }
