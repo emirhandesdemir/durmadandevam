@@ -1,3 +1,4 @@
+
 // src/app/(main)/live/start/page.tsx
 'use client';
 

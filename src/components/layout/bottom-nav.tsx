@@ -1,14 +1,12 @@
-
 // src/components/layout/bottom-nav.tsx
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageCircle, Plus, Radio, Waves } from 'lucide-react';
+import { Home, MessageCircle, Plus, Radio, Waves, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { useMemo } from 'react';
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -17,33 +15,24 @@ export default function BottomNav() {
   if (!user) {
     return null;
   }
-
-  // Hide nav on specific full-screen pages
-  if ((pathname.startsWith('/rooms/') && pathname !== '/rooms') || (pathname.startsWith('/call/')) || pathname.startsWith('/live/')) {
-    return null;
-  }
   
-  const navItems = useMemo(() => [
+  const navItems = [
     { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
     { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
-    { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
-    { id: 'live', href: '/live', icon: Radio, label: 'Canlı' },
+    { id: 'create', href: '/create-post', icon: Plus, label: 'Oluştur'},
+    { id: 'surf', href: '/surf', icon: Waves, label: 'Sörf' },
     { id: 'profile', href: `/profile/${user.uid}`, icon: Avatar, label: 'Profil' },
-  ], [user.uid]);
+  ];
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 w-full border-t bg-background/95 backdrop-blur-sm">
         <nav className="mx-auto flex h-16 max-w-md items-center justify-around">
             {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = item.id === 'create' 
-                    ? pathname.startsWith('/create') 
-                    : item.id === 'rooms' 
-                    ? pathname.startsWith('/rooms')
-                    : item.id === 'live'
-                    ? pathname.startsWith('/live') 
-                    : pathname === item.href;
-                
+                // Simplified active check
+                const isActive = (item.id === 'create' && pathname === item.href) || 
+                               (item.id !== 'create' && pathname.startsWith(item.href) && (pathname.length === item.href.length || pathname[item.href.length] === '/'));
+
                 return (
                   <Link
                     key={item.id}

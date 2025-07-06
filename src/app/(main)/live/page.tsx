@@ -1,3 +1,4 @@
+
 // src/app/(main)/live/page.tsx
 'use client';
 import { useEffect, useState } from 'react';

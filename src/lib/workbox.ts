@@ -1,4 +1,3 @@
-
 'use client';
 
 // Bu dosya artık kullanılmamaktadır.
