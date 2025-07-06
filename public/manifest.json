@@ -1,84 +1,72 @@
 {
+  "theme_color": "#000000",
+  "background_color": "#000000",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "id": "/?v=1",
   "name": "HiweWalk",
   "short_name": "HiweWalk",
-  "description": "Herkese açık odalar oluşturun ve katılın.",
+  "description": "Create and join public rooms. Share your thoughts, collaborate on ideas, and connect with others in real-time.",
   "lang": "tr",
   "dir": "ltr",
-  "start_url": "/",
-  "id": "/?v=1.0.0",
-  "scope": "/",
-  "background_color": "#000000",
-  "theme_color": "#121212",
-  "display": "standalone",
-  "orientation": "portrait-primary",
-  "display_override": [
-    "window-controls-overlay"
+  "orientation": "any",
+  "iarc_rating_id": "tbd",
+  "categories": [
+    "social",
+    "entertainment",
+    "lifestyle"
   ],
+  "launch_handler": {
+    "client_mode": ["navigate-existing", "auto"]
+  },
   "icons": [
     {
-      "src": "/icons/icon-any.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "https://placehold.co/192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-maskable.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "maskable"
     },
     {
       "src": "https://placehold.co/512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "https://placehold.co/192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://placehold.co/512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "launch_handler": {
-    "client_mode": [
-      "navigate-existing",
-      "auto"
-    ]
-  },
   "screenshots": [
     {
-      "src": "https://placehold.co/540x720.png",
-      "sizes": "540x720",
+      "src": "https://placehold.co/1080x1920.png",
+      "sizes": "1080x1920",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Ana Sayfa"
+      "label": "Home Screen"
     },
     {
-      "src": "https://placehold.co/1280x720.png",
-      "sizes": "1280x720",
+      "src": "https://placehold.co/1080x1920.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Chat Room"
+    },
+    {
+      "src": "https://placehold.co/1920x1080.png",
+      "sizes": "1920x1080",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "Oda Görünümü"
-    }
-  ],
-  "iarc_rating_id": "your-iarc-id-here",
-  "categories": [
-    "social",
-    "entertainment"
-  ],
-  "shortcuts": [
-    {
-      "name": "Sohbet Odaları",
-      "short_name": "Odalar",
-      "description": "Aktif sohbet odalarına göz at",
-      "url": "/rooms",
-      "icons": [
-        { "src": "/icons/icon.svg", "sizes": "any" }
-      ]
-    },
-    {
-      "name": "Yeni Gönderi Oluştur",
-      "short_name": "Oluştur",
-      "description": "Yeni bir gönderi paylaş",
-      "url": "/create-post",
-       "icons": [
-        { "src": "/icons/icon.svg", "sizes": "any" }
-      ]
+      "label": "Home Screen on Desktop"
     }
   ],
   "related_applications": [],
