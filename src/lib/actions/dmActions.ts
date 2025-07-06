@@ -165,8 +165,8 @@ export async function sendMessage(
       transaction.set(metadataDocRef, {
         participantUids: [sender.uid, receiver.uid],
         participantInfo: {
-          [sender.uid]: { username: sender.username, photoURL: sender.photoURL || null, selectedAvatarFrame: sender.selectedAvatarFrame || '' },
-          [receiver.uid]: { username: receiver.username, photoURL: receiver.photoURL || null, selectedAvatarFrame: receiver.selectedAvatarFrame || '' },
+          [sender.uid]: { username: sender.username, photoURL: sender.photoURL || null, selectedAvatarFrame: sender.selectedAvatarFrame || '', premiumUntil: senderData.premiumUntil || null },
+          [receiver.uid]: { username: receiver.username, photoURL: receiver.photoURL || null, selectedAvatarFrame: receiver.selectedAvatarFrame || '', premiumUntil: receiverData.premiumUntil || null },
         },
         lastMessage: { text: lastMessageText, senderId: sender.uid, timestamp: serverTimestamp(), read: false },
         unreadCounts: { [receiver.uid]: 1, [sender.uid]: 0 },
@@ -175,8 +175,8 @@ export async function sendMessage(
       transaction.update(metadataDocRef, {
         lastMessage: { text: lastMessageText, senderId: sender.uid, timestamp: serverTimestamp(), read: false },
         [`unreadCounts.${receiver.uid}`]: increment(1),
-        [`participantInfo.${sender.uid}`]: { username: sender.username, photoURL: sender.photoURL || null, selectedAvatarFrame: sender.selectedAvatarFrame || '' },
-        [`participantInfo.${receiver.uid}`]: { username: receiver.username, photoURL: receiver.photoURL || null, selectedAvatarFrame: receiver.selectedAvatarFrame || '' },
+        [`participantInfo.${sender.uid}`]: { username: sender.username, photoURL: sender.photoURL || null, selectedAvatarFrame: sender.selectedAvatarFrame || '', premiumUntil: senderData.premiumUntil || null },
+        [`participantInfo.${receiver.uid}`]: { username: receiver.username, photoURL: receiver.photoURL || null, selectedAvatarFrame: receiver.selectedAvatarFrame || '', premiumUntil: receiverData.premiumUntil || null },
       });
     }
   });

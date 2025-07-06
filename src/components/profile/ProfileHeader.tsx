@@ -86,7 +86,7 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
     <>
       <div className="flex flex-col items-center text-center p-4">
         {/* Avatar */}
-         <div className={cn("avatar-frame-wrapper", isPremium ? 'avatar-frame-premium' : profileUser.selectedAvatarFrame)}>
+         <div className={cn("avatar-frame-wrapper", profileUser.selectedAvatarFrame)}>
             <Avatar className="relative z-[1] h-24 w-24 md:h-28 md:w-28 border-4 border-background shadow-lg">
                 <AvatarImage src={profileUser.photoURL || undefined} />
                 <AvatarFallback className="text-5xl">{profileUser.username?.charAt(0).toUpperCase()}</AvatarFallback>
@@ -100,7 +100,7 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
                 {isPremium && (
                     <TooltipProvider>
                         <Tooltip>
-                            <TooltipTrigger><Crown className="h-6 w-6 text-red-500" /></TooltipTrigger>
+                            <TooltipTrigger><Crown className="h-6 w-6 text-amber-500" /></TooltipTrigger>
                             <TooltipContent><p>Premium Üye</p></TooltipContent>
                         </Tooltip>
                     </TooltipProvider>

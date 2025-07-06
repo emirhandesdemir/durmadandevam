@@ -133,7 +133,7 @@ export default function UsersTable({ users }: UsersTableProps) {
                             </TableCell>
                             <TableCell>
                                 {isPremium ? (
-                                    <Badge variant="destructive" className="bg-red-600 hover:bg-red-700">
+                                    <Badge className="bg-amber-500 hover:bg-amber-600 border-amber-600 text-white">
                                         <Crown className="mr-1 h-3 w-3" />
                                         Premium
                                     </Badge>

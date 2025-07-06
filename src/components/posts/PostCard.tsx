@@ -319,7 +319,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                                 <p className="font-bold text-sm hover:underline">{post.username}</p>
                             </Link>
                             {post.userRole === 'admin' && (
-                                <TooltipProvider>
+                                <TooltipProvider delayDuration={0}>
                                     <Tooltip>
                                         <TooltipTrigger><BadgeCheck className="h-4 w-4 text-primary fill-primary/20" /></TooltipTrigger>
                                         <TooltipContent><p>Yönetici</p></TooltipContent>
@@ -331,7 +331,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         {post.editedWithAI && (
-                            <TooltipProvider>
+                            <TooltipProvider delayDuration={0}>
                                 <Tooltip>
                                     <TooltipTrigger className="flex items-center gap-1 text-primary font-semibold">
                                         <Sparkles className="h-3 w-3" />

@@ -26,7 +26,8 @@ import {
   VolumeX,
   UserCheck,
   UserX,
-  CameraOff
+  CameraOff,
+  BadgeCheck
 } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -71,6 +72,7 @@ export default function VoiceUserIcon({
   const isSelf = participant.uid === currentUserId;
   const isParticipantHost = participant.uid === room.createdBy.uid;
   const isParticipantModerator = room.moderators?.includes(participant.uid);
+  const isParticipantAdmin = participant.role === 'admin';
 
   const canModerate = isHost || isModerator;
   
@@ -162,8 +164,17 @@ export default function VoiceUserIcon({
 
       <div className="flex items-center justify-center gap-1.5 w-full">
           <p className={cn("font-bold text-foreground truncate", nameSize, size === 'lg' ? 'max-w-[120px]' : 'max-w-[60px]')}>{participant.username}</p>
-          {isParticipantHost && size === 'sm' && (
-              <TooltipProvider>
+           {isParticipantAdmin ? (
+                 <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <BadgeCheck className={cn("text-primary shrink-0", iconSize)} />
+                        </TooltipTrigger>
+                        <TooltipContent><p>Yönetici</p></TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            ) : isParticipantHost && size === 'sm' ? (
+              <TooltipProvider delayDuration={0}>
                   <Tooltip>
                     <TooltipTrigger asChild>
                         <Crown className={cn("text-yellow-400 shrink-0", iconSize)} />
@@ -171,9 +182,8 @@ export default function VoiceUserIcon({
                     <TooltipContent><p>Oda Sahibi</p></TooltipContent>
                   </Tooltip>
               </TooltipProvider>
-          )}
-          {isParticipantModerator && !isParticipantHost && size === 'sm' && (
-              <TooltipProvider>
+          ) : isParticipantModerator && !isParticipantHost && size === 'sm' ? (
+              <TooltipProvider delayDuration={0}>
                   <Tooltip>
                     <TooltipTrigger asChild>
                         <Shield className={cn("text-blue-400 shrink-0", iconSize)} />
@@ -181,7 +191,7 @@ export default function VoiceUserIcon({
                     <TooltipContent><p>Moderatör</p></TooltipContent>
                   </Tooltip>
               </TooltipProvider>
-          )}
+          ) : null}
       </div>
     </div>
   );

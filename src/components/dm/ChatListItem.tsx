@@ -7,9 +7,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import type { DirectMessageMetadata } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, toDate } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Check, CheckCheck, Pin, CheckCircle2 } from 'lucide-react';
+import { Check, CheckCheck, Pin, CheckCircle2, Crown } from 'lucide-react';
 import Link from 'next/link';
 import useLongPress from '@/hooks/useLongPress';
 
@@ -34,6 +34,7 @@ export default function ChatListItem({ chat, currentUserId, isSelected, isSelect
   const isUnread = unreadCount > 0;
   const partnerFrame = partnerInfo.selectedAvatarFrame || '';
   const isPinned = chat.pinnedBy?.includes(currentUserId);
+  const isPartnerPremium = partnerInfo.premiumUntil && toDate(partnerInfo.premiumUntil as any) > new Date();
 
   const timeAgo = lastMessage
     ? formatDistanceToNow(lastMessage.timestamp.toDate(), { addSuffix: true, locale: tr })
@@ -85,8 +86,9 @@ export default function ChatListItem({ chat, currentUserId, isSelected, isSelect
             <div className="flex items-center gap-2">
               {isPinned && <Pin className="h-4 w-4 text-primary" />}
               <h3 className={cn("truncate", isUnread ? "font-bold text-foreground" : "font-semibold")}>
-                  <Link href={`/profile/${partnerId}`} className="hover:underline" onClick={e => e.stopPropagation()}>
+                  <Link href={`/profile/${partnerId}`} className="hover:underline flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
                     {partnerInfo.username}
+                    {isPartnerPremium && <Crown className="h-4 w-4 text-amber-500" />}
                   </Link>
               </h3>
             </div>

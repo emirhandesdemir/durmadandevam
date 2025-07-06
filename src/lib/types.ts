@@ -305,6 +305,7 @@ export interface DirectMessageMetadata {
             username: string;
             photoURL: string | null;
             selectedAvatarFrame?: string;
+            premiumUntil?: Timestamp;
         }
     };
     lastMessage: {

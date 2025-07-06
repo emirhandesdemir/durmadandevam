@@ -3,12 +3,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, query, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, Timestamp, toDate } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { UserProfile, DirectMessage } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Loader2, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { ChevronLeft, Loader2, ShieldAlert, ShieldCheck, Crown } from 'lucide-react';
 import NewMessageInput from './NewMessageInput';
 import MessageBubble from './MessageBubble';
 import Link from 'next/link';
@@ -82,6 +82,8 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
   
   if (!user || !userData) return null;
 
+  const isPartnerPremium = partner.premiumUntil && toDate(partner.premiumUntil as any) > new Date();
+
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Header */}
@@ -102,7 +104,10 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
                 )}
             </div>
             <div>
-                <h2 className="font-bold text-lg">{partner.username}</h2>
+                <h2 className="font-bold text-lg flex items-center gap-1.5">
+                  {partner.username}
+                  {isPartnerPremium && <Crown className="h-4 w-4 text-amber-500"/>}
+                </h2>
                 <p className="text-xs text-muted-foreground">
                     {partner.isOnline 
                         ? <span className="text-green-500 font-semibold">Çevrimiçi</span>
