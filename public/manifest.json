@@ -1,28 +1,21 @@
 {
-    "name": "HiweWalk",
-    "short_name": "HiweWalk",
-    "description": "Herkesin kendi odasını oluşturup sohbet ettiği, oyunlar oynadığı bir platform.",
-    "start_url": "/",
-    "display": "standalone",
-    "background_color": "#09090B",
-    "theme_color": "#7c3aed",
-    "icons": [
-        {
-            "src": "/icons/icon-192x192.png",
-            "sizes": "192x192",
-            "type": "image/png"
-        },
-        {
-            "src": "/icons/icon-512x512.png",
-            "sizes": "512x512",
-            "type": "image/png"
-        },
-        {
-            "src": "/icons/maskable_icon.png",
-            "sizes": "196x196",
-            "type": "image/png",
-            "purpose": "any maskable"
-        }
-    ],
-    "gcm_sender_id": "482941778795"
+  "name": "HiweWalk",
+  "short_name": "HiweWalk",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#121212",
+  "description": "Herkese açık odalar oluşturun ve katılın.",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
 }

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Search, Send, Bell, Store } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import UserSearchDialog from "../search/UserSearchDialog";
+import Image from "next/image";
 
 interface HeaderProps {}
 
@@ -27,16 +28,7 @@ export default function Header({}: HeaderProps) {
             <header className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="container flex h-14 items-center justify-between">
                     <Link href="/home" className="flex items-center gap-2">
-                        <svg width="32" height="32" viewBox="0 0 100 100" className="h-8 w-8">
-                             <defs>
-                                <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" style={{ stopColor: 'hsl(var(--primary))' }} />
-                                    <stop offset="100%" style={{ stopColor: 'hsl(var(--primary))', stopOpacity: 0.7 }} />
-                                </linearGradient>
-                            </defs>
-                            <rect width="100" height="100" rx="20" fill="url(#logoGradient)"/>
-                            <text x="50%" y="55%" dominantBaseline="middle" textAnchor="middle" fontSize="60" fontWeight="800" fill="hsl(var(--primary-foreground))" fontFamily="Poppins, sans-serif" letterSpacing="-5">HW</text>
-                        </svg>
+                        <Image src="/icons/icon.svg" alt="HiweWalk Logo" width={32} height={32} className="h-8 w-8" />
                         <span className="text-xl font-bold tracking-tight">{appName}</span>
                     </Link>
                     
