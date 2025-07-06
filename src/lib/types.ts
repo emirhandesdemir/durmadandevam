@@ -120,6 +120,7 @@ export interface UserProfile {
     fcmTokens?: string[];
     blockedUsers?: string[];
     hiddenPostIds?: string[];
+    savedPosts?: string[];
     isBanned?: boolean;
     reportCount?: number;
     isOnline?: boolean;
@@ -198,6 +199,7 @@ export interface Post {
     likes: string[]; // Beğenen kullanıcıların UID'lerini tutan dizi
     likeCount: number;
     commentCount: number;
+    saveCount?: number;
     language?: string;
     commentsDisabled?: boolean;
     likesHidden?: boolean;
