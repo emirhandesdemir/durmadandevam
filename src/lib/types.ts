@@ -247,6 +247,7 @@ export interface ActiveGame {
     status: 'active' | 'finished';
     answeredBy: string[];
     winner?: string;
+    finishedAt?: Timestamp;
 }
 
 export interface GameSettings {
@@ -399,7 +400,7 @@ export interface ActiveGameSession {
     moves: { [key: string]: string | number };
     status: 'pending' | 'active' | 'finished';
     turn?: string; // For turn-based games
-    winnerId?: string;
+    winnerId?: string | null;
     createdAt: Timestamp;
 }
 
