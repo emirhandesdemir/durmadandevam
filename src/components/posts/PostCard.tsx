@@ -45,6 +45,40 @@ interface PostCardProps {
     onHide?: (postId: string) => void;
 }
 
+/**
+ * Safely parses a timestamp from various formats (Firestore Timestamp, ISO string, object) into a Date object.
+ * @param timestamp The timestamp to parse.
+ * @returns A valid Date object.
+ */
+const safeParseTimestamp = (timestamp: any): Date => {
+    if (!timestamp) {
+        // Return a date in the past to avoid showing "az önce" for invalid dates
+        return new Date(0); 
+    }
+    // Already a Date object
+    if (timestamp instanceof Date) {
+        return timestamp;
+    }
+    // Firestore Timestamp object
+    if (timestamp instanceof Timestamp) {
+        return timestamp.toDate();
+    }
+    // Firestore Timestamp-like object from serialization
+    if (typeof timestamp === 'object' && 'seconds' in timestamp && 'nanoseconds' in timestamp) {
+        return new Timestamp(timestamp.seconds, timestamp.nanoseconds).toDate();
+    }
+    // ISO string from deepSerialize
+    if (typeof timestamp === 'string') {
+        const date = new Date(timestamp);
+        if (!isNaN(date.getTime())) {
+            return date;
+        }
+    }
+    // Fallback for any other unexpected format
+    return new Date(0);
+};
+
+
 export default function PostCard({ post, isStandalone = false, onHide }: PostCardProps) {
     const { user: currentUser, userData: currentUserData } = useAuth();
     const { toast } = useToast();
@@ -75,9 +109,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     const isOwner = currentUser?.uid === post.uid;
     
     // Güvenli tarih dönüşümü
-    const createdAtDate = post.createdAt && 'seconds' in post.createdAt 
-        ? new Timestamp(post.createdAt.seconds, post.createdAt.nanoseconds).toDate()
-        : new Date();
+    const createdAtDate = safeParseTimestamp(post.createdAt);
 
     const timeAgo = post.createdAt
         ? formatDistanceToNow(createdAtDate, { addSuffix: true, locale: tr })
@@ -185,9 +217,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
 
     if (post.retweetOf) {
         const originalPost = post.retweetOf;
-        const originalCreatedAtDate = originalPost.createdAt && 'seconds' in originalPost.createdAt
-            ? new Timestamp(originalPost.createdAt.seconds, originalPost.createdAt.nanoseconds).toDate()
-            : new Date();
+        const originalCreatedAtDate = safeParseTimestamp(originalPost.createdAt);
         const originalTimeAgo = originalPost.createdAt
             ? formatDistanceToNow(originalCreatedAtDate, { addSuffix: true, locale: tr })
             : "az önce";
