@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageCircle, Plus, Swords } from 'lucide-react';
+import { Home, MessageCircle, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -26,7 +26,6 @@ export default function BottomNav() {
     { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
     { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
     { id: 'create-post', href: '/create-post', icon: Plus, label: 'Oluştur'},
-    { id: 'matchmaking', href: '/matchmaking', icon: Swords, label: 'Eşleşme' },
     { id: 'profile', href: `/profile/${user.uid}`, icon: Avatar, label: 'Profil' },
   ], [user.uid]);
 
@@ -35,7 +34,7 @@ export default function BottomNav() {
         <nav className="mx-auto flex h-16 max-w-md items-center justify-around">
             {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = item.id === 'rooms' ? pathname.startsWith('/rooms') : item.id === 'matchmaking' ? pathname.startsWith('/matchmaking') : pathname === item.href;
+                const isActive = item.id === 'rooms' ? pathname.startsWith('/rooms') : pathname === item.href;
                 
                 return (
                   <Link

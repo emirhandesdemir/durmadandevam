@@ -69,42 +69,6 @@ export async function deleteEventRoom(roomId: string, adminId: string) {
     return { success: true };
 }
 
-export async function createPrivateMatchRoom(user1: UserInfo, user2: UserInfo) {
-    if (!user1?.uid || !user2?.uid) throw new Error("Kullanıcı bilgileri eksik.");
-
-    const newRoomRef = doc(collection(db, 'rooms'));
-    const durationInMs = 60 * 60 * 1000; // 1 hour
-
-    const newRoom: Partial<Room> = {
-        name: `Özel Maç: ${user1.username} vs ${user2.username}`,
-        description: `${user1.username} ve ${user2.username} için özel bir oda.`,
-        type: 'match',
-        createdAt: serverTimestamp() as Timestamp,
-        expiresAt: Timestamp.fromMillis(Date.now() + durationInMs),
-        confirmationExpiresAt: Timestamp.fromMillis(Date.now() + 60 * 1000), // 1 minute to confirm
-        matchConfirmation: {
-            [user1.uid]: 'pending',
-            [user2.uid]: 'pending'
-        },
-        createdBy: {
-            uid: user1.uid,
-            username: user1.username,
-            photoURL: user1.photoURL,
-        },
-        participants: [
-            { uid: user1.uid, username: user1.username, photoURL: user1.photoURL },
-            { uid: user2.uid, username: user2.username, photoURL: user2.photoURL }
-        ],
-        maxParticipants: 2,
-        voiceParticipantsCount: 0,
-        moderators: [],
-    };
-
-    await setDoc(newRoomRef, newRoom);
-    return newRoomRef.id;
-}
-
-
 export async function createRoom(
     userId: string,
     roomData: { name: string, description: string, language: string },
@@ -747,46 +711,4 @@ export async function controlPlayback(roomId: string, userId: string, control: {
             currentTrackName: newTrack?.name || '',
         });
     });
-}
-
-export async function handleMatchConfirmation(roomId: string, userId: string, accepted: boolean) {
-    const roomRef = doc(db, 'rooms', roomId);
-
-    await runTransaction(db, async (transaction) => {
-        const roomDoc = await transaction.get(roomRef);
-        if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
-
-        const roomData = roomDoc.data() as Room;
-        if (roomData.type !== 'match') throw new Error("Bu bir eşleşme odası değil.");
-        
-        const currentStatus = roomData.matchConfirmation?.[userId];
-        if (currentStatus !== 'pending') throw new Error("Yanıtınız zaten kaydedildi.");
-
-        const newStatus = accepted ? 'accepted' : 'declined';
-        transaction.update(roomRef, { [`matchConfirmation.${userId}`]: newStatus });
-        
-        // Check if both users have responded
-        const otherUserId = roomData.participants.find(p => p.uid !== userId)?.uid;
-        if (!otherUserId) return; // Should not happen
-
-        const otherUserStatus = roomData.matchConfirmation?.[otherUserId];
-        if (newStatus === 'accepted' && otherUserStatus === 'accepted') {
-            // Both accepted, convert to a permanent private room
-            transaction.update(roomRef, {
-                status: 'converting',
-                type: 'private',
-                expiresAt: deleteField(),
-                confirmationExpiresAt: deleteField(),
-                matchConfirmation: deleteField(),
-            });
-        } else if (newStatus === 'declined' || otherUserStatus === 'declined') {
-            // One declined, mark for deletion
-            transaction.update(roomRef, {
-                status: 'declined',
-                expiresAt: Timestamp.fromMillis(Date.now() + 60 * 1000) // Delete after 1 minute
-            });
-        }
-    });
-
-    return { success: true };
 }
