@@ -14,7 +14,7 @@ import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
 import RoomHeader from '@/components/rooms/RoomHeader';
 import { AnimatePresence, motion } from 'framer-motion';
 
-import type { Room, Message, Giveaway, ActiveGame, GameSettings, ActiveGameSession } from '@/lib/types';
+import type { Room, Message, Giveaway, ActiveGame, GameSettings, ActiveGameSession, MindWarSession } from '@/lib/types';
 import RoomFooter from '@/components/rooms/RoomFooter';
 import SpeakerLayout from '@/components/rooms/SpeakerLayout';
 import RoomInfoCards from '@/components/rooms/RoomInfoCards';
@@ -29,6 +29,8 @@ import RoomGameCard from '@/components/game/RoomGameCard';
 import { startGameInRoom, submitAnswer, endGameWithoutWinner } from '@/lib/actions/gameActions';
 import GameLobbyDialog from '@/components/game/GameLobbyDialog';
 import ActiveGameArea from '@/components/game/ActiveGameArea';
+import MindWarLobby from '@/components/games/mindwar/MindWarLobby';
+import MindWarMainUI from '@/components/games/mindwar/MindWarMainUI';
 
 
 export default function RoomPage() {
@@ -58,6 +60,7 @@ export default function RoomPage() {
     
     // New Interactive Game State
     const [activeGameSession, setActiveGameSession] = useState<ActiveGameSession | null>(null);
+    const [activeMindWarSession, setActiveMindWarSession] = useState<MindWarSession | null>(null);
 
     const isHost = user?.uid === room?.createdBy.uid;
 
@@ -104,17 +107,16 @@ export default function RoomPage() {
         });
         
         // Listener for new interactive game sessions
-        const gameSessionQuery = query(collection(db, 'rooms', roomId, 'game_sessions'), where('status', '!=', 'finished'), limit(1));
-        const gameSessionUnsub = onSnapshot(gameSessionQuery, (snapshot) => {
-            if (!snapshot.empty) {
-                const gameData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ActiveGameSession;
-                setActiveGameSession(gameData);
-            } else {
-                setActiveGameSession(null);
-            }
+        const gameSessionUnsub = onSnapshot(query(collection(db, 'rooms', roomId, 'game_sessions'), where('status', '!=', 'finished'), limit(1)), (snapshot) => {
+            setActiveGameSession(snapshot.empty ? null : { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ActiveGameSession);
+        });
+
+        // Listener for Mind Wars sessions
+        const mindWarSessionUnsub = onSnapshot(query(collection(db, 'rooms', roomId, 'mindWarSessions'), where('status', '!=', 'finished'), limit(1)), (snapshot) => {
+            setActiveMindWarSession(snapshot.empty ? null : { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as MindWarSession);
         });
         
-        return () => { roomUnsub(); messagesUnsub(); finishedGameUnsub(); gameSessionUnsub(); };
+        return () => { roomUnsub(); messagesUnsub(); finishedGameUnsub(); gameSessionUnsub(); mindWarSessionUnsub(); };
     }, [roomId, router, toast]);
     
     // Auto-scroll chat
@@ -217,6 +219,9 @@ export default function RoomPage() {
     if (isLoading) return <div className="flex h-full items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
 
     const renderGameContent = () => {
+        if (activeMindWarSession && user && userData) {
+             return <MindWarMainUI session={activeMindWarSession} currentUser={{uid: user.uid, username: userData.username, photoURL: userData.photoURL || null}} roomId={roomId} />;
+        }
         if (activeGameSession && user) {
             return <ActiveGameArea game={activeGameSession} roomId={roomId} currentUser={{uid: user.uid, username: userData?.username || 'Biri'}} />
         }
@@ -266,7 +271,7 @@ export default function RoomPage() {
                     {gameContent && (
                         <div className="p-4">
                             <AnimatePresence mode="wait">
-                                <motion.div key={activeGameSession?.id || activeQuizGame?.id || 'info'} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                                <motion.div key={activeGameSession?.id || activeQuizGame?.id || activeMindWarSession?.id || 'info'} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                                     {gameContent}
                                 </motion.div>
                             </AnimatePresence>

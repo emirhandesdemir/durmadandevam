@@ -1,6 +1,63 @@
 // src/lib/types.ts
 import { Timestamp } from "firebase/firestore";
 
+// Zihin Savaşları Oyunu Veri Yapıları
+// ===================================
+
+// Oyuncunun bireysel durumunu ve rolünü tanımlar.
+export interface MindWarPlayer {
+  uid: string; // Oyuncunun kimliği
+  username: string; // Oyuncu adı
+  photoURL: string | null; // Profil resmi
+  role: string; // Oyuna özel rolü (Hacker, Lider, Casus vb.)
+  status: 'alive' | 'eliminated'; // Oyundaki durumu
+  objective: string; // Oyuncunun kişisel görevi
+  inventory: string[]; // Sahip olduğu eşyalar
+}
+
+// Oyunun her bir turunu veya olayını kaydeder.
+export interface MindWarTurn {
+  turnNumber: number; // Tur numarası
+  activePlayerUid: string | null; // Sırası gelen oyuncu (null ise anlatıcı konuşur)
+  narrative: string; // Yapay zeka anlatıcısının o turdaki hikaye metni
+  choices: { [key: string]: string }; // Oyuncuya sunulan seçenekler (örn: { 'A': 'Kapıyı aç', 'B': 'Pencereyi kontrol et' })
+  playerChoice?: { // Oyuncunun yaptığı seçim
+    uid: string;
+    choiceKey: string; // 'A' veya 'B' gibi
+    choiceText: string;
+  };
+  outcome: string; // Seçim sonucunda ne olduğu
+  timestamp: Timestamp; // Turun zamanı
+}
+
+// Oyun oturumunun tamamını kapsayan ana veri yapısı.
+export interface MindWarSession {
+  id: string; // Oturum ID'si
+  status: 'lobby' | 'ongoing' | 'finished'; // Oyunun mevcut durumu
+  hostId: string; // Oyunu başlatan kişi
+  theme: string; // Oyunun ana teması (örn: "Kıyamet sonrası sığınak")
+  players: MindWarPlayer[]; // Oyuncuların listesi
+  spectators: { uid: string, username: string }[]; // İzleyiciler
+  gameHistory: MindWarTurn[]; // Geçmiş tüm turların kaydı
+  currentTurn: MindWarTurn; // Mevcut aktif tur
+  winner?: string | null; // Kazanan oyuncu veya takım
+  endSummary?: { // Oyun sonu özeti
+    narrative: string;
+    scores: {
+      [uid: string]: {
+        intelligence: number;
+        trust: number;
+        courage: number;
+        reward: number;
+      };
+    };
+  };
+  createdAt: Timestamp; // Başlangıç zamanı
+}
+
+// Mevcut Tiplere Eklemeler
+// ==========================
+
 export interface ColorTheme {
   background: string;
   foreground: string;
@@ -208,6 +265,7 @@ export interface Room {
     currentTrackIndex?: number;
     currentTrackName?: string;
     giveaway?: Giveaway;
+    activeMindWarSessionId?: string | null; // Zihin Savaşları oturum ID'si
 }
 
 export interface PlaylistTrack {

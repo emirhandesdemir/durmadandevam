@@ -3,7 +3,7 @@
 
 import { Button } from '@/components/ui/button';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
-import { Mic, MicOff, Settings, Loader2, ScreenShareOff, ScreenShare, Music, Camera, CameraOff, SwitchCamera, Gamepad2, Gift } from 'lucide-react';
+import { Mic, MicOff, Settings, Loader2, ScreenShareOff, ScreenShare, Music, Camera, CameraOff, SwitchCamera, Gamepad2, Gift, BrainCircuit } from 'lucide-react';
 import ChatMessageInput from '../chat/ChatMessageInput';
 import type { Room } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import MusicPlayerDialog from '../voice/MusicPlayerDialog';
 import { useAuth } from '@/contexts/AuthContext';
+import { startMindWar } from '@/lib/actions/mindWarActions';
 
 
 interface RoomFooterProps {
@@ -60,6 +61,15 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
         setIsMusicPlayerOpen(true);
     };
 
+    // Zihin Savaşları oyununu başlatmak için fonksiyon
+    const handleStartMindWar = async () => {
+        // Bu fonksiyon artık doğrudan lobi bileşeni tarafından yönetilecek,
+        // ancak bir kısayol olarak burada kalabilir veya kaldırılabilir.
+        // Şimdilik GameLobbyDialog'a yönlendirme yapıyoruz.
+        onGameLobbyOpen();
+    }
+
+
     return (
         <>
             <footer className="sticky bottom-0 left-0 right-0 z-10 bg-background/80 backdrop-blur-sm border-t p-2">
@@ -92,7 +102,7 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
                                             <Music />
                                         </Button>
                                         <Button onClick={onGameLobbyOpen} variant="ghost" size="icon" className="rounded-full">
-                                            <Gamepad2 />
+                                            <BrainCircuit />
                                         </Button>
                                         {isHost && (
                                             <Button onClick={onGiveawayOpen} variant="ghost" size="icon" className="rounded-full text-primary">
