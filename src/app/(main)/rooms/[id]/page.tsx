@@ -1,7 +1,7 @@
 // src/app/(main)/rooms/[id]/page.tsx
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, onSnapshot, collection, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -189,29 +189,30 @@ export default function RoomPage() {
         return () => clearInterval(interval);
     }, [room?.nextGameTimestamp, isHost, roomId, featureFlags?.quizGameEnabled]);
 
-    const handleAnswerSubmit = async (answerIndex: number) => {
+    const handleAnswerSubmit = useCallback(async (answerIndex: number) => {
         if (!activeGame || !user) return;
         try {
             await submitAnswer(roomId, activeGame.id, user.uid, answerIndex);
         } catch (error: any) {
             toast({ variant: 'destructive', description: error.message });
         }
-    };
+    }, [activeGame, user, roomId, toast]);
     
     // --- END GAME LOGIC ---
 
     const isLoading = authLoading || !room;
     if (isLoading) return <div className="flex h-full items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
 
-    const gameContent = useMemo(() => {
+    const getGameComponent = () => {
         if (!featureFlags?.quizGameEnabled) return null;
-        if (finishedGame) return <GameResultCard game={finishedGame} />;
-        if (activeGame && gameSettings) return <RoomGameCard game={activeGame} settings={gameSettings} onAnswerSubmit={handleAnswerSubmit} onTimerEnd={() => {}} currentUserId={user!.uid} />;
-        if (showGameCountdown && !activeGame) return <GameCountdownCard timeLeft={countdownTime} />;
-        if (room.giveaway && room.giveaway.status !== 'idle') return <GiveawayCard giveaway={room.giveaway} roomId={roomId} isHost={isHost} />;
+        if (finishedGame) return <GameResultCard game={finishedGame} key="finished-game" />;
+        if (activeGame && gameSettings) return <RoomGameCard game={activeGame} settings={gameSettings} onAnswerSubmit={handleAnswerSubmit} onTimerEnd={() => {}} currentUserId={user!.uid} key="active-game" />;
+        if (showGameCountdown && !activeGame) return <GameCountdownCard timeLeft={countdownTime} key="countdown"/>;
+        if (room.giveaway && room.giveaway.status !== 'idle') return <GiveawayCard giveaway={room.giveaway} roomId={roomId} isHost={isHost} key="giveaway" />;
         return null;
-    }, [featureFlags, finishedGame, activeGame, gameSettings, showGameCountdown, countdownTime, room.giveaway, roomId, isHost, user, handleAnswerSubmit]);
+    }
 
+    const GameComponent = getGameComponent();
 
     return (
         <>
@@ -239,15 +240,15 @@ export default function RoomPage() {
                 </AnimatePresence>
 
                 <main ref={chatScrollRef} className="flex-1 flex flex-col overflow-y-auto">
-                    {gameContent && (
-                        <div className="p-4">
-                            <AnimatePresence>
-                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                                    {gameContent}
+                    <div className="p-4">
+                        <AnimatePresence mode="wait">
+                            {GameComponent && (
+                                <motion.div key={GameComponent.key} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                                    {GameComponent}
                                 </motion.div>
-                            </AnimatePresence>
-                        </div>
-                    )}
+                            )}
+                        </AnimatePresence>
+                    </div>
                     <RoomInfoCards room={room} isOwner={isHost} />
                     <TextChat messages={messages} loading={messagesLoading} room={room} />
                 </main>
