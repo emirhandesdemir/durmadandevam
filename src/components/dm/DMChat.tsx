@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, query, onSnapshot, orderBy, Timestamp, toDate } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { UserProfile, DirectMessage } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -82,7 +82,7 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
   
   if (!user || !userData) return null;
 
-  const isPartnerPremium = partner.premiumUntil && toDate(partner.premiumUntil as any) > new Date();
+  const isPartnerPremium = partner.premiumUntil && (partner.premiumUntil as Timestamp).toDate() > new Date();
 
   return (
     <div className="flex flex-col h-full bg-background">

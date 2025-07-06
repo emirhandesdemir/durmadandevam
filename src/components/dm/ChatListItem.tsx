@@ -7,11 +7,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import type { DirectMessageMetadata } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { formatDistanceToNow, toDate } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Check, CheckCheck, Pin, CheckCircle2, Crown } from 'lucide-react';
 import Link from 'next/link';
 import useLongPress from '@/hooks/useLongPress';
+import type { Timestamp } from 'firebase/firestore';
 
 interface ChatListItemProps {
   chat: DirectMessageMetadata;
@@ -34,7 +35,7 @@ export default function ChatListItem({ chat, currentUserId, isSelected, isSelect
   const isUnread = unreadCount > 0;
   const partnerFrame = partnerInfo.selectedAvatarFrame || '';
   const isPinned = chat.pinnedBy?.includes(currentUserId);
-  const isPartnerPremium = partnerInfo.premiumUntil && toDate(partnerInfo.premiumUntil as any) > new Date();
+  const isPartnerPremium = partnerInfo.premiumUntil && (partnerInfo.premiumUntil as Timestamp).toDate() > new Date();
 
   const timeAgo = lastMessage
     ? formatDistanceToNow(lastMessage.timestamp.toDate(), { addSuffix: true, locale: tr })
