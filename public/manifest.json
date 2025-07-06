@@ -1,93 +1,143 @@
 {
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "id": "/?v=1.0.0",
   "name": "HiweWalk",
   "short_name": "HiweWalk",
-  "description": "Herkese açık odalar oluşturun ve katılın.",
-  "lang": "tr",
+  "description": "Herkese açık odalar oluşturun ve katılın. Düşüncelerinizi paylaşın, fikirler üzerinde işbirliği yapın ve başkalarıyla gerçek zamanlı olarak bağlantı kurun.",
+  "lang": "tr-TR",
   "dir": "ltr",
-  "start_url": "/?utm_source=pwa",
-  "id": "/?v=1.0.3",
-  "scope": "/",
-  "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#ffffff",
-  "theme_color": "#3b82f6",
-  "iarc_rating_id": "",
   "icons": [
     {
-      "src": "/icons/icon-192x192.png",
+      "src": "/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-512x512.png",
+      "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-maskable-192x192.png",
+      "src": "/icons/icon-maskable-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icons/icon-maskable-512x512.png",
+      "src": "/icons/icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icons/icon-monochrome-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "monochrome"
     }
   ],
   "screenshots": [
     {
-      "src": "https://placehold.co/1080x1920.png",
+      "src": "/screenshots/screenshot1.png",
       "sizes": "1080x1920",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Ana Sayfa ve Gönderi Akışı"
+      "label": "Ana Akış"
     },
     {
-      "src": "https://placehold.co/1080x1920.png",
+      "src": "/screenshots/screenshot2.png",
       "sizes": "1080x1920",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Sohbet Odası ve Sesli Sohbet"
-    },
-    {
-      "src": "https://placehold.co/1080x1920.png",
-      "sizes": "1080x1920",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Kullanıcı Profili"
+      "label": "Sohbet Odası"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Sohbet Odaları",
+      "short_name": "Odalar",
+      "description": "Aktif sohbet odalarını görüntüle",
+      "url": "/rooms",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Yeni Gönderi Oluştur",
+      "short_name": "Oluştur",
+      "description": "Yeni bir gönderi paylaş",
+      "url": "/create-post",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "share_target": {
+    "action": "/create-post",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "handle_links": "auto",
+  "display_override": [
+    "window-controls-overlay"
+  ],
+  "edge_side_panel": {
+    "preferred_width": 480
+  },
+  "file_handlers": [
+    {
+      "action": "/create-post",
+      "accept": {
+        "image/jpeg": [
+          ".jpg",
+          ".jpeg"
+        ],
+        "image/png": [
+          ".png"
+        ],
+        "image/webp": [
+          ".webp"
+        ],
+        "image/gif": [
+          ".gif"
+        ]
+      }
+    }
+  ],
+  "widgets": [
+    {
+      "name": "Son Bildirimler",
+      "description": "HiweWalk'taki son bildirimlerinizi görün.",
+      "tag": "notifications",
+      "template": "ms-appx-web-template",
+      "data": "/widgets/notifications.json"
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+hiwewalk",
+      "url": "/?protocol=%s"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "iarc_rating_id": "",
+  "categories": [
+    "social",
+    "entertainment"
   ],
   "launch_handler": {
     "client_mode": [
       "navigate-existing",
       "auto"
     ]
-  },
-  "categories": [
-    "social",
-    "entertainment",
-    "lifestyle"
-  ],
-  "shortcuts": [
-    {
-      "name": "Sohbet Odaları",
-      "url": "/rooms",
-      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Yeni Gönderi Oluştur",
-      "url": "/create-post",
-      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
-    }
-  ]
+  }
 }
