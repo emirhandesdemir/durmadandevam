@@ -41,7 +41,6 @@ export async function getGameSettings(): Promise<GameSettings> {
             imageUploadQuality: 0.9,
             audioBitrate: 64,
             videoBitrate: 1000,
-            matchmakingCost: 5,
             ...firestoreData
         } as GameSettings;
     }
@@ -55,7 +54,6 @@ export async function getGameSettings(): Promise<GameSettings> {
         imageUploadQuality: 0.9,
         audioBitrate: 64,
         videoBitrate: 1000,
-        matchmakingCost: 5,
     };
 }
 

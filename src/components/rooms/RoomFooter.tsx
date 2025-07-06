@@ -91,7 +91,10 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
                                         <Button onClick={handleMusicButtonClick} variant="ghost" size="icon" className="rounded-full">
                                             <Music />
                                         </Button>
-                                        {isHost && room.type === 'event' && (
+                                        <Button onClick={onGameLobbyOpen} variant="ghost" size="icon" className="rounded-full">
+                                            <Gamepad2 />
+                                        </Button>
+                                        {isHost && (
                                             <Button onClick={onGiveawayOpen} variant="ghost" size="icon" className="rounded-full text-primary">
                                                 <Gift />
                                             </Button>
