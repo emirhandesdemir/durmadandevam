@@ -44,54 +44,51 @@ export default function MusicPlayerDialog({ isOpen, onOpenChange, roomId }: Musi
         if (!files || files.length === 0) return;
     
         setIsAdding(true);
-        const filesArray = Array.from(files);
+        let addedCount = 0;
     
-        const uploadPromises = filesArray.map(file => {
-            if (file.size > 15 * 1024 * 1024) {
+        for (const file of Array.from(files)) {
+            if (file.size > 15 * 1024 * 1024) { // 15MB limit
                 toast({
                     variant: "destructive",
                     title: "Dosya Çok Büyük",
                     description: `"${file.name}" (15MB'dan büyük) atlandı.`
                 });
-                return Promise.resolve(null); // Başarısız dosyalar için null döndür
+                continue; // Skip this file and continue with the next
             }
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onloadend = async () => {
-                    try {
-                        await addTrackToPlaylist({
-                            fileName: file.name,
-                            fileDataUrl: reader.result as string,
-                        });
-                        resolve(file.name);
-                    } catch (error) {
-                        reject(error);
-                    }
-                };
-                reader.onerror = error => reject(error);
-            });
-        });
     
-        try {
-            const results = await Promise.all(uploadPromises);
-            const addedCount = results.filter(r => r !== null).length;
-            if (addedCount > 0) {
+            try {
+                const fileDataUrl = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onloadend = () => resolve(reader.result as string);
+                    reader.onerror = (error) => reject(error);
+                });
+                
+                await addTrackToPlaylist({
+                    fileName: file.name,
+                    fileDataUrl,
+                });
+                
+                addedCount++;
+    
+            } catch (error: any) {
                 toast({
-                    title: "Başarılı",
-                    description: `${addedCount} şarkı çalma listesine eklendi.`
+                    variant: "destructive",
+                    description: `"${file.name}" eklenirken bir hata oluştu: ${error.message}`
                 });
             }
-        } catch (error: any) {
+        }
+    
+        if (addedCount > 0) {
             toast({
-                variant: "destructive",
-                description: "Şarkılar eklenirken bir hata oluştu: " + error.message,
+                title: "Başarılı",
+                description: `${addedCount} şarkı çalma listesine eklendi.`
             });
-        } finally {
-            setIsAdding(false);
-            if (event.target) {
-                event.target.value = ""; // Input'u temizle
-            }
+        }
+    
+        setIsAdding(false);
+        if (event.target) {
+            event.target.value = ""; // Reset file input
         }
     };
     

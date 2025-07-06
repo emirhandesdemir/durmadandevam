@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Palette, Loader2, Sparkles, Lock, Camera, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown } from "lucide-react";
+import { LogOut, Palette, Loader2, Sparkles, Lock, Camera, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop } from "lucide-react";
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
@@ -193,10 +193,19 @@ export default function ProfilePageClient() {
 
             // Propagate visual changes to all posts and comments
             if (Object.keys(postAndCommentUpdates).length > 0) {
-                await Promise.all([
-                    updateUserPosts(user.uid, postAndCommentUpdates),
-                    updateUserComments(user.uid, postAndCommentUpdates)
-                ]);
+                try {
+                    await Promise.all([
+                        updateUserPosts(user.uid, postAndCommentUpdates),
+                        updateUserComments(user.uid, postAndCommentUpdates)
+                    ]);
+                } catch(e) {
+                    console.error("Error propagating profile updates", e);
+                    toast({
+                        variant: "destructive",
+                        title: "Yansıtma Hatası",
+                        description: "Profiliniz güncellendi ancak eski gönderi ve yorumlarınıza yansıtılamadı. Bu bir indeksleme sorunu olabilir, lütfen konsolu kontrol edin."
+                    })
+                }
             }
 
             toast({
@@ -319,8 +328,22 @@ export default function ProfilePageClient() {
                     <CardContent className="space-y-6">
                          <div>
                             <Label className="text-base font-medium">Tema</Label>
-                             <RadioGroup value={theme} onValueChange={setTheme} className="grid grid-cols-3 gap-2 pt-2">
-                                {/* Theme options */}
+                            <RadioGroup value={theme} onValueChange={setTheme} className="grid grid-cols-3 gap-2 pt-2">
+                                <Label htmlFor="light-theme" className={cn("flex flex-col items-center justify-center rounded-lg border-2 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer", theme === 'light' && "border-primary")}>
+                                    <RadioGroupItem value="light" id="light-theme" className="sr-only" />
+                                    <Sun className="mb-2 h-6 w-6" />
+                                    <span className="font-bold text-xs">Aydınlık</span>
+                                </Label>
+                                <Label htmlFor="dark-theme" className={cn("flex flex-col items-center justify-center rounded-lg border-2 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer", theme === 'dark' && "border-primary")}>
+                                    <RadioGroupItem value="dark" id="dark-theme" className="sr-only" />
+                                    <Moon className="mb-2 h-6 w-6" />
+                                    <span className="font-bold text-xs">Karanlık</span>
+                                </Label>
+                                <Label htmlFor="system-theme" className={cn("flex flex-col items-center justify-center rounded-lg border-2 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer", theme === 'system' && "border-primary")}>
+                                    <RadioGroupItem value="system" id="system-theme" className="sr-only" />
+                                    <Laptop className="mb-2 h-6 w-6" />
+                                    <span className="font-bold text-xs">Sistem</span>
+                                </Label>
                             </RadioGroup>
                         </div>
                          <div>
