@@ -1,4 +1,3 @@
-
 // Bu, bir kullanıcının profil sayfasını oluşturan sunucu bileşenidir.
 // Sayfa yüklendiğinde sunucuda çalışır, veritabanından gerekli verileri
 // (kullanıcı profili, gönderi sayısı vb.) çeker ve sayfayı oluşturur.

@@ -1,10 +1,9 @@
-
 // src/components/profile/ProfilePosts.tsx
 "use client";
 
 import { collection, query, where, Timestamp, orderBy, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Post, UserProfile } from '@/lib/types';
+import type { Post, UserProfile } from '../types';
 import { Card, CardContent } from '../ui/card';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
