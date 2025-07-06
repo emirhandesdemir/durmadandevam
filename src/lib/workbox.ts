@@ -1,7 +1,5 @@
 'use client';
 import { Workbox } from 'workbox-window';
-import { useToast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
 
 let wb: Workbox | undefined;
 
@@ -12,24 +10,13 @@ export const registerServiceWorker = () => {
   
     if ('serviceWorker' in navigator && typeof window !== 'undefined') {
         wb = new Workbox('/sw.js');
-        const { toast } = useToast();
-
+        
+        // Listen for the 'waiting' event, which indicates a new version is ready.
         wb.addEventListener('waiting', () => {
-          const { id, dismiss } = toast({
-            title: 'Yeni Güncelleme Mevcut!',
-            description: 'Uygulamanın yeni bir sürümü hazır. Yüklemek için butona tıklayın.',
-            duration: Infinity,
-            action: (
-              <Button
-                onClick={() => {
-                  wb?.messageSkipWaiting();
-                  dismiss();
-                }}
-              >
-                Güncelle ve Yenile
-              </Button>
-            ),
-          });
+            // Dispatch a custom event that the UI can listen for.
+            // Pass the workbox instance so the UI can call messageSkipWaiting.
+            const event = new CustomEvent('sw-update', { detail: wb });
+            window.dispatchEvent(event);
         });
 
         wb.addEventListener('activated', (event) => {
@@ -37,7 +24,7 @@ export const registerServiceWorker = () => {
                 console.log('Service worker activated for the first time!');
             } else {
                 console.log('Service worker has been updated.');
-                // We can reload the page to make sure the user gets the latest version.
+                // Reload the page to make sure the user gets the latest version.
                 window.location.reload();
             }
         });
