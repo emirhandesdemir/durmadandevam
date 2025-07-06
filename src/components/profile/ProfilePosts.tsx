@@ -3,11 +3,11 @@
 
 import { collection, query, where, Timestamp, orderBy, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Post, UserProfile } from '../types';
+import type { Post, UserProfile } from '@/lib/types';
 import { Card, CardContent } from '../ui/card';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, CameraOff, FileText as FileTextIcon, ShieldOff } from 'lucide-react';
+import { Loader2, CameraOff, FileText as FileTextIcon, ShieldOff, Play, Video } from 'lucide-react';
 import Image from 'next/image';
 import { Heart, MessageCircle } from 'lucide-react';
 import PostViewerDialog from '@/components/posts/PostViewerDialog';
@@ -16,7 +16,7 @@ import { tr } from 'date-fns/locale';
 
 interface ProfilePostsProps {
   userId: string;
-  postType: 'image' | 'text';
+  postType: 'image' | 'text' | 'video';
 }
 
 export default function ProfilePosts({ userId, postType }: ProfilePostsProps) {
@@ -73,7 +73,10 @@ export default function ProfilePosts({ userId, postType }: ProfilePostsProps) {
     }, [userId, canViewContent, authLoading, amIBlockedByThisUser, profileUser]);
 
     const filteredPosts = posts.filter(post => {
-        return postType === 'image' ? !!post.imageUrl : !post.imageUrl;
+        if (postType === 'image') return !!post.imageUrl && !post.videoUrl;
+        if (postType === 'video') return !!post.videoUrl;
+        if (postType === 'text') return !post.imageUrl && !post.videoUrl;
+        return false;
     });
     
     if (authLoading || loading) {
@@ -95,17 +98,55 @@ export default function ProfilePosts({ userId, postType }: ProfilePostsProps) {
     }
   
     if (filteredPosts.length === 0) {
+      const messages = {
+          image: { icon: CameraOff, text: 'Henüz Resimli Gönderi Yok' },
+          video: { icon: Video, text: 'Henüz Video Paylaşımı Yok' },
+          text: { icon: FileTextIcon, text: 'Henüz Metin Paylaşımı Yok' },
+      }
+      const { icon: Icon, text } = messages[postType];
       return (
           <Card className="text-center p-8 border-none shadow-none mt-4">
               <CardContent className="p-0 flex flex-col items-center">
-                  {postType === 'image' ? <CameraOff className="h-12 w-12 mx-auto text-muted-foreground mb-4" /> : <FileTextIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />}
-                  <h3 className="text-lg font-semibold">{postType === 'image' ? 'Henüz Resimli Gönderi Yok' : 'Henüz Metin Paylaşımı Yok'}</h3>
+                  <Icon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold">{text}</h3>
               </CardContent>
           </Card>
       );
     }
     
-    // RENDER IMAGE GRID
+    if (postType === 'video') {
+      return (
+          <>
+              <div className="grid grid-cols-3 gap-1">
+                  {filteredPosts.map((post) => (
+                      <button 
+                          key={post.id} 
+                          className="group relative aspect-[9/16] block bg-muted/50 focus:outline-none"
+                          onClick={() => setSelectedPost(post)}
+                      >
+                          <video
+                              src={post.videoUrl!}
+                              className="object-cover w-full h-full"
+                              onContextMenu={(e) => e.preventDefault()}
+                              preload="metadata" // To show first frame
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center text-white opacity-0 group-hover:opacity-100">
+                             <Play className="h-10 w-10" />
+                          </div>
+                      </button>
+                  ))}
+              </div>
+              {selectedPost && (
+                  <PostViewerDialog 
+                      post={selectedPost} 
+                      open={!!selectedPost} 
+                      onOpenChange={(open) => { if (!open) setSelectedPost(null) }}
+                  />
+              )}
+          </>
+      );
+    }
+
     if (postType === 'image') {
         return (
             <>
@@ -117,7 +158,7 @@ export default function ProfilePosts({ userId, postType }: ProfilePostsProps) {
                             onClick={() => setSelectedPost(post)}
                         >
                             <Image
-                                src={post.imageUrl!} // We know it exists due to filter
+                                src={post.imageUrl!}
                                 alt="Kullanıcı gönderisi"
                                 fill
                                 className="object-cover"
@@ -151,7 +192,6 @@ export default function ProfilePosts({ userId, postType }: ProfilePostsProps) {
         );
     }
 
-    // RENDER TEXT LIST
     if (postType === 'text') {
         return (
              <>

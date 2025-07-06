@@ -192,6 +192,7 @@ export interface Post {
     userGender?: 'male' | 'female';
     text: string;
     imageUrl?: string;
+    videoUrl?: string;
     editedWithAI?: boolean;
     createdAt: Timestamp | { seconds: number; nanoseconds: number };
     likes: string[]; // Beğenen kullanıcıların UID'lerini tutan dizi

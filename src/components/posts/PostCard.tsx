@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Post } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck, Sparkles, Repeat, EyeOff } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck, Sparkles, Repeat, EyeOff, Volume2, VolumeOff, Play } from "lucide-react";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -45,36 +45,25 @@ interface PostCardProps {
     onHide?: (postId: string) => void;
 }
 
-/**
- * Safely parses a timestamp from various formats (Firestore Timestamp, ISO string, object) into a Date object.
- * @param timestamp The timestamp to parse.
- * @returns A valid Date object.
- */
 const safeParseTimestamp = (timestamp: any): Date => {
     if (!timestamp) {
-        // Return a date in the past to avoid showing "az önce" for invalid dates
         return new Date(0); 
     }
-    // Already a Date object
     if (timestamp instanceof Date) {
         return timestamp;
     }
-    // Firestore Timestamp object
     if (timestamp instanceof Timestamp) {
         return timestamp.toDate();
     }
-    // Firestore Timestamp-like object from serialization
     if (typeof timestamp === 'object' && 'seconds' in timestamp && 'nanoseconds' in timestamp) {
         return new Timestamp(timestamp.seconds, timestamp.nanoseconds).toDate();
     }
-    // ISO string from deepSerialize
     if (typeof timestamp === 'string') {
         const date = new Date(timestamp);
         if (!isNaN(date.getTime())) {
             return date;
         }
     }
-    // Fallback for any other unexpected format
     return new Date(0);
 };
 
@@ -83,11 +72,9 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     const { user: currentUser, userData: currentUserData } = useAuth();
     const { toast } = useToast();
 
-    // Optimistic UI state
     const [optimisticLiked, setOptimisticLiked] = useState(post.likes?.includes(currentUser?.uid || ''));
     const [optimisticLikeCount, setOptimisticLikeCount] = useState(post.likeCount);
 
-    // Component State
     const [isDeleting, setIsDeleting] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editedText, setEditedText] = useState(post.text || '');
@@ -96,19 +83,26 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     const [showComments, setShowComments] = useState(false);
     const [postToRetweet, setPostToRetweet] = useState<Post | null>(null);
     const [showLikeAnimation, setShowLikeAnimation] = useState(false);
+    
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const [isMuted, setIsMuted] = useState(true);
 
+    const toggleMute = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (videoRef.current) {
+            videoRef.current.muted = !videoRef.current.muted;
+            setIsMuted(videoRef.current.muted);
+        }
+    }
 
-    // Sync optimistic state with props
     useEffect(() => {
         setOptimisticLiked(post.likes?.includes(currentUser?.uid || ''));
         setOptimisticLikeCount(post.likeCount);
     }, [post.likeCount, post.likes, currentUser]);
 
 
-    // Kontroller
     const isOwner = currentUser?.uid === post.uid;
     
-    // Güvenli tarih dönüşümü
     const createdAtDate = safeParseTimestamp(post.createdAt);
 
     const timeAgo = post.createdAt
@@ -424,6 +418,29 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                             className="h-auto w-full max-h-[70vh] object-cover"
                             onContextMenu={(e) => e.preventDefault()}
                         />
+                    </div>
+                )}
+
+                {post.videoUrl && !isEditing && (
+                     <div className="relative w-full aspect-video bg-black" onClick={toggleMute}>
+                        <video
+                            ref={videoRef}
+                            src={post.videoUrl}
+                            loop
+                            autoPlay
+                            playsInline
+                            muted={isMuted}
+                            className="h-full w-full object-contain cursor-pointer"
+                        />
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/50 p-4 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                            <Play className="h-8 w-8" />
+                        </div>
+                        <button
+                            onClick={toggleMute}
+                            className="absolute bottom-3 right-3 z-10 h-8 w-8 rounded-full bg-black/50 text-white flex items-center justify-center"
+                        >
+                            {isMuted ? <VolumeOff className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                        </button>
                     </div>
                 )}
                 

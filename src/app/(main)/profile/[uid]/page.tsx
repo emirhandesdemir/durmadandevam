@@ -9,7 +9,7 @@ import ProfilePosts from '@/components/profile/ProfilePosts';
 import ProfileViewLogger from '@/components/profile/ProfileViewLogger';
 import { Separator } from '@/components/ui/separator';
 import { deepSerialize } from '@/lib/server-utils';
-import { Grid3x3, FileText } from 'lucide-react';
+import { Grid3x3, FileText, Video } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface UserProfilePageProps {
@@ -56,10 +56,14 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
 
         {/* Sekmeli Gönderiler Bölümü */}
         <Tabs defaultValue="posts" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="posts">
                     <Grid3x3 className="h-5 w-5 mr-2" />
                     Gönderiler
+                </TabsTrigger>
+                 <TabsTrigger value="videos">
+                    <Video className="h-5 w-5 mr-2" />
+                    Videolar
                 </TabsTrigger>
                 <TabsTrigger value="texts">
                     <FileText className="h-5 w-5 mr-2" />
@@ -70,6 +74,12 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
                 <ProfilePosts 
                     userId={uid} 
                     postType="image"
+                />
+            </TabsContent>
+            <TabsContent value="videos" className="mt-4">
+                <ProfilePosts 
+                    userId={uid} 
+                    postType="video"
                 />
             </TabsContent>
             <TabsContent value="texts" className="mt-4">

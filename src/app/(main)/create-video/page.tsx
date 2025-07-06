@@ -1,14 +1,11 @@
-// Bu sayfa, kullanıcıların yeni bir gönderi oluşturması için tasarlanmıştır.
-// Gönderi oluşturma formunu içerir ve ana sayfaya geri dönmek için bir buton sunar.
-import NewPostForm from "@/components/posts/NewPostForm";
+import NewVideoForm from "@/components/posts/NewVideoForm";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function CreatePostPage() {
+export default function CreateVideoPage() {
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center p-4 bg-background">
-      {/* Geri Dön Butonu */}
       <Button
         asChild
         variant="ghost"
@@ -19,9 +16,8 @@ export default function CreatePostPage() {
           Geri Dön
         </Link>
       </Button>
-      {/* Gönderi Oluşturma Formu Bileşeni */}
-      <div className="w-full max-w-3xl animate-in zoom-in-95 duration-500">
-        <NewPostForm />
+      <div className="w-full max-w-lg animate-in zoom-in-95 duration-500">
+        <NewVideoForm />
       </div>
     </main>
   );

@@ -25,7 +25,7 @@ export default function BottomNav() {
   const navItems = useMemo(() => [
     { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
     { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
-    { id: 'create-post', href: '/create-post', icon: Plus, label: 'Oluştur'},
+    { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
     { id: 'store', href: '/store', icon: Store, label: 'Mağaza' },
     { id: 'profile', href: `/profile/${user.uid}`, icon: Avatar, label: 'Profil' },
   ], [user.uid]);
@@ -35,7 +35,7 @@ export default function BottomNav() {
         <nav className="mx-auto flex h-16 max-w-md items-center justify-around">
             {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = item.id === 'rooms' ? pathname.startsWith('/rooms') : pathname === item.href;
+                const isActive = item.id === 'create' ? pathname.startsWith('/create') : item.id === 'rooms' ? pathname.startsWith('/rooms') : pathname === item.href;
                 
                 return (
                   <Link
@@ -53,10 +53,10 @@ export default function BottomNav() {
                                 <AvatarFallback className="text-xs bg-muted">{user.displayName?.charAt(0)}</AvatarFallback>
                             </Avatar>
                        ) : (
-                            <Icon className={cn("h-6 w-6", item.id === 'create-post' && 'h-8 w-8 text-primary bg-primary/20 p-1.5 rounded-full')} />
+                            <Icon className={cn("h-6 w-6", item.id === 'create' && 'h-8 w-8 text-primary bg-primary/20 p-1.5 rounded-full')} />
                        )}
                     </div>
-                    {item.id !== 'create-post' && (
+                    {item.id !== 'create' && (
                         <span className="text-[10px] font-medium">{item.label}</span>
                     )}
                   </Link>
