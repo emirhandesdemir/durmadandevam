@@ -9,7 +9,7 @@ import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, SyntheticEvent } from "react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { deletePost, updatePost, likePost, retweetPost } from "@/lib/actions/postActions";
@@ -56,7 +56,7 @@ const safeParseTimestamp = (timestamp: any): Date => {
         return timestamp.toDate();
     }
     if (typeof timestamp === 'object' && 'seconds' in timestamp && 'nanoseconds' in timestamp) {
-        return new Timestamp(timestamp.seconds, timestamp.nanoseconds).toDate();
+        return new Timestamp(timestamp.seconds, timestamp.nanoseconds).toDate().toISOString();
     }
     if (typeof timestamp === 'string') {
         const date = new Date(timestamp);
@@ -84,16 +84,44 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     const [postToRetweet, setPostToRetweet] = useState<Post | null>(null);
     const [showLikeAnimation, setShowLikeAnimation] = useState(false);
     
+    // Video State
     const videoRef = useRef<HTMLVideoElement>(null);
-    const [isMuted, setIsMuted] = useState(true);
+    const [isMuted, setIsMuted] = useState(false); // Start with sound
+    const pressTimer = useRef<NodeJS.Timeout | null>(null);
+    const wasLongPress = useRef(false);
 
-    const toggleMute = (e: React.MouseEvent) => {
-        e.stopPropagation();
+    const toggleMute = () => {
         if (videoRef.current) {
-            videoRef.current.muted = !videoRef.current.muted;
-            setIsMuted(videoRef.current.muted);
+            const newMutedState = !videoRef.current.muted;
+            videoRef.current.muted = newMutedState;
+            setIsMuted(newMutedState);
         }
-    }
+    };
+
+    const handlePressStart = () => {
+        if (pressTimer.current) {
+            clearTimeout(pressTimer.current);
+        }
+        wasLongPress.current = false;
+        pressTimer.current = setTimeout(() => {
+            wasLongPress.current = true;
+            videoRef.current?.pause();
+        }, 200); // Hold longer than 200ms to pause
+    };
+
+    const handlePressEnd = (e: SyntheticEvent) => {
+        e.preventDefault();
+        if (pressTimer.current) {
+            clearTimeout(pressTimer.current);
+        }
+
+        if (wasLongPress.current) {
+            videoRef.current?.play();
+        } else {
+            toggleMute();
+        }
+    };
+
 
     useEffect(() => {
         setOptimisticLiked(post.likes?.includes(currentUser?.uid || ''));
@@ -422,7 +450,14 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                 )}
 
                 {post.videoUrl && !isEditing && (
-                     <div className="relative w-full aspect-video bg-black" onClick={toggleMute}>
+                     <div 
+                        className="relative w-full aspect-video bg-black cursor-pointer"
+                        onMouseDown={handlePressStart}
+                        onMouseUp={handlePressEnd}
+                        onTouchStart={handlePressStart}
+                        onTouchEnd={handlePressEnd}
+                        onContextMenu={(e) => e.preventDefault()}
+                    >
                         <video
                             ref={videoRef}
                             src={post.videoUrl}
@@ -430,17 +465,16 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                             autoPlay
                             playsInline
                             muted={isMuted}
-                            className="h-full w-full object-contain cursor-pointer"
+                            className="h-full w-full object-contain"
                         />
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/50 p-4 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                             <Play className="h-8 w-8" />
                         </div>
-                        <button
-                            onClick={toggleMute}
-                            className="absolute bottom-3 right-3 z-10 h-8 w-8 rounded-full bg-black/50 text-white flex items-center justify-center"
+                        <div
+                            className="absolute bottom-3 right-3 z-10 h-8 w-8 rounded-full bg-black/50 text-white flex items-center justify-center pointer-events-none"
                         >
                             {isMuted ? <VolumeOff className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-                        </button>
+                        </div>
                     </div>
                 )}
                 
