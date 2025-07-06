@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '../ui/button';
 import { BellRing } from 'lucide-react';
@@ -21,6 +22,7 @@ export default function NotificationPermissionManager() {
   const { toast, dismiss } = useToast();
   const { user } = useAuth(); // Get the current user from AuthContext
   const oneSignalAppId = "51c67432-a305-43fc-a4c8-9c5d9d478d1c";
+  const isInitialized = useRef(false); // Ref to track initialization
 
   // Handles the logic for requesting notification permissions from the user.
   const requestPermission = useCallback(() => {
@@ -45,34 +47,27 @@ export default function NotificationPermissionManager() {
     });
   }, [toast, dismiss, requestPermission]);
 
-  // Effect for initializing OneSignal and handling user state changes
+  // Effect for initializing OneSignal and setting up listeners. Runs only once.
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-
+    if (isInitialized.current || typeof window === 'undefined') return;
+    
+    isInitialized.current = true; // Mark as initialized immediately
+    
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     window.OneSignalDeferred.push(function(OneSignal: any) {
-      if (!OneSignal.isInitialized()) {
-        console.log('[OneSignal] Initializing SDK...');
-        OneSignal.init({
-          appId: oneSignalAppId,
-          allowLocalhostAsSecureOrigin: true,
-          // Explicitly define the service worker path. next-pwa generates sw.js in public root.
-          serviceWorkerPath: 'sw.js',
-        }).then(() => {
-          console.log("[OneSignal] SDK Initialized.");
-          
-          // Check for permission after init
-          if (OneSignal.Notifications.permission === 'default') {
-            promptForPermission();
-          }
-
-          // Handle user login/logout for identification
-          if (user) {
-            console.log(`[OneSignal] Identifying user with external ID: ${user.uid}`);
-            OneSignal.login(user.uid);
-          }
-        });
-      }
+      console.log('[OneSignal] Initializing SDK...');
+      OneSignal.init({
+        appId: oneSignalAppId,
+        allowLocalhostAsSecureOrigin: true,
+        serviceWorkerPath: 'sw.js',
+      }).then(() => {
+        console.log("[OneSignal] SDK Initialized.");
+        
+        // Check for permission after init
+        if (OneSignal.Notifications.permission === 'default') {
+          promptForPermission();
+        }
+      });
 
       // Listener for notification permission changes
       OneSignal.Notifications.addEventListener('permissionChange', (permission: boolean) => {
@@ -91,15 +86,19 @@ export default function NotificationPermissionManager() {
         }
       });
     });
-  }, [oneSignalAppId, promptForPermission, toast, user]);
+  }, [oneSignalAppId, promptForPermission, toast]);
   
-  // This separate effect handles user login/logout after the initial setup.
+  // This separate effect handles user login/logout based on auth state changes.
   useEffect(() => {
+     if (typeof window === 'undefined') return;
+     
      window.OneSignalDeferred = window.OneSignalDeferred || [];
      window.OneSignalDeferred.push(function(OneSignal: any) {
-        if (!OneSignal.isInitialized()) {
-            return; // Wait for initialization to complete
+        if (!isInitialized.current) {
+            // Wait for initialization logic to run
+            return;
         }
+
         if (user) {
             if (!OneSignal.User.hasExternalId() || OneSignal.User.getExternalId() !== user.uid) {
                 console.log(`[OneSignal] Auth state changed. Logging in user: ${user.uid}`);
