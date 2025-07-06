@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff, UserCheck, Crown } from 'lucide-react';
 import FollowButton from './FollowButton';
 import { useAuth } from '@/contexts/AuthContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import FollowListDialog from './FollowListDialog';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -34,12 +34,17 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
   const [sendDiamondOpen, setSendDiamondOpen] = useState(false);
   const [isBlocking, setIsBlocking] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const isOwnProfile = currentUserAuth?.uid === profileUser.uid;
   const areMutuals = currentUserData?.following?.includes(profileUser.uid) && profileUser.following?.includes(currentUserAuth?.uid);
   const amIBlockedByThisUser = profileUser.blockedUsers?.includes(currentUserAuth?.uid);
   const haveIBlockedThisUser = currentUserData?.blockedUsers?.includes(profileUser.uid);
-  const isPremium = profileUser.premiumUntil && new Date(profileUser.premiumUntil) > new Date();
+  const isPremium = isClient && profileUser.premiumUntil && new Date(profileUser.premiumUntil) > new Date();
 
   const handleStatClick = (type: 'followers' | 'following') => {
     setDialogType(type);
