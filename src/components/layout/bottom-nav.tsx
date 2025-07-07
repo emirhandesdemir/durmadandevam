@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageCircle, Plus, Radio, User } from 'lucide-react';
+import { Home, MessageCircle, Plus, Compass, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -16,8 +16,8 @@ export default function BottomNav() {
   const navItems = useMemo(() => [
     { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
     { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
-    { id: 'create', href: '/create-post', icon: Plus, label: 'Oluştur'},
-    { id: 'live', href: '/live', icon: Radio, label: 'Canlı' },
+    { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
+    { id: 'surf', href: '/surf', icon: Compass, label: 'Surf' },
     { id: 'profile', href: `/profile/${user?.uid}`, icon: Avatar, label: 'Profil' },
   ], [user?.uid]);
   
@@ -25,7 +25,6 @@ export default function BottomNav() {
     return null;
   }
   
-  // A clearer, more robust way to determine the active link.
   const getIsActive = (itemId: string, itemHref: string, currentPathname: string) => {
     // For dynamic routes, we check if the path starts with the base.
     if (itemId === 'profile') {
@@ -33,6 +32,9 @@ export default function BottomNav() {
     }
     if (itemId === 'rooms') {
       return currentPathname.startsWith('/rooms');
+    }
+    if (itemId === 'create') {
+        return currentPathname.startsWith('/create');
     }
     // For all other routes, we want an exact match.
     return currentPathname === itemHref;

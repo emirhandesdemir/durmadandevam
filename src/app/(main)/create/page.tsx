@@ -28,12 +28,12 @@ export default function CreatePage() {
                         </div>
                     </Card>
                 </Link>
-                <Link href="/live/start"> 
+                <Link href="/rooms" className="md:hidden"> 
                     <Card className="p-6 flex items-center gap-4 hover:bg-muted transition-colors cursor-pointer">
                         <Radio className="h-8 w-8 text-destructive" />
                         <div>
-                            <h2 className="font-semibold">Canlı Yayına Geç</h2>
-                            <p className="text-sm text-muted-foreground">Anlık olarak yayın yap.</p>
+                            <h2 className="font-semibold">Sohbet Odası Oluştur</h2>
+                            <p className="text-sm text-muted-foreground">Yeni bir sohbet odası başlat.</p>
                         </div>
                     </Card>
                 </Link>
