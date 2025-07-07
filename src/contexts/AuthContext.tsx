@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import type { FeatureFlags, UserProfile, ThemeSettings } from '@/lib/types';
 import { triggerProfileCompletionNotification } from '@/lib/actions/notificationActions';
+import PremiumWelcomeManager from '@/components/common/PremiumWelcomeManager';
 
 
 interface AuthContextType {
@@ -199,7 +200,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+        <PremiumWelcomeManager />
+        {children}
+    </AuthContext.Provider>
+  );
 }
 
 export const useAuth = () => {

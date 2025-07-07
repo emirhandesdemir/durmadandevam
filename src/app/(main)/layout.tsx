@@ -3,15 +3,11 @@
 
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/Header";
-import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
-import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
 import { useState, useRef, useEffect } from 'react';
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
-import ActiveCallBar from "@/components/voice/ActiveCallBar";
-import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -108,8 +104,8 @@ function PwaInstallBar() {
  * Ana Uygulama Düzeni (Main App Layout)
  * 
  * Bu bileşen, kullanıcı giriş yaptıktan sonra görünen tüm sayfalar için
- * genel bir çerçeve (iskelet) oluşturur. Header, BottomNav, sesli sohbet
- * bileşenleri ve sayfa geçiş animasyonları gibi ortak UI elemanlarını içerir.
+ * genel bir çerçeve (iskelet) oluşturur. Header, BottomNav gibi ortak 
+ * UI elemanlarını içerir.
  */
 export default function MainAppLayout({
   children,
@@ -123,39 +119,33 @@ export default function MainAppLayout({
   const isHomePage = pathname === '/home';
 
   return (
-    <VoiceChatProvider>
-      <PremiumWelcomeManager />
+    <div className="relative flex h-screen w-full flex-col bg-background overflow-hidden">
+      <PwaInstallBar />
       
-      <div className="relative flex h-screen w-full flex-col bg-background overflow-hidden">
-        <PwaInstallBar />
+      <main 
+        className={cn(
+          "flex-1 flex flex-col hide-scrollbar pb-20",
+          isFullPageLayout ? "overflow-hidden" : "overflow-y-auto"
+        )}
+      >
+         {!isHeaderlessPage && (
+            <header className="sticky top-0 z-40">
+              <Header />
+            </header>
+         )}
         
-        <main 
-          className={cn(
-            "flex-1 flex flex-col hide-scrollbar pb-20",
-            isFullPageLayout ? "overflow-hidden" : "overflow-y-auto"
-          )}
-        >
-           {!isHeaderlessPage && (
-              <header className="sticky top-0 z-40">
-                <Header />
-              </header>
-           )}
-          
-             <div
-                className={cn(
-                  "flex-1 flex flex-col",
-                  isFullPageLayout ? "overflow-hidden" : "",
-                  !isHomePage && !isFullPageLayout && "p-4"
-                )}
-             >
-              {children}
-             </div>
-        </main>
-        
-        <VoiceAudioPlayer />
-        <ActiveCallBar />
-        <BottomNav />
-      </div>
-    </VoiceChatProvider>
+           <div
+              className={cn(
+                "flex-1 flex flex-col",
+                isFullPageLayout ? "overflow-hidden" : "",
+                !isHomePage && !isFullPageLayout && "p-4"
+              )}
+           >
+            {children}
+           </div>
+      </main>
+      
+      <BottomNav />
+    </div>
   );
 }

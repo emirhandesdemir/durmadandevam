@@ -7,11 +7,13 @@ import { doc, onSnapshot, collection, query, orderBy, limit, where, Timestamp } 
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { useVoiceChat } from '@/contexts/VoiceChatContext';
+import { VoiceChatProvider, useVoiceChat } from '@/contexts/VoiceChatContext';
 import { Loader2 } from 'lucide-react';
 import TextChat from '@/components/chat/text-chat';
 import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
 import RoomHeader from '@/components/rooms/RoomHeader';
+import VoiceAudioPlayer from '@/components/voice/VoiceAudioPlayer';
+import ActiveCallBar from '@/components/voice/ActiveCallBar';
 
 import type { Room, Message, Giveaway } from '@/lib/types';
 import RoomFooter from '@/components/rooms/RoomFooter';
@@ -22,7 +24,7 @@ import GiveawayCard from '@/components/rooms/GiveawayCard';
 import { cn } from '@/lib/utils';
 import GiveawayDialog from '@/components/rooms/GiveawayDialog';
 
-export default function RoomPage() {
+function RoomPageContent() {
     const params = useParams();
     const router = useRouter();
     const { toast } = useToast();
@@ -152,6 +154,16 @@ export default function RoomPage() {
                 roomId={roomId}
                 isHost={isHost}
             />
+            <VoiceAudioPlayer />
+            <ActiveCallBar />
         </>
+    );
+}
+
+export default function RoomPage() {
+    return (
+        <VoiceChatProvider>
+            <RoomPageContent />
+        </VoiceChatProvider>
     );
 }
