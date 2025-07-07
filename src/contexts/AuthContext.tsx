@@ -51,16 +51,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 isOnline: false,
                 lastSeen: serverTimestamp()
             }, { merge: true });
-            
-            window.OneSignalDeferred = window.OneSignalDeferred || [];
-            window.OneSignalDeferred.push(function(OneSignal: any) {
-                const externalId = OneSignal.User.getExternalId();
-                if (externalId) {
-                    console.log("[OneSignal] Auth state changed. User is null, logging out from OneSignal.");
-                    OneSignal.logout();
-                }
-            });
         }
+        // The onAuthStateChanged listener will trigger the OneSignal logout
+        // via the useEffect in NotificationPermissionManager.
         await signOut(auth);
         toast({
             title: "Oturum Kapatıldı",
