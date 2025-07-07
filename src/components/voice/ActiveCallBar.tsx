@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { PhoneOff, Mic, ChevronRight, Users, MicOff as MicOffIcon } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ActiveCallBar() {
     const { isConnected, activeRoom, self, participants, leaveRoom, toggleSelfMute } = useVoiceChat();
@@ -23,13 +22,9 @@ export default function ActiveCallBar() {
     const isSpeaking = self?.isSpeaker;
 
     return (
-        <AnimatePresence>
+        <>
             {isVisible && (
-                 <motion.div
-                    initial={{ y: 100 }}
-                    animate={{ y: 0 }}
-                    exit={{ y: 100 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                 <div
                     className="fixed bottom-[76px] left-0 right-0 z-40 px-2 pointer-events-none"
                  >
                     <div className="flex items-center justify-between gap-2 bg-primary/90 text-primary-foreground p-2 rounded-2xl shadow-lg w-full max-w-md mx-auto pointer-events-auto">
@@ -58,8 +53,8 @@ export default function ActiveCallBar() {
                             </Button>
                         </div>
                     </div>
-                 </motion.div>
+                 </div>
             )}
-        </AnimatePresence>
+        </>
     );
 }
