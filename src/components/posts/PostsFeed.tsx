@@ -1,3 +1,4 @@
+
 // src/components/posts/PostsFeed.tsx
 'use client';
 
@@ -117,7 +118,7 @@ export default function PostsFeed() {
         <div className="w-full">
              <div className="bg-background">
                 {sortedPosts.map(post => (
-                    <PostCard key={post.id} post={post} onHide={handleHidePost} />
+                    <PostCard key={post.id} post={post} onHide={handleHidePost} animationsEnabled={false} />
                 ))}
             </div>
         </div>

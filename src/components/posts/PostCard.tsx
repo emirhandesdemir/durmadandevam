@@ -1,3 +1,4 @@
+
 // src/components/posts/PostCard.tsx
 "use client";
 
@@ -43,6 +44,7 @@ interface PostCardProps {
     post: Post;
     isStandalone?: boolean;
     onHide?: (postId: string) => void;
+    animationsEnabled?: boolean;
 }
 
 const safeParseTimestamp = (timestamp: any): Date => {
@@ -56,7 +58,7 @@ const safeParseTimestamp = (timestamp: any): Date => {
         return timestamp.toDate();
     }
     if (typeof timestamp === 'object' && 'seconds' in timestamp && 'nanoseconds' in timestamp) {
-        return new Timestamp(timestamp.seconds, timestamp.nanoseconds).toDate().toISOString();
+        return new Timestamp(timestamp.seconds, timestamp.nanoseconds).toDate();
     }
     if (typeof timestamp === 'string') {
         const date = new Date(timestamp);
@@ -68,7 +70,7 @@ const safeParseTimestamp = (timestamp: any): Date => {
 };
 
 
-export default function PostCard({ post, isStandalone = false, onHide }: PostCardProps) {
+export default function PostCard({ post, isStandalone = false, onHide, animationsEnabled = true }: PostCardProps) {
     const { user: currentUser, userData: currentUserData } = useAuth();
     const { toast } = useToast();
 
@@ -86,7 +88,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     
     // Video State
     const videoRef = useRef<HTMLVideoElement>(null);
-    const [isMuted, setIsMuted] = useState(false); // Start with sound
+    const [isMuted, setIsMuted] = useState(true);
     const pressTimer = useRef<NodeJS.Timeout | null>(null);
     const wasLongPress = useRef(false);
 
@@ -255,8 +257,8 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                     )}
                     
                     <div className="flex items-start gap-3 px-4 pb-2">
-                        <Link href={`/profile/${post.uid}`}>
-                            <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
+                         <Link href={`/profile/${post.uid}`}>
+                            <div className={cn("avatar-frame-wrapper", animationsEnabled && post.userAvatarFrame)}>
                                 <Avatar className="relative z-[1] h-10 w-10">
                                     <AvatarImage src={post.userAvatar || undefined} />
                                     <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
@@ -358,8 +360,8 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                 )}
             
                 <div className="flex items-start gap-3 p-4">
-                    <Link href={`/profile/${post.uid}`}>
-                        <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
+                     <Link href={`/profile/${post.uid}`}>
+                        <div className={cn("avatar-frame-wrapper", animationsEnabled && post.userAvatarFrame)}>
                             <Avatar className="relative z-[1] h-10 w-10">
                                 <AvatarImage src={post.userAvatar || undefined} />
                                 <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
