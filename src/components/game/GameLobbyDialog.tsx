@@ -26,6 +26,7 @@ import { Dice6, Hand, Bot as BottleIcon, BrainCircuit, Loader2, Users } from 'lu
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { cn } from '@/lib/utils';
 import { Textarea } from '../ui/textarea';
+import { Checkbox } from '../ui/checkbox';
 
 // Oynanabilecek oyunların listesi
 const gameOptions = [
