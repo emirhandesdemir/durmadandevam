@@ -8,27 +8,20 @@ import type { Post } from '@/lib/types';
 import PostCard from './PostCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTranslation } from 'react-i18next';
 import { hidePost } from '@/lib/actions/userActions';
 
 export default function PostsFeed() {
     const { user, userData, loading: authLoading } = useAuth();
-    const { i18n } = useTranslation();
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
     const [clientHiddenIds, setClientHiddenIds] = useState<string[]>([]);
 
-    const sortedPosts = useMemo(() => {
-        const allHiddenIds = new Set([...(userData?.hiddenPostIds || []), ...clientHiddenIds]);
-
-        return posts.filter(post => 
-            !userData?.blockedUsers?.includes(post.uid) && !allHiddenIds.has(post.id)
-        );
-        // Simplified sorting, remove complex logic for performance
-        // .sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
-
+    const filteredAndSortedPosts = useMemo(() => {
+        if (!userData) return posts;
+        const allHiddenIds = new Set([...(userData.hiddenPostIds || []), ...clientHiddenIds]);
+        return posts.filter(post => !allHiddenIds.has(post.id) && !userData.blockedUsers?.includes(post.uid));
     }, [posts, userData, clientHiddenIds]);
-    
+
     const handleHidePost = async (postId: string) => {
         setClientHiddenIds(prev => [...prev, postId]);
         if (user) {
@@ -63,14 +56,14 @@ export default function PostsFeed() {
 
     if (loading) {
         return (
-            <div className="space-y-4 w-full">
-                <Skeleton className="h-[200px] w-full rounded-2xl" />
-                <Skeleton className="h-[200px] w-full rounded-2xl" />
+            <div className="space-y-4 w-full max-w-xl mx-auto p-4">
+                <Skeleton className="h-48 w-full rounded-2xl" />
+                <Skeleton className="h-48 w-full rounded-2xl" />
             </div>
         );
     }
 
-    if (sortedPosts.length === 0) {
+    if (filteredAndSortedPosts.length === 0) {
         return (
             <div className="text-center text-muted-foreground py-10">
                 <p>Henüz hiç gönderi yok.</p>
@@ -80,9 +73,9 @@ export default function PostsFeed() {
     }
     
     return (
-        <div className="w-full">
+        <div className="w-full max-w-xl mx-auto">
              <div className="bg-background">
-                {sortedPosts.map(post => (
+                {filteredAndSortedPosts.map(post => (
                     <PostCard key={post.id} post={post} onHide={handleHidePost} />
                 ))}
             </div>

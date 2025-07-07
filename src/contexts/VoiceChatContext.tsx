@@ -120,8 +120,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     // Teardown logic
     const _cleanupAndResetState = useCallback(async () => {
-        // ... (music cleanup logic remains the same)
-
         // Close peer connections
         Object.values(peerConnections.current).forEach(pc => pc.close());
         peerConnections.current = {};
@@ -171,12 +169,12 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
               stream.getVideoTracks()[0].enabled = false;
             }
             if (stream.getAudioTracks()[0]) {
-                stream.getAudioTracks()[0].enabled = !options?.initialMuteState;
+                stream.getAudioTracks()[0].enabled = !options?.muted;
             }
             
             setLocalStream(stream);
             
-            const result = await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL }, { initialMuteState: options?.initialMuteState ?? false });
+            const result = await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL }, { initialMuteState: options?.muted ?? false });
             if (!result.success) {
                 throw new Error(result.error || 'Sesli sohbete katılamadınız.');
             }
@@ -204,7 +202,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         router.push('/rooms');
     }, [user, connectedRoomId, _cleanupAndResetState, router]);
 
-    // ... (screen share, video, mute logic remains the same)
     const stopScreenShare = useCallback(async () => {
         if (!user || !connectedRoomId || !localScreenStream) return;
         localScreenStream.getTracks().forEach(track => track.stop());
@@ -363,7 +360,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     // Firestore listeners
     useEffect(() => {
-        // ... (room, participants, playlist listeners remain the same)
         if (!user || !activeRoomId) {
             setActiveRoom(null);
             setParticipants([]);
@@ -503,14 +499,19 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     // Speaker detection logic
     useEffect(() => {
-        // ... (this logic remains the same)
-        const analyseAllStreams = () => {
-            if (Object.keys(audioAnalysers.current).length === 0 && (!self || self.isMuted)) {
-                if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
+        if (!isConnected) {
+            if (animationFrameId.current) {
+                cancelAnimationFrame(animationFrameId.current);
                 animationFrameId.current = undefined;
-                if(Object.keys(speakingStates).length > 0) setSpeakingStates({});
-                return;
             }
+            if (Object.keys(speakingStates).length > 0) {
+                 setSpeakingStates({});
+            }
+            return;
+        }
+
+        const analyseAllStreams = () => {
+            if (!animationFrameId.current) return; // Stop if cancelled
 
             const newStates: Record<string, boolean> = {};
 
@@ -520,10 +521,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 const avg = dataArray.length > 0 ? sum / dataArray.length : 0;
                 newStates[uid] = avg > 15; // Speaking threshold
             });
-
-            if (self) {
-                newStates[self.uid] = !self.isMuted;
-            }
 
             setSpeakingStates(currentStates => {
                 let hasChanged = false;
@@ -539,8 +536,14 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             animationFrameId.current = requestAnimationFrame(analyseAllStreams);
         };
         
-        Object.entries(remoteAudioStreams).forEach(([uid, stream]) => {
-            if (!audioAnalysers.current[uid]) {
+        // Setup analysers for all streams (local and remote)
+        const allStreams = {...remoteAudioStreams};
+        if(localStream) {
+            allStreams[user!.uid] = localStream;
+        }
+
+        Object.entries(allStreams).forEach(([uid, stream]) => {
+            if (!audioAnalysers.current[uid] && stream.getAudioTracks().length > 0) {
                 try {
                     const audioContext = new AudioContext();
                     const analyser = audioContext.createAnalyser();
@@ -553,8 +556,17 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             }
         });
         
+        // Clean up analysers for users who left
+        const participantIds = participants.map(p => p.uid);
+        Object.keys(audioAnalysers.current).forEach(uid => {
+            if (!participantIds.includes(uid)) {
+                audioAnalysers.current[uid].context.close();
+                delete audioAnalysers.current[uid];
+            }
+        });
+
         if (!animationFrameId.current) {
-            analyseAllStreams();
+            animationFrameId.current = requestAnimationFrame(analyseAllStreams);
         }
 
         return () => {
@@ -563,7 +575,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 animationFrameId.current = undefined;
             }
         };
-    }, [remoteAudioStreams, self]);
+    }, [isConnected, remoteAudioStreams, localStream, user, participants]);
 
     const memoizedParticipants = useMemo(() => {
         return participants.map(p => ({ ...p, isSpeaker: !!speakingStates[p.uid] }));
