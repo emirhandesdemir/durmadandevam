@@ -1,10 +1,9 @@
-
 // src/app/(main)/create/page.tsx
 'use client';
 
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
-import { PenSquare, Radio } from "lucide-react";
+import { PenSquare, Radio, Camera } from "lucide-react";
 
 export default function CreatePage() {
     return (
@@ -17,6 +16,15 @@ export default function CreatePage() {
                         <div>
                             <h2 className="font-semibold">Gönderi Oluştur</h2>
                             <p className="text-sm text-muted-foreground">Metin, fotoğraf veya video paylaş.</p>
+                        </div>
+                    </Card>
+                </Link>
+                <Link href="/create-story">
+                    <Card className="p-6 flex items-center gap-4 hover:bg-muted transition-colors cursor-pointer">
+                        <Camera className="h-8 w-8 text-purple-500" />
+                        <div>
+                            <h2 className="font-semibold">Hikaye Oluştur</h2>
+                            <p className="text-sm text-muted-foreground">24 saat sonra kaybolacak bir an paylaş.</p>
                         </div>
                     </Card>
                 </Link>

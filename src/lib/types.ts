@@ -118,6 +118,7 @@ export interface UserProfile {
     createdAt: Timestamp;
     lastActionTimestamp?: Timestamp; // For rate limiting
     lastAdWatchedAt?: Timestamp; // For ad reward cooldown
+    lastStoryAt?: Timestamp; // For sorting story reels
     privateProfile: boolean;
     acceptsFollowRequests: boolean;
     showOnlineStatus?: boolean;
@@ -194,6 +195,28 @@ export interface Notification {
     read: boolean;
     callId?: string;
     callType?: 'video' | 'audio';
+}
+
+export interface Story {
+  id: string;
+  uid: string;
+  userInfo: {
+    username: string;
+    photoURL: string | null;
+  };
+  mediaUrl: string;
+  mediaType: 'image' | 'video';
+  createdAt: Timestamp;
+  expiresAt: Timestamp;
+  viewedBy: string[];
+}
+
+export interface UserStoryReel {
+    uid: string;
+    username: string;
+    photoURL: string | null;
+    stories: Story[];
+    hasUnseenStories: boolean;
 }
 
 export interface Post {
