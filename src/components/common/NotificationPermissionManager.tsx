@@ -63,13 +63,13 @@ export default function NotificationPermissionManager() {
         OneSignal.init({
             appId: oneSignalAppId,
             allowLocalhostAsSecureOrigin: true,
-            serviceWorkerPath: 'sw.js',
+            serviceWorkerPath: 'OneSignalSDK.sw.js', // Use default service worker path
         }).then(() => {
             console.log("[OneSignal] SDK Initialized.");
             
             // Check for permission after init
             if (OneSignal.Notifications.permission === 'default') {
-            promptForPermission();
+              promptForPermission();
             }
         });
 
@@ -106,17 +106,11 @@ export default function NotificationPermissionManager() {
         }
 
         if (user) {
-            // Only call login if the externalId is not already set to the current user's UID
-            if (OneSignal.User.externalId !== user.uid) {
-                console.log(`[OneSignal] Auth state changed. Logging in user: ${user.uid}`);
-                OneSignal.login(user.uid);
-            }
+            console.log(`[OneSignal] Auth state changed. Logging in user: ${user.uid}`);
+            OneSignal.login(user.uid);
         } else {
-            // Only logout if an external_id is set. This prevents unnecessary calls.
-            if (OneSignal.User.externalId) {
-                 console.log("[OneSignal] Auth state changed. User is null, logging out from OneSignal.");
-                 OneSignal.logout();
-            }
+             console.log("[OneSignal] Auth state changed. User is null, logging out from OneSignal.");
+             OneSignal.logout();
         }
      });
   }, [user]);

@@ -16,7 +16,7 @@ import {
     addDoc,
     collection
 } from "firebase/firestore";
-import { ref, deleteObject, uploadBytes } from "firebase/storage";
+import { ref, deleteObject } from "firebase/storage";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
 import { findUserByUsername } from "./userActions";
@@ -30,21 +30,24 @@ async function handlePostMentions(postId: string, text: string, sender: { uid: s
         const mentionedUsernames = new Set(mentions);
 
         for (const username of mentions) {
-            const mentionedUser = await findUserByUsername(username);
-            if (mentionedUser && mentionedUser.uid !== sender.uid) {
-                const postSnap = await getDoc(doc(db, "posts", postId));
-                const postData = postSnap.data();
-                await createNotification({
-                    recipientId: mentionedUser.uid,
-                    senderId: sender.uid,
-                    senderUsername: sender.displayName || "Biri",
-                    senderAvatar: sender.photoURL,
-                    senderAvatarFrame: sender.selectedAvatarFrame,
-                    type: 'mention',
-                    postId: postId,
-                    postImage: postData?.imageUrl || null,
-                    commentText: text, // The post text where the mention happened
-                });
+            const cleanUsername = username.substring(1);
+            if (cleanUsername) {
+                const mentionedUser = await findUserByUsername(cleanUsername);
+                if (mentionedUser && mentionedUser.uid !== sender.uid) {
+                    const postSnap = await getDoc(doc(db, "posts", postId));
+                    const postData = postSnap.data();
+                    await createNotification({
+                        recipientId: mentionedUser.uid,
+                        senderId: sender.uid,
+                        senderUsername: sender.displayName || "Biri",
+                        senderAvatar: sender.photoURL,
+                        senderAvatarFrame: sender.selectedAvatarFrame,
+                        type: 'mention',
+                        postId: postId,
+                        postImage: postData?.imageUrl || null,
+                        commentText: text, // The post text where the mention happened
+                    });
+                }
             }
         }
     }
@@ -58,7 +61,8 @@ export async function createPost(postData: {
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
     text: string;
-    imageUrl: string;
+    imageUrl?: string;
+    videoUrl?: string;
     editedWithAI?: boolean;
     language: string;
     commentsDisabled?: boolean;
@@ -92,7 +96,6 @@ export async function createPost(postData: {
         };
 
         if (postCount === 0) {
-            // First post, give 90 more diamonds (10 already given at signup)
             userUpdates.diamonds = increment(90);
         }
         
@@ -133,12 +136,24 @@ export async function deletePost(postId: string) {
             transaction.update(userRef, { postCount: increment(-1) });
 
             if (postData.imageUrl) {
-                const imageRef = ref(storage, postData.imageUrl);
-                await deleteObject(imageRef).catch((error) => {
+                try {
+                    const imageRef = ref(storage, postData.imageUrl);
+                    await deleteObject(imageRef);
+                } catch(error: any) {
                     if (error.code !== 'storage/object-not-found') {
                         console.error("Storage resmi silinirken hata oluştu:", error);
                     }
-                });
+                }
+            }
+             if (postData.videoUrl) {
+                try {
+                    const videoRef = ref(storage, postData.videoUrl);
+                    await deleteObject(videoRef);
+                } catch(error: any) {
+                    if (error.code !== 'storage/object-not-found') {
+                        console.error("Storage videosu silinirken hata oluştu:", error);
+                    }
+                }
             }
         });
         revalidatePath('/home');
@@ -282,3 +297,4 @@ export async function retweetPost(
     revalidatePath('/home');
     revalidatePath(`/profile/${retweeter.uid}`);
 }
+
