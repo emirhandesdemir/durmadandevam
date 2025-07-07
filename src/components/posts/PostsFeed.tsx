@@ -1,4 +1,3 @@
-
 // src/components/posts/PostsFeed.tsx
 'use client';
 
@@ -22,47 +21,13 @@ export default function PostsFeed() {
     const sortedPosts = useMemo(() => {
         const allHiddenIds = new Set([...(userData?.hiddenPostIds || []), ...clientHiddenIds]);
 
-        const filteredPosts = posts.filter(post => 
+        return posts.filter(post => 
             !userData?.blockedUsers?.includes(post.uid) && !allHiddenIds.has(post.id)
         );
+        // Simplified sorting, remove complex logic for performance
+        // .sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
 
-        // First, separate posts by language
-        const postsInUserLanguage = filteredPosts.filter(p => p.language === i18n.language);
-        const otherLanguagePosts = filteredPosts.filter(p => p.language !== i18n.language);
-
-        // Then, sort each language group by gender if applicable
-        if (userData?.gender) {
-            const currentUserGender = userData.gender;
-            
-            const sortWithGender = (postsToSort: Post[]) => {
-                const oppositeGenderPosts: Post[] = [];
-                const sameGenderPosts: Post[] = [];
-                const unspecifiedGenderPosts: Post[] = [];
-
-                postsToSort.forEach(post => {
-                    if (!post.userGender) {
-                        unspecifiedGenderPosts.push(post);
-                    } else if (post.userGender === currentUserGender) {
-                        sameGenderPosts.push(post);
-                    } else {
-                        oppositeGenderPosts.push(post);
-                    }
-                });
-                
-                return [
-                    ...oppositeGenderPosts, 
-                    ...sameGenderPosts, 
-                    ...unspecifiedGenderPosts
-                ];
-            };
-
-            return [...sortWithGender(postsInUserLanguage), ...sortWithGender(otherLanguagePosts)];
-        }
-
-        // For non-logged-in users or users without gender, just sort by language
-        return [...postsInUserLanguage, ...otherLanguagePosts];
-
-    }, [posts, userData, i18n.language, clientHiddenIds]);
+    }, [posts, userData, clientHiddenIds]);
     
     const handleHidePost = async (postId: string) => {
         setClientHiddenIds(prev => [...prev, postId]);
@@ -118,7 +83,7 @@ export default function PostsFeed() {
         <div className="w-full">
              <div className="bg-background">
                 {sortedPosts.map(post => (
-                    <PostCard key={post.id} post={post} onHide={handleHidePost} animationsEnabled={false} />
+                    <PostCard key={post.id} post={post} onHide={handleHidePost} />
                 ))}
             </div>
         </div>

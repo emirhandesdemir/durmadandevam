@@ -43,7 +43,7 @@ export default function ProfileViewerList() {
             {viewers.map((viewer) => (
                 <div key={viewer.uid} className="flex items-center gap-4 p-2 rounded-lg hover:bg-muted">
                     <Link href={`/profile/${viewer.uid}`} className="flex items-center gap-3 group flex-1">
-                        <div className={cn("avatar-frame-wrapper", viewer.selectedAvatarFrame)}>
+                        <div>
                             <Avatar className="relative z-[1] h-11 w-11">
                                 <AvatarImage src={viewer.photoURL || undefined} />
                                 <AvatarFallback>{viewer.username?.charAt(0).toUpperCase()}</AvatarFallback>

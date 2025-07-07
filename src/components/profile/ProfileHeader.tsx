@@ -91,7 +91,7 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
     <>
       <div className="flex flex-col items-center text-center p-4">
         {/* Avatar */}
-         <div className={cn("avatar-frame-wrapper", profileUser.selectedAvatarFrame)}>
+         <div>
             <Avatar className="relative z-[1] h-24 w-24 md:h-28 md:w-28 border-4 border-background shadow-lg">
                 <AvatarImage src={profileUser.photoURL || undefined} />
                 <AvatarFallback className="text-5xl">{profileUser.username?.charAt(0).toUpperCase()}</AvatarFallback>

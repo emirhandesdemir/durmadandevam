@@ -1,4 +1,3 @@
-
 // src/lib/actions/roomActions.ts
 'use server';
 
@@ -18,13 +17,12 @@ const BOT_USER_INFO = {
     username: 'Walk',
     photoURL: `data:image/svg+xml;base64,${btoa(`<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="50" fill="url(#bot-grad)"/><rect x="25" y="45" width="50" height="20" rx="10" fill="white" fill-opacity="0.8"/><circle cx="50" cy="40" r="15" fill="white"/><circle cx="50" cy="40" r="10" fill="url(#eye-grad)"/><path d="M35 70 Q 50 80, 65 70" stroke="white" stroke-width="4" stroke-linecap="round" fill="none"/><defs><linearGradient id="bot-grad" x1="0" y1="0" x2="100" y2="100"><stop stop-color="#8b5cf6"/><stop offset="1" stop-color="#3b82f6"/></linearGradient><radialGradient id="eye-grad"><stop offset="20%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#2563eb"/></radialGradient></defs></svg>`)}`,
     role: 'user',
-    selectedAvatarFrame: 'avatar-frame-tech'
 };
 
 export async function createEventRoom(
     creatorId: string,
     roomData: { name: string, description: string, language: string },
-    creatorInfo: { username: string, photoURL: string | null, role: string, selectedAvatarFrame: string }
+    creatorInfo: { username: string, photoURL: string | null, role: string }
 ) {
     if (!creatorId) throw new Error("Kullanıcı ID'si gerekli.");
     if (creatorInfo.role !== 'admin') throw new Error("Bu işlemi yapma yetkiniz yok.");
@@ -43,7 +41,6 @@ export async function createEventRoom(
             username: creatorInfo.username,
             photoURL: creatorInfo.photoURL,
             role: creatorInfo.role,
-            selectedAvatarFrame: creatorInfo.selectedAvatarFrame,
         },
         moderators: [creatorId],
         participants: [],
@@ -74,7 +71,7 @@ export async function deleteEventRoom(roomId: string, adminId: string) {
 export async function createRoom(
     userId: string,
     roomData: { name: string, description: string, language: string },
-    creatorInfo: { username: string, photoURL: string | null, role: string, selectedAvatarFrame: string }
+    creatorInfo: { username: string, photoURL: string | null, role: string }
 ) {
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
     
@@ -105,7 +102,6 @@ export async function createRoom(
                 username: creatorInfo.username,
                 photoURL: creatorInfo.photoURL,
                 role: creatorInfo.role,
-                selectedAvatarFrame: creatorInfo.selectedAvatarFrame,
             },
             moderators: [userId],
             participants: [],
@@ -119,7 +115,7 @@ export async function createRoom(
 
         transaction.set(newRoomRef, newRoom);
         transaction.update(userRef, { 
-            diamonds: increment(-roomCost),
+            diamonds: increment(-cost),
             lastActionTimestamp: serverTimestamp()
         });
         
@@ -242,7 +238,6 @@ export async function joinRoom(roomId: string, userInfo: UserInfo) {
         uid: BOT_USER_INFO.uid,
         username: BOT_USER_INFO.username,
         photoURL: BOT_USER_INFO.photoURL,
-        selectedAvatarFrame: BOT_USER_INFO.selectedAvatarFrame,
         text: `Hoş geldin, ${userInfo.username}!`,
         createdAt: serverTimestamp()
     });
@@ -253,7 +248,7 @@ export async function joinRoom(roomId: string, userInfo: UserInfo) {
 export async function leaveRoom(roomId: string, userId: string, username: string) {
     if (!roomId || !userId) throw new Error("Oda ve kullanıcı bilgisi gerekli.");
 
-    const roomRef = doc(db, "rooms", roomId);
+    const roomRef = doc(db, 'rooms', roomId);
     
     await runTransaction(db, async (transaction) => {
         const roomDoc = await transaction.get(roomRef);
@@ -285,7 +280,7 @@ export async function leaveRoom(roomId: string, userId: string, username: string
 export async function sendRoomInvite(
   roomId: string,
   roomName: string,
-  inviter: { uid: string, username: string | null, photoURL: string | null, selectedAvatarFrame?: string },
+  inviter: { uid: string, username: string | null, photoURL: string | null },
   inviteeId: string
 ) {
   if (!roomId || !inviter || !inviteeId) throw new Error("Eksik bilgi: Davet gönderilemedi.");
@@ -296,7 +291,6 @@ export async function sendRoomInvite(
     senderId: inviter.uid,
     senderUsername: inviter.username || "Biri",
     senderAvatar: inviter.photoURL,
-    senderAvatarFrame: inviter.selectedAvatarFrame,
     type: 'room_invite',
     roomId: roomId,
     roomName: roomName,

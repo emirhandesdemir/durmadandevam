@@ -93,7 +93,7 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
         </Button>
         <Link href={`/profile/${partner.uid}`} className="flex items-center gap-3">
             <div className="relative">
-                <div className={cn("avatar-frame-wrapper", partner.selectedAvatarFrame)}>
+                <div>
                     <Avatar className="relative z-[1]">
                         <AvatarImage src={partner.photoURL || undefined} />
                         <AvatarFallback>{partner.username.charAt(0)}</AvatarFallback>
@@ -147,11 +147,11 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
                 <p className="text-sm font-medium text-muted-foreground">Bu kullanıcı tarafından engellendiniz. Mesaj gönderemezsiniz.</p>
             </div>
         ) : (
-             <div className="dm-input-glow rounded-full">
+             <div className="bg-muted rounded-full">
                 <NewMessageInput
                   chatId={chatId}
-                  sender={{ uid: user.uid, username: userData.username, photoURL: userData.photoURL, selectedAvatarFrame: userData.selectedAvatarFrame }}
-                  receiver={{ uid: partner.uid, username: partner.username, photoURL: partner.photoURL, selectedAvatarFrame: partner.selectedAvatarFrame }}
+                  sender={{ uid: user.uid, username: userData.username, photoURL: userData.photoURL }}
+                  receiver={{ uid: partner.uid, username: partner.username, photoURL: partner.photoURL }}
                 />
             </div>
         )}

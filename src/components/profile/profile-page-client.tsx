@@ -29,26 +29,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "..
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
 import BlockedUsersDialog from "./BlockedUsersDialog";
 
-
-const bubbleOptions = [
-    { id: "", name: "Yok" },
-    { id: "bubble-style-1", name: "Neon" },
-    { id: "bubble-style-2", name: "Okyanus" },
-    { id: "bubble-style-3", name: "Gün Batımı" },
-    { id: "bubble-style-4", name: "Orman" },
-    { id: "bubble-style-fire", name: "Alevli" },
-    { id: "bubble-style-premium", name: "Premium", isPremium: true },
-];
-
-const avatarFrameOptions = [
-    { id: "", name: "Yok" },
-    { id: "avatar-frame-angel", name: "Melek Kanadı" },
-    { id: "avatar-frame-devil", name: "Şeytan Kanadı" },
-    { id: "avatar-frame-snake", name: "Yılan" },
-    { id: "avatar-frame-tech", name: "Tekno Aura" },
-    { id: "avatar-frame-premium", name: "Premium", isPremium: true },
-];
-
 export default function ProfilePageClient() {
     const { user, userData, loading, handleLogout } = useAuth();
     const router = useRouter();
@@ -64,8 +44,6 @@ export default function ProfilePageClient() {
     const [showOnlineStatus, setShowOnlineStatus] = useState(true);
     const [newAvatar, setNewAvatar] = useState<string | null>(null);
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
-    const [selectedBubble, setSelectedBubble] = useState("");
-    const [selectedAvatarFrame, setSelectedAvatarFrame] = useState("");
     
     // States for component logic
     const [isSaving, setIsSaving] = useState(false);
@@ -84,8 +62,6 @@ export default function ProfilePageClient() {
             setPrivateProfile(userData.privateProfile || false);
             setAcceptsFollowRequests(userData.acceptsFollowRequests ?? true);
             setShowOnlineStatus(userData.showOnlineStatus ?? true);
-            setSelectedBubble(userData.selectedBubble || "");
-            setSelectedAvatarFrame(userData.selectedAvatarFrame || "");
         }
         if (user) {
             const encodedRef = btoa(user.uid);
@@ -101,11 +77,9 @@ export default function ProfilePageClient() {
             privateProfile !== (userData.privateProfile || false) || 
             acceptsFollowRequests !== (userData.acceptsFollowRequests ?? true) ||
             showOnlineStatus !== (userData.showOnlineStatus ?? true) ||
-            newAvatar !== null || 
-            selectedBubble !== (userData.selectedBubble || "") || 
-            selectedAvatarFrame !== (userData.selectedAvatarFrame || "")
+            newAvatar !== null
         );
-    }, [username, bio, privateProfile, acceptsFollowRequests, showOnlineStatus, newAvatar, selectedBubble, selectedAvatarFrame, userData]);
+    }, [username, bio, privateProfile, acceptsFollowRequests, showOnlineStatus, newAvatar, userData]);
     
     const handleAvatarClick = () => { fileInputRef.current?.click(); };
 
@@ -134,7 +108,7 @@ export default function ProfilePageClient() {
         try {
             const userDocUpdates: { [key: string]: any } = {};
             const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
-            const postAndCommentUpdates: { username?: string; userAvatar?: string; userAvatarFrame?: string; } = {};
+            const postAndCommentUpdates: { username?: string; userAvatar?: string; } = {};
     
             // Process Avatar
             if (newAvatar) {
@@ -161,19 +135,12 @@ export default function ProfilePageClient() {
                 authProfileUpdates.displayName = username;
                 postAndCommentUpdates.username = username;
             }
-            
-            // Process Avatar Frame
-            if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || "")) {
-                userDocUpdates.selectedAvatarFrame = selectedAvatarFrame;
-                postAndCommentUpdates.userAvatarFrame = selectedAvatarFrame;
-            }
 
             // Other fields
             if (bio !== (userData?.bio || "")) userDocUpdates.bio = bio;
             if (privateProfile !== (userData?.privateProfile || false)) userDocUpdates.privateProfile = privateProfile;
             if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) userDocUpdates.acceptsFollowRequests = acceptsFollowRequests;
             if (showOnlineStatus !== (userData?.showOnlineStatus ?? true)) userDocUpdates.showOnlineStatus = showOnlineStatus;
-            if (selectedBubble !== (userData?.selectedBubble || "")) userDocUpdates.selectedBubble = selectedBubble;
 
             // Execute database updates
             const userDocRef = doc(db, 'users', user.uid);
@@ -248,7 +215,7 @@ export default function ProfilePageClient() {
                         className="relative group rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                         aria-label="Profil fotoğrafını değiştir"
                     >
-                        <div className={cn("avatar-frame-wrapper", selectedAvatarFrame)}>
+                        <div>
                             <Avatar className="relative z-[1] h-24 w-24 border-4 border-background shadow-lg transition-all group-hover:brightness-90">
                                 <AvatarImage src={newAvatar || userData.photoURL || undefined} />
                                 <AvatarFallback className="text-4xl bg-primary/20">{username?.charAt(0).toUpperCase()}</AvatarFallback>
@@ -296,7 +263,7 @@ export default function ProfilePageClient() {
                                     <Palette className="h-6 w-6 text-primary" />
                                     <CardTitle>Görünüm Ayarları</CardTitle>
                                 </div>
-                                <CardDescription>Uygulamanın ve profilinizin görünümünü özelleştirin.</CardDescription>
+                                <CardDescription>Uygulamanın genel görünümünü özelleştirin.</CardDescription>
                             </CardHeader>
                         </AccordionTrigger>
                         <AccordionContent className="p-6 pt-0">
@@ -320,34 +287,6 @@ export default function ProfilePageClient() {
                                             <span className="font-bold text-xs">Sistem</span>
                                         </Label>
                                     </RadioGroup>
-                                </div>
-                                <div>
-                                    <Label className="text-base font-medium">Sohbet Baloncuğu</Label>
-                                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-2">
-                                        {bubbleOptions.map(option => (
-                                            <button key={option.id} onClick={() => setSelectedBubble(option.id)} disabled={option.isPremium && !isPremium} className={cn("flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer p-2 aspect-square hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50", selectedBubble === option.id ? "border-primary" : "")}>
-                                                <div className="relative h-12 w-12 bg-muted rounded-full overflow-hidden">
-                                                    {option.id !== "" && (<div className={`bubble-wrapper ${option.id}`}>{Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}</div>)}
-                                                    {option.isPremium && <Crown className="absolute top-1 right-1 h-4 w-4 text-red-500"/>}
-                                                </div>
-                                                <span className="text-xs font-bold text-center">{option.name}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div>
-                                    <Label className="text-base font-medium">Avatar Çerçevesi</Label>
-                                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-2">
-                                        {avatarFrameOptions.map(option => (
-                                            <button key={option.id} onClick={() => setSelectedAvatarFrame(option.id)} disabled={option.isPremium && !isPremium} className={cn("flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer p-2 aspect-square hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50", selectedAvatarFrame === option.id ? "border-primary" : "")}>
-                                                <div className={cn("avatar-frame-wrapper h-12 w-12", option.id)}>
-                                                    <Avatar className="relative z-[1] h-full w-full bg-muted" />
-                                                    {option.isPremium && <Crown className="absolute top-0 right-0 h-4 w-4 text-red-500"/>}
-                                                </div>
-                                                <span className="text-xs font-bold text-center">{option.name}</span>
-                                            </button>
-                                        ))}
-                                    </div>
                                 </div>
                             </div>
                         </AccordionContent>

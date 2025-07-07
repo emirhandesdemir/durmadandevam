@@ -1,4 +1,3 @@
-
 // src/components/posts/PostCard.tsx
 "use client";
 
@@ -44,7 +43,6 @@ interface PostCardProps {
     post: Post;
     isStandalone?: boolean;
     onHide?: (postId: string) => void;
-    animationsEnabled?: boolean;
 }
 
 const safeParseTimestamp = (timestamp: any): Date => {
@@ -70,7 +68,7 @@ const safeParseTimestamp = (timestamp: any): Date => {
 };
 
 
-export default function PostCard({ post, isStandalone = false, onHide, animationsEnabled = true }: PostCardProps) {
+export default function PostCard({ post, isStandalone = false, onHide }: PostCardProps) {
     const { user: currentUser, userData: currentUserData } = useAuth();
     const { toast } = useToast();
 
@@ -167,7 +165,6 @@ export default function PostCard({ post, isStandalone = false, onHide, animation
                     uid: currentUser.uid,
                     displayName: currentUserData.username || 'Biri',
                     photoURL: currentUserData.photoURL || null,
-                    selectedAvatarFrame: currentUserData.selectedAvatarFrame || ''
                 }
             );
         } catch (error) {
@@ -180,10 +177,6 @@ export default function PostCard({ post, isStandalone = false, onHide, animation
     
     const handleDoubleClick = () => {
         if (!currentUser) return;
-        setShowLikeAnimation(true);
-        setTimeout(() => {
-            setShowLikeAnimation(false);
-        }, 600);
         if (!optimisticLiked) {
             handleLike();
         }
@@ -249,16 +242,9 @@ export default function PostCard({ post, isStandalone = false, onHide, animation
         return (
             <>
                 <div className={cn("relative flex flex-col pt-3 bg-background", !isStandalone && "border-b")}>
-                    
-                    {showLikeAnimation && (
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-                            <Heart className="text-white h-24 w-24 drop-shadow-lg animate-like-pop" fill="currentColor" />
-                        </div>
-                    )}
-                    
                     <div className="flex items-start gap-3 px-4 pb-2">
                          <Link href={`/profile/${post.uid}`}>
-                            <div className={cn("avatar-frame-wrapper", animationsEnabled && post.userAvatarFrame)}>
+                            <div>
                                 <Avatar className="relative z-[1] h-10 w-10">
                                     <AvatarImage src={post.userAvatar || undefined} />
                                     <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
@@ -353,15 +339,9 @@ export default function PostCard({ post, isStandalone = false, onHide, animation
     return (
         <>
             <div className={cn("relative flex flex-col bg-background", !isStandalone && "border-b")}>
-                {showLikeAnimation && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-                        <Heart className="text-white h-24 w-24 drop-shadow-lg animate-like-pop" fill="currentColor" />
-                    </div>
-                )}
-            
                 <div className="flex items-start gap-3 p-4">
                      <Link href={`/profile/${post.uid}`}>
-                        <div className={cn("avatar-frame-wrapper", animationsEnabled && post.userAvatarFrame)}>
+                        <div>
                             <Avatar className="relative z-[1] h-10 w-10">
                                 <AvatarImage src={post.userAvatar || undefined} />
                                 <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>

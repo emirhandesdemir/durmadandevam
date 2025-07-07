@@ -74,7 +74,7 @@ export default function CommentItem({ comment, postId, onReply }: CommentItemPro
     return (
         <div className="flex items-start gap-3">
              <Link href={`/profile/${comment.uid}`}>
-                <div className={cn("avatar-frame-wrapper", comment.userAvatarFrame)}>
+                <div>
                     <Avatar className="relative z-[1] h-9 w-9">
                         <AvatarImage src={comment.userAvatar} />
                         <AvatarFallback>{comment.username?.charAt(0)}</AvatarFallback>

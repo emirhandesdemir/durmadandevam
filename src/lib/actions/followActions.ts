@@ -1,4 +1,3 @@
-
 // src/lib/actions/followActions.ts
 'use server';
 
@@ -16,7 +15,7 @@ import {
 import { revalidatePath } from 'next/cache';
 import { createNotification } from './notificationActions';
 
-export async function followUser(currentUserId: string, targetUserId: string, currentUserInfo: { username: string, photoURL: string | null, userAvatarFrame?: string }) {
+export async function followUser(currentUserId: string, targetUserId: string, currentUserInfo: { username: string, photoURL: string | null }) {
   if (currentUserId === targetUserId) {
     throw new Error('Kendinizi takip edemezsiniz.');
   }
@@ -50,7 +49,6 @@ export async function followUser(currentUserId: string, targetUserId: string, cu
         uid: currentUserId,
         username: currentUserInfo.username,
         photoURL: currentUserInfo.photoURL,
-        userAvatarFrame: currentUserInfo.userAvatarFrame || '',
         requestedAt: serverTimestamp(),
       };
       const requestExists = targetUserData.followRequests?.some((req: any) => req.uid === currentUserId);
@@ -75,7 +73,6 @@ export async function followUser(currentUserId: string, targetUserId: string, cu
         senderId: currentUserId,
         senderUsername: currentUserInfo.username || 'Biri',
         senderAvatar: currentUserInfo.photoURL,
-        senderAvatarFrame: currentUserInfo.userAvatarFrame,
         type: 'follow',
     });
   }
@@ -94,7 +91,7 @@ export async function unfollowUser(currentUserId: string, targetUserId: string) 
         lastActionTimestamp: serverTimestamp()
     });
     transaction.update(targetUserRef, {
-        followers: arrayRemove(currentUserId),
+        followers: arrayRemove(targetUserId),
     });
   });
 
@@ -137,7 +134,6 @@ export async function handleFollowRequest(currentUserId: string, requesterId: st
             senderId: currentUserId,
             senderUsername: currentUserData.username || 'Biri',
             senderAvatar: currentUserData.photoURL,
-            senderAvatarFrame: currentUserData.selectedAvatarFrame,
             type: 'follow_accept', // A new type for accepted request
         });
     }

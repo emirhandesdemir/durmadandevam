@@ -17,7 +17,6 @@ interface UserInfo {
   uid: string;
   username: string;
   photoURL: string | null;
-  selectedAvatarFrame?: string;
 }
 
 interface NewMessageInputProps {
@@ -34,7 +33,7 @@ type MessageFormValues = z.infer<typeof messageSchema>;
 const formatRecordingTime = (timeInSeconds: number) => {
     const minutes = Math.floor(timeInSeconds / 60);
     const remainingSeconds = Math.floor(timeInSeconds % 60);
-    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
 };
 
 const AudioPreviewPlayer = ({ audioUrl, duration }: { audioUrl: string; duration: number }) => {

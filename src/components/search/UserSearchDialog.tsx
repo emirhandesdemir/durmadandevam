@@ -71,7 +71,7 @@ export default function UserSearchDialog({ isOpen, onOpenChange }: UserSearchDia
                   onClick={() => onOpenChange(false)}
                   className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent"
                 >
-                  <div className={cn("avatar-frame-wrapper", user.selectedAvatarFrame)}>
+                  <div>
                     <Avatar className="relative z-[1] h-10 w-10">
                         <AvatarImage src={user.photoURL || undefined} />
                         <AvatarFallback>{user.username?.charAt(0).toUpperCase()}</AvatarFallback>

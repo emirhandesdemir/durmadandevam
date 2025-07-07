@@ -1,4 +1,3 @@
-
 // src/lib/actions/dmActions.ts
 'use server';
 
@@ -33,7 +32,6 @@ interface UserInfo {
   uid: string;
   username: string;
   photoURL: string | null;
-  selectedAvatarFrame?: string;
 }
 
 export async function addCallSystemMessageToDm(chatId: string, status: 'ended' | 'declined' | 'missed', duration?: string) {
@@ -166,8 +164,8 @@ export async function sendMessage(
       transaction.set(metadataDocRef, {
         participantUids: [sender.uid, receiver.uid],
         participantInfo: {
-          [sender.uid]: { username: sender.username, photoURL: sender.photoURL || null, selectedAvatarFrame: sender.selectedAvatarFrame || '', premiumUntil: senderData.premiumUntil || null },
-          [receiver.uid]: { username: receiver.username, photoURL: receiver.photoURL || null, selectedAvatarFrame: receiver.selectedAvatarFrame || '', premiumUntil: receiverData.premiumUntil || null },
+          [sender.uid]: { username: sender.username, photoURL: sender.photoURL || null, premiumUntil: senderData.premiumUntil || null },
+          [receiver.uid]: { username: receiver.username, photoURL: receiver.photoURL || null, premiumUntil: receiverData.premiumUntil || null },
         },
         lastMessage: { text: lastMessageText, senderId: sender.uid, timestamp: serverTimestamp(), read: false },
         unreadCounts: { [receiver.uid]: 1, [sender.uid]: 0 },
@@ -176,8 +174,8 @@ export async function sendMessage(
       transaction.update(metadataDocRef, {
         lastMessage: { text: lastMessageText, senderId: sender.uid, timestamp: serverTimestamp(), read: false },
         [`unreadCounts.${receiver.uid}`]: increment(1),
-        [`participantInfo.${sender.uid}`]: { username: sender.username, photoURL: sender.photoURL || null, selectedAvatarFrame: sender.selectedAvatarFrame || '', premiumUntil: senderData.premiumUntil || null },
-        [`participantInfo.${receiver.uid}`]: { username: receiver.username, photoURL: receiver.photoURL || null, selectedAvatarFrame: receiver.selectedAvatarFrame || '', premiumUntil: receiverData.premiumUntil || null },
+        [`participantInfo.${sender.uid}`]: { username: sender.username, photoURL: sender.photoURL || null, premiumUntil: senderData.premiumUntil || null },
+        [`participantInfo.${receiver.uid}`]: { username: receiver.username, photoURL: receiver.photoURL || null, premiumUntil: receiverData.premiumUntil || null },
       });
     }
   });
@@ -188,7 +186,6 @@ export async function sendMessage(
     senderId: sender.uid,
     senderUsername: sender.username,
     senderAvatar: sender.photoURL,
-    senderAvatarFrame: sender.selectedAvatarFrame,
     type: 'dm_message',
     messageText: content.text || (content.imageUrl ? '📷 Fotoğraf' : '🎤 Sesli Mesaj'),
     chatId: chatId,

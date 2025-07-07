@@ -16,7 +16,7 @@ export default function UserListItem({ user, currentUserData }: UserListItemProp
   return (
     <div className="flex items-center justify-between p-2 rounded-lg hover:bg-muted">
       <Link href={`/profile/${user.uid}`} className="flex items-center gap-3 group">
-         <div className={cn("avatar-frame-wrapper", user.selectedAvatarFrame)}>
+         <div>
             <Avatar className="relative z-[1] h-10 w-10">
                 <AvatarImage src={user.photoURL || undefined} />
                 <AvatarFallback>{user.username?.charAt(0).toUpperCase()}</AvatarFallback>

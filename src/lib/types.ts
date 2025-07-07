@@ -128,8 +128,6 @@ export interface UserProfile {
     diamonds: number;
     referredBy?: string | null;
     referralCount?: number;
-    selectedBubble?: string;
-    selectedAvatarFrame?: string;
     hasUnreadNotifications?: boolean;
     fcmTokens?: string[];
     blockedUsers?: string[];
@@ -150,7 +148,6 @@ export interface ProfileViewer {
     viewedAt: Timestamp;
     username?: string;
     photoURL?: string | null;
-    selectedAvatarFrame?: string;
 }
 
 export interface Report {
@@ -171,7 +168,6 @@ export interface FollowRequest {
     uid: string;
     username:string;
     photoURL: string | null;
-    userAvatarFrame?: string;
     requestedAt: Timestamp;
 }
 
@@ -181,7 +177,6 @@ export interface Notification {
     senderId: string;
     senderUsername: string;
     senderAvatar: string | null;
-    senderAvatarFrame?: string;
     type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile';
     postId?: string | null;
     postImage?: string | null;
@@ -224,7 +219,6 @@ export interface Post {
     uid: string;
     username: string;
     userAvatar?: string | null;
-    userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
     text: string;
@@ -244,7 +238,6 @@ export interface Post {
         uid: string;
         username: string;
         userAvatar?: string | null;
-        userAvatarFrame?: string;
         text: string;
         imageUrl?: string;
         createdAt: Timestamp | { seconds: number; nanoseconds: number };
@@ -256,7 +249,6 @@ export interface Comment {
     uid: string;
     username: string;
     userAvatar?: string;
-    userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     text: string;
     createdAt: Timestamp;
@@ -285,7 +277,6 @@ export interface Room {
         username: string;
         photoURL?: string | null;
         role?: 'admin' | 'user';
-        selectedAvatarFrame?: string;
     };
     moderators: string[]; // List of moderator UIDs
     createdAt: Timestamp;
@@ -332,8 +323,6 @@ export interface VoiceParticipant {
     isSharingVideo: boolean;
     joinedAt: Timestamp;
     lastActiveAt?: Timestamp;
-    selectedBubble?: string;
-    selectedAvatarFrame?: string;
 }
 
 export interface ActiveGame {
@@ -404,7 +393,6 @@ export interface DirectMessageMetadata {
         [uid: string]: {
             username: string;
             photoURL: string | null;
-            selectedAvatarFrame?: string;
             premiumUntil?: Timestamp;
         }
     };
@@ -431,8 +419,6 @@ export interface Message {
   videoUrl?: string;
   type?: 'system' | 'game' | 'portal' | 'user' | 'gameInvite';
   createdAt: Timestamp;
-  selectedBubble?: string;
-  selectedAvatarFrame?: string;
   portalRoomId?: string;
   portalRoomName?: string;
   gameInviteData?: GameInviteMessageData;

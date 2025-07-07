@@ -1,4 +1,3 @@
-
 // src/lib/actions/postActions.ts
 'use server';
 
@@ -21,7 +20,7 @@ import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
 import { findUserByUsername } from "./userActions";
 
-async function handlePostMentions(postId: string, text: string, sender: { uid: string; displayName: string | null; photoURL: string | null; selectedAvatarFrame?: string }) {
+async function handlePostMentions(postId: string, text: string, sender: { uid: string; displayName: string | null; photoURL: string | null; }) {
     if (!text) return;
     const mentionRegex = /(?<!\S)@\w+/g;
     const mentions = text.match(mentionRegex);
@@ -41,7 +40,6 @@ async function handlePostMentions(postId: string, text: string, sender: { uid: s
                         senderId: sender.uid,
                         senderUsername: sender.displayName || "Biri",
                         senderAvatar: sender.photoURL,
-                        senderAvatarFrame: sender.selectedAvatarFrame,
                         type: 'mention',
                         postId: postId,
                         postImage: postData?.imageUrl || null,
@@ -57,7 +55,6 @@ export async function createPost(postData: {
     uid: string;
     username: string;
     userAvatar: string | null;
-    userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
     text: string;
@@ -106,7 +103,6 @@ export async function createPost(postData: {
         uid: postData.uid,
         displayName: postData.username,
         photoURL: postData.userAvatar,
-        selectedAvatarFrame: postData.userAvatarFrame
     });
 
     revalidatePath('/home');
@@ -179,7 +175,7 @@ export async function updatePost(postId: string, newText: string) {
 
 export async function likePost(
     postId: string,
-    currentUser: { uid: string, displayName: string | null, photoURL: string | null, selectedAvatarFrame?: string }
+    currentUser: { uid: string, displayName: string | null, photoURL: string | null }
 ) {
     const postRef = doc(db, "posts", postId);
     
@@ -206,7 +202,6 @@ export async function likePost(
                     senderId: currentUser.uid,
                     senderUsername: currentUser.displayName || "Biri",
                     senderAvatar: currentUser.photoURL,
-                    senderAvatarFrame: currentUser.selectedAvatarFrame,
                     type: 'like',
                     postId: postId,
                     postImage: postData.imageUrl || null,
@@ -225,7 +220,6 @@ export async function retweetPost(
         uid: string; 
         username: string; 
         userAvatar: string | null;
-        userAvatarFrame?: string;
         userRole?: 'admin' | 'user';
         userGender?: 'male' | 'female';
     },
@@ -250,7 +244,6 @@ export async function retweetPost(
             uid: originalPostData.uid,
             username: originalPostData.username,
             userAvatar: originalPostData.userAvatar,
-            userAvatarFrame: originalPostData.userAvatarFrame,
             text: originalPostData.text,
             imageUrl: originalPostData.imageUrl,
             createdAt: originalPostData.createdAt,
@@ -260,7 +253,6 @@ export async function retweetPost(
             uid: retweeter.uid,
             username: retweeter.username,
             userAvatar: retweeter.userAvatar,
-            userAvatarFrame: retweeter.userAvatarFrame,
             userRole: retweeter.userRole,
             userGender: retweeter.userGender,
             text: quoteText || '', // Use the quote text here
@@ -287,7 +279,6 @@ export async function retweetPost(
             senderId: retweeter.uid,
             senderUsername: retweeter.username,
             senderAvatar: retweeter.userAvatar,
-            senderAvatarFrame: retweeter.userAvatarFrame,
             type: 'retweet',
             postId: newPostRef.id,
         });
@@ -297,4 +288,3 @@ export async function retweetPost(
     revalidatePath('/home');
     revalidatePath(`/profile/${retweeter.uid}`);
 }
-

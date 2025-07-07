@@ -149,7 +149,7 @@ export default function VoiceUserIcon({
   const avatar = (
     <div className="relative flex flex-col items-center gap-2">
        <div className={cn("relative", avatarSize)}>
-           <div className={cn("avatar-frame-wrapper w-full h-full", participant.selectedAvatarFrame)}>
+           <div>
               {avatarContent}
           </div>
           <div className={cn("absolute bg-card/70 backdrop-blur-sm rounded-full shadow-md z-10 flex items-center gap-1.5", iconBadgePos)}>

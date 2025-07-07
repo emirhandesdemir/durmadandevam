@@ -1,4 +1,3 @@
-
 // src/lib/actions/commentActions.ts
 'use server';
 
@@ -23,7 +22,6 @@ interface AddCommentArgs {
         uid: string;
         displayName: string | null;
         photoURL: string | null;
-        userAvatarFrame?: string;
         role?: 'admin' | 'user';
     };
     replyTo?: {
@@ -32,7 +30,7 @@ interface AddCommentArgs {
     }
 }
 
-async function handleMentions(text: string, postId: string, sender: { uid: string, displayName: string | null, photoURL: string | null, selectedAvatarFrame?: string }) {
+async function handleMentions(text: string, postId: string, sender: { uid: string, displayName: string | null, photoURL: string | null }) {
     const mentionRegex = /(?<!\S)@\w+/g;
     const mentions = text.match(mentionRegex);
 
@@ -46,7 +44,6 @@ async function handleMentions(text: string, postId: string, sender: { uid: strin
                     senderId: sender.uid,
                     senderUsername: sender.displayName || "Biri",
                     senderAvatar: sender.photoURL,
-                    senderAvatarFrame: sender.selectedAvatarFrame,
                     type: 'mention',
                     postId: postId,
                     commentText: text,
@@ -72,7 +69,6 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
         uid: user.uid,
         username: user.displayName || "Anonim Kullanıcı",
         userAvatar: user.photoURL,
-        userAvatarFrame: user.userAvatarFrame || '',
         userRole: user.role || 'user',
         text: text,
         createdAt: serverTimestamp(),
@@ -95,7 +91,6 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
             senderId: user.uid,
             senderUsername: user.displayName || "Biri",
             senderAvatar: user.photoURL,
-            senderAvatarFrame: user.userAvatarFrame,
             type: 'comment',
             postId: postId,
             postImage: postData.imageUrl || null,
@@ -108,7 +103,6 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
         uid: user.uid,
         displayName: user.displayName,
         photoURL: user.photoURL,
-        selectedAvatarFrame: user.userAvatarFrame
     });
 
     await batch.commit();

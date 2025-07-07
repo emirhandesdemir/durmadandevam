@@ -1,4 +1,3 @@
-
 // src/lib/actions/userActions.ts
 'use server';
 
@@ -54,7 +53,6 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
     const retweetUpdates: { [key: string]: any } = {};
     if (updates.username) retweetUpdates['retweetOf.username'] = updates.username;
     if (updates.userAvatar) retweetUpdates['retweetOf.userAvatar'] = updates.userAvatar;
-    if (updates.userAvatarFrame) retweetUpdates['retweetOf.userAvatarFrame'] = updates.userAvatarFrame;
     
     if (Object.keys(retweetUpdates).length > 0) {
         const retweetsQuery = query(postsRef, where('retweetOf.uid', '==', uid));
@@ -71,7 +69,7 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
     }
 }
 
-export async function updateUserComments(uid: string, updates: { userAvatar?: string; userAvatarFrame?: string; username?: string }) {
+export async function updateUserComments(uid: string, updates: { userAvatar?: string; username?: string }) {
     if (!uid || !updates || Object.keys(updates).length === 0) {
         return;
     }

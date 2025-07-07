@@ -33,7 +33,6 @@ export default function ChatListItem({ chat, currentUserId, isSelected, isSelect
   const lastMessage = chat.lastMessage;
   const unreadCount = chat.unreadCounts?.[currentUserId] || 0;
   const isUnread = unreadCount > 0;
-  const partnerFrame = partnerInfo.selectedAvatarFrame || '';
   const isPinned = chat.pinnedBy?.includes(currentUserId);
   const isPartnerPremium = partnerInfo.premiumUntil && (partnerInfo.premiumUntil as Timestamp).toDate() > new Date();
 
@@ -66,7 +65,7 @@ export default function ChatListItem({ chat, currentUserId, isSelected, isSelect
         )}
       >
         <div className="relative">
-            <div className={cn("avatar-frame-wrapper", partnerFrame)}>
+            <div>
                 <Avatar className="relative z-[1] h-12 w-12">
                 <AvatarImage src={partnerInfo.photoURL || undefined} />
                 <AvatarFallback>{partnerInfo.username.charAt(0)}</AvatarFallback>

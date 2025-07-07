@@ -77,8 +77,6 @@ export default function ChatMessageInput({ room }: ChatMessageInputProps) {
             text: message || '',
             createdAt: serverTimestamp(),
             type: 'user',
-            selectedBubble: userData?.selectedBubble || '',
-            selectedAvatarFrame: userData?.selectedAvatarFrame || '',
         };
 
         if (imageUrl) {
