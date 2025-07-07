@@ -48,16 +48,16 @@ export default function StoryViewer({ reels, activeReelIndex, onClose, onNextRee
     }, [activeReelIndex, reels, user]);
 
     useEffect(() => {
+        const animationTarget = animationTargetRef.current;
+        const videoElement = videoRef.current;
+        if (!animationTarget) return;
+
         if (paused) {
-            if (animationTargetRef.current) {
-                animationTargetRef.current.style.animationPlayState = 'paused';
-            }
-            videoRef.current?.pause();
+            animationTarget.style.animationPlayState = 'paused';
+            videoElement?.pause();
         } else {
-            if (animationTargetRef.current) {
-                animationTargetRef.current.style.animationPlayState = 'running';
-            }
-            videoRef.current?.play().catch(e => console.error("Video play failed:", e));
+            animationTarget.style.animationPlayState = 'running';
+            videoElement?.play().catch(e => console.error("Video play failed:", e));
         }
     }, [paused]);
 
