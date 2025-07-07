@@ -6,7 +6,6 @@ import PostsFeed from "@/components/posts/PostsFeed";
 import { Card, CardContent } from "@/components/ui/card";
 import { EyeOff } from "lucide-react";
 import FirstPostRewardCard from "@/components/posts/FirstPostRewardCard";
-import StoryReel from "@/components/stories/StoryReel";
 
 /**
  * Ana Sayfa (Home Page)
@@ -42,9 +41,6 @@ export default function HomePage() {
     <div className="min-h-screen bg-background text-foreground">
       <main>
         <div className="flex flex-col items-center">
-          <div className="w-full">
-            <StoryReel />
-          </div>
           <div className="flex flex-col items-center gap-4 w-full">
             {/* Eğer kullanıcı yeni ise ve henüz hiç gönderi paylaşmamışsa, ödül kartını göster. */}
             {!loading && userData?.postCount === 0 && (

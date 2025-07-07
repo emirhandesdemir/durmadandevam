@@ -118,7 +118,6 @@ export interface UserProfile {
     createdAt: Timestamp;
     lastActionTimestamp?: Timestamp; // For rate limiting
     lastAdWatchedAt?: Timestamp; // For ad reward cooldown
-    lastStoryAt?: Timestamp; // For sorting story reels
     privateProfile: boolean;
     acceptsFollowRequests: boolean;
     showOnlineStatus?: boolean;
@@ -141,6 +140,8 @@ export interface UserProfile {
     isFirstPremium?: boolean;
     unlimitedRoomCreationUntil?: Timestamp;
     profileCompletionNotificationSent?: boolean;
+    selectedBubble?: string;
+    selectedAvatarFrame?: string;
 }
 
 export interface ProfileViewer {
@@ -190,28 +191,7 @@ export interface Notification {
     read: boolean;
     callId?: string;
     callType?: 'video' | 'audio';
-}
-
-export interface Story {
-  id: string;
-  uid: string;
-  userInfo: {
-    username: string;
-    photoURL: string | null;
-  };
-  mediaUrl: string;
-  mediaType: 'image' | 'video';
-  createdAt: Timestamp;
-  expiresAt: Timestamp;
-  viewedBy: string[];
-}
-
-export interface UserStoryReel {
-    uid: string;
-    username: string;
-    photoURL: string | null;
-    stories: Story[];
-    hasUnseenStories: boolean;
+    senderAvatarFrame?: string;
 }
 
 export interface Post {
@@ -241,7 +221,8 @@ export interface Post {
         text: string;
         imageUrl?: string;
         createdAt: Timestamp | { seconds: number; nanoseconds: number };
-    }
+    };
+    userAvatarFrame?: string;
 }
 
 export interface Comment {
@@ -256,6 +237,7 @@ export interface Comment {
         commentId: string;
         username: string;
     } | null;
+    userAvatarFrame?: string;
 }
 
 export interface Giveaway {
@@ -277,6 +259,7 @@ export interface Room {
         username: string;
         photoURL?: string | null;
         role?: 'admin' | 'user';
+        selectedAvatarFrame?: string;
     };
     moderators: string[]; // List of moderator UIDs
     createdAt: Timestamp;
@@ -323,6 +306,8 @@ export interface VoiceParticipant {
     isSharingVideo: boolean;
     joinedAt: Timestamp;
     lastActiveAt?: Timestamp;
+    selectedBubble?: string;
+    selectedAvatarFrame?: string;
 }
 
 export interface ActiveGame {
