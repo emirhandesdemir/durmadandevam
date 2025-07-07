@@ -5,15 +5,10 @@ import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from "@/comp
 import { Button } from "@/components/ui/button";
 import { Gem, Gift, PenSquare } from "lucide-react";
 import Link from "next/link";
-import { motion } from "framer-motion";
 
 export default function FirstPostRewardCard() {
   return (
-    <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-    >
+    <div>
         <Card className="bg-gradient-to-tr from-primary/20 to-primary/5 border-primary/20 shadow-lg">
             <CardHeader className="flex-row items-center gap-4 space-y-0">
                 <div className="p-3 bg-primary/10 rounded-full">
@@ -35,6 +30,6 @@ export default function FirstPostRewardCard() {
                 </Button>
             </CardFooter>
         </Card>
-    </motion.div>
+    </div>
   );
 }
