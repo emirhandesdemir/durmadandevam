@@ -106,3 +106,4 @@ Google'ın, web sitenizin gerçekten size ait olduğundan emin olması gerekir. 
 4.  **Çok Önemli:** Bu değişikliği yaptıktan sonra projenizi tekrar yayınlamanız (deploy etmeniz) gerekir. Böylece `https://hiwewalkbeta.netlify.app/.well-known/assetlinks.json` adresi erişilebilir olur.
 
 Bu son adımdan sonra APK dosyanız, URL çubuğu olmadan tam ekran bir şekilde çalışacaktır. Artık bu APK dosyasını test edebilir veya Google Play Console'a yükleyerek yayınlayabilirsiniz!
+

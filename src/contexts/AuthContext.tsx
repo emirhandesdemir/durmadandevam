@@ -53,8 +53,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 lastSeen: serverTimestamp()
             }, { merge: true });
         }
-        // The onAuthStateChanged listener will trigger the OneSignal logout
-        // via the useEffect in NotificationPermissionManager.
         await signOut(auth);
         toast({
             title: "Oturum Kapatıldı",

@@ -8,6 +8,10 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
+import { VoiceChatProvider } from '@/contexts/VoiceChatContext';
+import VoiceAudioPlayer from '@/components/voice/VoiceAudioPlayer';
+import ActiveCallBar from '@/components/voice/ActiveCallBar';
+import PremiumWelcomeManager from '@/components/common/PremiumWelcomeManager';
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -120,32 +124,33 @@ export default function MainAppLayout({
 
   return (
     <div className="relative flex h-screen w-full flex-col bg-background overflow-hidden">
-      <PwaInstallBar />
-      
-      <main 
-        className={cn(
-          "flex-1 flex flex-col hide-scrollbar pb-20",
-          isFullPageLayout ? "overflow-hidden" : "overflow-y-auto"
-        )}
-      >
-         {!isHeaderlessPage && (
-            <header className="sticky top-0 z-40">
-              <Header />
-            </header>
-         )}
+        <PwaInstallBar />
         
-           <div
-              className={cn(
-                "flex-1 flex flex-col",
-                isFullPageLayout ? "overflow-hidden" : "",
-                !isHomePage && !isFullPageLayout && "p-4"
-              )}
-           >
-            {children}
-           </div>
-      </main>
-      
-      <BottomNav />
+        <main 
+            className={cn(
+            "flex-1 flex flex-col hide-scrollbar pb-20",
+            isFullPageLayout ? "overflow-hidden" : "overflow-y-auto"
+            )}
+        >
+            {!isHeaderlessPage && (
+                <header className="sticky top-0 z-40">
+                    <Header />
+                </header>
+            )}
+            
+            <div
+                className={cn(
+                    "flex-1 flex flex-col",
+                    isFullPageLayout ? "overflow-hidden" : "",
+                    !isHomePage && !isFullPageLayout && "p-4"
+                )}
+            >
+                {children}
+            </div>
+        </main>
+        
+        <BottomNav />
+        {/* VoiceChatProvider and related components have been moved to RoomPage to improve performance */}
     </div>
   );
 }
