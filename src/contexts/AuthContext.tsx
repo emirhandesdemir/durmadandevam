@@ -1,4 +1,3 @@
-
 // src/contexts/AuthContext.tsx
 'use client';
 

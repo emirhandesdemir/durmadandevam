@@ -8,10 +8,6 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
-import { VoiceChatProvider } from '@/contexts/VoiceChatContext';
-import VoiceAudioPlayer from '@/components/voice/VoiceAudioPlayer';
-import ActiveCallBar from '@/components/voice/ActiveCallBar';
-import PremiumWelcomeManager from '@/components/common/PremiumWelcomeManager';
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
