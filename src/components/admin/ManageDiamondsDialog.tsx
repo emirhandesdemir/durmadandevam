@@ -32,6 +32,8 @@ const formSchema = z.object({
   amount: z.coerce.number().int("Sadece tam sayılar girilebilir."),
 });
 
+type FormValues = z.infer<typeof formSchema>;
+
 /**
  * Bir kullanıcının elmas miktarını yönetmek için kullanılan dialog bileşeni.
  * Pozitif sayılar ekler, negatif sayılar çıkarır.
@@ -39,14 +41,14 @@ const formSchema = z.object({
 export default function ManageDiamondsDialog({ isOpen, setIsOpen, user }: ManageDiamondsDialogProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { register, handleSubmit, formState: { errors } } = useForm<z.infer<typeof formSchema>>({
+  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
   });
 
   if (!user) return null;
 
   // Form gönderildiğinde çalışacak fonksiyon.
-  const onSubmit = async (data: z.infer<typeof formSchema>>) => {
+  const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
       const result = await modifyUserDiamonds(user.uid, data.amount);

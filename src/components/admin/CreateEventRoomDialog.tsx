@@ -35,6 +35,8 @@ const formSchema = z.object({
   description: z.string().min(10, "Açıklama en az 10 karakter olmalıdır."),
 });
 
+type FormValues = z.infer<typeof formSchema>;
+
 export default function CreateEventRoomDialog({ isOpen, setIsOpen, room }: CreateEventRoomDialogProps) {
   const { toast } = useToast();
   const { user, userData } = useAuth();
@@ -42,7 +44,7 @@ export default function CreateEventRoomDialog({ isOpen, setIsOpen, room }: Creat
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditMode = !!room;
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: room?.name || "",
@@ -50,7 +52,7 @@ export default function CreateEventRoomDialog({ isOpen, setIsOpen, room }: Creat
     },
   });
 
-  const onSubmit = async (data: z.infer<typeof formSchema>>) => {
+  const onSubmit = async (data: FormValues) => {
     if (!user || !userData || userData.role !== 'admin') {
       toast({ variant: 'destructive', description: "Bu işlemi yapma yetkiniz yok." });
       return;

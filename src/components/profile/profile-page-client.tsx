@@ -24,7 +24,6 @@ import { useRouter } from 'next/navigation';
 import { findUserByUsername, updateUserPosts, updateUserComments } from "@/lib/actions/userActions";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../common/LanguageSwitcher";
-import { AnimatePresence, motion } from "framer-motion";
 import Link from 'next/link';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
@@ -469,13 +468,9 @@ export default function ProfilePageClient() {
                 </Accordion>
             </div>
 
-            <AnimatePresence>
+            <>
             {hasChanges && (
-                <motion.div
-                    initial={{ y: "100%", opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: "100%", opacity: 0 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                <div
                     className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t"
                 >
                     <div className="container mx-auto flex justify-between items-center max-w-4xl">
@@ -485,9 +480,9 @@ export default function ProfilePageClient() {
                             {t('save_changes')}
                         </Button>
                     </div>
-                </motion.div>
+                </div>
             )}
-            </AnimatePresence>
+            </>
 
             <ImageCropperDialog 
               isOpen={!!imageToCrop} 

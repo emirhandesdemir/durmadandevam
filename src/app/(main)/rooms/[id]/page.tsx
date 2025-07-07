@@ -1,4 +1,3 @@
-
 // src/app/(main)/rooms/[id]/page.tsx
 "use client";
 
@@ -13,7 +12,6 @@ import { Loader2 } from 'lucide-react';
 import TextChat from '@/components/chat/text-chat';
 import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
 import RoomHeader from '@/components/rooms/RoomHeader';
-import { AnimatePresence, motion } from 'framer-motion';
 
 import type { Room, Message, Giveaway } from '@/lib/types';
 import RoomFooter from '@/components/rooms/RoomFooter';
@@ -124,19 +122,15 @@ export default function RoomPage() {
                     onToggleCollapse={() => setIsSpeakerLayoutCollapsed(p => !p)}
                 />
                 
-                <AnimatePresence>
+                <>
                     {!isSpeakerLayoutCollapsed && (
-                         <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                         <div
                             className="overflow-hidden"
                         >
                             <SpeakerLayout room={room} />
-                        </motion.div>
+                        </div>
                     )}
-                </AnimatePresence>
+                </>
 
                 <main ref={chatScrollRef} className="flex-1 flex flex-col overflow-y-auto">
                     {gameContent && (

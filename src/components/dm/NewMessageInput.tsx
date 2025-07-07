@@ -12,7 +12,6 @@ import { Input } from '@/components/ui/input';
 import { Send, Loader2, ImagePlus, Mic, Trash2, Camera, Timer, X, StopCircle, Play, Pause } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { motion, AnimatePresence } from 'framer-motion';
 
 interface UserInfo {
   uid: string;
@@ -34,7 +33,7 @@ type MessageFormValues = z.infer<typeof messageSchema>;
 
 const formatRecordingTime = (timeInSeconds: number) => {
     const minutes = Math.floor(timeInSeconds / 60);
-    const seconds = Math.floor(timeInSeconds % 60);
+    const remainingSeconds = Math.floor(timeInSeconds % 60);
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
 
@@ -241,13 +240,9 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
                 </div>
             )}
             
-            <AnimatePresence>
+            <>
             {recordingStatus !== 'idle' ? (
-                <motion.div
-                    key="recorder-ui"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
+                <div
                     className="flex w-full items-center justify-between p-2 overflow-hidden"
                 >
                     {recordingStatus === 'recording' ? (
@@ -274,14 +269,9 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
                             </Button>
                          </>
                     )}
-                </motion.div>
+                </div>
             ) : (
-                <motion.div
-                     key="input-ui"
-                     initial={{ opacity: 0, y: -10 }}
-                     animate={{ opacity: 1, y: 0 }}
-                     exit={{ opacity: 0, y: -10 }}
-                >
+                <div>
                     <form 
                       onSubmit={handleSubmit(onSubmit)} 
                       className="flex w-full items-center space-x-2 p-1"
@@ -324,9 +314,9 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
                             </Button>
                         )}
                     </form>
-                </motion.div>
+                </div>
             )}
-            </AnimatePresence>
+            </>
         </div>
     );
 }
