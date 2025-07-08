@@ -59,7 +59,6 @@ export async function createPost(postData: {
     userGender?: 'male' | 'female';
     text: string;
     imageUrl?: string;
-    videoUrl?: string;
     editedWithAI?: boolean;
     language: string;
     commentsDisabled?: boolean;
@@ -138,16 +137,6 @@ export async function deletePost(postId: string) {
                 } catch(error: any) {
                     if (error.code !== 'storage/object-not-found') {
                         console.error("Storage resmi silinirken hata oluştu:", error);
-                    }
-                }
-            }
-             if (postData.videoUrl) {
-                try {
-                    const videoRef = ref(storage, postData.videoUrl);
-                    await deleteObject(videoRef);
-                } catch(error: any) {
-                    if (error.code !== 'storage/object-not-found') {
-                        console.error("Storage videosu silinirken hata oluştu:", error);
                     }
                 }
             }

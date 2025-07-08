@@ -135,9 +135,6 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
                                 className="rounded-md object-cover max-w-full h-auto"
                             />
                         )}
-                        {msg.videoUrl && (
-                            <video src={msg.videoUrl} controls className="w-full max-w-xs rounded-md" />
-                        )}
                         {msg.text && (
                             <p className="text-sm break-words whitespace-pre-wrap mt-1 px-1">{msg.text}</p>
                         )}

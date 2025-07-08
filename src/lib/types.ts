@@ -203,7 +203,6 @@ export interface Post {
     userGender?: 'male' | 'female';
     text: string;
     imageUrl?: string;
-    videoUrl?: string;
     editedWithAI?: boolean;
     createdAt: Timestamp | { seconds: number; nanoseconds: number };
     likes: string[]; // Beğenen kullanıcıların UID'lerini tutan dizi
@@ -400,8 +399,7 @@ export interface Message {
   username: string;
   photoURL?: string | null;
   text?: string;
-  imageUrl?: string; // Changed from imageUrls
-  videoUrl?: string;
+  imageUrl?: string;
   type?: 'system' | 'game' | 'portal' | 'user' | 'gameInvite';
   createdAt: Timestamp;
   portalRoomId?: string;
