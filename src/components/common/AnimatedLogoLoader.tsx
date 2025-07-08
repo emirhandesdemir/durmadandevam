@@ -28,7 +28,7 @@ export default function AnimatedLogoLoader({ fullscreen = false, className, isAu
 
   if (fullscreen) {
     return (
-      <div className={cn("flex min-h-screen items-center justify-center", isAuthPage ? 'auth-bg' : 'bg-background')}>
+      <div className={cn("flex min-h-screen items-center justify-center", isAuthPage ? 'bg-background' : 'bg-background')}>
         {loader}
       </div>
     );

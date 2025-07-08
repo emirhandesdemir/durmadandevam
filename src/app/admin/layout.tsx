@@ -1,4 +1,3 @@
-
 // src/app/admin/layout.tsx
 // Bu, tüm /admin rotaları için ana iskelet (layout) bileşenidir.
 // Kimlik doğrulama ve yetkilendirme kontrollerini burada yapar.

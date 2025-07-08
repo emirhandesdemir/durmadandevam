@@ -3,14 +3,12 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { doc, onSnapshot, DocumentData, collection, query, where, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, DocumentData, collection, query, where, updateDoc, serverTimestamp, setDoc, getDocs } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import type { FeatureFlags, UserProfile, ThemeSettings } from '@/lib/types';
 import { triggerProfileCompletionNotification } from '@/lib/actions/notificationActions';
-import PremiumWelcomeManager from '@/components/common/PremiumWelcomeManager';
-
 
 interface AuthContextType {
   user: User | null;
