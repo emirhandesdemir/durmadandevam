@@ -13,3 +13,4 @@
 # doğru şekilde yönetmesini sağlayan eklenti.
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
