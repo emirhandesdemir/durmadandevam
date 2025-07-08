@@ -1,4 +1,3 @@
-
 // src/app/signup/page.tsx
 "use client";
 
@@ -32,7 +31,7 @@ export default function SignUpPage() {
   return (
     <Suspense fallback={<AnimatedLogoLoader fullscreen isAuthPage />}>
       {/* Asıl sayfa içeriği */}
-      <main className="relative flex min-h-screen flex-col items-center justify-center p-4 auth-bg">
+      <main className="relative flex min-h-screen flex-col items-center justify-center p-4">
         <div className="w-full animate-in zoom-in-95 duration-500">
           <SignUpForm />
         </div>

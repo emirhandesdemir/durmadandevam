@@ -1,4 +1,3 @@
-
 // Bu dosya, uygulamanın en dış katmanını oluşturan kök düzendir (root layout).
 // Tüm sayfalar bu düzenin içinde render edilir.
 // HTML ve BODY etiketlerini, temel fontları, tema ve kimlik doğrulama sağlayıcılarını içerir.
@@ -93,5 +92,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-    

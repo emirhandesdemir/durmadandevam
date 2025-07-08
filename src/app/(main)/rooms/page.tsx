@@ -1,4 +1,3 @@
-
 // src/app/(main)/rooms/page.tsx
 'use client';
 
@@ -21,7 +20,7 @@ export default function RoomsPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   return (
-    <div className={cn("min-h-screen bg-background text-foreground", "rooms-page-bg")}>
+    <div className={cn("min-h-screen bg-background text-foreground")}>
       <main className="container mx-auto max-w-7xl px-4 py-6 md:py-8">
         <div className="flex flex-col gap-8">
           {/* Yeni oda oluşturma veya mevcut odayı yönetme kartı. */}

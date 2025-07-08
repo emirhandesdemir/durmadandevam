@@ -8,7 +8,9 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
+import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -120,9 +122,7 @@ export default function MainAppLayout({
   const isHomePage = pathname === '/home';
 
   return (
-    <>
-      <PremiumWelcomeManager />
-      <div className="relative flex h-screen w-full flex-col bg-background overflow-hidden">
+    <div className="relative flex h-screen w-full flex-col bg-background overflow-hidden">
         <PwaInstallBar />
         
         <main 
@@ -150,6 +150,5 @@ export default function MainAppLayout({
         
         <BottomNav />
       </div>
-    </>
   );
 }

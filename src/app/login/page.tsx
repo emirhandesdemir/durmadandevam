@@ -1,4 +1,3 @@
-
 // Bu dosya, uygulamanın giriş sayfasını oluşturur.
 "use client";
 
@@ -27,7 +26,7 @@ export default function LoginPage() {
 
   // Kullanıcı giriş yapmamışsa, giriş formunu göster.
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center p-4 auth-bg">
+    <main className="relative flex min-h-screen flex-col items-center justify-center p-4">
       <div className="w-full animate-in zoom-in-95 duration-500">
         <LoginForm />
       </div>

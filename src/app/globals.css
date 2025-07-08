@@ -64,17 +64,6 @@
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior-y: contain;
   }
-  .auth-bg {
-    background: linear-gradient(-45deg, #ef4444, #dc2626, #3b82f6, #2563eb);
-    background-size: 400% 400%;
-    animation: gradientBG 15s ease infinite;
-  }
-
-  @keyframes gradientBG {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-  }
 }
 
 .event-room-bg {
@@ -96,4 +85,3 @@
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
 }
-
