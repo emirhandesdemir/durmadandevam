@@ -13,7 +13,7 @@ import Image from "next/image";
 interface HeaderProps {}
 
 export default function Header({}: HeaderProps) {
-    const { themeSettings, userData, totalUnreadDms } = useAuth();
+    const { themeSettings, userData } = useAuth();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const pathname = usePathname();
 
@@ -50,7 +50,6 @@ export default function Header({}: HeaderProps) {
                                     <Link href="/dm">
                                         <div className="relative">
                                             <Send className="h-5 w-5" />
-                                            {totalUnreadDms > 0 && <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span></span>}
                                         </div>
                                     </Link>
                                 </Button>

@@ -17,7 +17,6 @@ interface AuthContextType {
   userData: UserProfile | null;
   featureFlags: FeatureFlags | null;
   themeSettings: ThemeSettings | null;
-  totalUnreadDms: number;
   loading: boolean;
   handleLogout: () => Promise<void>;
 }
@@ -27,7 +26,6 @@ const AuthContext = createContext<AuthContextType>({
   userData: null,
   featureFlags: null,
   themeSettings: null,
-  totalUnreadDms: 0,
   loading: true,
   handleLogout: async () => {},
 });
@@ -37,7 +35,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userData, setUserData] = useState<UserProfile | null>(null);
   const [featureFlags, setFeatureFlags] = useState<FeatureFlags | null>(null);
   const [themeSettings, setThemeSettings] = useState<ThemeSettings | null>(null);
-  const [totalUnreadDms, setTotalUnreadDms] = useState(0);
   const [authLoading, setAuthLoading] = useState(true);
   const [firestoreLoading, setFirestoreLoading] = useState(true);
   const router = useRouter();
@@ -134,7 +131,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     let unsubscribeUser: () => void = () => {};
-    let unsubscribeDms: () => void = () => {};
 
     if (user) {
       const userDocRef = doc(db, 'users', user.uid);
@@ -166,40 +162,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setFirestoreLoading(false);
       });
 
-      const dmsQuery = query(
-        collection(db, 'directMessagesMetadata'),
-        where('participantUids', 'array-contains', user.uid)
-      );
-      unsubscribeDms = onSnapshot(dmsQuery, (snapshot) => {
-        let total = 0;
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            total += data.unreadCounts?.[user.uid] || 0;
-        });
-        setTotalUnreadDms(total);
-      });
-
     } else {
       setUserData(null);
-      setTotalUnreadDms(0);
       setFirestoreLoading(false);
     }
 
     return () => {
       unsubscribeUser();
       unsubscribeFeatures();
-      unsubscribeDms();
       unsubscribeTheme();
     };
   }, [user, handleLogout, toast]);
 
   const loading = authLoading || firestoreLoading;
 
-  const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms };
+  const value = { user, userData, loading, handleLogout, featureFlags, themeSettings };
 
   return (
     <AuthContext.Provider value={value}>
-        <PremiumWelcomeManager />
         {children}
     </AuthContext.Provider>
   );
