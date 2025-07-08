@@ -9,7 +9,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Loader2, ImagePlus, X, FileVideo } from 'lucide-react';
+import { Send, Loader2, ImagePlus, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Room } from '@/lib/types';
 

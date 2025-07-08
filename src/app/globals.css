@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -246,34 +247,4 @@
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
   }
-}
-
-.event-room-bg {
-    background-image:
-        radial-gradient(at 27% 37%, hsla(215,98%,61%,0.4) 0px, transparent 50%),
-        radial-gradient(at 97% 21%, hsla(125,98%,72%,0.4) 0px, transparent 50%),
-        radial-gradient(at 52% 99%, hsla(355,98%,76%,0.4) 0px, transparent 50%),
-        radial-gradient(at 10% 29%, hsla(256,96%,68%,0.4) 0px, transparent 50%),
-        radial-gradient(at 97% 96%, hsla(38,98%,70%,0.4) 0px, transparent 50%),
-        radial-gradient(at 33% 50%, hsla(222,97%,71%,0.4) 0px, transparent 50%),
-        radial-gradient(at 79% 53%, hsla(343,98%,74%,0.4) 0px, transparent 50%);
-    background-size: 100% 100%;
-}
-
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.hide-scrollbar {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
-}
-
-@keyframes like-pop {
-  0% { opacity: 0; transform: scale(0.5); }
-  30% { opacity: 0.9; transform: scale(1.2); }
-  60% { opacity: 0.9; transform: scale(1.0); }
-  100% { opacity: 0; transform: scale(1.0); }
-}
-.animate-like-pop {
-  animation: like-pop 0.6s ease-in-out forwards;
 }

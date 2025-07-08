@@ -6,12 +6,13 @@ import PostsFeed from "@/components/posts/PostsFeed";
 import { Card, CardContent } from "@/components/ui/card";
 import { EyeOff } from "lucide-react";
 import FirstPostRewardCard from "@/components/posts/FirstPostRewardCard";
+import NewPostForm from "@/components/posts/NewPostForm";
 
 /**
  * Ana Sayfa (Home Page)
  * 
  * Uygulamanın ana giriş sayfasıdır. Kullanıcı giriş yaptıktan sonra bu sayfayı görür.
- * Artık admin panelinden kontrol edilebilen bir özellik bayrağına göre gönderi akışını gösterir.
+ * Admin panelinden kontrol edilebilen bir özellik bayrağına göre gönderi akışını gösterir.
  * Ayrıca yeni kullanıcılara ilk gönderi ödül kartını gösterir.
  */
 export default function HomePage() {
@@ -39,8 +40,11 @@ export default function HomePage() {
     <div className="min-h-screen bg-background text-foreground">
       <main>
         <div className="flex flex-col items-center gap-4">
+          <div className="w-full max-w-2xl px-4 pt-4">
+            <NewPostForm />
+          </div>
           {!loading && userData?.postCount === 0 && (
-             <div className="w-full px-4 pt-4">
+             <div className="w-full px-4">
                 <FirstPostRewardCard />
             </div>
           )}
