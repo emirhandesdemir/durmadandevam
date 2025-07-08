@@ -19,7 +19,9 @@ export default function PostsFeed() {
     const filteredAndSortedPosts = useMemo(() => {
         if (!userData) return posts;
         const allHiddenIds = new Set([...(userData.hiddenPostIds || []), ...clientHiddenIds]);
-        return posts.filter(post => !allHiddenIds.has(post.id) && !userData.blockedUsers?.includes(post.uid));
+        // Also filter out posts from users the current user has blocked
+        const blockedByCurrentUser = userData.blockedUsers || [];
+        return posts.filter(post => !allHiddenIds.has(post.id) && !blockedByCurrentUser.includes(post.uid));
     }, [posts, userData, clientHiddenIds]);
 
     const handleHidePost = async (postId: string) => {
@@ -56,7 +58,7 @@ export default function PostsFeed() {
 
     if (loading) {
         return (
-            <div className="space-y-4 w-full max-w-xl mx-auto p-4">
+            <div className="space-y-4 w-full">
                 <Skeleton className="h-48 w-full rounded-2xl" />
                 <Skeleton className="h-48 w-full rounded-2xl" />
             </div>
@@ -73,7 +75,7 @@ export default function PostsFeed() {
     }
     
     return (
-        <div className="w-full max-w-xl mx-auto">
+        <div className="w-full">
              <div className="bg-background">
                 {filteredAndSortedPosts.map(post => (
                     <PostCard key={post.id} post={post} onHide={handleHidePost} />
