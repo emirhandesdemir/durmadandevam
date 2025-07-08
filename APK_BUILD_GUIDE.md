@@ -107,3 +107,4 @@ Google'ın, web sitenizin gerçekten size ait olduğundan emin olması gerekir. 
 
 Bu son adımdan sonra APK dosyanız, URL çubuğu olmadan tam ekran bir şekilde çalışacaktır. Artık bu APK dosyasını test edebilir veya Google Play Console'a yükleyerek yayınlayabilirsiniz!
 
+

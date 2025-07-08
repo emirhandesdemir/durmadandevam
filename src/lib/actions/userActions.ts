@@ -316,3 +316,17 @@ export async function submitReport(reportData: Omit<Report, 'id' | 'timestamp'>)
         return { success: false, error: "Rapor gönderilirken bir hata oluştu." };
     }
 }
+
+export async function hidePost(userId: string, postId: string) {
+    if (!userId || !postId) return;
+
+    const userRef = doc(db, 'users', userId);
+    try {
+        await updateDoc(userRef, {
+            hiddenPostIds: arrayUnion(postId)
+        });
+        revalidatePath('/home');
+    } catch (error) {
+        console.error("Error hiding post:", error);
+    }
+}
