@@ -13,7 +13,6 @@ import TextChat from '@/components/chat/text-chat';
 import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
 import RoomHeader from '@/components/rooms/RoomHeader';
 import VoiceAudioPlayer from '@/components/voice/VoiceAudioPlayer';
-import ActiveCallBar from '@/components/voice/ActiveCallBar';
 
 import type { Room, Message, Giveaway } from '@/lib/types';
 import RoomFooter from '@/components/rooms/RoomFooter';
@@ -155,7 +154,6 @@ function RoomPageContent() {
                 isHost={isHost}
             />
             <VoiceAudioPlayer />
-            <ActiveCallBar />
         </>
     );
 }
