@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
 import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
-import { AuthProvider } from "@/contexts/AuthContext";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;

@@ -7,12 +7,13 @@ import { doc, onSnapshot, collection, query, orderBy, limit, where, Timestamp } 
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { useVoiceChat } from '@/contexts/VoiceChatContext';
+import { VoiceChatProvider, useVoiceChat } from '@/contexts/VoiceChatContext';
 import { Loader2 } from 'lucide-react';
 import TextChat from '@/components/chat/text-chat';
 import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
 import RoomHeader from '@/components/rooms/RoomHeader';
-import { AnimatePresence, motion } from 'framer-motion';
+import VoiceAudioPlayer from '@/components/voice/VoiceAudioPlayer';
+import ActiveCallBar from '@/components/voice/ActiveCallBar';
 
 import type { Room, Message, Giveaway } from '@/lib/types';
 import RoomFooter from '@/components/rooms/RoomFooter';
@@ -23,7 +24,7 @@ import GiveawayCard from '@/components/rooms/GiveawayCard';
 import { cn } from '@/lib/utils';
 import GiveawayDialog from '@/components/rooms/GiveawayDialog';
 
-export default function RoomPage() {
+function RoomPageContent() {
     const params = useParams();
     const router = useRouter();
     const { toast } = useToast();
@@ -123,19 +124,15 @@ export default function RoomPage() {
                     onToggleCollapse={() => setIsSpeakerLayoutCollapsed(p => !p)}
                 />
                 
-                <AnimatePresence>
+                <>
                     {!isSpeakerLayoutCollapsed && (
-                         <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                         <div
                             className="overflow-hidden"
                         >
                             <SpeakerLayout room={room} />
-                        </motion.div>
+                        </div>
                     )}
-                </AnimatePresence>
+                </>
 
                 <main ref={chatScrollRef} className="flex-1 flex flex-col overflow-y-auto">
                     {gameContent && (
@@ -157,6 +154,16 @@ export default function RoomPage() {
                 roomId={roomId}
                 isHost={isHost}
             />
+            <VoiceAudioPlayer />
+            <ActiveCallBar />
         </>
+    );
+}
+
+export default function RoomPage() {
+    return (
+        <VoiceChatProvider>
+            <RoomPageContent />
+        </VoiceChatProvider>
     );
 }
