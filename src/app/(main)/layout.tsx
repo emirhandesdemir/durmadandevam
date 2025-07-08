@@ -6,7 +6,6 @@ import { useState, useRef, useEffect } from 'react';
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import NotificationPermissionManager from "@/components/common/NotificationPermissionManager";
-import InAppNotificationHandler from "@/components/common/InAppNotificationHandler";
 import IncomingCallManager from '@/components/common/IncomingCallManager'; // Import the new component
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
@@ -117,7 +116,6 @@ export default function MainAppLayout({
     <>
       {/* Bildirim izni ve PWA yükleme gibi genel işlemleri yöneten bileşenler. */}
       <NotificationPermissionManager />
-      <InAppNotificationHandler />
       <IncomingCallManager />
       <PremiumWelcomeManager />
       
