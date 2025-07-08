@@ -85,13 +85,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const screenSenderRef = useRef<Record<string, RTCRtpSender>>({});
     const videoSenderRef = useRef<Record<string, RTCRtpSender>>({});
     const lastActiveUpdateTimestamp = useRef<number>(0);
-
-    // Music Refs
-    const musicAudioRef = useRef<HTMLAudioElement | null>(null);
+    const audioWorkletNodeRef = useRef<AudioWorkletNode | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
-    const originalMicTrackRef = useRef<MediaStreamTrack | null>(null);
-    const mixedStreamDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null);
-    const musicGainNodeRef = useRef<GainNode | null>(null);
 
     const self = useMemo(() => participants.find(p => p.uid === user?.uid), [participants, user?.uid]);
     const isConnected = !!self && !!connectedRoomId;
@@ -121,6 +116,15 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         setLocalStream(null);
         setLocalScreenStream(null);
         setIsSharingVideo(false);
+
+        if(audioWorkletNodeRef.current) {
+            audioWorkletNodeRef.current.disconnect();
+            audioWorkletNodeRef.current = null;
+        }
+        if(audioContextRef.current && audioContextRef.current.state !== 'closed') {
+            await audioContextRef.current.close();
+            audioContextRef.current = null;
+        }
 
         // Reset state
         setRemoteAudioStreams({});
@@ -371,8 +375,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             }
         });
 
-        const playlistUnsub = onSnapshot(collection(db, "rooms", activeRoomId, "playlist"), snapshot => {
-            const tracks = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as PlaylistTrack)).sort((a,b) => a.order - b.order);
+        const playlistUnsub = onSnapshot(query(collection(db, "rooms", activeRoomId, "playlist"), orderBy("order")), snapshot => {
+            const tracks = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as PlaylistTrack));
             setLivePlaylist(tracks);
         });
 

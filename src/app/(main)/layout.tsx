@@ -3,11 +3,13 @@
 
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/Header";
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
+import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -119,7 +121,9 @@ export default function MainAppLayout({
   const isHomePage = pathname === '/home';
 
   return (
-    <div className="relative flex h-screen w-full flex-col bg-background overflow-hidden">
+    <>
+      <PremiumWelcomeManager />
+      <div className="relative flex h-screen w-full flex-col bg-background overflow-hidden">
         <PwaInstallBar />
         
         <main 
@@ -146,7 +150,7 @@ export default function MainAppLayout({
         </main>
         
         <BottomNav />
-        {/* VoiceChatProvider and related components have been moved to RoomPage to improve performance */}
-    </div>
+      </div>
+    </>
   );
 }
