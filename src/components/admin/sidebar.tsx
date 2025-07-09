@@ -26,12 +26,14 @@ import {
   RadioTower,
   Gift,
   Bot,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "../ui/button";
 
 // Navigasyon öğeleri listesi
 const navItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/studio", label: "Studio AI", icon: Sparkles },
   { href: "/admin/analytics", label: "İstatistikler", icon: BarChart3 },
   { href: "/admin/status", label: "Sistem Durumu", icon: HeartPulse },
   { href: "/admin/users", label: "Kullanıcılar", icon: Users },
