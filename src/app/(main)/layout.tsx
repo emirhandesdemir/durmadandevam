@@ -1,3 +1,4 @@
+
 // src/app/(main)/layout.tsx
 'use client';
 
@@ -6,6 +7,9 @@ import Header from "@/components/layout/Header";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
+import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
+import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
+import ActiveCallBar from "@/components/voice/ActiveCallBar";
 
 /**
  * Ana Uygulama Düzeni (Main App Layout)
@@ -29,40 +33,41 @@ export default function MainAppLayout({
 
 
   return (
-    <>
-      <PremiumWelcomeManager />
-      
-      <div className="relative flex h-screen w-full flex-col bg-background overflow-hidden">
-        
-        {/* Ana içerik alanı */}
-        <main 
-          className={cn(
-            "flex-1 flex flex-col",
-            isFullPageLayout ? "overflow-hidden" : "overflow-y-auto pb-24" // Tam ekran sayfalarda kaydırmayı engelle.
-          )}
-        >
-           {/* Header'ı olmayan sayfalarda Header'ı render etme. */}
-           {!isHeaderlessPage && (
-              <header
-                className="sticky top-0 z-40"
-              >
-                <Header />
-              </header>
-           )}
+      <VoiceChatProvider>
+        <PremiumWelcomeManager />
+        <div className="relative flex h-screen w-full flex-col bg-background overflow-hidden">
           
-           <div
-                className={cn(
-                  "flex-1 flex flex-col",
-                  isFullPageLayout ? "overflow-hidden" : "",
-                  !isHomePage && !isFullPageLayout && "p-4"
-                )}
-             >
-              {children}
-             </div>
-        </main>
-        
-        <BottomNav />
-      </div>
-    </>
+          {/* Ana içerik alanı */}
+          <main 
+            className={cn(
+              "flex-1 flex flex-col",
+              isFullPageLayout ? "overflow-hidden" : "overflow-y-auto pb-24" // Tam ekran sayfalarda kaydırmayı engelle.
+            )}
+          >
+             {/* Header'ı olmayan sayfalarda Header'ı render etme. */}
+             {!isHeaderlessPage && (
+                <header
+                  className="sticky top-0 z-40"
+                >
+                  <Header />
+                </header>
+             )}
+            
+             <div
+                  className={cn(
+                    "flex-1 flex flex-col",
+                    isFullPageLayout ? "overflow-hidden" : "",
+                    !isHomePage && !isFullPageLayout && "p-4"
+                  )}
+               >
+                {children}
+               </div>
+          </main>
+          
+          <VoiceAudioPlayer />
+          <ActiveCallBar />
+          <BottomNav />
+        </div>
+      </VoiceChatProvider>
   );
 }

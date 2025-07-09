@@ -12,60 +12,6 @@ import { useTranslation } from "react-i18next";
 import AnimatedLogoLoader from "@/components/common/AnimatedLogoLoader";
 import Image from "next/image";
 
-// PwaInstallButton component is moved here to consolidate files.
-function PwaInstallButton() {
-  const { t } = useTranslation();
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
-
-  useEffect(() => {
-    // Don't show if already in standalone mode
-    if (typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches) {
-      return;
-    }
-
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setInstallPrompt(e);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
-  }, []);
-
-  const handleInstallClick = () => {
-    if (!installPrompt) return;
-    installPrompt.prompt();
-    installPrompt.userChoice.then((choiceResult: { outcome: string }) => {
-      if (choiceResult.outcome === 'accepted') {
-        console.log('User accepted the A2HS prompt');
-      } else {
-        console.log('User dismissed the A2HS prompt');
-      }
-      setInstallPrompt(null);
-    });
-  };
-  
-  if (!installPrompt) {
-    return null;
-  }
-
-  return (
-    <Button 
-      size="lg"
-      variant="secondary"
-      onClick={handleInstallClick}
-      className="transition-transform hover:scale-105"
-    >
-        <Download className="mr-2 h-5 w-5" />
-        {t('install_app')}
-    </Button>
-  );
-}
-
-
 export default function Home() {
   const router = useRouter();
   const { user, loading, themeSettings } = useAuth();
@@ -110,7 +56,6 @@ export default function Home() {
         <Button asChild size="lg" variant="outline" className="transition-transform hover:scale-105">
           <Link href="/signup">{t('signup')}</Link>
         </Button>
-        <PwaInstallButton />
       </div>
     </main>
   );

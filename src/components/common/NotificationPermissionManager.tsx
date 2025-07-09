@@ -1,119 +1,62 @@
+// Bu dosya, uygulamanın ana giriş sayfasıdır (`/`).
+// Kullanıcı giriş yapmamışsa veya ilk kez ziyaret ediyorsa bu sayfa gösterilir.
+"use client";
 
-'use client';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Users, Download } from "lucide-react";
+import Link from "next/link";
+import { useTranslation } from "react-i18next";
+import AnimatedLogoLoader from "@/components/common/AnimatedLogoLoader";
+import Image from "next/image";
 
-import { useEffect, useCallback, useRef } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { Button } from '../ui/button';
-import { BellRing } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+export default function Home() {
+  const router = useRouter();
+  const { user, loading, themeSettings } = useAuth();
+  const { t } = useTranslation();
 
-declare global {
-  interface Window {
-    OneSignal: any;
-    OneSignalDeferred?: any[];
+  // Authentication status check.
+  useEffect(() => {
+    // If loading is finished and the user is logged in,
+    // redirect them directly to the main page (/home).
+    if (!loading && user) {
+      router.replace('/home');
+    }
+  }, [user, loading, router]);
+
+  // Show a loading animation while the auth state is being determined.
+  // This prevents the page from changing abruptly and provides a smoother experience.
+  if (loading) {
+    return <AnimatedLogoLoader fullscreen />;
   }
-}
-
-/**
- * Manages all OneSignal SDK interactions: initialization, permission requests,
- * and user identification. This is the single source of truth for OneSignal.
- */
-export default function NotificationPermissionManager() {
-  const { toast, dismiss } = useToast();
-  const { user } = useAuth(); // Get the current user from AuthContext
-  const oneSignalAppId = "51c67432-a305-43fc-a4c8-9c5d9d478d1c";
-  const isInitialized = useRef(false); // Ref to track initialization
-
-  // Handles the logic for requesting notification permissions from the user.
-  const requestPermission = useCallback(() => {
-    window.OneSignal?.Notifications.requestPermission();
-  }, []);
-
-  // Asks the user to enable notifications via a dismissible toast.
-  const promptForPermission = useCallback(() => {
-    const { id } = toast({
-      title: 'Bildirimleri Etkinleştir',
-      description: 'Uygulamadan en iyi şekilde yararlanmak için anlık bildirimlere izin verin.',
-      duration: Infinity,
-      action: (
-        <Button onClick={() => {
-          requestPermission();
-          dismiss(id);
-        }}>
-          <BellRing className="mr-2 h-4 w-4" />
-          İzin Ver
-        </Button>
-      ),
-    });
-  }, [toast, dismiss, requestPermission]);
-
-  // Effect for initializing OneSignal and setting up listeners. Runs only once.
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
-    // Ensure the deferred queue exists
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    
-    window.OneSignalDeferred.push(function(OneSignal: any) {
-        // Prevent re-initialization
-        if (isInitialized.current) return;
-        isInitialized.current = true;
-        
-        console.log('[OneSignal] Initializing SDK...');
-        OneSignal.init({
-            appId: oneSignalAppId,
-            allowLocalhostAsSecureOrigin: true,
-            serviceWorkerPath: 'OneSignalSDK.sw.js', // Use default service worker path
-        }).then(() => {
-            console.log("[OneSignal] SDK Initialized.");
-            
-            // Check for permission after init
-            if (OneSignal.Notifications.permission === 'default') {
-              promptForPermission();
-            }
-        });
-
-        // Listener for notification permission changes
-        OneSignal.Notifications.addEventListener('permissionChange', (permission: boolean) => {
-            console.log("[OneSignal] New permission state:", permission);
-            if (permission) {
-                toast({
-                    title: 'Teşekkürler!',
-                    description: 'Artık önemli etkinlikler için bildirim alacaksınız.',
-                });
-            } else {
-                toast({
-                    title: 'Bildirimler Engellendi',
-                    description: 'Bildirimleri etkinleştirmek için tarayıcı ayarlarınızı kontrol edebilirsiniz.',
-                    variant: 'destructive'
-                });
-            }
-        });
-    });
-  }, [oneSignalAppId, promptForPermission, toast]);
   
-  // This separate effect handles user login/logout based on auth state changes.
-  useEffect(() => {
-     if (typeof window === 'undefined') return;
-     
-     // Ensure the deferred queue exists
-     window.OneSignalDeferred = window.OneSignalDeferred || [];
+  // If the user is logged in, this component returns null while the redirect happens.
+  if (user) {
+    return null;
+  }
 
-     window.OneSignalDeferred.push(function(OneSignal: any) {
-        if (!isInitialized.current) {
-            // Wait for initialization logic to run
-            return;
-        }
-
-        if (user) {
-            console.log(`[OneSignal] Auth state changed. Logging in user: ${user.uid}`);
-            OneSignal.login(user.uid);
-        } else {
-             console.log("[OneSignal] Auth state changed. User is null, logging out from OneSignal.");
-             OneSignal.logout();
-        }
-     });
-  }, [user]);
-
-  return null; // This component does not render anything
+  // If loading is complete and there is no user, show the welcome page.
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500">
+      <div className="flex flex-col items-center gap-4">
+        <Image src="/icons/icon.svg" alt="HiweWalk Logo" width={80} height={80} className="h-20 w-20" />
+        <h1 className="text-5xl font-bold tracking-tight text-foreground md:text-6xl">
+          {t('welcome_to_hiwewalk', { appName: themeSettings?.appName || 'HiweWalk' })}
+        </h1>
+        <p className="max-w-md text-lg text-muted-foreground">
+          {t('app_description')}
+        </p>
+      </div>
+      <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row">
+        <Button asChild size="lg" className="transition-transform hover:scale-105">
+          <Link href="/login">{t('login')}</Link>
+        </Button>
+        <Button asChild size="lg" variant="outline" className="transition-transform hover:scale-105">
+          <Link href="/signup">{t('signup')}</Link>
+        </Button>
+      </div>
+    </main>
+  );
 }
