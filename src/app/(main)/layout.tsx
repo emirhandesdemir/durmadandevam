@@ -3,11 +3,8 @@
 
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/Header";
-import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
-import ActiveCallBar from "@/components/voice/ActiveCallBar";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import NotificationPermissionManager from "@/components/common/NotificationPermissionManager";
 import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
 
 /**
@@ -32,11 +29,10 @@ export default function MainAppLayout({
 
 
   return (
-    <VoiceChatProvider>
-      <NotificationPermissionManager />
+    <>
       <PremiumWelcomeManager />
       
-      <div className="relative flex h-dvh w-full flex-col bg-background overflow-hidden">
+      <div className="relative flex h-screen w-full flex-col bg-background overflow-hidden">
         
         {/* Ana içerik alanı */}
         <main 
@@ -65,10 +61,8 @@ export default function MainAppLayout({
              </div>
         </main>
         
-        {/* Her zaman aktif olan sesli sohbet bileşenleri. */}
-        <ActiveCallBar />
         <BottomNav />
       </div>
-    </VoiceChatProvider>
+    </>
   );
 }

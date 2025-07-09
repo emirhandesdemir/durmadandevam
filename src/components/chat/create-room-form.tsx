@@ -1,3 +1,1 @@
-// Bu dosya artık kullanılmamaktadır. Oda oluşturma mantığı
-// `src/components/rooms/CreateRoomForm.tsx` dosyasına taşınmıştır.
-// Karışıklığı önlemek için içeriği temizlenmiştir ve güvenle silinebilir.
+// This file is obsolete and has been removed to clean up the project.
