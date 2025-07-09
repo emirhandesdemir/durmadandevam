@@ -1,4 +1,3 @@
-
 // src/app/admin/features/page.tsx
 "use client";
 
@@ -11,7 +10,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { SlidersHorizontal, Loader2, Gamepad2, Newspaper, FileLock2 } from "lucide-react";
+import { SlidersHorizontal, Loader2, Gamepad2, Newspaper, FileLock2, Bot, UserPlus, MessageSquare, Heart } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
@@ -94,62 +93,47 @@ export default function FeatureManagementPage() {
             </div>
 
             <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Quiz Oyunu Kartı */}
-                <Card>
+                 {/* Bot Otomasyon Kartı */}
+                 <Card className="lg:col-span-1">
                     <CardHeader>
                         <div className="flex items-center gap-3">
-                             <Gamepad2 className="h-6 w-6 text-primary" />
-                            <CardTitle>Oyunlar</CardTitle>
+                             <Bot className="h-6 w-6 text-primary" />
+                            <CardTitle>Bot Otomasyonu</CardTitle>
                         </div>
-                        <CardDescription>Oda içi oyun ve etkileşim modülleri.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
-                            <div className="space-y-0.5">
-                                <Label htmlFor="quiz-game" className="text-base">
-                                    Quiz Oyunu
-                                </Label>
-                                <p className="text-xs text-muted-foreground">
-                                    Odaların içinde periyodik olarak quiz oyunlarını etkinleştirir.
-                                </p>
-                            </div>
-                            <Switch
-                                id="quiz-game"
-                                checked={flags?.quizGameEnabled ?? true}
-                                onCheckedChange={(value) => handleFlagChange('quizGameEnabled', value)}
-                                disabled={saving}
-                            />
-                        </div>
-                    </CardContent>
-                </Card>
-                {/* Gönderi Akışı Kartı */}
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center gap-3">
-                             <Newspaper className="h-6 w-6 text-primary" />
-                            <CardTitle>Sosyal Akış</CardTitle>
-                        </div>
-                        <CardDescription>Kullanıcıların içerik paylaştığı ana akış modülleri.</CardDescription>
+                        <CardDescription>Botların otomatik davranışlarını buradan yönetin.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                          <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
                             <div className="space-y-0.5">
-                                <Label htmlFor="post-feed" className="text-base">
-                                    Gönderi Akışı
-                                </Label>
-                                <p className="text-xs text-muted-foreground">
-                                    Ana sayfadaki gönderi akışını ve gönderi oluşturmayı etkinleştirir.
-                                </p>
+                                <Label htmlFor="bot-onboarding" className="text-base flex items-center gap-2"><UserPlus/> Yeni Kullanıcı Karşılama</Label>
+                                <p className="text-xs text-muted-foreground pl-7">Botların yeni kullanıcılara DM atıp takip etmesini sağlar.</p>
                             </div>
-                            <Switch
-                                id="post-feed"
-                                checked={flags?.postFeedEnabled ?? true}
-                                onCheckedChange={(value) => handleFlagChange('postFeedEnabled', value)}
-                                disabled={saving}
-                            />
+                            <Switch id="bot-onboarding" checked={flags?.botNewUserOnboardEnabled ?? true} onCheckedChange={(value) => handleFlagChange('botNewUserOnboardEnabled', value)} disabled={saving} />
+                        </div>
+                         <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                            <div className="space-y-0.5">
+                                <Label htmlFor="bot-posting" className="text-base flex items-center gap-2"><Newspaper/> Periyodik Gönderi</Label>
+                                <p className="text-xs text-muted-foreground pl-7">Botların belirli aralıklarla içerik (resim, video, metin) paylaşmasını sağlar.</p>
+                            </div>
+                            <Switch id="bot-posting" checked={flags?.botAutoPostEnabled ?? true} onCheckedChange={(value) => handleFlagChange('botAutoPostEnabled', value)} disabled={saving} />
+                        </div>
+                         <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                            <div className="space-y-0.5">
+                                <Label htmlFor="bot-interaction" className="text-base flex items-center gap-2"><Heart/> Periyodik Etkileşim</Label>
+                                <p className="text-xs text-muted-foreground pl-7">Botların belirli aralıklarla gönderi beğenip yorum yapmasını sağlar.</p>
+                            </div>
+                            <Switch id="bot-interaction" checked={flags?.botAutoInteractEnabled ?? true} onCheckedChange={(value) => handleFlagChange('botAutoInteractEnabled', value)} disabled={saving} />
+                        </div>
+                         <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                            <div className="space-y-0.5">
+                                <Label htmlFor="bot-room" className="text-base flex items-center gap-2"><MessageSquare/> Oda Etkileşimi</Label>
+                                <p className="text-xs text-muted-foreground pl-7">Botların odalara katılıp sohbeti canlandırmasını sağlar.</p>
+                            </div>
+                            <Switch id="bot-room" checked={flags?.botAutoRoomInteractEnabled ?? true} onCheckedChange={(value) => handleFlagChange('botAutoRoomInteractEnabled', value)} disabled={saving} />
                         </div>
                     </CardContent>
                 </Card>
+
                  {/* İçerik Moderasyon Kartı */}
                  <Card>
                     <CardHeader>

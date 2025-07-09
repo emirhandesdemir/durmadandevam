@@ -4,7 +4,7 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import axios from "axios";
-import { GameSettings, BotState } from "./types"; // We need a types file in functions folder
+import { GameSettings, BotState, FeatureFlags } from "./types"; // We need a types file in functions folder
 import { getChatId } from "./utils";
 
 
@@ -47,23 +47,28 @@ const welcomeDms = [
     "Selam, uygulamaya hoş geldin! 🎉 Umarız harika vakit geçirirsin.",
     "Merhaba! Aramıza katıldığın için çok mutluyuz. 😊",
     "Hoş geldin! Yardıma ihtiyacın olursa çekinme. 🙋‍♀️",
+    "Naber? Uygulamayı keşfetmeye başla, harika şeyler var!",
+    "Selam, yeni bir yüz görmek ne güzel! Hadi bir oda oluştur da görelim seni.",
 ];
 
-const getBotSettings = async (): Promise<{ settings: GameSettings; state: BotState }> => {
+const getSystemConfig = async (): Promise<{ settings: GameSettings; state: BotState; flags: FeatureFlags; }> => {
     const settingsDoc = await db.collection('config').doc('gameSettings').get();
     const stateDoc = await db.collection('config').doc('botState').get();
+    const flagsDoc = await db.collection('config').doc('featureFlags').get();
     
-    const defaults: GameSettings = {
-        botAutomationEnabled: true,
-        botInteractIntervalMinutes: 30,
-        botPostIntervalMinutes: 60,
-        // Diğer ayarlar için varsayılanlar...
-        dailyDiamondLimit: 50, gameIntervalMinutes: 5, questionTimerSeconds: 15, rewardAmount: 5, cooldownSeconds: 30, afkTimeoutMinutes: 8, imageUploadQuality: 0.9, audioBitrate: 64, videoBitrate: 1000
+    const defaultSettings: GameSettings = {
+        dailyDiamondLimit: 50, gameIntervalMinutes: 5, questionTimerSeconds: 15, rewardAmount: 5, cooldownSeconds: 30, afkTimeoutMinutes: 8, imageUploadQuality: 0.9, audioBitrate: 64, videoBitrate: 1000, botPostIntervalMinutes: 60, botInteractIntervalMinutes: 30, botRoomJoinIntervalMinutes: 10, maxBotsPerRoom: 3
+    };
+
+    const defaultFlags: FeatureFlags = {
+        quizGameEnabled: true, postFeedEnabled: true, contentModerationEnabled: true,
+        botNewUserOnboardEnabled: true, botAutoPostEnabled: true, botAutoInteractEnabled: true, botAutoRoomInteractEnabled: true,
     };
 
     return {
-        settings: { ...defaults, ...settingsDoc.data() },
+        settings: { ...defaultSettings, ...settingsDoc.data() },
         state: stateDoc.data() || {},
+        flags: { ...defaultFlags, ...flagsDoc.data() },
     };
 };
 
@@ -76,9 +81,9 @@ const logBotActivity = async (logData: any) => {
 
 // BOT İÇERİK PAYLAŞIM FONKSİYONU
 export const botPostContent = functions.region("us-central1").pubsub.schedule('every 5 minutes').onRun(async (context) => {
-    const { settings, state } = await getBotSettings();
-    if (!settings.botAutomationEnabled) {
-        console.log("Bot otomasyonu devre dışı, içerik paylaşımı atlanıyor.");
+    const { settings, state, flags } = await getSystemConfig();
+    if (!flags.botAutoPostEnabled) {
+        console.log("Bot otomasyonu (paylaşım) devre dışı, işlem atlanıyor.");
         return null;
     }
     
@@ -100,16 +105,16 @@ export const botPostContent = functions.region("us-central1").pubsub.schedule('e
     const botDocs = botsSnapshot.docs;
     const randomBotDoc = randomElement(botDocs);
     const botUser = { id: randomBotDoc.id, ...randomBotDoc.data() };
-    const contentType = randomElement(['image', 'text', 'video']);
+    const contentType = randomElement(['video', 'video', 'image', 'text']); // Prioritize video
 
     const newPost: any = {
         uid: botUser.id, username: botUser.username, userAvatar: botUser.photoURL, userAvatarFrame: botUser.selectedAvatarFrame || '',
         userRole: 'user', userGender: 'female', createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        likeCount: 0, commentCount: 0, saveCount: 0, likes: [], savedBy: [], tags: [],
+        likeCount: 0, commentCount: 0, saveCount: 0, likes: [], savedBy: [], tags: [], isBotPost: true
     };
     switch(contentType) {
         case 'image': newPost.imageUrl = `https://picsum.photos/600/800?random=${Date.now()}`; newPost.text = randomElement(botCaptions); break;
-        case 'video': newPost.videoUrl = 'https://samplelib.com/lib/preview/mp4/sample-5s.mp4'; newPost.text = randomElement(botCaptions); break;
+        case 'video': newPost.videoUrl = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4'; newPost.text = randomElement(botCaptions); break;
         default: newPost.text = randomElement(botTextPosts); break;
     }
     
@@ -129,9 +134,9 @@ export const botPostContent = functions.region("us-central1").pubsub.schedule('e
 
 // BOT ETKİLEŞİM FONKSİYONU
 export const botInteract = functions.region("us-central1").pubsub.schedule('every 5 minutes').onRun(async (context) => {
-    const { settings, state } = await getBotSettings();
-    if (!settings.botAutomationEnabled) {
-        console.log("Bot otomasyonu devre dışı, etkileşim atlanıyor.");
+    const { settings, state, flags } = await getSystemConfig();
+    if (!flags.botAutoInteractEnabled) {
+        console.log("Bot otomasyonu (etkileşim) devre dışı, işlem atlanıyor.");
         return null;
     }
 
@@ -144,7 +149,7 @@ export const botInteract = functions.region("us-central1").pubsub.schedule('ever
     }
 
     console.log('Bot etkileşim fonksiyonu tetiklendi.');
-    const botsQuery = db.collection('users').where('isBot', '==', true).where('gender', '==', 'female');
+    const botsQuery = db.collection('users').where('isBot', '==', true);
     const botsSnapshot = await botsQuery.get();
     if (botsSnapshot.empty) return null;
     const randomBotDoc = randomElement(botsSnapshot.docs);
@@ -164,7 +169,7 @@ export const botInteract = functions.region("us-central1").pubsub.schedule('ever
             likes: admin.firestore.FieldValue.arrayUnion(botUser.id)
         });
         await admin.firestore().collection('users').doc(postData.uid).collection('notifications').add({
-            senderId: botUser.id, senderUsername: botUser.username, senderAvatar: botUser.photoURL,
+            senderId: botUser.id, senderUsername: botUser.username, senderAvatar: botUser.photoURL, senderAvatarFrame: botUser.selectedAvatarFrame || '',
             type: 'like', postId: randomPostDoc.id, postImage: postData.imageUrl || null,
             createdAt: admin.firestore.FieldValue.serverTimestamp(), read: false,
         });
@@ -173,13 +178,13 @@ export const botInteract = functions.region("us-central1").pubsub.schedule('ever
 
     const commentText = randomElement(botComments);
     await postRef.collection('comments').add({
-        uid: botUser.id, username: botUser.username, userAvatar: botUser.photoURL,
+        uid: botUser.id, username: botUser.username, userAvatar: botUser.photoURL, userAvatarFrame: botUser.selectedAvatarFrame || '',
         text: commentText, createdAt: admin.firestore.FieldValue.serverTimestamp(), userRole: 'user',
     });
     await postRef.update({ commentCount: admin.firestore.FieldValue.increment(1) });
     await admin.firestore().collection('users').doc(postData.uid).collection('notifications').add({
-        senderId: botUser.id, senderUsername: botUser.username, senderAvatar: botUser.photoURL,
-        type: 'comment', postId: randomPostDoc.id, commentText: commentText,
+        senderId: botUser.id, senderUsername: botUser.username, senderAvatar: botUser.photoURL, senderAvatarFrame: botUser.selectedAvatarFrame || '',
+        type: 'comment', postId: randomPostDoc.id, commentText: commentText, postImage: postData.imageUrl || null,
         createdAt: admin.firestore.FieldValue.serverTimestamp(), read: false,
     });
     await logBotActivity({ botId: botUser.id, botUsername: botUser.username, actionType: 'comment', targetPostId: randomPostDoc.id, targetUserId: postData.uid, targetUsername: postData.username, commentText });
@@ -368,7 +373,7 @@ export const sendPushNotification = functions.region("us-central1").firestore
 /**
  * Firebase Authentication'da yeni bir kullanıcı oluşturulduğunda tetiklenir.
  * Kullanıcı oluşturma olayı için bir denetim kaydı (audit log) oluşturur.
- * Ayrıca yeni kullanıcıya bir botun takip isteği göndermesini ve DM atmasını sağlar.
+ * Ayrıca yeni kullanıcıya botların takip isteği göndermesini ve DM atmasını sağlar.
  */
 export const onUserCreate = functions.auth.user().onCreate(async (user) => {
     // Denetim kaydı oluştur
@@ -386,51 +391,62 @@ export const onUserCreate = functions.auth.user().onCreate(async (user) => {
         return;
     }
 
-    // Rastgele bir bot seç
+    const { flags } = await getSystemConfig();
+    if (!flags.botNewUserOnboardEnabled) {
+        console.log("Yeni kullanıcı için bot etkileşimi devre dışı.");
+        return;
+    }
+
+    // Rastgele 5 bot seç
     const botsQuery = db.collection('users').where('isBot', '==', true);
     const botsSnapshot = await botsQuery.get();
     if (botsSnapshot.empty) return;
-    const randomBotDoc = randomElement(botsSnapshot.docs);
-    const botUser = { id: randomBotDoc.id, ...randomBotDoc.data() } as any;
+    
+    // Shuffle and pick 5
+    const allBots = botsSnapshot.docs;
+    const shuffledBots = allBots.sort(() => 0.5 - Math.random());
+    const selectedBots = shuffledBots.slice(0, 5);
+    
+    if (selectedBots.length === 0) return;
 
     const batch = db.batch();
-
-    // Bot yeni kullanıcıyı takip etsin
-    const botRef = db.collection('users').doc(botUser.id);
     const newUserRef = db.collection('users').doc(user.uid);
-    batch.update(botRef, { following: admin.firestore.FieldValue.arrayUnion(user.uid) });
-    batch.update(newUserRef, { followers: admin.firestore.FieldValue.arrayUnion(botUser.id) });
+
+    for (const botDoc of selectedBots) {
+        const botUser = { id: botDoc.id, ...botDoc.data() } as any;
+        const botRef = db.collection('users').doc(botUser.id);
+        batch.update(botRef, { following: admin.firestore.FieldValue.arrayUnion(user.uid) });
+        batch.update(newUserRef, { followers: admin.firestore.FieldValue.arrayUnion(botUser.id) });
+        await logBotActivity({ botId: botUser.id, botUsername: botUser.username, actionType: 'follow', targetUserId: user.uid, targetUsername: user.displayName });
+    }
 
     await batch.commit();
 
-    await logBotActivity({ botId: botUser.id, botUsername: botUser.username, actionType: 'follow', targetUserId: user.uid, targetUsername: user.displayName });
-
-    // Bot yeni kullanıcıya DM göndersin
-    const chatId = getChatId(botUser.id, user.uid);
+    // Seçilen botlardan biri DM göndersin
+    const randomDmBotDoc = randomElement(selectedBots);
+    const dmBot = { id: randomDmBotDoc.id, ...randomDmBotDoc.data() } as any;
+    const chatId = getChatId(dmBot.id, user.uid);
     const dmMessage = randomElement(welcomeDms);
-    await db.collection('directMessages').doc(chatId).collection('messages').add({
-        senderId: botUser.id,
-        receiverId: user.uid,
-        text: dmMessage,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        read: false,
-    });
 
-    // Sohbetin metadata'sını oluştur/güncelle
+    await db.collection('directMessages').doc(chatId).collection('messages').add({
+        senderId: dmBot.id, receiverId: user.uid, text: dmMessage,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(), read: false,
+    });
+    
     const metadataRef = db.collection('directMessagesMetadata').doc(chatId);
     await metadataRef.set({
-        participantUids: [botUser.id, user.uid],
+        participantUids: [dmBot.id, user.uid],
         participantInfo: {
-            [botUser.id]: { username: botUser.username, photoURL: botUser.photoURL },
+            [dmBot.id]: { username: dmBot.username, photoURL: dmBot.photoURL },
             [user.uid]: { username: user.displayName, photoURL: user.photoURL },
         },
-        lastMessage: { text: dmMessage, senderId: botUser.id, timestamp: admin.firestore.FieldValue.serverTimestamp(), read: false },
-        unreadCounts: { [user.uid]: 1, [botUser.id]: 0 },
+        lastMessage: { text: dmMessage, senderId: dmBot.id, timestamp: admin.firestore.FieldValue.serverTimestamp(), read: false },
+        unreadCounts: { [user.uid]: 1, [dmBot.id]: 0 },
     }, { merge: true });
     
-    await logBotActivity({ botId: botUser.id, botUsername: botUser.username, actionType: 'dm_sent', targetUserId: user.uid, targetUsername: user.displayName });
-
+    await logBotActivity({ botId: dmBot.id, botUsername: dmBot.username, actionType: 'dm_sent', targetUserId: user.uid, targetUsername: user.displayName });
 });
+
 
 /**
  * Firebase Authentication'dan bir kullanıcı silindiğinde tetiklenir.

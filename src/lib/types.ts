@@ -351,11 +351,10 @@ export interface GameSettings {
     imageUploadQuality: number;
     audioBitrate: number;
     videoBitrate: number;
-    botAutomationEnabled: boolean;
-    botInteractIntervalMinutes: number;
     botPostIntervalMinutes: number;
-    maxBotsPerRoom?: number;
-    botRoomJoinIntervalMinutes?: number;
+    botInteractIntervalMinutes: number;
+    botRoomJoinIntervalMinutes: number;
+    maxBotsPerRoom: number;
 }
 
 
@@ -363,6 +362,10 @@ export interface FeatureFlags {
     quizGameEnabled: boolean;
     postFeedEnabled: boolean;
     contentModerationEnabled: boolean;
+    botNewUserOnboardEnabled: boolean;
+    botAutoPostEnabled: boolean;
+    botAutoInteractEnabled: boolean;
+    botAutoRoomInteractEnabled: boolean;
 }
 
 export interface VoiceStats {

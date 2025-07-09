@@ -1,4 +1,3 @@
-
 // src/lib/actions/featureActions.ts
 'use server';
 
@@ -24,6 +23,10 @@ export async function getFeatureFlags(): Promise<FeatureFlags> {
         quizGameEnabled: true,
         postFeedEnabled: true,
         contentModerationEnabled: true,
+        botNewUserOnboardEnabled: true,
+        botAutoPostEnabled: true,
+        botAutoInteractEnabled: true,
+        botAutoRoomInteractEnabled: true,
     };
 }
 

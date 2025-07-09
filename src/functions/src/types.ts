@@ -3,10 +3,6 @@
 import { Timestamp } from "firebase-admin/firestore";
 
 export interface GameSettings {
-    botAutomationEnabled: boolean;
-    botPostIntervalMinutes: number;
-    botInteractIntervalMinutes: number;
-    // Add other settings if needed by functions
     dailyDiamondLimit: number;
     gameIntervalMinutes: number;
     questionTimerSeconds: number;
@@ -16,9 +12,24 @@ export interface GameSettings {
     imageUploadQuality: number;
     audioBitrate: number;
     videoBitrate: number;
+    botPostIntervalMinutes: number;
+    botInteractIntervalMinutes: number;
+    botRoomJoinIntervalMinutes: number;
+    maxBotsPerRoom: number;
+}
+
+export interface FeatureFlags {
+    quizGameEnabled: boolean;
+    postFeedEnabled: boolean;
+    contentModerationEnabled: boolean;
+    botNewUserOnboardEnabled: boolean;
+    botAutoPostEnabled: boolean;
+    botAutoInteractEnabled: boolean;
+    botAutoRoomInteractEnabled: boolean;
 }
 
 export interface BotState {
     lastPostRun?: Timestamp;
     lastInteractRun?: Timestamp;
+    lastRoomInteractRun?: Timestamp;
 }
