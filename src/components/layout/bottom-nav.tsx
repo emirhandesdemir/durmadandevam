@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageCircle, Plus, User } from 'lucide-react';
+import { Home, MessageCircle, Plus, Store } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -13,40 +13,30 @@ export default function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
 
-  const navItems = useMemo(() => [
-    { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
-    { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
-    { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
-    { id: 'profile', href: `/profile/${user?.uid}`, icon: Avatar, label: 'Profil' },
-  ], [user?.uid]);
-  
   if (!user) {
     return null;
   }
-  
-  const getIsActive = (itemId: string, itemHref: string, currentPathname: string) => {
-    // For dynamic routes, we check if the path starts with the base.
-    if (itemId === 'profile') {
-      return currentPathname.startsWith('/profile');
-    }
-    if (itemId === 'rooms') {
-      return currentPathname.startsWith('/rooms');
-    }
-    if (itemId === 'create') {
-        return currentPathname.startsWith('/create');
-    }
-    // For all other routes, we want an exact match.
-    return currentPathname === itemHref;
-  };
 
+  // Hide nav on specific full-screen pages
+  if ((pathname.startsWith('/rooms/') && pathname !== '/rooms') || (pathname.startsWith('/call/'))) {
+    return null;
+  }
+  
+  const navItems = useMemo(() => [
+    { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
+    { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
+    { id: 'create-post', href: '/create-post', icon: Plus, label: 'Oluştur'},
+    { id: 'store', href: '/store', icon: Store, label: 'Mağaza' },
+    { id: 'profile', href: `/profile/${user.uid}`, icon: Avatar, label: 'Profil' },
+  ], [user.uid]);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 w-full border-t bg-background/95 backdrop-blur-sm">
         <nav className="mx-auto flex h-16 max-w-md items-center justify-around">
             {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = getIsActive(item.id, item.href, pathname);
-
+                const isActive = item.id === 'rooms' ? pathname.startsWith('/rooms') : pathname === item.href;
+                
                 return (
                   <Link
                     key={item.id}
@@ -63,10 +53,10 @@ export default function BottomNav() {
                                 <AvatarFallback className="text-xs bg-muted">{user.displayName?.charAt(0)}</AvatarFallback>
                             </Avatar>
                        ) : (
-                            <Icon className={cn("h-6 w-6", item.id === 'create' && 'h-8 w-8 text-primary bg-primary/20 p-1.5 rounded-full')} />
+                            <Icon className={cn("h-6 w-6", item.id === 'create-post' && 'h-8 w-8 text-primary bg-primary/20 p-1.5 rounded-full')} />
                        )}
                     </div>
-                    {item.id !== 'create' && (
+                    {item.id !== 'create-post' && (
                         <span className="text-[10px] font-medium">{item.label}</span>
                     )}
                   </Link>

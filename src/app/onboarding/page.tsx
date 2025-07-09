@@ -1,3 +1,5 @@
+// Bu dosya, yeni kayıt olan kullanıcıların profil kurulumunu yaptığı "Onboarding" (Alıştırma) sayfasını yönetir.
+// Kullanıcıyı adım adım profil resmi, biyografi ve takip edeceği kişileri seçmeye yönlendirir.
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,7 +8,6 @@ import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import Step1Welcome from '@/components/onboarding/Step1Welcome';
 import Step2Bio from '@/components/onboarding/Step2Bio';
-import Step3Follow from '@/components/onboarding/Step3Follow';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { updateOnboardingData } from '@/lib/actions/userActions';
@@ -20,32 +21,34 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   
-  // Data states
+  // Her adımdan gelen verileri tutan state'ler.
   const [avatarDataUrl, setAvatarDataUrl] = useState<string | null>(null);
   const [bio, setBio] = useState('');
-  const [followingUids, setFollowingUids] = useState<string[]>([]);
   
   useEffect(() => {
-    // If auth is done loading and there's no user, redirect to signup
+    // Auth yüklemesi bittiğinde ve kullanıcı yoksa, kayıt sayfasına yönlendir.
     if (!authLoading && !user) {
       router.replace('/signup');
     }
-    // If user data is loaded and they have a bio, they've probably completed onboarding.
+    // Eğer kullanıcının zaten bir biyografisi varsa, bu onboarding işlemini tamamlamış demektir.
+    // Ana sayfaya yönlendir.
     if (userData && userData.bio) {
         router.replace('/home');
     }
   }, [user, userData, authLoading, router]);
 
+  // Tüm adımlar bittiğinde bu fonksiyon çalışır.
   const handleFinish = async () => {
     if (!user || !userData) return;
     setLoading(true);
 
     try {
+        // Sunucu eylemini çağırarak toplanan verileri veritabanına kaydet.
         await updateOnboardingData({
             userId: user.uid,
             avatarDataUrl,
             bio,
-            followingUids
+            followingUids: [] // This is now empty
         });
         toast({
             title: "Kurulum Tamamlandı!",
@@ -65,6 +68,7 @@ export default function OnboardingPage() {
   const nextStep = () => setStep(s => s + 1);
   const prevStep = () => setStep(s => s - 1);
 
+  // Veriler yüklenene kadar yükleme göstergesi.
   if (authLoading || !user || !userData) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -73,7 +77,8 @@ export default function OnboardingPage() {
     );
   }
 
-  const progress = (step / 3) * 100;
+  // İlerleme çubuğu için yüzde hesaplaması.
+  const progress = (step / 2) * 100;
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
@@ -81,20 +86,22 @@ export default function OnboardingPage() {
             <Progress value={progress} className="mb-8" />
             
             <div className="animate-in fade-in-50 duration-500">
+                {/* Mevcut adıma göre ilgili bileşeni render et. */}
                 {step === 1 && <Step1Welcome onAvatarChange={setAvatarDataUrl} />}
                 {step === 2 && <Step2Bio bio={bio} setBio={setBio} />}
-                {step === 3 && <Step3Follow selectedUids={followingUids} onSelectionChange={setFollowingUids} />}
             </div>
 
             <div className="mt-8 grid grid-cols-2 gap-4">
                  {step > 1 ? (
                     <Button variant="outline" onClick={prevStep}>Geri</Button>
                 ) : (
+                    // İlk adımda kullanıcı atlayabilir.
                     <Button variant="outline" onClick={() => router.push('/home')}>Atla</Button>
                 )}
-                {step < 3 ? (
+                {step < 2 ? (
                     <Button onClick={nextStep}>İleri</Button>
                 ) : (
+                    // Son adımda "Bitir" butonu.
                     <Button onClick={handleFinish} disabled={loading}>
                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Bitir

@@ -41,7 +41,7 @@ export const onBroadcastCreate = functions.region("us-central1").firestore
             included_segments: ["Subscribed Users"],
             headings: { "en": title, "tr": title },
             contents: { "en": body, "tr": body },
-            web_url: `https://hiwewalkbeta.netlify.app${link || '/'}`,
+            web_url: `https://yenidendeneme-ea9ed.web.app${link || '/'}`,
         };
         
         console.log("Yayın yükü OneSignal'a gönderiliyor:", JSON.stringify(oneSignalPayload, null, 2));
@@ -150,29 +150,15 @@ export const sendPushNotification = functions.region("us-central1").firestore
                 body = `${notificationData.senderUsername} sizi aradı.`;
                 link = `/dm`; // Link to DM list
                 break;
-            case "complete_profile":
-                title = "Profilini Tamamla! ✨";
-                body = "Profiline bir biyografi ekleyerek insanların seni daha iyi tanımasını sağla.";
-                link = "/profile";
-                break;
         }
 
-        const oneSignalPayload: { [key: string]: any } = {
+        const oneSignalPayload = {
             app_id: ONE_SIGNAL_APP_ID,
             include_external_user_ids: [userId],
             headings: { "en": title, "tr": title },
             contents: { "en": body, "tr": body },
-            web_url: `https://hiwewalkbeta.netlify.app${link}`,
-            data: { // Add custom data for in-app navigation
-                notificationType: notificationData.type,
-                relatedId: notificationData.postId || notificationData.roomId || notificationData.chatId || notificationData.senderId
-            }
+            web_url: `https://yenidendeneme-ea9ed.web.app${link}`,
         };
-
-        if (notificationData.postImage) {
-            oneSignalPayload.big_picture = notificationData.postImage;
-            oneSignalPayload.chrome_web_image = notificationData.postImage;
-        }
         
         console.log("Yük OneSignal'a gönderiliyor:", JSON.stringify(oneSignalPayload, null, 2));
 
