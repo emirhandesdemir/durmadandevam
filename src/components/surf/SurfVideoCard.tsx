@@ -23,6 +23,7 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [showComments, setShowComments] = useState(false);
+  const [showLikeAnimation, setShowLikeAnimation] = useState(false);
 
   const [optimisticLiked, setOptimisticLiked] = useState(post.likes?.includes(user?.uid || ''));
   const [optimisticLikeCount, setOptimisticLikeCount] = useState(post.likeCount);
@@ -61,7 +62,7 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
         uid: user.uid,
         displayName: userData.username,
         photoURL: userData.photoURL || null,
-        selectedAvatarFrame: userData.selectedAvatarFrame
+        userAvatarFrame: userData.selectedAvatarFrame || ''
       });
     } catch (error) {
       setOptimisticLiked(wasLiked);
@@ -70,16 +71,39 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
     }
   }, [user, userData, post.id, optimisticLiked, toast]);
 
+  const handleDoubleClick = useCallback(() => {
+    if (!user) {
+        toast({
+            variant: 'destructive',
+            description: 'Beğenmek için giriş yapmalısınız.',
+        });
+        return;
+    }
+    if (!optimisticLiked) {
+        handleLike();
+    }
+    setShowLikeAnimation(true);
+    setTimeout(() => {
+        setShowLikeAnimation(false);
+    }, 600);
+  }, [user, optimisticLiked, handleLike, toast]);
+
+
   return (
     <>
-      <div className="h-full w-full relative bg-black rounded-lg" onClick={togglePlay}>
+      <div className="h-full w-full relative bg-black rounded-lg" onClick={togglePlay} onDoubleClick={handleDoubleClick}>
+        {showLikeAnimation && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                <Heart className="text-white h-24 w-24 drop-shadow-lg animate-like-pop" fill="currentColor" />
+            </div>
+        )}
         <video
           ref={videoRef}
           src={post.videoUrl}
           loop
           muted={isMuted}
           playsInline
-          className="h-full w-full object-contain"
+          className="h-full w-full object-cover"
         />
 
         {!isPlaying && (
