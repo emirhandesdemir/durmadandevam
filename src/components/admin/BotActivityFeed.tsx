@@ -85,7 +85,7 @@ export default function BotActivityFeed() {
                             )}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                             {log.timestamp ? formatDistanceToNow(new Date(log.timestamp.seconds * 1000), { addSuffix: true, locale: tr }) : ''}
+                             {log.timestamp ? formatDistanceToNow(new Date(log.timestamp), { addSuffix: true, locale: tr }) : ''}
                         </p>
                     </div>
                 </div>
