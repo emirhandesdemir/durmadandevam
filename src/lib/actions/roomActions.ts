@@ -71,7 +71,7 @@ export async function deleteEventRoom(roomId: string, adminId: string) {
 export async function createRoom(
     userId: string,
     roomData: { name: string, description: string, language: string },
-    creatorInfo: { username: string, photoURL: string | null, role: string }
+    creatorInfo: { username: string, photoURL: string | null, role: string, selectedAvatarFrame?: string }
 ) {
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
     
@@ -102,6 +102,7 @@ export async function createRoom(
                 username: creatorInfo.username,
                 photoURL: creatorInfo.photoURL,
                 role: creatorInfo.role,
+                selectedAvatarFrame: creatorInfo.selectedAvatarFrame || '',
             },
             moderators: [userId],
             participants: [],
@@ -115,7 +116,7 @@ export async function createRoom(
 
         transaction.set(newRoomRef, newRoom);
         transaction.update(userRef, { 
-            diamonds: increment(-cost),
+            diamonds: increment(-roomCost),
             lastActionTimestamp: serverTimestamp()
         });
         
@@ -216,7 +217,7 @@ export async function joinRoom(roomId: string, userInfo: UserInfo) {
     const roomData = roomSnap.data();
     
     const isExpired = roomData.expiresAt && (roomData.expiresAt as Timestamp).toDate() < new Date();
-    if(isExpired) throw new Error("Bu odanın süresi dolmuş.");
+    if(isExpired && roomData.type !== 'event') throw new Error("Bu odanın süresi dolmuş.");
 
     const isFull = (roomData.participants?.length || 0) >= roomData.maxParticipants;
     if (isFull) throw new Error("Bu oda dolu.");
@@ -280,7 +281,7 @@ export async function leaveRoom(roomId: string, userId: string, username: string
 export async function sendRoomInvite(
   roomId: string,
   roomName: string,
-  inviter: { uid: string, username: string | null, photoURL: string | null },
+  inviter: { uid: string, username: string | null, photoURL: string | null, selectedAvatarFrame?: string },
   inviteeId: string
 ) {
   if (!roomId || !inviter || !inviteeId) throw new Error("Eksik bilgi: Davet gönderilemedi.");
@@ -291,6 +292,7 @@ export async function sendRoomInvite(
     senderId: inviter.uid,
     senderUsername: inviter.username || "Biri",
     senderAvatar: inviter.photoURL,
+    senderAvatarFrame: inviter.selectedAvatarFrame,
     type: 'room_invite',
     roomId: roomId,
     roomName: roomName,
