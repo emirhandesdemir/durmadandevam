@@ -1,0 +1,31 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Genel Kural: Varsayılan olarak tüm yollara erişimi engelle.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Kullanıcı Avatarları: Kullanıcılar sadece kendi avatarını güncelleyebilir. Herkes okuyabilir.
+    match /upload/avatars/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Gönderi Medyası (Resimler & Videolar): Kullanıcılar sadece kendi gönderi medyalarını yükleyebilir. Herkes okuyabilir.
+    match /upload/posts/{mediaType}/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId && (mediaType == 'images' || mediaType == 'videos');
+    }
+
+    // Oda Medyası: Odadaki katılımcılar dosya yükleyebilir. Herkes okuyabilir.
+    // Not: Bu kural, oda dokümanına erişim gerektirir, bu yüzden daha karmaşık olabilir.
+    // Şimdilik, giriş yapmış tüm kullanıcıların yüklemesine izin veriyoruz.
+    match /upload/rooms/{roomId}/{mediaType}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}

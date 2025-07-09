@@ -1,4 +1,3 @@
-
 // src/app/(main)/create-surf/page.tsx
 'use client';
 
@@ -6,7 +5,7 @@ import { useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
 import { createPost } from '@/lib/actions/postActions';
 import { Button } from '@/components/ui/button';
@@ -14,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Clapperboard, X, Send, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
+import { Progress } from '@/components/ui/progress';
 
 export default function CreateSurfPage() {
   const router = useRouter();
@@ -25,6 +25,7 @@ export default function CreateSurfPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,37 +56,57 @@ export default function CreateSurfPage() {
     }
 
     setIsSubmitting(true);
-    try {
-      const storagePath = `upload/video/${user.uid}/${Date.now()}_${videoFile.name}`;
-      const videoRef = ref(storage, storagePath);
-      await uploadBytes(videoRef, videoFile);
-      const videoUrl = await getDownloadURL(videoRef);
+    setUploadProgress(0);
 
-      await createPost({
-        uid: user.uid,
-        username: userData.username,
-        userAvatar: userData.photoURL || null,
-        userAvatarFrame: userData.selectedAvatarFrame || '',
-        userRole: userData.role || 'user',
-        userGender: userData.gender,
-        text: text,
-        videoUrl: videoUrl,
-        imageUrl: '', // No image for surf posts
-        language: i18n.language,
-      });
+    const storagePath = `upload/posts/videos/${user.uid}/${Date.now()}_${videoFile.name}`;
+    const videoRef = ref(storage, storagePath);
+    const uploadTask = uploadBytesResumable(videoRef, videoFile);
 
-      toast({ title: "Başarıyla Paylaşıldı!", description: "Videonuz Surf akışında görünecektir." });
-      router.push('/surf');
+    uploadTask.on('state_changed',
+      (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        setUploadProgress(progress);
+      }, 
+      (error) => {
+        console.error("Upload error:", error);
+        toast({ 
+          variant: 'destructive', 
+          title: 'Yükleme Hatası', 
+          description: 'Video yüklenirken bir hata oluştu: ' + error.message,
+        });
+        setIsSubmitting(false);
+      },
+      async () => {
+        try {
+            const videoUrl = await getDownloadURL(uploadTask.snapshot.ref);
 
-    } catch (error: any) {
-      toast({ 
-        variant: 'destructive', 
-        title: 'Bir Hata Oluştu', 
-        description: error.message || 'Videonuz paylaşılamadı.', 
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+            await createPost({
+                uid: user.uid,
+                username: userData.username,
+                userAvatar: userData.photoURL || null,
+                userAvatarFrame: userData.selectedAvatarFrame || '',
+                userRole: userData.role || 'user',
+                userGender: userData.gender,
+                text: text,
+                videoUrl: videoUrl,
+                imageUrl: '',
+                language: i18n.language,
+            });
+    
+            toast({ title: "Başarıyla Paylaşıldı!", description: "Videonuz Surf akışında görünecektir." });
+            router.push('/surf');
+        } catch (error: any) {
+            toast({ 
+                variant: 'destructive', 
+                title: 'Bir Hata Oluştu', 
+                description: error.message || 'Videonuz paylaşılamadı.', 
+            });
+        } finally {
+            setIsSubmitting(false);
+            setUploadProgress(0);
+        }
+      }
+    );
   };
 
   return (
@@ -138,9 +159,16 @@ export default function CreateSurfPage() {
             disabled={isSubmitting}
         />
         
+        {isSubmitting && (
+            <div className="space-y-1">
+                <Progress value={uploadProgress} className="w-full" />
+                <p className="text-xs text-center text-muted-foreground">Yükleniyor... %{Math.round(uploadProgress)}</p>
+            </div>
+        )}
+
         <Button onClick={handleShare} disabled={isSubmitting || !videoFile} className="w-full">
             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4"/>}
-            Paylaş
+            {isSubmitting ? 'Paylaşılıyor...' : 'Paylaş'}
         </Button>
       </div>
     </div>
