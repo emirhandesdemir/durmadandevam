@@ -195,113 +195,120 @@ export default function ProfilePageClient() {
                 </Card>
 
                 <Accordion type="multiple" className="w-full space-y-4">
-                    <Card as={AccordionItem} value="item-1">
-                         <AccordionTrigger className="p-6">
-                            <CardHeader className="p-0 text-left">
-                                <div className="flex items-center gap-3">
-                                    <Palette className="h-6 w-6 text-primary" />
-                                    <CardTitle>Görünüm Ayarları</CardTitle>
+                    <AccordionItem value="item-1" asChild>
+                        <Card>
+                             <AccordionTrigger className="p-6">
+                                <CardHeader className="p-0 text-left">
+                                    <div className="flex items-center gap-3">
+                                        <Palette className="h-6 w-6 text-primary" />
+                                        <CardTitle>Görünüm Ayarları</CardTitle>
+                                    </div>
+                                    <CardDescription>Uygulamanın genel görünümünü özelleştirin.</CardDescription>
+                                </CardHeader>
+                            </AccordionTrigger>
+                            <AccordionContent className="p-6 pt-0">
+                                <div className="space-y-6">
+                                    <div>
+                                        <Label className="text-base font-medium">Tema</Label>
+                                        <RadioGroup value={theme} onValueChange={setTheme} className="grid grid-cols-3 gap-2 pt-2">
+                                            <Label htmlFor="light-theme" className={cn("flex flex-col items-center justify-center rounded-lg border-2 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer", theme === 'light' && "border-primary")}>
+                                                <RadioGroupItem value="light" id="light-theme" className="sr-only" />
+                                                <div className="flex items-center gap-2 font-semibold">
+                                                    <Sun className="h-4 w-4" />Aydınlık
+                                                </div>
+                                            </Label>
+                                            <Label htmlFor="dark-theme" className={cn("flex flex-col items-center justify-center rounded-lg border-2 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer", theme === 'dark' && "border-primary")}>
+                                                <RadioGroupItem value="dark" id="dark-theme" className="sr-only" />
+                                                <div className="flex items-center gap-2 font-semibold">
+                                                    <Moon className="h-4 w-4" />Karanlık
+                                                </div>
+                                            </Label>
+                                            <Label htmlFor="system-theme" className={cn("flex flex-col items-center justify-center rounded-lg border-2 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer", theme === 'system' && "border-primary")}>
+                                                <RadioGroupItem value="system" id="system-theme" className="sr-only" />
+                                                <div className="flex items-center gap-2 font-semibold">
+                                                    <Laptop className="h-4 w-4" />Sistem
+                                                </div>
+                                            </Label>
+                                        </RadioGroup>
+                                    </div>
                                 </div>
-                                <CardDescription>Uygulamanın genel görünümünü özelleştirin.</CardDescription>
-                            </CardHeader>
-                        </AccordionTrigger>
-                        <AccordionContent className="p-6 pt-0">
-                            <div className="space-y-6">
-                                <div>
-                                    <Label className="text-base font-medium">Tema</Label>
-                                    <RadioGroup value={theme} onValueChange={setTheme} className="grid grid-cols-3 gap-2 pt-2">
-                                        <Label htmlFor="light-theme" className={cn("flex flex-col items-center justify-center rounded-lg border-2 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer", theme === 'light' && "border-primary")}>
-                                            <RadioGroupItem value="light" id="light-theme" className="sr-only" />
-                                            <div className="flex items-center gap-2 font-semibold">
-                                                <Sun className="h-4 w-4" />Aydınlık
-                                            </div>
-                                        </Label>
-                                        <Label htmlFor="dark-theme" className={cn("flex flex-col items-center justify-center rounded-lg border-2 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer", theme === 'dark' && "border-primary")}>
-                                            <RadioGroupItem value="dark" id="dark-theme" className="sr-only" />
-                                            <div className="flex items-center gap-2 font-semibold">
-                                                <Moon className="h-4 w-4" />Karanlık
-                                            </div>
-                                        </Label>
-                                        <Label htmlFor="system-theme" className={cn("flex flex-col items-center justify-center rounded-lg border-2 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer", theme === 'system' && "border-primary")}>
-                                            <RadioGroupItem value="system" id="system-theme" className="sr-only" />
-                                            <div className="flex items-center gap-2 font-semibold">
-                                                <Laptop className="h-4 w-4" />Sistem
-                                            </div>
-                                        </Label>
-                                    </RadioGroup>
-                                </div>
-                            </div>
-                        </AccordionContent>
-                    </Card>
+                            </AccordionContent>
+                        </Card>
+                    </AccordionItem>
 
-                    <Card as={AccordionItem} value="item-2">
-                         <AccordionTrigger className="p-6">
-                            <CardHeader className="p-0 text-left">
-                                <div className="flex items-center gap-3">
-                                    <Lock className="h-6 w-6 text-primary" />
-                                    <CardTitle>Gizlilik Ayarları</CardTitle>
+                    <AccordionItem value="item-2" asChild>
+                         <Card>
+                             <AccordionTrigger className="p-6">
+                                <CardHeader className="p-0 text-left">
+                                    <div className="flex items-center gap-3">
+                                        <Lock className="h-6 w-6 text-primary" />
+                                        <CardTitle>Gizlilik Ayarları</CardTitle>
+                                    </div>
+                                    <CardDescription>Hesabınızın gizliliğini ve kimlerin sizinle etkileşim kurabileceğini yönetin.</CardDescription>
+                                </CardHeader>
+                            </AccordionTrigger>
+                             <AccordionContent className="p-6 pt-0">
+                                 <div className="flex items-center justify-between">
+                                    <div>
+                                        <Label htmlFor="privacy-mode">Gizli Hesap</Label>
+                                        <p className="text-xs text-muted-foreground">Aktif olduğunda, sadece onayladığın kişiler seni takip edebilir.</p>
+                                    </div>
+                                    <Switch id="privacy-mode" checked={privateProfile} onCheckedChange={setPrivateProfile} />
                                 </div>
-                                <CardDescription>Hesabınızın gizliliğini ve kimlerin sizinle etkileşim kurabileceğini yönetin.</CardDescription>
-                            </CardHeader>
-                        </AccordionTrigger>
-                         <AccordionContent className="p-6 pt-0">
-                             <div className="flex items-center justify-between">
-                                <div>
-                                    <Label htmlFor="privacy-mode">Gizli Hesap</Label>
-                                    <p className="text-xs text-muted-foreground">Aktif olduğunda, sadece onayladığın kişiler seni takip edebilir.</p>
+                                 <div className="flex items-center justify-between mt-4">
+                                    <div>
+                                        <Label htmlFor="requests-mode" className={cn("transition-colors", !privateProfile && "text-muted-foreground/50")}>Takip İsteklerine İzin Ver</Label>
+                                        <p className={cn("text-xs text-muted-foreground transition-colors", !privateProfile && "text-muted-foreground/50")}>Kapalıysa, kimse size takip isteği gönderemez.</p>
+                                    </div>
+                                    <Switch id="requests-mode" checked={acceptsFollowRequests} onCheckedChange={setAcceptsFollowRequests} disabled={!privateProfile}/>
                                 </div>
-                                <Switch id="privacy-mode" checked={privateProfile} onCheckedChange={setPrivateProfile} />
-                            </div>
-                             <div className="flex items-center justify-between mt-4">
-                                <div>
-                                    <Label htmlFor="requests-mode" className={cn("transition-colors", !privateProfile && "text-muted-foreground/50")}>Takip İsteklerine İzin Ver</Label>
-                                    <p className={cn("text-xs text-muted-foreground transition-colors", !privateProfile && "text-muted-foreground/50")}>Kapalıysa, kimse size takip isteği gönderemez.</p>
-                                </div>
-                                <Switch id="requests-mode" checked={acceptsFollowRequests} onCheckedChange={setAcceptsFollowRequests} disabled={!privateProfile}/>
-                            </div>
-                        </AccordionContent>
-                    </Card>
+                            </AccordionContent>
+                        </Card>
+                    </AccordionItem>
                      
-                    <Card as={AccordionItem} value="item-4">
-                        <AccordionTrigger className="p-6">
-                            <CardHeader className="p-0 text-left">
-                                <div className="flex items-center gap-3">
-                                    <Sparkles className="h-6 w-6 text-primary" />
-                                    <CardTitle>Ekstra</CardTitle>
+                    <AccordionItem value="item-4" asChild>
+                        <Card>
+                            <AccordionTrigger className="p-6">
+                                <CardHeader className="p-0 text-left">
+                                    <div className="flex items-center gap-3">
+                                        <Sparkles className="h-6 w-6 text-primary" />
+                                        <CardTitle>Ekstra</CardTitle>
+                                    </div>
+                                    <CardDescription>Davet sistemi, dil ayarları ve daha fazlası.</CardDescription>
+                                </CardHeader>
+                            </AccordionTrigger>
+                            <AccordionContent className="p-6 pt-0">
+                                 <div className="space-y-6">
+                                    <div>
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <Gift className="h-5 w-5 text-muted-foreground" />
+                                            <Label className="text-base font-semibold">{t('invitation_system')}</Label>
+                                        </div>
+                                        <p className="text-sm text-muted-foreground">
+                                            Bu linki arkadaşlarınla paylaş. Senin linkinle kayıt olan her arkadaşın için <strong>10 elmas</strong> kazan!
+                                        </p>
+                                         <div className="text-sm font-semibold p-2 bg-muted rounded-md text-center flex items-center justify-center gap-2 mt-2">
+                                            <Users className="h-4 w-4"/>
+                                            <span>Bu linkle toplam <span className="text-primary">{userData.referralCount || 0}</span> kişi kayıt oldu.</span>
+                                        </div>
+                                        <div className="flex gap-2 mt-2">
+                                            <Input value={inviteLink} readOnly className="text-sm" />
+                                            <Button onClick={copyToClipboard} variant="outline" size="icon"><Copy className="h-4 w-4" /></Button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                         <div className="flex items-center gap-3 mb-2">
+                                            <Globe className="h-5 w-5 text-muted-foreground" />
+                                            <Label className="text-base font-semibold">{t('language_settings')}</Label>
+                                        </div>
+                                        <LanguageSwitcher />
+                                    </div>
                                 </div>
-                                <CardDescription>Davet sistemi, dil ayarları ve daha fazlası.</CardDescription>
-                            </CardHeader>
-                        </AccordionTrigger>
-                        <AccordionContent className="p-6 pt-0">
-                             <div className="space-y-6">
-                                <div>
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <Gift className="h-5 w-5 text-muted-foreground" />
-                                        <Label className="text-base font-semibold">{t('invitation_system')}</Label>
-                                    </div>
-                                    <p className="text-sm text-muted-foreground">
-                                        Bu linki arkadaşlarınla paylaş. Senin linkinle kayıt olan her arkadaşın için <strong>10 elmas</strong> kazan!
-                                    </p>
-                                     <div className="text-sm font-semibold p-2 bg-muted rounded-md text-center flex items-center justify-center gap-2 mt-2">
-                                        <Users className="h-4 w-4"/>
-                                        <span>Bu linkle toplam <span className="text-primary">{userData.referralCount || 0}</span> kişi kayıt oldu.</span>
-                                    </div>
-                                    <div className="flex gap-2 mt-2">
-                                        <Input value={inviteLink} readOnly className="text-sm" />
-                                        <Button onClick={copyToClipboard} variant="outline" size="icon"><Copy className="h-4 w-4" /></Button>
-                                    </div>
-                                </div>
-                                <div>
-                                     <div className="flex items-center gap-3 mb-2">
-                                        <Globe className="h-5 w-5 text-muted-foreground" />
-                                        <Label className="text-base font-semibold">{t('language_settings')}</Label>
-                                    </div>
-                                    <LanguageSwitcher />
-                                </div>
-                            </div>
-                        </AccordionContent>
-                    </Card>
-                
+                            </AccordionContent>
+                        </Card>
+                    </AccordionItem>
+                </Accordion>
+                    
                     {userData.role === 'admin' && (
                         <Card>
                             <CardHeader>
@@ -331,7 +338,7 @@ export default function ProfilePageClient() {
                             </Button>
                         </CardContent>
                     </Card>
-                </Accordion>
+
             </div>
 
             <>
