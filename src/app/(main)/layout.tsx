@@ -1,4 +1,4 @@
-
+// src/app/(main)/layout.tsx
 'use client';
 
 import BottomNav from "@/components/layout/bottom-nav";
