@@ -10,6 +10,35 @@ import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import Link from 'next/link';
 
+/**
+ * Gelen zaman damgası verisini güvenli bir şekilde Date nesnesine dönüştürür.
+ * Veri, sunucudan istemciye geçerken farklı formatlarda (ISO string, obje) gelebilir.
+ * Bu fonksiyon bu durumları yönetir.
+ * @param timestamp - Dönüştürülecek zaman damgası verisi.
+ * @returns Geçerli bir Date nesnesi veya null.
+ */
+const parseTimestamp = (timestamp: any): Date | null => {
+    if (!timestamp) return null;
+    
+    // Zaten bir Date nesnesi ise doğrudan döndür.
+    if (timestamp instanceof Date) return timestamp;
+
+    // ISO string formatını işle (örn: "2024-01-01T12:00:00.000Z").
+    if (typeof timestamp === 'string') {
+        const date = new Date(timestamp);
+        if (!isNaN(date.getTime())) return date;
+    }
+
+    // Firestore'dan gelen obje formatını işle (örn: { seconds: ..., nanoseconds: ... }).
+    if (typeof timestamp === 'object' && typeof timestamp.seconds === 'number') {
+        return new Date(timestamp.seconds * 1000);
+    }
+    
+    // Tanınmayan formatlar için null döndür.
+    return null;
+};
+
+
 export default function BotActivityFeed() {
     const [logs, setLogs] = useState<BotActivityLog[]>([]);
     const [loading, setLoading] = useState(true);
@@ -69,27 +98,30 @@ export default function BotActivityFeed() {
 
     return (
         <div className="space-y-4">
-            {logs.map(log => (
-                <div key={log.id} className="flex items-start gap-3">
-                    <div className="mt-1">{getActionIcon(log.actionType)}</div>
-                    <div className="flex-1 text-sm">
-                        <p>
-                            <span className="font-bold">{log.botUsername}</span>
-                            {log.targetUsername ? (
-                                <>
-                                    , <Link href={`/profile/${log.targetUserId}`} className="text-primary font-semibold hover:underline">{log.targetUsername}</Link>
-                                    {` `}{getActionText(log)}
-                                </>
-                            ) : (
-                                ` ${getActionText(log)}`
-                            )}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                             {log.timestamp ? formatDistanceToNow(new Date(log.timestamp), { addSuffix: true, locale: tr }) : ''}
-                        </p>
+            {logs.map(log => {
+                const date = parseTimestamp(log.timestamp);
+                return (
+                    <div key={log.id} className="flex items-start gap-3">
+                        <div className="mt-1">{getActionIcon(log.actionType)}</div>
+                        <div className="flex-1 text-sm">
+                            <p>
+                                <span className="font-bold">{log.botUsername}</span>
+                                {log.targetUsername ? (
+                                    <>
+                                        , <Link href={`/profile/${log.targetUserId}`} className="text-primary font-semibold hover:underline">{log.targetUsername}</Link>
+                                        {` `}{getActionText(log)}
+                                    </>
+                                ) : (
+                                    ` ${getActionText(log)}`
+                                )}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                 {date ? formatDistanceToNow(date, { addSuffix: true, locale: tr }) : ''}
+                            </p>
+                        </div>
                     </div>
-                </div>
-            ))}
+                );
+            })}
         </div>
     );
 }
