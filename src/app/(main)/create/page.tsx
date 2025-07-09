@@ -3,7 +3,7 @@
 
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
-import { PenSquare, Clapperboard } from "lucide-react";
+import { PenSquare } from "lucide-react";
 
 export default function CreatePage() {
     return (
@@ -15,16 +15,7 @@ export default function CreatePage() {
                         <PenSquare className="h-8 w-8 text-primary" />
                         <div>
                             <h2 className="font-semibold">Gönderi Oluştur</h2>
-                            <p className="text-sm text-muted-foreground">Metin veya fotoğraf paylaş.</p>
-                        </div>
-                    </Card>
-                </Link>
-                <Link href="/create-surf">
-                    <Card className="p-6 flex items-center gap-4 hover:bg-muted transition-colors cursor-pointer">
-                        <Clapperboard className="h-8 w-8 text-primary" />
-                        <div>
-                            <h2 className="font-semibold">Surf Videosu Yükle</h2>
-                            <p className="text-sm text-muted-foreground">Kısa bir video paylaşarak Surf akışında yer al.</p>
+                            <p className="text-sm text-muted-foreground">Metin, fotoğraf veya video paylaş.</p>
                         </div>
                     </Card>
                 </Link>
