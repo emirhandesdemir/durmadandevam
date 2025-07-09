@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
  * Ayrıca yeni kullanıcılara ilk gönderi ödül kartını gösterir.
  */
 export default function HomePage() {
-  const { userData, featureFlags, loading, handleLogout } = useAuth();
+  const { userData, featureFlags, loading } = useAuth();
   
   // Özellik bayrağı yüklenirken veya devre dışı bırakılmışsa farklı bir içerik göster
   if (!loading && !featureFlags?.postFeedEnabled) {
@@ -42,12 +42,6 @@ export default function HomePage() {
       <main>
         <div className="flex flex-col items-center gap-4">
           <div className="w-full max-w-2xl px-4 pt-4">
-            <div className="flex justify-end mb-4">
-              <Button variant="outline" size="sm" onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Geçici Çıkış
-              </Button>
-            </div>
             <NewPostForm />
           </div>
           {!loading && userData?.postCount === 0 && (

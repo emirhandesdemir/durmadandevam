@@ -76,50 +76,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  // Presence Management
+  // Effect for general app config (features, theme) - runs once
   useEffect(() => {
-    if (!user || !userData) return;
-    
-    const userStatusRef = doc(db, 'users', user.uid);
-    
-    if (userData.showOnlineStatus === false) {
-      setDoc(userStatusRef, { isOnline: false }, { merge: true });
-      return; 
-    }
-
-    const updateStatus = (online: boolean) => {
-        setDoc(userStatusRef, {
-            isOnline: online,
-            lastSeen: serverTimestamp()
-        }, { merge: true }).catch(err => console.error("Presence update failed:", err));
-    };
-    
-    updateStatus(true);
-    const handleVisibilityChange = () => {
-        if (document.visibilityState === 'hidden') {
-            updateStatus(false);
-        } else {
-            updateStatus(true);
-        }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    
-    const handleBeforeUnload = () => {
-        updateStatus(false);
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-        updateStatus(false);
-        document.removeEventListener("visibilitychange", handleVisibilityChange);
-        window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [user, userData]); 
-
-
-  useEffect(() => {
-    setFirestoreLoading(true);
-
     const featuresRef = doc(db, 'config', 'featureFlags');
     const unsubscribeFeatures = onSnapshot(featuresRef, (docSnap) => {
       setFeatureFlags(docSnap.exists() ? docSnap.data() as FeatureFlags : { quizGameEnabled: true, postFeedEnabled: true, contentModerationEnabled: true });
@@ -131,11 +89,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setThemeSettings(docSnap.data() as ThemeSettings);
       }
     });
+    
+    return () => {
+        unsubscribeFeatures();
+        unsubscribeTheme();
+    };
+  }, []);
 
+
+  // Effect for user-specific data (userData, DMs, presence)
+  useEffect(() => {
+    setFirestoreLoading(true);
     let unsubscribeUser: () => void = () => {};
     let unsubscribeDms: () => void = () => {};
+    let unsubscribePresence: (() => void) | undefined = undefined;
 
     if (user) {
+      // User Data Listener
       const userDocRef = doc(db, 'users', user.uid);
       unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
         if (docSnap.exists()) {
@@ -152,11 +122,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
             setUserData(data);
 
-            const isOnboardingRelatedPage = pathname === '/onboarding' || pathname.startsWith('/login') || pathname.startsWith('/signup');
-            if (!data.bio && !isOnboardingRelatedPage) {
-                router.replace('/onboarding');
-            }
-
             if (!data.bio && !data.profileCompletionNotificationSent) {
                 triggerProfileCompletionNotification(user.uid);
             }
@@ -170,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setFirestoreLoading(false);
       });
 
+      // DM Listener
       const dmsQuery = query(
         collection(db, 'directMessagesMetadata'),
         where('participantUids', 'array-contains', user.uid)
@@ -183,6 +149,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setTotalUnreadDms(total);
       });
 
+      // Presence Management
+      const userStatusRef = doc(db, 'users', user.uid);
+      const updateStatus = (online: boolean) => {
+          setDoc(userStatusRef, {
+              isOnline: online,
+              lastSeen: serverTimestamp()
+          }, { merge: true }).catch(err => console.error("Presence update failed:", err));
+      };
+      
+      updateStatus(true);
+      const handleVisibilityChange = () => document.visibilityState === 'hidden' ? updateStatus(false) : updateStatus(true);
+      const handleBeforeUnload = () => updateStatus(false);
+      
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+      window.addEventListener('beforeunload', handleBeforeUnload);
+
+      unsubscribePresence = () => {
+          updateStatus(false);
+          document.removeEventListener("visibilitychange", handleVisibilityChange);
+          window.removeEventListener('beforeunload', handleBeforeUnload);
+      };
+
     } else {
       setUserData(null);
       setTotalUnreadDms(0);
@@ -191,14 +179,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       unsubscribeUser();
-      unsubscribeFeatures();
       unsubscribeDms();
-      unsubscribeTheme();
+      if (unsubscribePresence) unsubscribePresence();
     };
-  }, [user, handleLogout, toast, pathname, router]);
+  }, [user, handleLogout, toast]);
+
+  // Effect for handling redirection logic
+  useEffect(() => {
+    const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
+    const isOnboardingPage = pathname === '/onboarding';
+    
+    if (loading) return; // Wait until all loading is finished
+
+    if (user && userData) { // User is logged in and has data
+        if (!userData.bio && !isOnboardingPage) {
+            router.replace('/onboarding');
+        } else if (isAuthPage) {
+            router.replace('/home');
+        }
+    } else if (!user && !isAuthPage) { // User is not logged in and not on an auth page
+        router.replace('/login');
+    }
+  }, [user, userData, pathname, router, loading]);
+
 
   const loading = authLoading || firestoreLoading;
-
   const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
