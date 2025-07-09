@@ -6,7 +6,6 @@ import { db } from '@/lib/firebase';
 import { notFound } from 'next/navigation';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import ProfilePosts from '@/components/profile/ProfilePosts';
-import ProfileViewLogger from '@/components/profile/ProfileViewLogger';
 import { Separator } from '@/components/ui/separator';
 import { deepSerialize } from '@/lib/server-utils';
 
@@ -43,9 +42,6 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
 
   return (
     <>
-      {/* Bu görünmez bileşen, profil görüntüleme olayını kaydeder. */}
-      <ProfileViewLogger targetUserId={uid} />
-      
       <div className="w-full mx-auto max-w-4xl py-4">
         {/* Profilin üst kısmını (avatar, isim, takipçi sayısı vb.) oluşturan bileşen. */}
         <ProfileHeader profileUser={serializableProfileUser} />

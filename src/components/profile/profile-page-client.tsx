@@ -25,7 +25,6 @@ import { findUserByUsername } from "@/lib/actions/userActions";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../common/LanguageSwitcher";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
-import ProfileViewerList from "./ProfileViewerList";
 
 export default function ProfilePageClient() {
     const { user, userData, loading, handleLogout } = useAuth();
@@ -259,21 +258,6 @@ export default function ProfilePageClient() {
                                 </div>
                                 <Switch id="requests-mode" checked={acceptsFollowRequests} onCheckedChange={setAcceptsFollowRequests} disabled={!privateProfile}/>
                             </div>
-                        </AccordionContent>
-                    </Card>
-                    
-                    <Card as={AccordionItem} value="item-3">
-                        <AccordionTrigger className="p-6">
-                            <CardHeader className="p-0 text-left">
-                                <div className="flex items-center gap-3">
-                                    <Users className="h-6 w-6 text-primary" />
-                                    <CardTitle>{t('profile_viewers')}</CardTitle>
-                                </div>
-                                <CardDescription>Son zamanlarda profilini kimlerin görüntülediğini gör.</CardDescription>
-                            </CardHeader>
-                        </AccordionTrigger>
-                        <AccordionContent className="p-6 pt-0">
-                           <ProfileViewerList />
                         </AccordionContent>
                     </Card>
                      
