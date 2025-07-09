@@ -1,4 +1,3 @@
-
 // Bu dosya, Firebase projesinin sunucu tarafı mantığını içerir.
 // Veritabanındaki belirli olaylara (örn: yeni bildirim oluşturma) tepki vererek
 // anlık bildirim gönderme gibi işlemleri gerçekleştirir.
@@ -15,6 +14,146 @@ const db = admin.firestore();
 // OneSignal konfigürasyonu.
 const ONE_SIGNAL_APP_ID = "51c67432-a305-43fc-a4c8-9c5d9d478d1c";
 const ONE_SIGNAL_REST_API_KEY = "os_v2_app_khdhimvdavb7zjgitroz2r4ndrkixk2biw6eqrfn4oygor7fxogtw3riv5mjpu4koeuuju6ma2scefend3lqkwij53ppdzbngmbouvy";
+
+
+const randomElement = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+// Botlar için önceden tanımlanmış içerikler
+const botTextPosts = [
+    "Bugün biraz kitap okudum 📖 Keyifli bir mola oldu.",
+    "Kendime güzel bir kahve yaptım ☕️ Küçük mutluluklar...",
+    "Pencereden bakan bir kedi gördüm, günüme neşe kattı 🐱",
+    "Yeni bir diziye başladım, saran bir şeyler arıyordum tam da.",
+    "Akşam için ne pişirsem diye düşünüyorum, fikirleriniz var mı? 🤔",
+];
+const botCaptions = [
+    "Bugün hava şahane ☀️",
+    "Anı yaşa ✨",
+    "Hafta sonu enerjisi! 💃",
+    "Küçük bir mola.",
+    "Günün karesi 📸",
+];
+const botComments = [
+    "Çok güzel paylaşım olmuş 💕",
+    "Enerjine bayıldım 😍",
+    "Tam benlik bir içerik",
+    "Yine harikasın 🫶",
+    "Mutlaka devam et 👏👏",
+];
+
+// BOT İÇERİK PAYLAŞIM FONKSİYONU (SAATLİK)
+export const botPostContent = functions.region("us-central1").pubsub.schedule('every 1 hours').onRun(async (context) => {
+    console.log('Bot içerik paylaşım fonksiyonu tetiklendi.');
+    
+    // Rastgele bir kadın bot kullanıcı seç
+    const botsQuery = db.collection('users').where('isBot', '==', true).where('gender', '==', 'female');
+    const botsSnapshot = await botsQuery.get();
+    if (botsSnapshot.empty) {
+        console.log("Paylaşım yapacak bot bulunamadı.");
+        return null;
+    }
+    const botDocs = botsSnapshot.docs;
+    const randomBotDoc = randomElement(botDocs);
+    const botUser = { id: randomBotDoc.id, ...randomBotDoc.data() };
+
+    // Rastgele bir içerik türü seç
+    const contentType = randomElement(['image', 'text', 'video']);
+
+    const newPost: any = {
+        uid: botUser.id,
+        username: botUser.username,
+        userAvatar: botUser.photoURL,
+        userAvatarFrame: botUser.selectedAvatarFrame || '',
+        userRole: 'user',
+        userGender: 'female',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        likeCount: 0,
+        commentCount: 0,
+        saveCount: 0,
+        likes: [],
+        savedBy: [],
+        tags: [],
+    };
+
+    switch(contentType) {
+        case 'image':
+            newPost.type = 'image';
+            newPost.imageUrl = `https://picsum.photos/600/800?random=${Date.now()}`;
+            newPost.text = randomElement(botCaptions);
+            break;
+        case 'video':
+            newPost.type = 'video';
+            newPost.videoUrl = 'https://samplelib.com/lib/preview/mp4/sample-5s.mp4';
+            newPost.text = randomElement(botCaptions);
+            break;
+        case 'text':
+        default:
+            newPost.type = 'text';
+            newPost.text = randomElement(botTextPosts);
+            break;
+    }
+    
+    await db.collection('posts').add(newPost);
+    console.log(`Bot ${botUser.username} yeni bir ${contentType} gönderisi paylaştı.`);
+    return null;
+});
+
+
+// BOT ETKİLEŞİM FONKSİYONU (15 DAKİKADA BİR)
+export const botInteract = functions.region("us-central1").pubsub.schedule('every 15 minutes').onRun(async (context) => {
+     console.log('Bot etkileşim fonksiyonu tetiklendi.');
+     
+    // Rastgele bir kadın bot kullanıcı seç
+    const botsQuery = db.collection('users').where('isBot', '==', true).where('gender', '==', 'female');
+    const botsSnapshot = await botsQuery.get();
+    if (botsSnapshot.empty) {
+        console.log("Etkileşim yapacak bot bulunamadı.");
+        return null;
+    }
+    const botDocs = botsSnapshot.docs;
+    const randomBotDoc = randomElement(botDocs);
+    const botUser = { id: randomBotDoc.id, ...randomBotDoc.data() };
+
+    // Rastgele bir gönderi seç (botun kendi gönderisi olmasın)
+    const postsQuery = db.collection('posts').where('uid', '!=', botUser.id);
+    const postsSnapshot = await postsQuery.get();
+    if (postsSnapshot.empty) {
+        console.log("Etkileşim yapılacak gönderi bulunamadı.");
+        return null;
+    }
+    const postDocs = postsSnapshot.docs;
+    const randomPostDoc = randomElement(postDocs);
+    const postRef = randomPostDoc.ref;
+
+    const postData = randomPostDoc.data();
+    if (!postData) return;
+
+    // Beğenme işlemi
+    if (!postData.likes || !postData.likes.includes(botUser.id)) {
+        await postRef.update({
+            likeCount: admin.firestore.FieldValue.increment(1),
+            likes: admin.firestore.FieldValue.arrayUnion(botUser.id)
+        });
+        console.log(`Bot ${botUser.username}, ${postData.username} kullanıcısının gönderisini beğendi.`);
+    }
+
+    // Yorum yapma işlemi
+    const newComment = {
+        uid: botUser.id,
+        username: botUser.username,
+        userAvatar: botUser.photoURL,
+        text: randomElement(botComments),
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    await postRef.collection('comments').add(newComment);
+    await postRef.update({
+        commentCount: admin.firestore.FieldValue.increment(1)
+    });
+    console.log(`Bot ${botUser.username}, ${postData.username} kullanıcısının gönderisine yorum yaptı.`);
+
+    return null;
+});
+
 
 /**
  * 'broadcasts' koleksiyonuna yeni bir belge eklendiğinde tetiklenir.
@@ -42,10 +181,10 @@ export const onBroadcastCreate = functions.region("us-central1").firestore
             included_segments: ["Subscribed Users"],
             headings: { "en": title, "tr": title },
             contents: { "en": body, "tr": body },
-            web_url: `https://hiwewalkbeta.netlify.app${link || '/'}`,
+            web_url: `https://yenidendeneme-ea9ed.web.app${link || '/'}`,
         };
         
-        console.log("Yayın yükü OneSignal'a gnderiliyor:", JSON.stringify(oneSignalPayload, null, 2));
+        console.log("Yayın yükü OneSignal'a gönderiliyor:", JSON.stringify(oneSignalPayload, null, 2));
 
         try {
             const response = await axios.post("https://onesignal.com/api/v1/notifications", oneSignalPayload, {

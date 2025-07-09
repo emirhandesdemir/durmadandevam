@@ -143,6 +143,7 @@ export interface UserProfile {
     profileCompletionNotificationSent?: boolean;
     selectedBubble?: string;
     selectedAvatarFrame?: string;
+    isBot?: boolean; // Added for bot system
 }
 
 export interface ProfileViewer {
@@ -200,6 +201,7 @@ export interface Post {
     uid: string;
     username: string;
     userAvatar?: string | null;
+    userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
     text: string;
@@ -215,6 +217,7 @@ export interface Post {
     language?: string;
     commentsDisabled?: boolean;
     likesHidden?: boolean;
+    tags?: string[];
     retweetOf?: {
         postId: string;
         uid: string;
@@ -225,7 +228,6 @@ export interface Post {
         videoUrl?: string;
         createdAt: Timestamp | { seconds: number; nanoseconds: number };
     };
-    userAvatarFrame?: string;
 }
 
 export interface Comment {
@@ -242,6 +244,14 @@ export interface Comment {
     } | null;
     userAvatarFrame?: string;
 }
+
+export interface Like {
+    id: string;
+    userId: string;
+    postId: string;
+    createdAt: Timestamp;
+}
+
 
 export interface Giveaway {
     status: 'idle' | 'active' | 'finished';
@@ -381,6 +391,7 @@ export interface DirectMessageMetadata {
         [uid: string]: {
             username: string;
             photoURL: string | null;
+            selectedAvatarFrame?: string;
             premiumUntil?: Timestamp;
         }
     };
