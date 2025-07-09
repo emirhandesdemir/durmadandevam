@@ -11,8 +11,8 @@
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-    --primary: 262.1 83.3% 57.8%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
     --muted: 240 4.8% 95.9%;
@@ -23,30 +23,30 @@
     --destructive-foreground: 0 0% 100%;
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
-    --ring: 262.1 83.3% 57.8%;
+    --ring: 221.2 83.2% 53.3%;
     --radius: 1rem;
   }
  
   .dark {
-    --background: 240 10% 3.9%;
+    --background: 0 0% 0%;
     --foreground: 210 40% 98%;
-    --card: 240 4.8% 11.0%;
+    --card: 0 0% 2.5%;
     --card-foreground: 210 40% 98%;
-    --popover: 240 10% 3.9%;
+    --popover: 0 0% 2%;
     --popover-foreground: 210 40% 98%;
-    --primary: 262.1 83.3% 57.8%;
+    --primary: 217.2 91.2% 59.8%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 0 0% 8%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
+    --muted: 0 0% 8%;
     --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
+    --accent: 0 0% 8%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 262.1 83.3% 57.8%;
+    --border: 0 0% 8%;
+    --input: 0 0% 8%;
+    --ring: 217.2 91.2% 59.8%;
   }
 }
  
@@ -62,9 +62,10 @@
     user-select: none;         /* Standard */
     -webkit-touch-callout: none; /* iOS Safari */
     -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: contain;
   }
   .auth-bg {
-    background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+    background: linear-gradient(-45deg, #73A580, #E9967A, #F5F5DC, #73A580);
     background-size: 400% 400%;
     animation: gradientBG 15s ease infinite;
   }
@@ -145,6 +146,24 @@
     50% { transform: scale(1.1); box-shadow: 0 0 15px #fef08a, 0 0 30px #f97316; }
     100% { transform: scale(1); box-shadow: 0 0 10px #fef08a, 0 0 20px #f97316; }
   }
+
+  /* NEW: Premium Gold Bubble */
+  .bubble-style-premium .bubble {
+    animation-name: float, premium-flicker;
+    animation-duration: 4s, 2s;
+    animation-timing-function: ease-in-out, ease-in-out;
+    animation-iteration-count: infinite, infinite;
+  }
+  .bubble-style-premium .bubble:nth-child(1) { @apply bg-amber-400 w-3 h-3 top-[10%] left-[80%]; animation-delay: 0s; }
+  .bubble-style-premium .bubble:nth-child(2) { @apply bg-yellow-500 w-4 h-4 top-[75%] left-[10%]; animation-delay: 1s; }
+  .bubble-style-premium .bubble:nth-child(3) { @apply bg-amber-300 w-2 h-2 top-[90%] left-[90%]; animation-delay: 2s; }
+  .bubble-style-premium .bubble:nth-child(4) { @apply bg-yellow-400 w-3 h-3 top-[35%] left-[20%]; animation-delay: 3s; }
+  .bubble-style-premium .bubble:nth-child(5) { @apply bg-amber-200 w-2 h-2 top-[5%] left-[30%]; animation-delay: 1.5s; }
+
+  @keyframes premium-flicker {
+    0%, 100% { box-shadow: 0 0 5px #fcd34d, 0 0 10px #f59e0b; }
+    50% { box-shadow: 0 0 10px #fcd34d, 0 0 20px #f59e0b; }
+  }
 }
 
 /* Avatar Frame Styles */
@@ -155,7 +174,8 @@
   .avatar-frame-angel::before, .avatar-frame-angel::after,
   .avatar-frame-devil::before, .avatar-frame-devil::after,
   .avatar-frame-snake::before,
-  .avatar-frame-tech::before {
+  .avatar-frame-tech::before,
+  .avatar-frame-premium::before {
     content: '';
     position: absolute;
     pointer-events: none;
@@ -229,6 +249,24 @@
     background-size: 100% 100%;
     background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3cfilter id='tech-glow'%3e%3cfeGaussianBlur in='SourceGraphic' stdDeviation='2' /%3e%3c/filter%3e%3c/defs%3e%3ccircle cx='60' cy='60' r='55' stroke='%230ea5e9' stroke-width='4' stroke-dasharray='15 25' fill='none' filter='url(%23tech-glow)'%3e%3canimateTransform attributeName='transform' type='rotate' from='0 60 60' to='360 60 60' dur='10s' repeatCount='indefinite' /%3e%3c/circle%3e%3ccircle cx='60' cy='60' r='50' stroke='%2334d399' stroke-width='2' stroke-dasharray='5 15' fill='none'%3e%3canimateTransform attributeName='transform' type='rotate' from='360 60 60' to='0 60 60' dur='15s' repeatCount='indefinite' /%3e%3c/circle%3e%3c/svg%3e");
   }
+
+  /* Premium Gold Avatar Frame */
+  .avatar-frame-premium::before {
+    inset: -5px;
+    border-radius: 9999px;
+    border: 2px solid;
+    border-color: #f59e0b;
+    animation: premium-glow 2s ease-in-out infinite alternate;
+  }
+
+  @keyframes premium-glow {
+    from {
+      box-shadow: 0 0 2px #f59e0b, 0 0 4px #f59e0b, 0 0 6px #d97706;
+    }
+    to {
+      box-shadow: 0 0 4px #f59e0b, 0 0 8px #d97706, 0 0 12px #b45309;
+    }
+  }
 }
 
 /* NEW: Animated DM Input Border */
@@ -246,5 +284,43 @@
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
+  }
+}
+
+.event-room-bg {
+    background-image:
+        radial-gradient(at 27% 37%, hsla(215,98%,61%,0.4) 0px, transparent 50%),
+        radial-gradient(at 97% 21%, hsla(125,98%,72%,0.4) 0px, transparent 50%),
+        radial-gradient(at 52% 99%, hsla(355,98%,76%,0.4) 0px, transparent 50%),
+        radial-gradient(at 10% 29%, hsla(256,96%,68%,0.4) 0px, transparent 50%),
+        radial-gradient(at 97% 96%, hsla(38,98%,70%,0.4) 0px, transparent 50%),
+        radial-gradient(at 33% 50%, hsla(222,97%,71%,0.4) 0px, transparent 50%),
+        radial-gradient(at 79% 53%, hsla(343,98%,74%,0.4) 0px, transparent 50%);
+    background-size: 100% 100%;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+@keyframes like-pop {
+  0% { opacity: 0; transform: scale(0.5); }
+  30% { opacity: 0.9; transform: scale(1.2); }
+  60% { opacity: 0.9; transform: scale(1.0); }
+  100% { opacity: 0; transform: scale(1.0); }
+}
+.animate-like-pop {
+  animation: like-pop 0.6s ease-in-out forwards;
+}
+
+@layer utilities {
+  .rooms-page-bg {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3e%3ctext x='50%25' y='50%25' font-size='50' font-weight='bold' fill='hsl(var(--foreground))' fill-opacity='0.03' dominant-baseline='middle' text-anchor='middle' transform='rotate(-20 200 200)'%3eHiweWalk%3c/text%3e%3c/svg%3e");
+    background-size: 400px 400px;
+    background-repeat: repeat;
   }
 }

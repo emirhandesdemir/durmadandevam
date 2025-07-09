@@ -1,0 +1,193 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isUser(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && getUserData(request.auth.uid).role == 'admin';
+    }
+
+    function isNotBanned() {
+      return isAuthenticated() && getUserData(request.auth.uid).isBanned != true;
+    }
+
+    // Rate limiting function: checks if last action was at least X seconds ago.
+    // Use on write operations to prevent spam.
+    function isRateLimited(seconds) {
+      let lastAction = getUserData(request.auth.uid).lastActionTimestamp;
+      // Allow if no previous action or if enough time has passed.
+      return lastAction == null || request.time > lastAction + duration.value(seconds, 's');
+    }
+
+    // USERS collection
+    match /users/{userId} {
+      // Anyone can read a user profile (if it's not private)
+      allow get: if isAuthenticated() && (resource.data.privateProfile == false || resource.data.followers.has(request.auth.uid) || isUser(userId));
+      
+      // Users can list other users (for search, etc.) but not their private subcollections
+      allow list: if isAuthenticated();
+
+      // A user can update their own document, but with restrictions.
+      allow update: if isUser(userId) && isNotBanned() && isRateLimited(2)
+                    // Ensure a user cannot change protected fields
+                    && request.resource.data.uid == userId
+                    && request.resource.data.email == resource.data.email
+                    && request.resource.data.role == resource.data.role
+                    && request.resource.data.diamonds == resource.data.diamonds
+                    && request.resource.data.matchmakingRights == resource.data.matchmakingRights
+                    && request.resource.data.referralCount == resource.data.referralCount
+                    && request.resource.data.reportCount == resource.data.reportCount
+                    && request.resource.data.isBanned == resource.data.isBanned;
+      
+      // New user documents are created via server-side logic (Auth trigger), not directly by clients.
+      allow create: if false;
+      allow delete: if false; // Users cannot delete their accounts directly
+
+      match /profileViewers/{viewerId} {
+        allow write: if isAuthenticated() && viewerId == request.auth.uid; // Can only log your own view
+        allow read: if isUser(userId); // Only the profile owner can see who viewed them
+      }
+      
+      match /notifications/{notificationId} {
+        allow read, write: if isUser(userId); // Only user can access their own notifications
+      }
+    }
+    
+    // POSTS collection
+    match /posts/{postId} {
+      function isOwner() {
+        return resource.data.uid == request.auth.uid;
+      }
+
+      function isLiking() {
+        let diff = request.resource.data.diff(resource.data);
+        return diff.affectedKeys().hasOnly(['likes', 'likeCount']) &&
+               (diff.addedKeys().has('likes') || diff.removedKeys().has('likes'));
+      }
+    
+      allow read: if isAuthenticated();
+      
+      allow create: if isAuthenticated() && isNotBanned() && isRateLimited(10)
+                    && request.resource.data.uid == request.auth.uid;
+
+      allow update: if isAuthenticated() && isNotBanned() && 
+                    ( (isOwner() && isRateLimited(10)) || (isLiking() && isRateLimited(1)) );
+
+      allow delete: if isAuthenticated() && isNotBanned() && isOwner();
+
+      // Comments subcollection
+      match /comments/{commentId} {
+        allow read: if isAuthenticated();
+        // Allow authenticated, non-banned users to create comments with rate limiting.
+        allow create: if isAuthenticated() && isNotBanned() && isRateLimited(5)
+                      && request.resource.data.uid == request.auth.uid;
+        // Only the owner of the comment can delete it.
+        allow delete: if isAuthenticated() && isNotBanned() && resource.data.uid == request.auth.uid;
+      }
+    }
+
+    // ROOMS collection
+    match /rooms/{roomId} {
+      allow read: if isAuthenticated();
+      // Room creation is handled by a server-side action which validates diamonds etc.
+      allow create: if false;
+      
+      // Only participants can update a room (e.g. join/leave voice). Specific logic is in server actions.
+      // This is a broad rule; server actions provide finer control.
+      allow update: if isAuthenticated() && isNotBanned();
+
+      // Only room owner can delete
+      allow delete: if isAuthenticated() && resource.data.createdBy.uid == request.auth.uid;
+
+      // Subcollections
+      match /messages/{messageId} {
+        // Anyone in the room can read messages
+        allow read: if isAuthenticated() && resource.data.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.participants;
+        // Only participants can write messages
+        allow create: if isAuthenticated() && isNotBanned() && isRateLimited(1)
+                      && request.resource.data.uid == request.auth.uid
+                      && request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.participants;
+      }
+
+      match /voiceParticipants/{participantId} {
+        // Anyone in the room can read who is in voice chat
+        allow read: if isAuthenticated();
+        // Only the user themselves can write to their own participant document (join/leave/mute)
+        allow write: if isUser(participantId);
+        // Only the host/moderator can delete (kick) a participant document
+        allow delete: if isAuthenticated() && 
+                       (get(/databases/$(database)/documents/rooms/$(roomId)).data.createdBy.uid == request.auth.uid ||
+                        request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.moderators);
+      }
+      
+       match /playlist/{trackId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated(); // Handled by server actions
+      }
+
+      // Other subcollections are mostly managed server-side.
+      match /{subcollection}/{docId} {
+        allow read, write: if isAuthenticated(); // Broad rule, assuming server logic handles specifics
+      }
+    }
+    
+    // DIRECT MESSAGES
+    match /directMessages/{chatId}/messages/{messageId} {
+        // Only participants of the chat can read/write messages
+        allow read, write: if isAuthenticated() && request.auth.uid in chatId.split('_');
+    }
+    
+    match /directMessagesMetadata/{chatId} {
+        // Only participants can read/update their chat metadata
+        allow read, update: if isAuthenticated() && request.auth.uid in resource.data.participantUids;
+        // Nobody can create/delete metadata directly
+        allow create, delete: if false;
+    }
+    
+    // MATCHMAKING QUEUE
+    match /matchmakingQueue/{userId} {
+        // Users can only add/remove themselves from the queue
+        allow write, delete: if isUser(userId);
+        allow read: if isAuthenticated(); // Other users need to read to find a match
+    }
+
+    // CONFIG - Read-only for clients
+    match /config/{docId} {
+      allow read: if true; // Some config might be needed before auth
+      allow write: if false;
+    }
+    
+    // AUDIT LOGS & REPORTS - Server-only write access
+    match /auditLogs/{logId} {
+      allow read, write: if false;
+    }
+
+    match /reports/{reportId} {
+      allow read, write: if false;
+    }
+    
+     // PORTALS - Read-only for clients
+    match /portals/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+  }
+}

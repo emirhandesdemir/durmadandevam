@@ -1,7 +1,9 @@
+
 // Bu dosya, uygulamanın en dış katmanını oluşturan kök düzendir (root layout).
 // Tüm sayfalar bu düzenin içinde render edilir.
 // HTML ve BODY etiketlerini, temel fontları, tema ve kimlik doğrulama sağlayıcılarını içerir.
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import './globals.css';
@@ -10,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/layout/ThemeProvider';
 import NetworkStatusNotifier from '@/components/common/NetworkStatusNotifier';
 import I18nProvider from '@/components/common/I18nProvider';
+import NotificationPermissionManager from '@/components/common/NotificationPermissionManager';
 
 // Google Fonts'tan Inter font ailesini yüklüyoruz.
 const inter = Inter({ 
@@ -40,10 +43,13 @@ export const metadata: Metadata = {
 
 // Mobil cihazlarda tarayıcı çubuğunun rengi gibi viewport ayarları.
 export const viewport: Viewport = {
-  themeColor: '#09090B', // Karanlık mod için tema rengi.
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: 'white' },
+    { media: '(prefers-color-scheme: dark)', color: 'black' },
+  ],
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1, // Kullanıcının zoom yapmasını engelle (uygulama hissi için).
+  maximumScale: 1,
   userScalable: false,
 }
 
@@ -54,14 +60,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="tr" suppressHydrationWarning>
-      <head />
+      <head>
+        <Script
+            id="onesignal-sdk"
+            src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"
+            strategy="afterInteractive"
+        />
+      </head>
       <body
         className={cn(
           'min-h-screen bg-background font-sans antialiased font-medium',
           inter.variable // Inter fontunu tüm body'e uygula.
         )}
       >
-        {/* Tema Sağlayıcısı (Aydınlık/Karanlık Mod) */}
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -71,6 +82,7 @@ export default function RootLayout({
           {/* Kimlik Doğrulama Sağlayıcısı: Tüm alt bileşenlerin kullanıcı verisine erişmesini sağlar. */}
           <AuthProvider>
              <I18nProvider>
+                <NotificationPermissionManager />
                 {children}
                 <Toaster />
                 <NetworkStatusNotifier />
@@ -81,3 +93,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+

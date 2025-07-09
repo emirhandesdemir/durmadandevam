@@ -1,0 +1,26 @@
+<svg width="192" height="192" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#000000" />
+      <stop offset="100%" stop-color="#121212" />
+    </linearGradient>
+    <filter id="whiteGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="192" height="192" rx="36" ry="36" fill="url(#bg)" />
+  <text x="50%" y="60%" text-anchor="middle"
+        font-family="Arial Black, sans-serif"
+        font-size="56"
+        fill="#FFFFFF"
+        font-style="italic"
+        font-weight="900"
+        letter-spacing="1"
+        filter="url(#whiteGlow)">
+    Hiwe
+  </text>
+</svg>
