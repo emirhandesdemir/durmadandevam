@@ -26,7 +26,7 @@ export interface MindWarTurn {
     choiceKey: string; // 'A' veya 'B' gibi
     choiceText: string;
   };
-  outcome: string; // Seçim sonucunda ne olduğu
+  outcome?: string; // Seçim sonucunda ne olduğu
   timestamp: Timestamp; // Turun zamanı
 }
 
@@ -51,6 +51,7 @@ export interface MindWarSession {
         reward: number;
       };
     };
+    winner?: string | null;
   };
   createdAt: Timestamp; // Başlangıç zamanı
 }
@@ -204,6 +205,7 @@ export interface Post {
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
+    isBotPost?: boolean;
     text: string;
     imageUrl?: string;
     videoUrl?: string;
@@ -281,6 +283,7 @@ export interface Room {
     participants: { uid: string, username: string, photoURL?: string | null }[];
     maxParticipants: number;
     voiceParticipantsCount?: number;
+    nextGameTimestamp?: Timestamp;
     rules: string | null;
     welcomeMessage: string | null;
     pinnedMessageId: string | null;
