@@ -6,8 +6,8 @@ import type { UserData } from "@/app/admin/users/page";
 import { format } from "date-fns";
 import { tr } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
-import { deleteUserFromFirestore, updateUserRole, banUser } from "@/lib/actions/adminActions";
-import { MoreHorizontal, Trash2, UserCheck, UserX, Loader2, ShieldCheck, Shield, Gem, Ban, Swords, Crown } from "lucide-react";
+import { deleteUserFromFirestore, updateUserRole, banUser, makeBotFollowUser } from "@/lib/actions/adminActions";
+import { MoreHorizontal, Trash2, UserCheck, UserX, Loader2, ShieldCheck, Shield, Gem, Ban, Swords, Crown, Bot } from "lucide-react";
 
 import {
   Table,
@@ -99,6 +99,21 @@ export default function UsersTable({ users }: UsersTableProps) {
         setIsProcessing(null);
     }
 
+    const handleMakeBotFollow = async (user: UserData) => {
+        setIsProcessing(user.uid);
+        try {
+            const result = await makeBotFollowUser(user.uid);
+            if(result.success) {
+                toast({ title: "Başarılı", description: result.message });
+            } else {
+                throw new Error(result.error);
+            }
+        } catch (error: any) {
+             toast({ title: "Hata", description: error.message, variant: "destructive" });
+        }
+        setIsProcessing(null);
+    }
+
   return (
       <>
         <Table>
@@ -175,6 +190,12 @@ export default function UsersTable({ users }: UsersTableProps) {
                                             <Gem className="mr-2 h-4 w-4" />
                                             <span>Elmasları Yönet</span>
                                         </DropdownMenuItem>
+                                         <DropdownMenuItem onClick={() => handleMakeBotFollow(user)}>
+                                            <Bot className="mr-2 h-4 w-4" />
+                                            <span>Bot ile Takip Ettir</span>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuLabel>Yönetimsel</DropdownMenuLabel>
                                         <DropdownMenuItem onClick={() => handleToggleAdmin(user)}>
                                             {user.role === 'admin' ? <UserX className="mr-2 h-4 w-4" /> : <UserCheck className="mr-2 h-4 w-4" />}
                                             <span>{user.role === 'admin' ? 'Admin Yetkisini Al' : 'Admin Yap'}</span>

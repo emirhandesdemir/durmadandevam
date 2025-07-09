@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { getBotActivityLogs } from '@/lib/actions/botActions';
 import type { BotActivityLog } from '@/lib/types';
-import { Loader2, MessageCircle, Heart, FileUp } from 'lucide-react';
+import { Loader2, MessageCircle, Heart, FileUp, UserPlus, Send } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -33,6 +33,10 @@ export default function BotActivityFeed() {
                 return <Heart className="h-4 w-4 text-red-500" />;
             case 'comment':
                 return <MessageCircle className="h-4 w-4 text-green-600" />;
+            case 'follow':
+                return <UserPlus className="h-4 w-4 text-purple-500" />;
+            case 'dm_sent':
+                return <Send className="h-4 w-4 text-indigo-500" />;
             default:
                 return null;
         }
@@ -45,6 +49,8 @@ export default function BotActivityFeed() {
             case 'post_video': return "bir video paylaştı.";
             case 'like': return <>'nin gönderisini beğendi.</>;
             case 'comment': return <>'nin gönderisine yorum yaptı.</>;
+            case 'follow': return <>kullanıcısını takip etmeye başladı.</>;
+            case 'dm_sent': return <>kullanıcısına bir hoşgeldin mesajı gönderdi.</>;
             default: return "bir eylem gerçekleştirdi."
         }
     }
@@ -69,13 +75,13 @@ export default function BotActivityFeed() {
                     <div className="flex-1 text-sm">
                         <p>
                             <span className="font-bold">{log.botUsername}</span>
-                            {log.actionType === 'like' || log.actionType === 'comment' ? (
+                            {log.targetUsername ? (
                                 <>
                                     , <Link href={`/profile/${log.targetUserId}`} className="text-primary font-semibold hover:underline">{log.targetUsername}</Link>
-                                    {getActionText(log)}
+                                    {` `}{getActionText(log)}
                                 </>
                             ) : (
-                                getActionText(log)
+                                ` ${getActionText(log)}`
                             )}
                         </p>
                         <p className="text-xs text-muted-foreground">

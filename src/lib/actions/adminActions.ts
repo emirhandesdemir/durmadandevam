@@ -3,7 +3,7 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { doc, deleteDoc, updateDoc, increment, runTransaction, Timestamp } from 'firebase/firestore';
+import { doc, deleteDoc, updateDoc, increment, runTransaction, Timestamp, getDocs, collection, query, where, arrayUnion, writeBatch } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
 
 /**
@@ -19,6 +19,7 @@ export async function deleteUserFromFirestore(uid: string) {
         const userDocRef = doc(db, 'users', uid);
         await deleteDoc(userDocRef);
         revalidatePath('/admin/users');
+        revalidatePath('/admin/bots');
         return { success: true };
     } catch (error) {
         console.error("Firestore'dan kullanıcı silinirken hata:", error);
@@ -116,4 +117,24 @@ export async function manageUserPremium(userId: string, durationDays: number | n
         revalidatePath('/admin/users');
         return { success: true };
     });
+}
+
+export async function makeBotFollowUser(targetUserId: string) {
+    const botsQuery = query(collection(db, 'users'), where('isBot', '==', true));
+    const botsSnapshot = await getDocs(botsQuery);
+    if (botsSnapshot.empty) {
+        throw new Error("Sistemde takip edecek bot bulunamadı.");
+    }
+    const randomBotDoc = botsSnapshot.docs[Math.floor(Math.random() * botsSnapshot.docs.length)];
+    const botId = randomBotDoc.id;
+
+    const botRef = doc(db, 'users', botId);
+    const targetUserRef = doc(db, 'users', targetUserId);
+    
+    const batch = writeBatch(db);
+    batch.update(botRef, { following: arrayUnion(targetUserId) });
+    batch.update(targetUserRef, { followers: arrayUnion(botId) });
+    await batch.commit();
+
+    return { success: true, message: `${randomBotDoc.data().username} adlı bot, kullanıcıyı takip etti.` };
 }

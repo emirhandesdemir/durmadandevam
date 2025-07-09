@@ -6,11 +6,14 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Bot, Loader2, Sparkles, UserCheck, History, PlayCircle, ToggleLeft, ToggleRight, AlertTriangle, FileText, Image as ImageIcon, Video, Heart, MessageCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { createInitialBots, getBotCount, getBotAutomationStatus, toggleBotAutomation, triggerBotPostNow, triggerBotLikeNow, triggerBotCommentNow } from '@/lib/actions/botActions';
+import { createInitialBots, getBotCount, getBotAutomationStatus, toggleBotAutomation, triggerBotPostNow, triggerBotLikeNow, triggerBotCommentNow, getBots } from '@/lib/actions/botActions';
 import StatCard from '@/components/admin/stat-card';
 import BotActivityFeed from '@/components/admin/BotActivityFeed';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import BotUsersTable from '@/components/admin/BotUsersTable';
+import type { UserProfile } from '@/lib/types';
+
 
 export default function BotManagerPage() {
     const { toast } = useToast();
@@ -23,12 +26,31 @@ export default function BotManagerPage() {
     // Bot automation state
     const [isAutomationEnabled, setIsAutomationEnabled] = useState(true);
     const [loadingAutomationStatus, setLoadingAutomationStatus] = useState(true);
+
+    // Bots list state
+    const [bots, setBots] = useState<UserProfile[]>([]);
+    const [loadingBots, setLoadingBots] = useState(true);
+
+    const fetchBotData = async () => {
+        setLoadingCount(true);
+        setLoadingBots(true);
+        try {
+            const [count, botList] = await Promise.all([
+                getBotCount(),
+                getBots()
+            ]);
+            setBotCount(count);
+            setBots(botList);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Hata', description: 'Bot verileri alınamadı.' });
+        } finally {
+            setLoadingCount(false);
+            setLoadingBots(false);
+        }
+    };
     
     useEffect(() => {
-        getBotCount().then(count => {
-            setBotCount(count);
-            setLoadingCount(false);
-        });
+        fetchBotData();
         getBotAutomationStatus().then(status => {
             setIsAutomationEnabled(status);
             setLoadingAutomationStatus(false);
@@ -44,7 +66,7 @@ export default function BotManagerPage() {
                     title: 'Botlar Oluşturuldu!',
                     description: `${result.createdCount} yeni bot başarıyla sisteme eklendi.`,
                 });
-                setBotCount(prev => prev + (result.createdCount || 0));
+                await fetchBotData(); // Refresh bot list and count
             } else {
                 throw new Error(result.error || 'Botlar oluşturulurken bilinmeyen bir hata oluştu.');
             }
@@ -194,7 +216,7 @@ export default function BotManagerPage() {
                         </CardContent>
                     </Card>
                 </div>
-                <div className="lg:col-span-2">
+                <div className="lg:col-span-2 space-y-6">
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-3">
@@ -205,6 +227,18 @@ export default function BotManagerPage() {
                         </CardHeader>
                         <CardContent>
                             <BotActivityFeed />
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-3">
+                                <Bot className="h-6 w-6 text-primary"/>
+                                Bot Kullanıcı Listesi
+                            </CardTitle>
+                             <CardDescription>Sistemdeki tüm bot kullanıcılar.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                           <BotUsersTable bots={bots} loading={loadingBots} onBotDeleted={fetchBotData} />
                         </CardContent>
                     </Card>
                 </div>

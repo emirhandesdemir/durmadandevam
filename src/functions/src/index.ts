@@ -5,6 +5,8 @@ import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import axios from "axios";
 import { GameSettings, BotState } from "./types"; // We need a types file in functions folder
+import { getChatId } from "./utils";
+
 
 // Firebase Admin SDK'sını başlat. Bu, sunucu tarafında Firebase servislerine erişim sağlar.
 admin.initializeApp();
@@ -41,6 +43,11 @@ const botComments = [
     "Yine harikasın 🫶",
     "Mutlaka devam et 👏👏",
 ];
+const welcomeDms = [
+    "Selam, uygulamaya hoş geldin! 🎉 Umarız harika vakit geçirirsin.",
+    "Merhaba! Aramıza katıldığın için çok mutluyuz. 😊",
+    "Hoş geldin! Yardıma ihtiyacın olursa çekinme. 🙋‍♀️",
+];
 
 const getBotSettings = async (): Promise<{ settings: GameSettings; state: BotState }> => {
     const settingsDoc = await db.collection('config').doc('gameSettings').get();
@@ -60,6 +67,13 @@ const getBotSettings = async (): Promise<{ settings: GameSettings; state: BotSta
     };
 };
 
+const logBotActivity = async (logData: any) => {
+    await db.collection('botActivityLogs').add({
+        ...logData,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+};
+
 // BOT İÇERİK PAYLAŞIM FONKSİYONU
 export const botPostContent = functions.region("us-central1").pubsub.schedule('every 5 minutes').onRun(async (context) => {
     const { settings, state } = await getBotSettings();
@@ -73,7 +87,6 @@ export const botPostContent = functions.region("us-central1").pubsub.schedule('e
     const intervalMillis = (settings.botPostIntervalMinutes || 60) * 60 * 1000;
 
     if (now - lastRun < intervalMillis) {
-        console.log(`Bot paylaşım zamanı gelmedi. Sonraki kontrol ~5 dakika içinde.`);
         return null;
     }
 
@@ -100,8 +113,15 @@ export const botPostContent = functions.region("us-central1").pubsub.schedule('e
         default: newPost.text = randomElement(botTextPosts); break;
     }
     
-    await db.collection('posts').add(newPost);
+    const postRef = await db.collection('posts').add(newPost);
     await db.collection('config').doc('botState').set({ lastPostRun: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    
+    await logBotActivity({
+        botId: botUser.id,
+        botUsername: botUser.username,
+        actionType: `post_${contentType}`,
+        targetPostId: postRef.id,
+    });
     console.log(`Bot ${botUser.username} yeni bir ${contentType} gönderisi paylaştı.`);
     return null;
 });
@@ -120,46 +140,49 @@ export const botInteract = functions.region("us-central1").pubsub.schedule('ever
     const intervalMillis = (settings.botInteractIntervalMinutes || 30) * 60 * 1000;
 
     if (now - lastRun < intervalMillis) {
-        console.log(`Bot etkileşim zamanı gelmedi. Sonraki kontrol ~5 dakika içinde.`);
         return null;
     }
 
     console.log('Bot etkileşim fonksiyonu tetiklendi.');
     const botsQuery = db.collection('users').where('isBot', '==', true).where('gender', '==', 'female');
     const botsSnapshot = await botsQuery.get();
-    if (botsSnapshot.empty) {
-        console.log("Etkileşim yapacak bot bulunamadı.");
-        return null;
-    }
-    const botDocs = botsSnapshot.docs;
-    const randomBotDoc = randomElement(botDocs);
-    const botUser = { id: randomBotDoc.id, ...randomBotDoc.data() };
+    if (botsSnapshot.empty) return null;
+    const randomBotDoc = randomElement(botsSnapshot.docs);
+    const botUser = { id: randomBotDoc.id, ...randomBotDoc.data() } as any;
 
-    const postsQuery = db.collection('posts').where('uid', '!=', botUser.id);
+    const postsQuery = db.collection('posts').where('isBot', '!=', true).orderBy('createdAt', 'desc').limit(20);
     const postsSnapshot = await postsQuery.get();
-    if (postsSnapshot.empty) {
-        console.log("Etkileşim yapılacak gönderi bulunamadı.");
-        return null;
-    }
-    const postDocs = postsSnapshot.docs;
-    const randomPostDoc = randomElement(postDocs);
+    if (postsSnapshot.empty) return null;
+    const randomPostDoc = randomElement(postsSnapshot.docs);
     const postRef = randomPostDoc.ref;
     const postData = randomPostDoc.data();
-    if (!postData) return;
+    if (!postData || postData.uid === botUser.id) return;
 
     if (!postData.likes || !postData.likes.includes(botUser.id)) {
         await postRef.update({
             likeCount: admin.firestore.FieldValue.increment(1),
             likes: admin.firestore.FieldValue.arrayUnion(botUser.id)
         });
+        await admin.firestore().collection('users').doc(postData.uid).collection('notifications').add({
+            senderId: botUser.id, senderUsername: botUser.username, senderAvatar: botUser.photoURL,
+            type: 'like', postId: randomPostDoc.id, postImage: postData.imageUrl || null,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(), read: false,
+        });
+        await logBotActivity({ botId: botUser.id, botUsername: botUser.username, actionType: 'like', targetPostId: randomPostDoc.id, targetUserId: postData.uid, targetUsername: postData.username });
     }
 
-    const newComment = {
+    const commentText = randomElement(botComments);
+    await postRef.collection('comments').add({
         uid: botUser.id, username: botUser.username, userAvatar: botUser.photoURL,
-        text: randomElement(botComments), createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    };
-    await postRef.collection('comments').add(newComment);
+        text: commentText, createdAt: admin.firestore.FieldValue.serverTimestamp(), userRole: 'user',
+    });
     await postRef.update({ commentCount: admin.firestore.FieldValue.increment(1) });
+    await admin.firestore().collection('users').doc(postData.uid).collection('notifications').add({
+        senderId: botUser.id, senderUsername: botUser.username, senderAvatar: botUser.photoURL,
+        type: 'comment', postId: randomPostDoc.id, commentText: commentText,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(), read: false,
+    });
+    await logBotActivity({ botId: botUser.id, botUsername: botUser.username, actionType: 'comment', targetPostId: randomPostDoc.id, targetUserId: postData.uid, targetUsername: postData.username, commentText });
     
     await db.collection('config').doc('botState').set({ lastInteractRun: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
     console.log(`Bot ${botUser.username}, ${postData.username} kullanıcısının gönderisiyle etkileşimde bulundu.`);
@@ -345,19 +368,68 @@ export const sendPushNotification = functions.region("us-central1").firestore
 /**
  * Firebase Authentication'da yeni bir kullanıcı oluşturulduğunda tetiklenir.
  * Kullanıcı oluşturma olayı için bir denetim kaydı (audit log) oluşturur.
+ * Ayrıca yeni kullanıcıya bir botun takip isteği göndermesini ve DM atmasını sağlar.
  */
 export const onUserCreate = functions.auth.user().onCreate(async (user) => {
+    // Denetim kaydı oluştur
     const log = {
         type: "user_created",
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        actor: {
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-        },
+        actor: { uid: user.uid, email: user.email, displayName: user.displayName, },
         details: `${user.displayName || user.email || user.uid} sisteme kayıt oldu.`
     };
     await db.collection("auditLogs").add(log);
+
+    // Yeni kullanıcı bot ise işlemi durdur.
+    const userSnap = await db.collection('users').doc(user.uid).get();
+    if(userSnap.exists() && userSnap.data()?.isBot) {
+        return;
+    }
+
+    // Rastgele bir bot seç
+    const botsQuery = db.collection('users').where('isBot', '==', true);
+    const botsSnapshot = await botsQuery.get();
+    if (botsSnapshot.empty) return;
+    const randomBotDoc = randomElement(botsSnapshot.docs);
+    const botUser = { id: randomBotDoc.id, ...randomBotDoc.data() } as any;
+
+    const batch = db.batch();
+
+    // Bot yeni kullanıcıyı takip etsin
+    const botRef = db.collection('users').doc(botUser.id);
+    const newUserRef = db.collection('users').doc(user.uid);
+    batch.update(botRef, { following: admin.firestore.FieldValue.arrayUnion(user.uid) });
+    batch.update(newUserRef, { followers: admin.firestore.FieldValue.arrayUnion(botUser.id) });
+
+    await batch.commit();
+
+    await logBotActivity({ botId: botUser.id, botUsername: botUser.username, actionType: 'follow', targetUserId: user.uid, targetUsername: user.displayName });
+
+    // Bot yeni kullanıcıya DM göndersin
+    const chatId = getChatId(botUser.id, user.uid);
+    const dmMessage = randomElement(welcomeDms);
+    await db.collection('directMessages').doc(chatId).collection('messages').add({
+        senderId: botUser.id,
+        receiverId: user.uid,
+        text: dmMessage,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        read: false,
+    });
+
+    // Sohbetin metadata'sını oluştur/güncelle
+    const metadataRef = db.collection('directMessagesMetadata').doc(chatId);
+    await metadataRef.set({
+        participantUids: [botUser.id, user.uid],
+        participantInfo: {
+            [botUser.id]: { username: botUser.username, photoURL: botUser.photoURL },
+            [user.uid]: { username: user.displayName, photoURL: user.photoURL },
+        },
+        lastMessage: { text: dmMessage, senderId: botUser.id, timestamp: admin.firestore.FieldValue.serverTimestamp(), read: false },
+        unreadCounts: { [user.uid]: 1, [botUser.id]: 0 },
+    }, { merge: true });
+    
+    await logBotActivity({ botId: botUser.id, botUsername: botUser.username, actionType: 'dm_sent', targetUserId: user.uid, targetUsername: user.displayName });
+
 });
 
 /**
@@ -368,11 +440,7 @@ export const onUserDelete = functions.auth.user().onDelete(async (user) => {
     const log = {
         type: "user_deleted",
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        actor: {
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-        },
+        actor: { uid: user.uid, email: user.email, displayName: user.displayName, },
         details: `${user.displayName || user.email || user.uid} hesabı sistemden silindi.`
     };
      await db.collection("auditLogs").add(log);

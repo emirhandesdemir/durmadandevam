@@ -57,6 +57,13 @@ async function fetchRandomAvatar(gender: 'women' | 'men', index: number) {
     }
 }
 
+export async function getBots(): Promise<UserProfile[]> {
+    const botsQuery = query(collection(db, 'users'), where('isBot', '==', true));
+    const snapshot = await getDocs(botsQuery);
+    const bots = snapshot.docs.map(doc => doc.data() as UserProfile);
+    return deepSerialize(bots);
+}
+
 export async function getBotCount() {
     const botsQuery = query(collection(db, 'users'), where('isBot', '==', true));
     const snapshot = await getCountFromServer(botsQuery);
@@ -81,13 +88,13 @@ export async function createInitialBots() {
     try {
         const usersCol = collection(db, 'users');
         for (let i = 0; i < 6; i++) {
-            const username = (femaleUsernames[i] || `kadin_bot_${i}`).replace(' ', '_');
+            const username = femaleUsernames[i] || `KadinBot${i}`;
             const existingUserQuery = query(usersCol, where('username', '==', username), where('isBot', '==', true));
             const existingUserSnap = await getDocs(existingUserQuery);
             if (existingUserSnap.empty) {
                 const newBotRef = doc(usersCol);
                 const newBot: Partial<UserProfile> = {
-                    username: username, email: `${username}@bot.hiwewalk.com`, photoURL: await fetchRandomAvatar('women', i),
+                    username: username, email: `${username.replace(' ','_')}@bot.hiwewalk.com`, photoURL: await fetchRandomAvatar('women', i),
                     isBot: true, bio: bios[i] || "Yeni maceralar peşinde...", gender: 'female', role: 'user', followers: [], following: [],
                     postCount: 0, diamonds: 0, privateProfile: false, acceptsFollowRequests: true, followRequests: [],
                 };
@@ -96,13 +103,13 @@ export async function createInitialBots() {
             }
         }
         for (let i = 0; i < 2; i++) {
-            const username = (maleUsernames[i] || `erkek_bot_${i}`).replace(' ', '_');
+            const username = maleUsernames[i] || `ErkekBot${i}`;
             const existingUserQuery = query(usersCol, where('username', '==', username), where('isBot', '==', true));
             const existingUserSnap = await getDocs(existingUserQuery);
              if (existingUserSnap.empty) {
                 const newBotRef = doc(usersCol);
                 const newBot: Partial<UserProfile> = {
-                    username: username, email: `${username}@bot.hiwewalk.com`, photoURL: await fetchRandomAvatar('men', i),
+                    username: username, email: `${username.replace(' ','_')}@bot.hiwewalk.com`, photoURL: await fetchRandomAvatar('men', i),
                     isBot: true, bio: bios[6 + i] || "Hayatı dolu dolu yaşa.", gender: 'male', role: 'user', followers: [],
                     following: [], postCount: 0, diamonds: 0, privateProfile: false, acceptsFollowRequests: true, followRequests: [],
                 };

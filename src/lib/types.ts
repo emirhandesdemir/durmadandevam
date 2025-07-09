@@ -484,7 +484,7 @@ export interface BotActivityLog {
     id: string;
     botId: string;
     botUsername: string;
-    actionType: 'post_image' | 'post_video' | 'post_text' | 'like' | 'comment';
+    actionType: 'post_image' | 'post_video' | 'post_text' | 'like' | 'comment' | 'follow' | 'dm_sent';
     targetPostId?: string;
     targetUserId?: string;
     targetUsername?: string;
