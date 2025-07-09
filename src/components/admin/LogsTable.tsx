@@ -22,6 +22,25 @@ interface LogsTableProps {
 }
 
 /**
+ * Gelen zaman damgası verisini güvenli bir şekilde Date nesnesine dönüştürür.
+ * @param timestamp - Dönüştürülecek zaman damgası verisi.
+ * @returns Geçerli bir Date nesnesi veya null.
+ */
+const parseTimestamp = (timestamp: any): Date | null => {
+    if (!timestamp) return null;
+    if (timestamp instanceof Date) return timestamp;
+    if (typeof timestamp === 'string') {
+        const date = new Date(timestamp);
+        if (!isNaN(date.getTime())) return date;
+    }
+    if (typeof timestamp === 'object' && typeof timestamp.seconds === 'number') {
+        return new Date(timestamp.seconds * 1000);
+    }
+    return null;
+};
+
+
+/**
  * Denetim kayıtlarını (audit logs) bir tablo içinde gösteren bileşen.
  */
 export default function LogsTable({ logs }: LogsTableProps) {
@@ -51,6 +70,7 @@ export default function LogsTable({ logs }: LogsTableProps) {
             <TableBody>
                 {logs.map((log) => {
                     const { Icon, color } = getLogIconAndStyle(log.type);
+                    const date = parseTimestamp(log.timestamp);
                     return (
                         <TableRow key={log.id}>
                             <TableCell>
@@ -63,7 +83,7 @@ export default function LogsTable({ logs }: LogsTableProps) {
                             <TableCell>{log.actor.displayName || log.actor.email}</TableCell>
                             <TableCell>
                                 {/* Tarihi okunabilir bir formata çevir. */}
-                                {log.timestamp ? format(log.timestamp.toDate(), 'PPpp', { locale: tr }) : 'Bilinmiyor'}
+                                {date ? format(date, 'PPpp', { locale: tr }) : 'Bilinmiyor'}
                             </TableCell>
                         </TableRow>
                     );
