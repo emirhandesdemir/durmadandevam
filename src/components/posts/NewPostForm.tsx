@@ -165,7 +165,7 @@ export default function NewPostForm() {
         reader.onload = () => setImageToCrop(reader.result as string);
         reader.readAsDataURL(selectedFile);
     } else if (selectedFile.type.startsWith('video/')) {
-        if (selectedFile.size > 20 * 1024 * 1024) { toast({ variant: "destructive", description: "Video boyutu 20MB'dan büyük olamaz." }); return; }
+        if (selectedFile.size > 50 * 1024 * 1024) { toast({ variant: "destructive", description: "Video boyutu 50MB'dan büyük olamaz." }); return; }
         setFile(selectedFile);
         setFileType('video');
         setVideoPreview(URL.createObjectURL(selectedFile));

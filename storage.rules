@@ -1,15 +1,44 @@
 rules_version = '2';
+
 service firebase.storage {
   match /b/{bucket}/o {
-    match /upload/avatars/{userId}/{allPaths=**} {
-      allow read;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
     
-    match /upload/posts/{mediaType}/{userId}/{fileName} {
+    // Genel Kural: Varsayılan olarak tüm okuma ve yazma işlemlerini reddet.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Yüklemeler Klasörü
+    match /upload/{allPaths=**} {
+        // Kullanıcı kendi avatarını yükleyebilir.
+        match /avatars/{userId}/{fileName} {
+          allow write: if request.auth != null && request.auth.uid == userId;
+        }
+
+        // Kullanıcılar gönderiler için resim veya video yükleyebilir.
+        match /posts/{userId}/{mediaType}/{fileName} {
+            allow write: if request.auth != null && request.auth.uid == userId
+                        // Dosya tipi kontrolü
+                        && (request.resource.contentType.matches('image/.*') || request.resource.contentType.matches('video/.*'))
+                        // Resimler için 10MB, videolar için 50MB boyut limiti
+                        && (
+                            (request.resource.contentType.matches('image/.*') && request.resource.size < 10 * 1024 * 1024) ||
+                            (request.resource.contentType.matches('video/.*') && request.resource.size < 50 * 1024 * 1024)
+                        );
+        }
+
+        // Kullanıcılar sohbet odalarında dosya yükleyebilir.
+        match /rooms/{roomId}/{mediaType}/{fileName} {
+            // TODO: Odaya üye olanların dosya yüklemesine izin veren bir kural eklenmeli.
+            // Şimdilik sadece giriş yapmış kullanıcılara izin ver.
+            allow write: if request.auth != null;
+        }
+    }
+
+    // Herkese Açık Okuma Erişimleri
+    // Kullanıcıların profil fotoğrafları, gönderileri vb.
+    match /upload/{allPaths=**} {
       allow read;
-      allow write: if request.auth != null && request.auth.uid == userId 
-                   && mediaType.matches('images|videos');
     }
   }
 }
