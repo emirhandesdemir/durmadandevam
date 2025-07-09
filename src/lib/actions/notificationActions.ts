@@ -19,6 +19,7 @@ interface CreateNotificationArgs {
   senderId: string;
   senderUsername: string;
   senderAvatar: string | null;
+  senderAvatarFrame?: string;
   type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile';
   postId?: string | null;
   postImage?: string | null;
@@ -55,6 +56,28 @@ export async function sendBroadcastNotification(data: BroadcastNotificationArgs)
     }
 }
 
+export async function triggerProfileCompletionNotification(userId: string) {
+    if (!userId) return;
+
+    const userRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) {
+        const userData = userSnap.data();
+        if (!userData.bio && !userData.profileCompletionNotificationSent) {
+            await createNotification({
+                recipientId: userId,
+                senderId: 'system-profile',
+                senderUsername: 'HiweWalk',
+                senderAvatar: 'https://placehold.co/100x100.png',
+                type: 'complete_profile',
+            });
+            await updateDoc(userRef, {
+                profileCompletionNotificationSent: true
+            });
+        }
+    }
+}
 
 export async function createNotification(data: CreateNotificationArgs) {
   // Don't send notifications for self-actions
