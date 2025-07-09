@@ -42,7 +42,7 @@ export const onBroadcastCreate = functions.region("us-central1").firestore
             included_segments: ["Subscribed Users"],
             headings: { "en": title, "tr": title },
             contents: { "en": body, "tr": body },
-            web_url: `https://hiwewalkbeta.netlify.app${link || '/'}`,
+            web_url: `https://yenidendeneme-ea9ed.web.app${link || '/'}`,
         };
         
         console.log("Yayın yükü OneSignal'a gönderiliyor:", JSON.stringify(oneSignalPayload, null, 2));
@@ -163,7 +163,7 @@ export const sendPushNotification = functions.region("us-central1").firestore
             include_external_user_ids: [userId],
             headings: { "en": title, "tr": title },
             contents: { "en": body, "tr": body },
-            web_url: `https://hiwewalkbeta.netlify.app${link}`,
+            web_url: `https://yenidendeneme-ea9ed.web.app${link}`,
             data: { // Add custom data for in-app navigation
                 notificationType: notificationData.type,
                 relatedId: notificationData.postId || notificationData.roomId || notificationData.chatId || notificationData.senderId
