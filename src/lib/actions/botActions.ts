@@ -50,10 +50,35 @@ const welcomeDms = [
     "Selam, yeni bir yüz görmek ne güzel! Hadi bir oda oluştur da görelim seni.",
 ];
 
-const generateDeterministicAvatarUrl = (seed: string) => {
-    // Use Dicebear service for reliable, deterministic avatars.
-    // The "personas" style provides human-like avatars.
-    return `https://api.dicebear.com/8.x/personas/svg?seed=${encodeURIComponent(seed)}`;
+const generateFallbackAvatar = (seed: string) => {
+    const getHash = (str: string) => {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = (hash << 5) - hash + char;
+            hash |= 0;
+        }
+        return Math.abs(hash);
+    };
+
+    const hash = getHash(seed);
+    const hue = hash % 360;
+    const saturation = 70 + (hash % 10);
+    const lightness = 45 + (hash % 10);
+    const lightness2 = lightness + 15;
+
+    const svg = `
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="200" height="200" fill="url(#gradient)"/>
+<defs>
+<radialGradient id="gradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+<stop offset="0%" style="stop-color:hsl(${hue}, ${saturation}%, ${lightness2}%);stop-opacity:1" />
+<stop offset="100%" style="stop-color:hsl(${hue}, ${saturation}%, ${lightness}%);stop-opacity:1" />
+</radialGradient>
+</defs>
+</svg>`.replace(/\n/g, "").replace(/\s+/g, " ");
+
+    return `data:image/svg+xml;base64,${btoa(svg)}`;
 };
 
 export async function getBots(): Promise<UserProfile[]> {
@@ -90,15 +115,44 @@ export async function createInitialBots() {
             const username = femaleUsernames[i] || `KadinBot${i}`;
             const existingUserQuery = query(usersCol, where('username', '==', username), where('isBot', '==', true));
             const existingUserSnap = await getDocs(existingUserQuery);
+
             if (existingUserSnap.empty) {
                 const newBotRef = doc(usersCol);
                 const seed = username.replace(/\s+/g, '').toLowerCase();
-                const photoURL = generateDeterministicAvatarUrl(seed);
-                
+                let photoURL = '';
+
+                try {
+                    // Fetch realistic avatar from randomuser.me using a seed for consistency
+                    const response = await fetch(`https://randomuser.me/api/?gender=female&seed=${seed}`);
+                    if (!response.ok) {
+                        throw new Error(`API responded with status ${response.status}`);
+                    }
+                    const data = await response.json();
+                    photoURL = data.results[0]?.picture?.large;
+
+                    if (!photoURL) {
+                        throw new Error("No picture URL found in API response.");
+                    }
+                } catch (apiError: any) {
+                    console.warn(`Could not fetch avatar for ${username} from API: ${apiError.message}. Using fallback.`);
+                    photoURL = generateFallbackAvatar(seed); // Use fallback SVG avatar
+                }
+
                 const newBot: Partial<UserProfile> = {
-                    username: username, email: `${username.replace(' ','_').toLowerCase()}@bot.hiwewalk.com`, photoURL: photoURL,
-                    isBot: true, bio: bios[i] || "Yeni maceralar peşinde...", gender: 'female', role: 'user', followers: [], following: [],
-                    postCount: 0, diamonds: 0, privateProfile: false, acceptsFollowRequests: true, followRequests: [],
+                    username: username,
+                    email: `${seed}@bot.hiwewalk.com`,
+                    photoURL: photoURL,
+                    isBot: true,
+                    bio: bios[i] || "Yeni maceralar peşinde...",
+                    gender: 'female',
+                    role: 'user',
+                    followers: [],
+                    following: [],
+                    postCount: 0,
+                    diamonds: 0,
+                    privateProfile: false,
+                    acceptsFollowRequests: true,
+                    followRequests: [],
                 };
                 await setDoc(newBotRef, { ...newBot, uid: newBotRef.id, createdAt: serverTimestamp() });
                 createdCount++;
