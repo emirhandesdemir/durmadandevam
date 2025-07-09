@@ -10,7 +10,6 @@ import { useAuth } from '@/contexts/AuthContext';
 declare global {
   interface Window {
     OneSignal: any;
-    OneSignalDeferred?: any[];
   }
 }
 
@@ -50,11 +49,10 @@ export default function NotificationPermissionManager() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    window.OneSignalDeferred.push(function(OneSignal: any) {
-      if (!OneSignal.isInitialized()) {
+    window.OneSignal = window.OneSignal || [];
+    window.OneSignal.push(function() {
         console.log('[OneSignal] Initializing SDK...');
-        OneSignal.init({
+        window.OneSignal.init({
           appId: oneSignalAppId,
           allowLocalhostAsSecureOrigin: true,
           // Explicitly define the service worker path. next-pwa generates sw.js in public root.
@@ -63,20 +61,19 @@ export default function NotificationPermissionManager() {
           console.log("[OneSignal] SDK Initialized.");
           
           // Check for permission after init
-          if (OneSignal.Notifications.permission === 'default') {
+          if (window.OneSignal.Notifications.permission === 'default') {
             promptForPermission();
           }
 
           // Handle user login/logout for identification
           if (user) {
             console.log(`[OneSignal] Identifying user with external ID: ${user.uid}`);
-            OneSignal.login(user.uid);
+            window.OneSignal.login(user.uid);
           }
         });
-      }
 
       // Listener for notification permission changes
-      OneSignal.Notifications.addEventListener('permissionChange', (permission: boolean) => {
+      window.OneSignal.Notifications.addEventListener('permissionChange', (permission: boolean) => {
         console.log("[OneSignal] New permission state:", permission);
         if (permission) {
             toast({
@@ -96,20 +93,17 @@ export default function NotificationPermissionManager() {
   
   // This separate effect handles user login/logout after the initial setup.
   useEffect(() => {
-     window.OneSignalDeferred = window.OneSignalDeferred || [];
-     window.OneSignalDeferred.push(function(OneSignal: any) {
-        if (!OneSignal.isInitialized()) {
-            return; // Wait for initialization to complete
-        }
+     if (typeof window === 'undefined' || !window.OneSignal) return;
+     window.OneSignal.push(function() {
         if (user) {
-            if (!OneSignal.User.hasExternalId() || OneSignal.User.getExternalId() !== user.uid) {
+            if (!window.OneSignal.User.hasExternalId() || window.OneSignal.User.getExternalId() !== user.uid) {
                 console.log(`[OneSignal] Auth state changed. Logging in user: ${user.uid}`);
-                OneSignal.login(user.uid);
+                window.OneSignal.login(user.uid);
             }
         } else {
-            if (OneSignal.User.hasExternalId()) {
+            if (window.OneSignal.User.hasExternalId()) {
                 console.log("[OneSignal] Auth state changed. User is null, logging out from OneSignal.");
-                OneSignal.logout();
+                window.OneSignal.logout();
             }
         }
      });
