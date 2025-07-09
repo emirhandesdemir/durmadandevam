@@ -4,13 +4,12 @@
 import { collection, query, where, orderBy, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Post, UserProfile } from '@/lib/types';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, CameraOff, ShieldOff, Play, Lock, FileTextIcon } from 'lucide-react';
+import { Loader2, CameraOff, ShieldOff, Lock, FileTextIcon, Video } from 'lucide-react';
 import Image from 'next/image';
 import { Heart, MessageCircle } from 'lucide-react';
 import PostViewerDialog from '@/components/posts/PostViewerDialog';
-import PostCard from '@/components/posts/PostCard';
 import { Card, CardContent } from '../ui/card';
 import { formatDistanceToNow, toDate } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -29,7 +28,6 @@ export default function ProfilePosts({ userId, postType }: ProfilePostsProps) {
     const [profileUser, setProfileUser] = useState<UserProfile | null>(null);
     const [selectedPost, setSelectedPost] = useState<Post | null>(null);
     
-    // Listen for real-time updates on the profile user's document
     useEffect(() => {
         const userDocRef = doc(db, 'users', userId);
         const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
@@ -49,7 +47,6 @@ export default function ProfilePosts({ userId, postType }: ProfilePostsProps) {
 
     useEffect(() => {
         if (authLoading || !profileUser) {
-            // Wait for auth and profile data to be loaded
             return;
         }
 
@@ -61,13 +58,9 @@ export default function ProfilePosts({ userId, postType }: ProfilePostsProps) {
 
         setLoading(true);
         const postsRef = collection(db, 'posts');
-        
-        let q;
-        if (postType === 'image') {
-            q = query(postsRef, where('uid', '==', userId), where('imageUrl', '!=', ''), orderBy('imageUrl'), orderBy('createdAt', 'desc'));
-        } else { // 'text'
-            q = query(postsRef, where('uid', '==', userId), where('imageUrl', '==', ''), where('videoUrl', '==', ''), orderBy('createdAt', 'desc'));
-        }
+        // A simplified query to fetch all posts by the user, ordered by date.
+        // This avoids complex indexes and potential Firestore errors.
+        const q = query(postsRef, where('uid', '==', userId), orderBy('createdAt', 'desc'));
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const fetchedPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post));
@@ -79,8 +72,20 @@ export default function ProfilePosts({ userId, postType }: ProfilePostsProps) {
         });
 
         return () => unsubscribe();
-    }, [userId, postType, canViewContent, authLoading, amIBlockedByThisUser, profileUser]);
+    }, [userId, canViewContent, authLoading, amIBlockedByThisUser, profileUser]);
 
+    const filteredPosts = useMemo(() => {
+        return posts.filter(post => {
+            const hasImage = !!post.imageUrl;
+            const hasVideo = !!post.videoUrl;
+
+            if (postType === 'image') return hasImage;
+            if (postType === 'text') return !hasImage && !hasVideo;
+            
+            return false;
+        });
+    }, [posts, postType]);
+    
     if (authLoading || loading) {
         return <div className="flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin" /></div>;
     }
@@ -104,7 +109,7 @@ export default function ProfilePosts({ userId, postType }: ProfilePostsProps) {
         );
     }
   
-    if (posts.length === 0) {
+    if (filteredPosts.length === 0) {
         return (
              <div className="text-center py-10 mt-4 text-muted-foreground">
                 {postType === 'image' ? <CameraOff className="h-12 w-12 mx-auto mb-4" /> : <FileTextIcon className="h-12 w-12 mx-auto mb-4" />}
@@ -113,19 +118,18 @@ export default function ProfilePosts({ userId, postType }: ProfilePostsProps) {
         )
     }
 
-    // RENDER IMAGE GRID
     if (postType === 'image') {
         return (
             <>
                 <div className="grid grid-cols-3 gap-1">
-                    {posts.map((post) => (
+                    {filteredPosts.map((post) => (
                         <button 
                             key={post.id} 
                             className="group relative aspect-square block bg-muted/50 focus:outline-none"
                             onClick={() => setSelectedPost(post)}
                         >
                             <Image
-                                src={post.imageUrl!} // We know it exists due to filter
+                                src={post.imageUrl!}
                                 alt="Kullanıcı gönderisi"
                                 fill
                                 className="object-cover"
@@ -159,12 +163,11 @@ export default function ProfilePosts({ userId, postType }: ProfilePostsProps) {
         );
     }
 
-    // RENDER TEXT LIST
     if (postType === 'text') {
         return (
              <>
                 <div className="space-y-3">
-                    {posts.map((post) => (
+                    {filteredPosts.map((post) => (
                          <button 
                             key={post.id} 
                             className="w-full text-left"
