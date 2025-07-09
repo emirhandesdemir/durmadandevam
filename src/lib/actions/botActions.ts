@@ -165,33 +165,39 @@ export async function createInitialBots() {
         for (let i = 0; i < botsToCreate; i++) {
             const username = await generateUniqueBotUsername();
             const seed = username.replace(/\s+/g, '').toLowerCase();
-            const photoURL = await fetchRandomAvatar(seed);
+            
+            const existingUserQuery = query(collection(db, 'users'), where('username', '==', username));
+            const existingUserSnap = await getDocs(existingUserQuery);
 
-            const newBotRef = doc(usersCol);
-
-            const newBot: Partial<UserProfile> = {
-                username: username,
-                email: `${seed}@bot.hiwewalk.com`,
-                photoURL: photoURL,
-                isBot: true,
-                bio: randomElement(bios),
-                gender: 'female',
-                role: 'user',
-                followers: [],
-                following: [],
-                postCount: 0,
-                diamonds: 0,
-                privateProfile: false,
-                acceptsFollowRequests: true,
-                followRequests: [],
-                uid: newBotRef.id,
-                createdAt: serverTimestamp() as any,
-            };
-            batch.set(newBotRef, newBot);
-            createdCount++;
+            if (existingUserSnap.empty) {
+                const photoURL = await fetchRandomAvatar(seed);
+                const newBotRef = doc(usersCol);
+                const newBot: Partial<UserProfile> = {
+                    uid: newBotRef.id,
+                    username: username,
+                    email: `${seed}@bot.hiwewalk.com`,
+                    photoURL: photoURL,
+                    isBot: true,
+                    bio: randomElement(bios),
+                    gender: 'female', // Only create female bots
+                    role: 'user',
+                    followers: [],
+                    following: [],
+                    postCount: 0,
+                    diamonds: 0,
+                    privateProfile: false,
+                    acceptsFollowRequests: true,
+                    followRequests: [],
+                    createdAt: serverTimestamp() as any,
+                };
+                batch.set(newBotRef, newBot);
+                createdCount++;
+            }
         }
-
-        await batch.commit();
+        
+        if (createdCount > 0) {
+            await batch.commit();
+        }
 
         return { success: true, createdCount };
     } catch (error: any) {
@@ -239,14 +245,23 @@ export async function triggerBotPostNow(contentType: 'image' | 'text' | 'video')
     const newPost: Partial<Post> = {
         uid: botUser.id, username: botUser.username, userAvatar: botUser.photoURL, userAvatarFrame: botUser.selectedAvatarFrame || '',
         userRole: 'user', userGender: 'female', createdAt: serverTimestamp(), likeCount: 0, commentCount: 0, saveCount: 0, likes: [], savedBy: [], tags: [], isBotPost: true,
+        videoUrl: '', imageUrl: '', text: ''
     };
 
     const typeMap = { image: 'görsel', text: 'metin', video: 'video' };
 
     switch(contentType) {
-        case 'image': newPost.imageUrl = `https://placehold.co/600x800.png`; newPost.text = randomElement(botCaptions); break;
-        case 'video': newPost.videoUrl = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4'; newPost.text = randomElement(botCaptions); break;
-        default: newPost.text = randomElement(botTextPosts); newPost.imageUrl = ''; newPost.videoUrl = ''; break;
+        case 'image': 
+            newPost.imageUrl = 'https://placehold.co/600x800.png';
+            newPost.text = randomElement(botCaptions); 
+            break;
+        case 'video': 
+            newPost.videoUrl = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4'; 
+            newPost.text = randomElement(botCaptions); 
+            break;
+        default: 
+            newPost.text = randomElement(botTextPosts);
+            break;
     }
     
     const postRef = await addDoc(collection(db, 'posts'), newPost);
