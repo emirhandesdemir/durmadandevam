@@ -59,15 +59,17 @@ export default function LoginForm() {
         try {
             await signInWithEmailAndPassword(auth, values.email, values.password);
             // Başarılı girişte AuthContext yönlendirmeyi halledecek.
-            // Bu, kullanıcının eksik profili varsa onboarding'e gitmesini sağlar.
         } catch (error: any) {
             console.error("Giriş hatası", error);
-            let errorMessage = "Giriş yapılırken bir hata oluştu.";
-            if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password" || error.code === "auth/invalid-credential") {
-                errorMessage = "E-posta veya şifre hatalı.";
+            let errorMessage = "Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.";
+            // The 'auth/invalid-credential' code covers both user-not-found and wrong-password since Firebase v9.
+            if (error.code === 'auth/invalid-credential') {
+                errorMessage = "E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edip tekrar deneyin.";
+            } else if (error.code === 'auth/too-many-requests') {
+                errorMessage = "Çok fazla hatalı deneme yapıldı. Lütfen daha sonra tekrar deneyin.";
             }
             toast({
-                title: "Hata",
+                title: "Giriş Başarısız",
                 description: errorMessage,
                 variant: "destructive",
             });

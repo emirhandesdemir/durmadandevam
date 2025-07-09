@@ -148,7 +148,6 @@ export default function SignUpForm() {
                 gender: values.gender,
                 createdAt: serverTimestamp(),
                 diamonds: 10, // Start with 10 diamonds
-                matchmakingRights: 0,
                 referredBy: ref || null,
                 postCount: 0,
                 followers: [],
@@ -177,15 +176,27 @@ export default function SignUpForm() {
             
             router.push('/onboarding');
 
-        } catch (error: any)
-        {
-            console.error("Signup error", error);
-            let errorMessage = "Hesap oluşturulurken bir hata oluştu.";
-            if (error.code === "auth/email-already-in-use") {
-                errorMessage = "Bu e-posta adresi zaten kullanılıyor.";
+        } catch (error: any) {
+            console.error("Kayıt hatası", error);
+            let errorMessage = "Hesap oluşturulurken bilinmeyen bir hata oluştu. Lütfen tekrar deneyin.";
+            switch (error.code) {
+                case 'auth/email-already-in-use':
+                    errorMessage = "Bu e-posta adresi zaten başka bir hesap tarafından kullanılıyor.";
+                    form.setError("email", { type: "manual", message: errorMessage });
+                    break;
+                case 'auth/invalid-email':
+                    errorMessage = "Lütfen geçerli bir e-posta adresi girin.";
+                    form.setError("email", { type: "manual", message: errorMessage });
+                    break;
+                case 'auth/weak-password':
+                    errorMessage = "Şifre çok zayıf. Lütfen en az 6 karakterli daha güçlü bir şifre seçin.";
+                    form.setError("password", { type: "manual", message: errorMessage });
+                    break;
+                default:
+                    console.error(error.message); // Log the specific error for debugging
             }
             toast({
-                title: "Hata",
+                title: "Kayıt Başarısız",
                 description: errorMessage,
                 variant: "destructive",
             });
