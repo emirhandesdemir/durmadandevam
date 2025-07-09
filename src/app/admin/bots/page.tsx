@@ -6,11 +6,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Bot, Loader2, Sparkles, UserCheck, History, PlayCircle, ToggleLeft, ToggleRight, AlertTriangle, FileText, Image as ImageIcon, Video, Heart, MessageCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { createInitialBots, getBotCount, getBotAutomationStatus, toggleBotAutomation, triggerBotPostNow, triggerBotLikeNow, triggerBotCommentNow, getBots } from '@/lib/actions/botActions';
+import { createInitialBots, getBotCount, triggerBotPostNow, triggerBotLikeNow, triggerBotCommentNow, getBots } from '@/lib/actions/botActions';
 import StatCard from '@/components/admin/stat-card';
 import BotActivityFeed from '@/components/admin/BotActivityFeed';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import BotUsersTable from '@/components/admin/BotUsersTable';
 import type { UserProfile } from '@/lib/types';
 
@@ -23,11 +21,6 @@ export default function BotManagerPage() {
     const [isTesting, setIsTesting] = useState(false);
     const [testingType, setTestingType] = useState<string | null>(null);
 
-    // Bot automation state
-    const [isAutomationEnabled, setIsAutomationEnabled] = useState(true);
-    const [loadingAutomationStatus, setLoadingAutomationStatus] = useState(true);
-
-    // Bots list state
     const [bots, setBots] = useState<UserProfile[]>([]);
     const [loadingBots, setLoadingBots] = useState(true);
 
@@ -51,10 +44,6 @@ export default function BotManagerPage() {
     
     useEffect(() => {
         fetchBotData();
-        getBotAutomationStatus().then(status => {
-            setIsAutomationEnabled(status);
-            setLoadingAutomationStatus(false);
-        });
     }, []);
 
     const handleCreateBots = async () => {
@@ -78,20 +67,6 @@ export default function BotManagerPage() {
             });
         } finally {
             setIsCreating(false);
-        }
-    };
-    
-    const handleToggleAutomation = async (enabled: boolean) => {
-        setIsAutomationEnabled(enabled); // Optimistic update
-        try {
-            await toggleBotAutomation(enabled);
-            toast({
-                title: 'Başarılı',
-                description: `Bot otomasyonu ${enabled ? 'aktif edildi' : 'devre dışı bırakıldı'}.`,
-            });
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Hata', description: 'Ayar değiştirilemedi.' });
-            setIsAutomationEnabled(!enabled); // Revert on error
         }
     };
     
@@ -150,27 +125,6 @@ export default function BotManagerPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
                 <div className="lg:col-span-1 space-y-6">
                     <StatCard title="Toplam Bot Sayısı" value={botCount} icon={Bot} isLoading={loadingCount} />
-
-                    <Card>
-                         <CardHeader>
-                            <CardTitle>Bot Otomasyon Kontrolü</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                             <div className="flex items-center space-x-2">
-                                <Switch 
-                                    id="automation-switch" 
-                                    checked={isAutomationEnabled} 
-                                    onCheckedChange={handleToggleAutomation}
-                                    disabled={loadingAutomationStatus}
-                                />
-                                <Label htmlFor="automation-switch" className="flex items-center gap-2">
-                                     {isAutomationEnabled ? <ToggleRight className="text-green-600"/> : <ToggleLeft />}
-                                     {isAutomationEnabled ? 'Otomasyon Aktif' : 'Otomasyon Pasif'}
-                                </Label>
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-2">Botların otomatik içerik paylaşmasını ve etkileşimde bulunmasını durdurur veya başlatır.</p>
-                        </CardContent>
-                    </Card>
 
                     <Card>
                         <CardHeader>

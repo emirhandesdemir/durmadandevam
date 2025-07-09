@@ -261,7 +261,7 @@ export default function NewPostForm() {
             });
         }
 
-        const newPost = await createPost({
+        await createPost({
             uid: user.uid,
             username: userData.username,
             userAvatar: userData.photoURL || null,
