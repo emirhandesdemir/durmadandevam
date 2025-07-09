@@ -14,7 +14,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Settings, Loader2, Gamepad2, UserX, Database, Signal, Bot } from "lucide-react";
+import { Settings, Loader2, Gamepad2, UserX, Database, Signal, Bot, AlertTriangle } from "lucide-react";
 import { GameSettings as GameSettingsType } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
@@ -30,7 +30,7 @@ const settingsSchema = z.object({
   imageUploadQuality: z.coerce.number().min(0.1, "Kalite en az 0.1 olmalı").max(1, "Kalite en fazla 1 olabilir"),
   audioBitrate: z.coerce.number().min(16, "Bit hızı en az 16 olmalı").max(128, "Bit hızı en fazla 128 olabilir"),
   videoBitrate: z.coerce.number().min(100, "Bit hızı en az 100 olmalı").max(2000, "Bit hızı en fazla 2000 olabilir"),
-  botPostIntervalHours: z.coerce.number().min(1, "Aralık en az 1 saat olmalıdır."),
+  botPostIntervalMinutes: z.coerce.number().min(1, "Aralık en az 1 dakika olmalıdır."),
   botInteractIntervalMinutes: z.coerce.number().min(5, "Aralık en az 5 dakika olmalıdır."),
 });
 
@@ -52,8 +52,8 @@ export default function SystemSettingsPage() {
             imageUploadQuality: 0.92,
             audioBitrate: 64,
             videoBitrate: 1000,
-            botPostIntervalHours: 1,
-            botInteractIntervalMinutes: 15,
+            botPostIntervalMinutes: 60,
+            botInteractIntervalMinutes: 30,
         },
     });
 
@@ -153,7 +153,7 @@ export default function SystemSettingsPage() {
                                 <CardTitle>Bot Otomasyon Ayarları</CardTitle>
                             </div>
                             <CardDescription>
-                                Botların ne sıklıkla paylaşım ve etkileşim yapacağını ayarlayın. <strong>Not:</strong> Bu ayarların aktif olması için Cloud Functions'ın yeniden deploy edilmesi gerekir.
+                                Botların ne sıklıkla paylaşım ve etkileşim yapacağını ayarlayın.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
@@ -163,8 +163,8 @@ export default function SystemSettingsPage() {
                                 </div>
                              ) : (
                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <FormField control={form.control} name="botPostIntervalHours" render={({ field }) => (
-                                        <FormItem><FormLabel>İçerik Paylaşım Aralığı (Saat)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                    <FormField control={form.control} name="botPostIntervalMinutes" render={({ field }) => (
+                                        <FormItem><FormLabel>İçerik Paylaşım Aralığı (Dakika)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                                     )} />
                                     <FormField control={form.control} name="botInteractIntervalMinutes" render={({ field }) => (
                                         <FormItem><FormLabel>Etkileşim Aralığı (Dakika)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>

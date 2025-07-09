@@ -280,7 +280,6 @@ export interface Room {
     portalExpiresAt?: Timestamp; // For public announcements
     participants: { uid: string, username: string, photoURL?: string | null }[];
     maxParticipants: number;
-    nextGameTimestamp?: Timestamp;
     voiceParticipantsCount?: number;
     rules: string | null;
     welcomeMessage: string | null;
@@ -346,6 +345,9 @@ export interface GameSettings {
     imageUploadQuality: number;
     audioBitrate: number;
     videoBitrate: number;
+    botAutomationEnabled: boolean;
+    botPostIntervalMinutes: number;
+    botInteractIntervalMinutes: number;
 }
 
 
@@ -474,6 +476,24 @@ export interface AuditLog {
     };
     details: string;
 }
+
+export interface BotActivityLog {
+    id: string;
+    botId: string;
+    botUsername: string;
+    actionType: 'post_image' | 'post_video' | 'post_text' | 'like' | 'comment';
+    targetPostId?: string;
+    targetUserId?: string;
+    targetUsername?: string;
+    commentText?: string;
+    timestamp: Timestamp;
+}
+
+export interface BotState {
+    lastPostRun?: Timestamp;
+    lastInteractRun?: Timestamp;
+}
+
 
 export interface ActiveGameSession {
     id: string;

@@ -4,6 +4,7 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import axios from "axios";
+import { GameSettings, BotState } from "./types"; // We need a types file in functions folder
 
 // Firebase Admin SDK'sını başlat. Bu, sunucu tarafında Firebase servislerine erişim sağlar.
 admin.initializeApp();
@@ -41,11 +42,42 @@ const botComments = [
     "Mutlaka devam et 👏👏",
 ];
 
-// BOT İÇERİK PAYLAŞIM FONKSİYONU (SAATLİK)
-export const botPostContent = functions.region("us-central1").pubsub.schedule('every 1 hours').onRun(async (context) => {
-    console.log('Bot içerik paylaşım fonksiyonu tetiklendi.');
+const getBotSettings = async (): Promise<{ settings: GameSettings; state: BotState }> => {
+    const settingsDoc = await db.collection('config').doc('gameSettings').get();
+    const stateDoc = await db.collection('config').doc('botState').get();
     
-    // Rastgele bir kadın bot kullanıcı seç
+    const defaults: GameSettings = {
+        botAutomationEnabled: true,
+        botInteractIntervalMinutes: 30,
+        botPostIntervalMinutes: 60,
+        // Diğer ayarlar için varsayılanlar...
+        dailyDiamondLimit: 50, gameIntervalMinutes: 5, questionTimerSeconds: 15, rewardAmount: 5, cooldownSeconds: 30, afkTimeoutMinutes: 8, imageUploadQuality: 0.9, audioBitrate: 64, videoBitrate: 1000
+    };
+
+    return {
+        settings: { ...defaults, ...settingsDoc.data() },
+        state: stateDoc.data() || {},
+    };
+};
+
+// BOT İÇERİK PAYLAŞIM FONKSİYONU
+export const botPostContent = functions.region("us-central1").pubsub.schedule('every 5 minutes').onRun(async (context) => {
+    const { settings, state } = await getBotSettings();
+    if (!settings.botAutomationEnabled) {
+        console.log("Bot otomasyonu devre dışı, içerik paylaşımı atlanıyor.");
+        return null;
+    }
+    
+    const now = Date.now();
+    const lastRun = state.lastPostRun?.toMillis() || 0;
+    const intervalMillis = (settings.botPostIntervalMinutes || 60) * 60 * 1000;
+
+    if (now - lastRun < intervalMillis) {
+        console.log(`Bot paylaşım zamanı gelmedi. Sonraki kontrol ~5 dakika içinde.`);
+        return null;
+    }
+
+    console.log('Bot içerik paylaşım fonksiyonu tetiklendi.');
     const botsQuery = db.collection('users').where('isBot', '==', true).where('gender', '==', 'female');
     const botsSnapshot = await botsQuery.get();
     if (botsSnapshot.empty) {
@@ -55,55 +87,44 @@ export const botPostContent = functions.region("us-central1").pubsub.schedule('e
     const botDocs = botsSnapshot.docs;
     const randomBotDoc = randomElement(botDocs);
     const botUser = { id: randomBotDoc.id, ...randomBotDoc.data() };
-
-    // Rastgele bir içerik türü seç
     const contentType = randomElement(['image', 'text', 'video']);
 
     const newPost: any = {
-        uid: botUser.id,
-        username: botUser.username,
-        userAvatar: botUser.photoURL,
-        userAvatarFrame: botUser.selectedAvatarFrame || '',
-        userRole: 'user',
-        userGender: 'female',
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        likeCount: 0,
-        commentCount: 0,
-        saveCount: 0,
-        likes: [],
-        savedBy: [],
-        tags: [],
+        uid: botUser.id, username: botUser.username, userAvatar: botUser.photoURL, userAvatarFrame: botUser.selectedAvatarFrame || '',
+        userRole: 'user', userGender: 'female', createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        likeCount: 0, commentCount: 0, saveCount: 0, likes: [], savedBy: [], tags: [],
     };
-
     switch(contentType) {
-        case 'image':
-            newPost.type = 'image';
-            newPost.imageUrl = `https://picsum.photos/600/800?random=${Date.now()}`;
-            newPost.text = randomElement(botCaptions);
-            break;
-        case 'video':
-            newPost.type = 'video';
-            newPost.videoUrl = 'https://samplelib.com/lib/preview/mp4/sample-5s.mp4';
-            newPost.text = randomElement(botCaptions);
-            break;
-        case 'text':
-        default:
-            newPost.type = 'text';
-            newPost.text = randomElement(botTextPosts);
-            break;
+        case 'image': newPost.imageUrl = `https://picsum.photos/600/800?random=${Date.now()}`; newPost.text = randomElement(botCaptions); break;
+        case 'video': newPost.videoUrl = 'https://samplelib.com/lib/preview/mp4/sample-5s.mp4'; newPost.text = randomElement(botCaptions); break;
+        default: newPost.text = randomElement(botTextPosts); break;
     }
     
     await db.collection('posts').add(newPost);
+    await db.collection('config').doc('botState').set({ lastPostRun: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
     console.log(`Bot ${botUser.username} yeni bir ${contentType} gönderisi paylaştı.`);
     return null;
 });
 
 
-// BOT ETKİLEŞİM FONKSİYONU (15 DAKİKADA BİR)
-export const botInteract = functions.region("us-central1").pubsub.schedule('every 15 minutes').onRun(async (context) => {
-     console.log('Bot etkileşim fonksiyonu tetiklendi.');
-     
-    // Rastgele bir kadın bot kullanıcı seç
+// BOT ETKİLEŞİM FONKSİYONU
+export const botInteract = functions.region("us-central1").pubsub.schedule('every 5 minutes').onRun(async (context) => {
+    const { settings, state } = await getBotSettings();
+    if (!settings.botAutomationEnabled) {
+        console.log("Bot otomasyonu devre dışı, etkileşim atlanıyor.");
+        return null;
+    }
+
+    const now = Date.now();
+    const lastRun = state.lastInteractRun?.toMillis() || 0;
+    const intervalMillis = (settings.botInteractIntervalMinutes || 30) * 60 * 1000;
+
+    if (now - lastRun < intervalMillis) {
+        console.log(`Bot etkileşim zamanı gelmedi. Sonraki kontrol ~5 dakika içinde.`);
+        return null;
+    }
+
+    console.log('Bot etkileşim fonksiyonu tetiklendi.');
     const botsQuery = db.collection('users').where('isBot', '==', true).where('gender', '==', 'female');
     const botsSnapshot = await botsQuery.get();
     if (botsSnapshot.empty) {
@@ -114,7 +135,6 @@ export const botInteract = functions.region("us-central1").pubsub.schedule('ever
     const randomBotDoc = randomElement(botDocs);
     const botUser = { id: randomBotDoc.id, ...randomBotDoc.data() };
 
-    // Rastgele bir gönderi seç (botun kendi gönderisi olmasın)
     const postsQuery = db.collection('posts').where('uid', '!=', botUser.id);
     const postsSnapshot = await postsQuery.get();
     if (postsSnapshot.empty) {
@@ -124,33 +144,25 @@ export const botInteract = functions.region("us-central1").pubsub.schedule('ever
     const postDocs = postsSnapshot.docs;
     const randomPostDoc = randomElement(postDocs);
     const postRef = randomPostDoc.ref;
-
     const postData = randomPostDoc.data();
     if (!postData) return;
 
-    // Beğenme işlemi
     if (!postData.likes || !postData.likes.includes(botUser.id)) {
         await postRef.update({
             likeCount: admin.firestore.FieldValue.increment(1),
             likes: admin.firestore.FieldValue.arrayUnion(botUser.id)
         });
-        console.log(`Bot ${botUser.username}, ${postData.username} kullanıcısının gönderisini beğendi.`);
     }
 
-    // Yorum yapma işlemi
     const newComment = {
-        uid: botUser.id,
-        username: botUser.username,
-        userAvatar: botUser.photoURL,
-        text: randomElement(botComments),
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        uid: botUser.id, username: botUser.username, userAvatar: botUser.photoURL,
+        text: randomElement(botComments), createdAt: admin.firestore.FieldValue.serverTimestamp(),
     };
     await postRef.collection('comments').add(newComment);
-    await postRef.update({
-        commentCount: admin.firestore.FieldValue.increment(1)
-    });
-    console.log(`Bot ${botUser.username}, ${postData.username} kullanıcısının gönderisine yorum yaptı.`);
-
+    await postRef.update({ commentCount: admin.firestore.FieldValue.increment(1) });
+    
+    await db.collection('config').doc('botState').set({ lastInteractRun: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    console.log(`Bot ${botUser.username}, ${postData.username} kullanıcısının gönderisiyle etkileşimde bulundu.`);
     return null;
 });
 

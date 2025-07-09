@@ -1,8 +1,9 @@
+
 'use server';
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getCountFromServer, query, where, serverTimestamp, getDocs, orderBy, limit, doc, setDoc } from 'firebase/firestore';
-import type { BotActivityLog, UserProfile } from '../types';
+import { collection, addDoc, getCountFromServer, query, where, serverTimestamp, getDocs, orderBy, limit, doc, setDoc, updateDoc } from 'firebase/firestore';
+import type { BotActivityLog, UserProfile, GameSettings } from '../types';
 import { deepSerialize } from '../server-utils';
 
 // Predefined bot data
@@ -114,6 +115,27 @@ export async function createInitialBots() {
         return { success: true, createdCount };
     } catch (error: any) {
         console.error("Error creating initial bots:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function getBotAutomationStatus(): Promise<boolean> {
+    const settingsRef = doc(db, 'config', 'gameSettings');
+    const docSnap = await getDoc(settingsRef);
+    if (docSnap.exists()) {
+        const settings = docSnap.data() as GameSettings;
+        return settings.botAutomationEnabled ?? true; // Default to true if not set
+    }
+    return true; // Default to true if doc doesn't exist
+}
+
+export async function toggleBotAutomation(enabled: boolean) {
+    const settingsRef = doc(db, 'config', 'gameSettings');
+    try {
+        await setDoc(settingsRef, { botAutomationEnabled: enabled }, { merge: true });
+        return { success: true };
+    } catch (error: any) {
+        console.error("Error toggling bot automation:", error);
         return { success: false, error: error.message };
     }
 }
