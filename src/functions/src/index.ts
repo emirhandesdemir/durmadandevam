@@ -16,6 +16,67 @@ const db = admin.firestore();
 const ONE_SIGNAL_APP_ID = "51c67432-a305-43fc-a4c8-9c5d9d478d1c";
 const ONE_SIGNAL_REST_API_KEY = "os_v2_app_khdhimvdavb7zjgitroz2r4ndrkixk2biw6eqrfn4oygor7fxogtw3riv5mjpu4koeuuju6ma2scefend3lqkwij53ppdzbngmbouvy";
 
+const botProfiles = [
+    { uid: "bot-elif", username: "Elif Dans", photoURL: "https://randomuser.me/api/portraits/women/68.jpg", userAvatarFrame: "avatar-frame-angel", gender: "female" },
+    { uid: "bot-zeynep", username: "Zeynep Gezgin", photoURL: "https://randomuser.me/api/portraits/women/69.jpg", userAvatarFrame: "avatar-frame-devil", gender: "female" },
+    { uid: "bot-ayse", username: "Ayşe Şef", photoURL: "https://randomuser.me/api/portraits/women/70.jpg", userAvatarFrame: "avatar-frame-snake", gender: "female" },
+    { uid: "bot-fatma", username: "Fatma Sanat", photoURL: "https://randomuser.me/api/portraits/women/71.jpg", userAvatarFrame: "avatar-frame-tech", gender: "female" },
+    { uid: "bot-emine", username: "Emine Spor", photoURL: "https://randomuser.me/api/portraits/women/72.jpg", userAvatarFrame: "avatar-frame-premium", gender: "female" },
+    { uid: "bot-hatice", username: "Hatice Müzik", photoURL: "https://randomuser.me/api/portraits/women/73.jpg", userAvatarFrame: "", gender: "female" },
+    { uid: "bot-merve", username: "Merve Kod", photoURL: "https://randomuser.me/api/portraits/women/74.jpg", userAvatarFrame: "", gender: "female" },
+    { uid: "bot-ipek", username: "İpek Doğa", photoURL: "https://randomuser.me/api/portraits/women/75.jpg", userAvatarFrame: "", gender: "female" }
+];
+
+const surfVideoCaptions = [
+    "Hafta sonu kaçamağı! 🌊☀️ #tatil #deniz",
+    "Bu manzaraya karşı kahve keyfi... ☕️ #kahve #huzur",
+    "Şehirde bir gün. 🏙️ #istanbul #gezi",
+    "Yeni bir tarif denedim, sonuç harika! 😋 #yemek #tarif",
+    "Günün en güzel anı. 🌅 #günbatımı #doğa",
+    "Bu şarkı modumu anında yükseltiyor! 🎶 #müzik #enerji",
+    "Spor zamanı! 💪 #spor #motivasyon",
+    "Küçük dostumla tanışın! 🐶❤️ #hayvanlar #sevimli"
+];
+
+const surfVideoUrl = "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4";
+
+/**
+ * Belirli aralıklarla çalışarak otomatik olarak bir "Surf" videosu paylaşır.
+ */
+export const autoPostSurfVideo = functions.region("us-central1").runWith({ memory: '256MB' }).pubsub.schedule('every 3 hours').onRun(async () => {
+    try {
+        const randomBot = botProfiles[Math.floor(Math.random() * botProfiles.length)];
+        const randomCaption = surfVideoCaptions[Math.floor(Math.random() * surfVideoCaptions.length)];
+
+        const postData = {
+            uid: randomBot.uid,
+            username: randomBot.username,
+            userAvatar: randomBot.photoURL,
+            userAvatarFrame: randomBot.userAvatarFrame,
+            userRole: 'user',
+            userGender: randomBot.gender,
+            text: randomCaption,
+            videoUrl: surfVideoUrl,
+            imageUrl: '',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            language: 'tr',
+            likeCount: 0,
+            likes: [],
+            commentCount: 0,
+            saveCount: 0,
+            savedBy: []
+        };
+
+        await db.collection('posts').add(postData);
+        console.log(`Bot ${randomBot.username} tarafından yeni bir surf videosu paylaşıldı.`);
+        return null;
+    } catch (error) {
+        console.error("Otomatik surf videosu paylaşılırken hata oluştu:", error);
+        return null;
+    }
+});
+
+
 /**
  * 'broadcasts' koleksiyonuna yeni bir belge eklendiğinde tetiklenir.
  * OneSignal kullanarak abone olan tüm kullanıcılara anlık bildirim gönderir.
@@ -190,6 +251,7 @@ export const sendPushNotification = functions.region("us-central1").firestore
                 error.response?.data || error.message);
         }
     });
+
 
 /**
  * Firebase Authentication'da yeni bir kullanıcı oluşturulduğunda tetiklenir.
