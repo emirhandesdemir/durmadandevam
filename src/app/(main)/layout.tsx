@@ -128,7 +128,7 @@ export default function MainAppLayout({
   const [hidden, setHidden] = useState(false);
   const pathname = usePathname();
 
-  const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/');
+  const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/') || pathname === '/surf';
   const isHeaderlessPage = isFullPageLayout;
   const isHomePage = pathname === '/home';
 

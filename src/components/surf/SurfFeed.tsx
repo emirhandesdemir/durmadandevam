@@ -91,7 +91,7 @@ export default function SurfFeed() {
   }
 
   return (
-    <div ref={containerRef} data-surf-feed-container className="h-full w-full overflow-y-auto snap-y snap-mandatory hide-scrollbar">
+    <div ref={containerRef} data-surf-feed-container className="h-full w-full overflow-y-auto snap-y snap-mandatory overscroll-behavior-contain scroll-smooth hide-scrollbar">
       {videoPosts.map((post, index) => (
         <div key={post.id} data-index={index} className="h-full w-full snap-start relative flex items-center justify-center bg-black">
           <SurfVideoCard post={post} isActive={index === activeIndex} />
