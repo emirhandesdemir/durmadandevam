@@ -152,6 +152,7 @@ export interface ProfileViewer {
     viewedAt: Timestamp;
     username?: string;
     photoURL?: string | null;
+    selectedAvatarFrame?: string;
 }
 
 export interface Report {
@@ -172,6 +173,7 @@ export interface FollowRequest {
     uid: string;
     username:string;
     photoURL: string | null;
+    userAvatarFrame?: string;
     requestedAt: Timestamp;
 }
 
@@ -205,7 +207,6 @@ export interface Post {
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
-    isBotPost?: boolean;
     text: string;
     imageUrl?: string;
     videoUrl?: string;
@@ -230,6 +231,8 @@ export interface Post {
         videoUrl?: string;
         createdAt: Timestamp | { seconds: number; nanoseconds: number };
     };
+    isBotPost?: boolean;
+    retweetCount?: number;
 }
 
 export interface Comment {
@@ -349,8 +352,10 @@ export interface GameSettings {
     audioBitrate: number;
     videoBitrate: number;
     botAutomationEnabled: boolean;
-    botPostIntervalMinutes: number;
     botInteractIntervalMinutes: number;
+    botPostIntervalMinutes: number;
+    maxBotsPerRoom?: number;
+    botRoomJoinIntervalMinutes?: number;
 }
 
 
@@ -419,10 +424,12 @@ export interface Message {
   username: string;
   photoURL?: string | null;
   text?: string;
-  imageUrl?: string;
+  imageUrl?: string; // Changed from imageUrls
   videoUrl?: string;
   type?: 'system' | 'game' | 'portal' | 'user' | 'gameInvite';
   createdAt: Timestamp;
+  selectedBubble?: string;
+  selectedAvatarFrame?: string;
   portalRoomId?: string;
   portalRoomName?: string;
   gameInviteData?: GameInviteMessageData;
@@ -484,10 +491,11 @@ export interface BotActivityLog {
     id: string;
     botId: string;
     botUsername: string;
-    actionType: 'post_image' | 'post_video' | 'post_text' | 'like' | 'comment' | 'follow' | 'dm_sent';
+    actionType: 'post_image' | 'post_video' | 'post_text' | 'like' | 'comment' | 'follow' | 'dm_sent' | 'retweet' | 'join_room' | 'send_room_message';
     targetPostId?: string;
     targetUserId?: string;
     targetUsername?: string;
+    targetRoomId?: string;
     commentText?: string;
     timestamp: Timestamp;
 }
@@ -495,6 +503,7 @@ export interface BotActivityLog {
 export interface BotState {
     lastPostRun?: Timestamp;
     lastInteractRun?: Timestamp;
+    lastRoomInteractRun?: Timestamp;
 }
 
 

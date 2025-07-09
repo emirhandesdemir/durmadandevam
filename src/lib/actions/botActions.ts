@@ -1,9 +1,9 @@
-
+// src/lib/actions/botActions.ts
 'use server';
 
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getCountFromServer, query, where, serverTimestamp, getDocs, orderBy, limit, doc, setDoc, updateDoc, writeBatch, increment, arrayUnion } from 'firebase/firestore';
-import type { BotActivityLog, UserProfile, GameSettings, Post } from '../types';
+import type { BotActivityLog, UserProfile, Post } from '../types';
 import { deepSerialize } from '../server-utils';
 import { createNotification } from './notificationActions';
 
@@ -94,7 +94,7 @@ export async function createInitialBots() {
             if (existingUserSnap.empty) {
                 const newBotRef = doc(usersCol);
                 const newBot: Partial<UserProfile> = {
-                    username: username, email: `${username.replace(' ','_')}@bot.hiwewalk.com`, photoURL: await fetchRandomAvatar('women', i),
+                    username: username, email: `${username.replace(' ','_').toLowerCase()}@bot.hiwewalk.com`, photoURL: await fetchRandomAvatar('women', i),
                     isBot: true, bio: bios[i] || "Yeni maceralar peşinde...", gender: 'female', role: 'user', followers: [], following: [],
                     postCount: 0, diamonds: 0, privateProfile: false, acceptsFollowRequests: true, followRequests: [],
                 };
@@ -109,7 +109,7 @@ export async function createInitialBots() {
              if (existingUserSnap.empty) {
                 const newBotRef = doc(usersCol);
                 const newBot: Partial<UserProfile> = {
-                    username: username, email: `${username.replace(' ','_')}@bot.hiwewalk.com`, photoURL: await fetchRandomAvatar('men', i),
+                    username: username, email: `${username.replace(' ','_').toLowerCase()}@bot.hiwewalk.com`, photoURL: await fetchRandomAvatar('men', i),
                     isBot: true, bio: bios[6 + i] || "Hayatı dolu dolu yaşa.", gender: 'male', role: 'user', followers: [],
                     following: [], postCount: 0, diamonds: 0, privateProfile: false, acceptsFollowRequests: true, followRequests: [],
                 };
@@ -164,7 +164,7 @@ async function getRandomPost(excludeBotId?: string) {
     
     let eligibleDocs = postsSnapshot.docs;
     if (excludeBotId) {
-        eligibleDocs = postsSnapshot.docs.filter(doc => doc.data().uid !== excludeBotId);
+        eligibleDocs = postsSnapshot.docs.filter(doc => doc.data().uid !== excludeBotId && !doc.data().isBotPost);
     }
     if (eligibleDocs.length === 0) throw new Error("Etkileşime girilecek uygun gönderi bulunamadı.");
 
@@ -184,7 +184,7 @@ export async function triggerBotPostNow(contentType: 'image' | 'text' | 'video')
     
     const newPost: Partial<Post> = {
         uid: botUser.id, username: botUser.username, userAvatar: botUser.photoURL, userAvatarFrame: botUser.selectedAvatarFrame || '',
-        userRole: 'user', userGender: 'female', createdAt: serverTimestamp(), likeCount: 0, commentCount: 0, saveCount: 0, likes: [], savedBy: [], tags: [], isBotPost: true
+        userRole: 'user', userGender: 'female', createdAt: serverTimestamp(), likeCount: 0, commentCount: 0, saveCount: 0, likes: [], savedBy: [], tags: [], isBotPost: true,
     };
 
     const typeMap = { image: 'görsel', text: 'metin', video: 'video' };
