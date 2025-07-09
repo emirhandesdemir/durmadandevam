@@ -41,13 +41,6 @@ const botComments = [
     "Yine harikasın 🫶",
     "Mutlaka devam et 👏👏",
 ];
-const welcomeDms = [
-    "Selam, uygulamaya hoş geldin! 🎉 Umarız harika vakit geçirirsin.",
-    "Merhaba! Aramıza katıldığın için çok mutluyuz. 😊",
-    "Hoş geldin! Yardıma ihtiyacın olursa çekinme. 🙋‍♀️",
-    "Naber? Uygulamayı keşfetmeye başla, harika şeyler var!",
-    "Selam, yeni bir yüz görmek ne güzel! Hadi bir oda oluştur da görelim seni.",
-];
 
 const femaleFirstNames = [
     'Ayşe', 'Fatma', 'Emine', 'Hatice', 'Zeynep', 'Elif', 'Meryem', 'Şerife', 'Sultan', 'Zehra',
@@ -58,6 +51,49 @@ const turkishLastNames = [
     'Yılmaz', 'Kaya', 'Demir', 'Çelik', 'Şahin', 'Yıldız', 'Yıldırım', 'Öztürk', 'Aydın', 'Özdemir',
     'Arslan', 'Doğan', 'Kılıç', 'Çetin', 'Kara', 'Koç', 'Kurt', 'Özcan', 'Polat', 'Tekin'
 ];
+
+async function generateUniqueBotUsername(): Promise<string> {
+    let username = '';
+    let isUnique = false;
+    let attempts = 0;
+    while (!isUnique && attempts < 20) {
+        const randomFirstName = randomElement(femaleFirstNames);
+        const randomLastName = randomElement(turkishLastNames);
+        username = `${randomFirstName} ${randomLastName}`;
+        
+        const existingUserQuery = query(collection(db, 'users'), where('username', '==', username));
+        const existingUserSnap = await getDocs(existingUserQuery);
+        
+        if (existingUserSnap.empty) {
+            isUnique = true;
+        }
+        attempts++;
+    }
+
+    if (!isUnique) {
+        return `BotUser${Date.now()}`;
+    }
+
+    return username;
+}
+
+const fetchRandomAvatar = async (seed: string): Promise<string> => {
+     try {
+        const response = await fetch(`https://randomuser.me/api/?gender=female&seed=${seed}`);
+        if (!response.ok) {
+            throw new Error(`API responded with status ${response.status}`);
+        }
+        const data = await response.json();
+        const photoURL = data.results[0]?.picture?.large;
+        if (!photoURL) {
+            throw new Error("No picture URL found in API response.");
+        }
+        return photoURL;
+    } catch (apiError: any) {
+        console.warn(`Could not fetch avatar for seed ${seed} from API: ${apiError.message}. Using fallback.`);
+        return generateFallbackAvatar(seed);
+    }
+}
 
 const generateFallbackAvatar = (seed: string) => {
     const getHash = (str: string) => {
@@ -90,30 +126,6 @@ const generateFallbackAvatar = (seed: string) => {
     return `data:image/svg+xml;base64,${btoa(svg)}`;
 };
 
-async function generateUniqueBotUsername(): Promise<string> {
-    let username = '';
-    let isUnique = false;
-    let attempts = 0;
-    while (!isUnique && attempts < 20) {
-        const randomFirstName = randomElement(femaleFirstNames);
-        const randomLastName = randomElement(turkishLastNames);
-        username = `${randomFirstName} ${randomLastName}`;
-        
-        const existingUserQuery = query(collection(db, 'users'), where('username', '==', username));
-        const existingUserSnap = await getDocs(existingUserQuery);
-        
-        if (existingUserSnap.empty) {
-            isUnique = true;
-        }
-        attempts++;
-    }
-
-    if (!isUnique) {
-        return `BotUser${Date.now()}`;
-    }
-
-    return username;
-}
 
 
 export async function getBots(): Promise<UserProfile[]> {
@@ -152,26 +164,10 @@ export async function createInitialBots() {
 
         for (let i = 0; i < botsToCreate; i++) {
             const username = await generateUniqueBotUsername();
-            
-            const newBotRef = doc(usersCol);
             const seed = username.replace(/\s+/g, '').toLowerCase();
-            let photoURL = '';
+            const photoURL = await fetchRandomAvatar(seed);
 
-            try {
-                const response = await fetch(`https://randomuser.me/api/?gender=female&seed=${seed}`);
-                if (!response.ok) {
-                    throw new Error(`API responded with status ${response.status}`);
-                }
-                const data = await response.json();
-                photoURL = data.results[0]?.picture?.large;
-
-                if (!photoURL) {
-                    throw new Error("No picture URL found in API response.");
-                }
-            } catch (apiError: any) {
-                console.warn(`Could not fetch avatar for ${username} from API: ${apiError.message}. Using fallback.`);
-                photoURL = generateFallbackAvatar(seed);
-            }
+            const newBotRef = doc(usersCol);
 
             const newBot: Partial<UserProfile> = {
                 username: username,
@@ -200,7 +196,7 @@ export async function createInitialBots() {
         return { success: true, createdCount };
     } catch (error: any) {
         console.error("Error creating initial bots:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: error.message, createdCount: 0 };
     }
 }
 
@@ -248,8 +244,8 @@ export async function triggerBotPostNow(contentType: 'image' | 'text' | 'video')
     const typeMap = { image: 'görsel', text: 'metin', video: 'video' };
 
     switch(contentType) {
-        case 'image': newPost.imageUrl = `https://picsum.photos/600/800?random=${Date.now()}`; newPost.text = randomElement(botCaptions); break;
-        case 'video': newPost.videoUrl = 'https://samplelib.com/lib/preview/mp4/sample-5s.mp4'; newPost.text = randomElement(botCaptions); break;
+        case 'image': newPost.imageUrl = `https://placehold.co/600x800.png`; newPost.text = randomElement(botCaptions); break;
+        case 'video': newPost.videoUrl = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4'; newPost.text = randomElement(botCaptions); break;
         default: newPost.text = randomElement(botTextPosts); newPost.imageUrl = ''; newPost.videoUrl = ''; break;
     }
     

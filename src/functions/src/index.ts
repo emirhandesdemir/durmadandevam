@@ -110,10 +110,11 @@ export const botPostContent = functions.region("us-central1").pubsub.schedule('e
     const newPost: any = {
         uid: botUser.id, username: botUser.username, userAvatar: botUser.photoURL, userAvatarFrame: botUser.selectedAvatarFrame || '',
         userRole: 'user', userGender: 'female', createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        likeCount: 0, commentCount: 0, saveCount: 0, likes: [], savedBy: [], tags: [], isBotPost: true
+        likeCount: 0, commentCount: 0, saveCount: 0, likes: [], savedBy: [], tags: [], isBotPost: true, videoUrl: '', imageUrl: '',
     };
+    
     switch(contentType) {
-        case 'image': newPost.imageUrl = `https://picsum.photos/600/800?random=${Date.now()}`; newPost.text = randomElement(botCaptions); break;
+        case 'image': newPost.imageUrl = `https://placehold.co/600x800.png`; newPost.text = randomElement(botCaptions); break;
         case 'video': newPost.videoUrl = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4'; newPost.text = randomElement(botCaptions); break;
         default: 
             newPost.text = randomElement(botTextPosts);
