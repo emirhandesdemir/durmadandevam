@@ -144,7 +144,6 @@ export interface UserProfile {
     profileCompletionNotificationSent?: boolean;
     selectedBubble?: string;
     selectedAvatarFrame?: string;
-    isBot?: boolean; // Added for bot system
 }
 
 export interface ProfileViewer {
@@ -231,7 +230,6 @@ export interface Post {
         videoUrl?: string;
         createdAt: Timestamp | { seconds: number; nanoseconds: number };
     };
-    isBotPost?: boolean;
     retweetCount?: number;
 }
 
@@ -286,7 +284,6 @@ export interface Room {
     participants: { uid: string, username: string, photoURL?: string | null }[];
     maxParticipants: number;
     voiceParticipantsCount?: number;
-    nextGameTimestamp?: Timestamp;
     rules: string | null;
     welcomeMessage: string | null;
     pinnedMessageId: string | null;
@@ -328,44 +325,18 @@ export interface VoiceParticipant {
     selectedAvatarFrame?: string;
 }
 
-export interface ActiveGame {
-    id: string;
-    questionId: string;
-    question: string;
-    options: string[];
-    correctOptionIndex: number;
-    startTime: Timestamp;
-    status: 'active' | 'finished';
-    answeredBy: string[];
-    winner?: string;
-    finishedAt?: Timestamp;
-}
-
 export interface GameSettings {
     dailyDiamondLimit: number;
-    gameIntervalMinutes: number;
-    questionTimerSeconds: number;
-    rewardAmount: number;
-    cooldownSeconds: number;
     afkTimeoutMinutes: number;
     imageUploadQuality: number;
     audioBitrate: number;
     videoBitrate: number;
-    botPostIntervalMinutes: number;
-    botInteractIntervalMinutes: number;
-    botRoomJoinIntervalMinutes: number;
-    maxBotsPerRoom: number;
 }
 
 
 export interface FeatureFlags {
-    quizGameEnabled: boolean;
     postFeedEnabled: boolean;
     contentModerationEnabled: boolean;
-    botNewUserOnboardEnabled: boolean;
-    botAutoPostEnabled: boolean;
-    botAutoInteractEnabled: boolean;
-    botAutoRoomInteractEnabled: boolean;
 }
 
 export interface VoiceStats {
@@ -489,26 +460,6 @@ export interface AuditLog {
     };
     details: string;
 }
-
-export interface BotActivityLog {
-    id: string;
-    botId: string;
-    botUsername: string;
-    actionType: 'post_image' | 'post_video' | 'post_text' | 'like' | 'comment' | 'follow' | 'dm_sent' | 'retweet' | 'join_room' | 'send_room_message';
-    targetPostId?: string;
-    targetUserId?: string;
-    targetUsername?: string;
-    targetRoomId?: string;
-    commentText?: string;
-    timestamp: Timestamp;
-}
-
-export interface BotState {
-    lastPostRun?: Timestamp;
-    lastInteractRun?: Timestamp;
-    lastRoomInteractRun?: Timestamp;
-}
-
 
 export interface ActiveGameSession {
     id: string;
