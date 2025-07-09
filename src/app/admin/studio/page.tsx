@@ -1,42 +1,69 @@
 'use client';
 
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useRef, useEffect } from 'react';
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, Send, User } from "lucide-react";
+import { Sparkles, Send, User, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { studioChat, type StudioChatInput } from '@/ai/flows/studioChatFlow';
 
-// Dummy message type for the UI
 interface Message {
-  id: number;
-  sender: 'ai' | 'user';
-  text: string;
+  role: 'model' | 'user';
+  content: string;
 }
 
 export default function StudioPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: 1,
-      sender: 'ai',
-      text: "Merhaba! Ben Firebase Studio'daki yapay zeka asistanınızım. Uygulamanızda nasıl bir değişiklik yapmak istersiniz? Örneğin, 'Kullanıcı profiline bir 'arkadaş ekle' butonu ekle' diyebilirsiniz."
+      role: 'model',
+      content: "Merhaba! Ben Firebase Studio'daki yapay zeka asistanınızım. Uygulamanızda nasıl bir değişiklik yapmak istersiniz? Örneğin, 'Kullanıcı profiline bir 'arkadaş ekle' butonu ekle' diyebilirsiniz."
     }
   ]);
   const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  useEffect(() => {
+    // Scroll to bottom when messages change
+    if (scrollAreaRef.current) {
+        scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  }, [messages]);
+
+
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || isLoading) return;
 
-    // This is a placeholder. In a real implementation, you would send the message
-    // to your backend/AI service and get a response.
-    const userMessage: Message = { id: Date.now(), sender: 'user', text: input };
-    const aiResponse: Message = { id: Date.now() + 1, sender: 'ai', text: `"${input}" isteğinizi anladım. Ancak bu arayüz şu anda sadece bir gösterimdir ve isteğinizi işleyemez. Lütfen Firebase Studio'nun ana arayüzünü kullanmaya devam edin.` };
-    
-    setMessages(prev => [...prev, userMessage, aiResponse]);
+    const newUserMessage: Message = { role: 'user', content: input };
+    const updatedMessages = [...messages, newUserMessage];
+    setMessages(updatedMessages);
     setInput('');
+    setIsLoading(true);
+
+    try {
+        const chatInput: StudioChatInput = {
+            history: updatedMessages.map(m => ({
+                role: m.role,
+                content: m.content
+            }))
+        }
+
+        const aiResponse = await studioChat(chatInput);
+        
+        if (aiResponse.response) {
+            setMessages(prev => [...prev, { role: 'model', content: aiResponse.response }]);
+        }
+
+    } catch (error) {
+        console.error("Chat error:", error);
+        setMessages(prev => [...prev, { role: 'model', content: "Üzgünüm, bir hata oluştu. Lütfen daha sonra tekrar deneyin." }]);
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   return (
@@ -53,31 +80,43 @@ export default function StudioPage() {
 
       <Card className="mt-8 flex-1 flex flex-col">
         <CardContent className="p-0 flex-1 flex flex-col">
-          <ScrollArea className="flex-1 p-6">
+          <ScrollArea className="flex-1 p-6" ref={scrollAreaRef}>
             <div className="space-y-6">
-              {messages.map((message) => (
-                <div key={message.id} className={cn(
+              {messages.map((message, index) => (
+                <div key={index} className={cn(
                     "flex items-start gap-4",
-                    message.sender === 'user' && "justify-end"
+                    message.role === 'user' && "justify-end"
                 )}>
-                  {message.sender === 'ai' && (
+                  {message.role === 'model' && (
                     <Avatar className="h-9 w-9 border">
-                      <AvatarFallback><Sparkles className="h-5 w-5"/></AvatarFallback>
+                      <AvatarFallback><Sparkles className="h-5 w-5 text-primary"/></AvatarFallback>
                     </Avatar>
                   )}
                   <div className={cn(
-                      "max-w-xl rounded-lg p-3 text-sm",
-                      message.sender === 'ai' ? "bg-muted" : "bg-primary text-primary-foreground"
+                      "max-w-xl rounded-lg p-3 text-sm whitespace-pre-wrap",
+                      message.role === 'model' ? "bg-muted" : "bg-primary text-primary-foreground"
                   )}>
-                    <p className="leading-relaxed">{message.text}</p>
+                    <p className="leading-relaxed">{message.content}</p>
                   </div>
-                   {message.sender === 'user' && (
+                   {message.role === 'user' && (
                     <Avatar className="h-9 w-9 border">
                       <AvatarFallback><User className="h-5 w-5"/></AvatarFallback>
                     </Avatar>
                   )}
                 </div>
               ))}
+              {isLoading && (
+                  <div className="flex items-start gap-4">
+                     <Avatar className="h-9 w-9 border">
+                      <AvatarFallback><Sparkles className="h-5 w-5 text-primary"/></AvatarFallback>
+                    </Avatar>
+                    <div className="max-w-xl rounded-lg p-3 text-sm bg-muted flex items-center gap-2">
+                        <span className="h-2 w-2 bg-primary rounded-full animate-pulse [animation-delay:-0.3s]"></span>
+                        <span className="h-2 w-2 bg-primary rounded-full animate-pulse [animation-delay:-0.15s]"></span>
+                        <span className="h-2 w-2 bg-primary rounded-full animate-pulse"></span>
+                    </div>
+                  </div>
+              )}
             </div>
           </ScrollArea>
           <div className="p-4 border-t bg-background/95">
@@ -87,9 +126,10 @@ export default function StudioPage() {
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Bir özellik isteyin veya bir hatayı tarif edin..."
                 autoComplete="off"
+                disabled={isLoading}
               />
-              <Button type="submit">
-                <Send className="h-4 w-4" />
+              <Button type="submit" disabled={isLoading || !input.trim()}>
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 <span className="sr-only">Gönder</span>
               </Button>
             </form>
