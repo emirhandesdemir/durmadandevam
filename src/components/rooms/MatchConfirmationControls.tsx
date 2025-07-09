@@ -1,1 +1,4 @@
-// Bu dosya, kaldırılan "Hızlı Eşleşme" özelliğiyle ilgili olduğu için artık kullanılmamaktadır ve güvenle silinebilir.
+// This file is obsolete and has been removed to clean up the project.
+export default function MatchConfirmationControls() {
+  return null;
+}

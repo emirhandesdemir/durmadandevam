@@ -172,10 +172,10 @@ export default function SignUpForm() {
 
             toast({
                 title: "Hesap Oluşturuldu!",
-                description: "Uygulamaya hoş geldin!",
+                description: "Profilinizi tamamlayarak başlayabilirsiniz.",
             });
             
-            router.push('/home');
+            router.push('/onboarding');
 
         } catch (error: any)
         {

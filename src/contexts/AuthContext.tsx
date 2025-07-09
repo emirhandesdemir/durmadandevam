@@ -5,7 +5,7 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { doc, onSnapshot, DocumentData, collection, query, where, updateDoc, serverTimestamp, setDoc, getDocs } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import type { FeatureFlags, UserProfile, ThemeSettings } from '@/lib/types';
 import { triggerProfileCompletionNotification } from '@/lib/actions/notificationActions';
@@ -15,6 +15,7 @@ interface AuthContextType {
   userData: UserProfile | null;
   featureFlags: FeatureFlags | null;
   themeSettings: ThemeSettings | null;
+  totalUnreadDms: number;
   loading: boolean;
   handleLogout: () => Promise<void>;
 }
@@ -24,6 +25,7 @@ const AuthContext = createContext<AuthContextType>({
   userData: null,
   featureFlags: null,
   themeSettings: null,
+  totalUnreadDms: 0,
   loading: true,
   handleLogout: async () => {},
 });
@@ -33,9 +35,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userData, setUserData] = useState<UserProfile | null>(null);
   const [featureFlags, setFeatureFlags] = useState<FeatureFlags | null>(null);
   const [themeSettings, setThemeSettings] = useState<ThemeSettings | null>(null);
+  const [totalUnreadDms, setTotalUnreadDms] = useState(0);
   const [authLoading, setAuthLoading] = useState(true);
   const [firestoreLoading, setFirestoreLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
   const { toast } = useToast();
 
   const handleLogout = useCallback(async () => {
@@ -110,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         document.removeEventListener("visibilitychange", handleVisibilityChange);
         window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [user, userData]); // Rerun when userData (including showOnlineStatus) changes
+  }, [user, userData]); 
 
 
   useEffect(() => {
@@ -129,6 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     let unsubscribeUser: () => void = () => {};
+    let unsubscribeDms: () => void = () => {};
 
     if (user) {
       const userDocRef = doc(db, 'users', user.uid);
@@ -147,6 +152,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
             setUserData(data);
 
+            const isOnboardingRelatedPage = pathname === '/onboarding' || pathname.startsWith('/login') || pathname.startsWith('/signup');
+            if (!data.bio && !isOnboardingRelatedPage) {
+                router.replace('/onboarding');
+            }
+
             if (!data.bio && !data.profileCompletionNotificationSent) {
                 triggerProfileCompletionNotification(user.uid);
             }
@@ -160,27 +170,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setFirestoreLoading(false);
       });
 
+      const dmsQuery = query(
+        collection(db, 'directMessagesMetadata'),
+        where('participantUids', 'array-contains', user.uid)
+      );
+      unsubscribeDms = onSnapshot(dmsQuery, (snapshot) => {
+        let total = 0;
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            total += data.unreadCounts?.[user.uid] || 0;
+        });
+        setTotalUnreadDms(total);
+      });
+
     } else {
       setUserData(null);
+      setTotalUnreadDms(0);
       setFirestoreLoading(false);
     }
 
     return () => {
       unsubscribeUser();
       unsubscribeFeatures();
+      unsubscribeDms();
       unsubscribeTheme();
     };
-  }, [user, handleLogout, toast]);
+  }, [user, handleLogout, toast, pathname, router]);
 
   const loading = authLoading || firestoreLoading;
 
-  const value = { user, userData, loading, handleLogout, featureFlags, themeSettings };
+  const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms };
 
-  return (
-    <AuthContext.Provider value={value}>
-        {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export const useAuth = () => {

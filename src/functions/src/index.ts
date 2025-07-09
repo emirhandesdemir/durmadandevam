@@ -42,10 +42,10 @@ export const onBroadcastCreate = functions.region("us-central1").firestore
             included_segments: ["Subscribed Users"],
             headings: { "en": title, "tr": title },
             contents: { "en": body, "tr": body },
-            web_url: `https://yenidendeneme-ea9ed.web.app${link || '/'}`,
+            web_url: `https://hiwewalkbeta.netlify.app${link || '/'}`,
         };
         
-        console.log("Yayın yükü OneSignal'a gönderiliyor:", JSON.stringify(oneSignalPayload, null, 2));
+        console.log("Yayın yükü OneSignal'a gnderiliyor:", JSON.stringify(oneSignalPayload, null, 2));
 
         try {
             const response = await axios.post("https://onesignal.com/api/v1/notifications", oneSignalPayload, {

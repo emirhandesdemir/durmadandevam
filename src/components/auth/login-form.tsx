@@ -58,7 +58,8 @@ export default function LoginForm() {
         setIsLoading(true);
         try {
             await signInWithEmailAndPassword(auth, values.email, values.password);
-            router.push('/home'); // Başarılı girişte ana sayfaya yönlendir.
+            // Başarılı girişte AuthContext yönlendirmeyi halledecek.
+            // Bu, kullanıcının eksik profili varsa onboarding'e gitmesini sağlar.
         } catch (error: any) {
             console.error("Giriş hatası", error);
             let errorMessage = "Giriş yapılırken bir hata oluştu.";
