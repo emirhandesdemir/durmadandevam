@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Post } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck, Sparkles, Repeat, EyeOff, FileVideo } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck, Sparkles, Repeat, EyeOff, MessageCircleOff, HeartOff } from "lucide-react";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -14,6 +14,8 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { deletePost, updatePost, likePost, retweetPost } from "@/lib/actions/postActions";
 import { Timestamp } from "firebase/firestore";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 import {
   DropdownMenu,
@@ -82,11 +84,17 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showComments, setShowComments] = useState(false);
     const [postToRetweet, setPostToRetweet] = useState<Post | null>(null);
+
+    // New state for editing mode
+    const [editingCommentsDisabled, setEditingCommentsDisabled] = useState(post.commentsDisabled ?? false);
+    const [editingLikesHidden, setEditingLikesHidden] = useState(post.likesHidden ?? false);
     
     useEffect(() => {
         setOptimisticLiked(post.likes?.includes(currentUser?.uid || ''));
         setOptimisticLikeCount(post.likeCount);
-    }, [post.likeCount, post.likes, currentUser]);
+        setEditingCommentsDisabled(post.commentsDisabled ?? false);
+        setEditingLikesHidden(post.likesHidden ?? false);
+    }, [post.likeCount, post.likes, post.commentsDisabled, post.likesHidden, currentUser]);
 
 
     const isOwner = currentUser?.uid === post.uid;
@@ -151,14 +159,36 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     };
 
     const handleSaveEdit = async () => {
-        if (!isOwner || !editedText.trim()) return;
+        if (!isOwner) return;
+        
+        const updates: { text?: string; commentsDisabled?: boolean; likesHidden?: boolean } = {};
+        let hasChanges = false;
+
+        if (editedText.trim() !== (post.text || '')) {
+            updates.text = editedText.trim();
+            hasChanges = true;
+        }
+        if (editingCommentsDisabled !== (post.commentsDisabled ?? false)) {
+            updates.commentsDisabled = editingCommentsDisabled;
+            hasChanges = true;
+        }
+        if (editingLikesHidden !== (post.likesHidden ?? false)) {
+            updates.likesHidden = editingLikesHidden;
+            hasChanges = true;
+        }
+
+        if (!hasChanges) {
+            setIsEditing(false);
+            return;
+        }
+
         setIsSaving(true);
         try {
-            await updatePost(post.id, editedText);
+            await updatePost(post.id, updates);
             toast({ description: "Gönderi güncellendi." });
             setIsEditing(false);
         } catch (error: any) {
-            console.error("Error updating post:", error);
+            console.error("Gönderi güncellenirken hata:", error);
             toast({ variant: "destructive", description: "Gönderi güncellenirken bir hata oluştu." });
         } finally {
             setIsSaving(false);
@@ -167,6 +197,8 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     
     const handleCancelEdit = () => {
         setEditedText(post.text || '');
+        setEditingCommentsDisabled(post.commentsDisabled ?? false);
+        setEditingLikesHidden(post.likesHidden ?? false);
         setIsEditing(false);
     };
 
@@ -365,8 +397,18 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                  {(post.text || isEditing) && (
                     <div className="px-4 pb-3 text-sm text-foreground/90">
                         {isEditing ? (
-                            <div className="space-y-2">
+                            <div className="space-y-4">
                                 <Textarea ref={textareaRef} value={editedText} onChange={(e) => setEditedText(e.target.value)} className="w-full resize-none bg-muted p-2 rounded-lg" onInput={(e) => { const target = e.currentTarget; target.style.height = 'inherit'; target.style.height = `${target.scrollHeight}px`; }} />
+                                <div className="space-y-3 rounded-lg border p-3">
+                                    <div className="flex items-center justify-between">
+                                        <Label htmlFor="edit-disable-comments" className="font-semibold flex items-center gap-2"><MessageCircleOff className="h-4 w-4"/> Yorumları Kapat</Label>
+                                        <Switch id="edit-disable-comments" checked={editingCommentsDisabled} onCheckedChange={setEditingCommentsDisabled} />
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <Label htmlFor="edit-hide-likes" className="font-semibold flex items-center gap-2"><HeartOff className="h-4 w-4"/> Beğeni Sayısını Gizle</Label>
+                                        <Switch id="edit-hide-likes" checked={editingLikesHidden} onCheckedChange={setEditingLikesHidden} />
+                                    </div>
+                                </div>
                                 <div className="flex justify-end gap-2">
                                     <Button variant="ghost" size="sm" onClick={handleCancelEdit}>İptal</Button>
                                     <Button size="sm" onClick={handleSaveEdit} disabled={isSaving}>

@@ -60,11 +60,8 @@ export async function createPost(postData: {
     userGender?: 'male' | 'female';
     text: string;
     imageUrl: string;
-    videoUrl: string;
     editedWithAI?: boolean;
     language: string;
-    commentsDisabled?: boolean;
-    likesHidden?: boolean;
 }) {
     const newPostRef = doc(collection(db, 'posts'));
     const userRef = doc(db, 'users', postData.uid);
@@ -79,12 +76,13 @@ export async function createPost(postData: {
         
         const newPostData = {
             ...postData,
+            videoUrl: "", // Ensure videoUrl is empty
             createdAt: serverTimestamp(),
             likes: [],
             likeCount: 0,
             commentCount: 0,
-            commentsDisabled: postData.commentsDisabled ?? false,
-            likesHidden: postData.likesHidden ?? false,
+            commentsDisabled: false,
+            likesHidden: false,
         };
         transaction.set(newPostRef, newPostData);
         
@@ -142,6 +140,16 @@ export async function deletePost(postId: string) {
                     }
                 }
             }
+            if (postData.videoUrl) {
+                 try {
+                    const videoRef = ref(storage, postData.videoUrl);
+                    await deleteObject(videoRef);
+                } catch(error: any) {
+                    if (error.code !== 'storage/object-not-found') {
+                        console.error("Storage videosu silinirken hata oluştu:", error);
+                    }
+                }
+            }
         });
         revalidatePath('/home');
     } catch (error) {
@@ -150,12 +158,14 @@ export async function deletePost(postId: string) {
     }
 }
 
-export async function updatePost(postId: string, newText: string) {
+export async function updatePost(postId: string, updates: { text?: string; commentsDisabled?: boolean; likesHidden?: boolean; }) {
     if (!postId) throw new Error("Gönderi ID'si gerekli.");
     const postRef = doc(db, "posts", postId);
     await updateDoc(postRef, {
-        text: newText,
+        ...updates,
+        editedAt: serverTimestamp() // Add an edited timestamp
     });
+
     const postSnap = await getDoc(postRef);
     if(postSnap.exists()) {
         const postData = postSnap.data();
@@ -163,6 +173,7 @@ export async function updatePost(postId: string, newText: string) {
         revalidatePath(`/profile/${postData.uid}`);
     }
 }
+
 
 export async function likePost(
     postId: string,
@@ -266,7 +277,6 @@ export async function retweetPost(
         });
     });
     
-    // Notification for the original poster
     const originalPostData = (await getDoc(originalPostRef)).data();
     if(originalPostData) {
         await createNotification({
