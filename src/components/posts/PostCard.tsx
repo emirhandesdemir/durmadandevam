@@ -5,14 +5,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Post } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck, Sparkles, Repeat, EyeOff, MessageCircleOff, HeartOff } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck, Sparkles, Repeat, EyeOff, MessageCircleOff, HeartOff, Bookmark } from "lucide-react";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { deletePost, updatePost, likePost, retweetPost } from "@/lib/actions/postActions";
+import { deletePost, updatePost, likePost, retweetPost, toggleSavePost } from "@/lib/actions/postActions";
 import { Timestamp } from "firebase/firestore";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -76,6 +76,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
 
     const [optimisticLiked, setOptimisticLiked] = useState(post.likes?.includes(currentUser?.uid || ''));
     const [optimisticLikeCount, setOptimisticLikeCount] = useState(post.likeCount);
+    const [optimisticSaved, setOptimisticSaved] = useState(post.savedBy?.includes(currentUser?.uid || ''));
 
     const [isDeleting, setIsDeleting] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -92,6 +93,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     useEffect(() => {
         setOptimisticLiked(post.likes?.includes(currentUser?.uid || ''));
         setOptimisticLikeCount(post.likeCount);
+        setOptimisticSaved(post.savedBy?.includes(currentUser?.uid || ''));
         setEditingCommentsDisabled(post.commentsDisabled ?? false);
         setEditingLikesHidden(post.likesHidden ?? false);
     }, [post, currentUser]);
@@ -140,6 +142,22 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
             setOptimisticLikeCount(previousLikeCount);
             console.error("Error liking post:", error);
             toast({ variant: "destructive", description: "Beğenirken bir hata oluştu." });
+        }
+    };
+
+    const handleSave = async () => {
+        if (!currentUser) {
+            toast({ variant: "destructive", description: "Bu işlemi yapmak için giriş yapmalısınız." });
+            return;
+        }
+        const wasSaved = optimisticSaved;
+        setOptimisticSaved(!wasSaved);
+    
+        try {
+            await toggleSavePost(post.id, currentUser.uid);
+        } catch (error: any) {
+            setOptimisticSaved(wasSaved);
+            toast({ variant: "destructive", description: "Gönderi kaydedilirken bir hata oluştu." });
         }
     };
 
@@ -299,17 +317,22 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                     </div>
                     
                     <div className="px-2 pt-1 pb-2">
-                        <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" className={cn("rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive", optimisticLiked && "text-destructive")} onClick={handleLike} disabled={!currentUser}>
-                                <Heart className={cn("h-5 w-5", optimisticLiked && "fill-current")} />
-                            </Button>
-                            {!post.commentsDisabled && (
-                                <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary" onClick={() => setShowComments(true)}>
-                                    <MessageCircle className="h-5 w-5" />
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                                <Button variant="ghost" size="icon" className={cn("rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive", optimisticLiked && "text-destructive")} onClick={handleLike} disabled={!currentUser}>
+                                    <Heart className={cn("h-5 w-5", optimisticLiked && "fill-current")} />
                                 </Button>
-                            )}
-                            <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground" disabled>
-                                <Repeat className="h-5 w-5" />
+                                {!post.commentsDisabled && (
+                                    <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary" onClick={() => setShowComments(true)}>
+                                        <MessageCircle className="h-5 w-5" />
+                                    </Button>
+                                )}
+                                <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground" disabled>
+                                    <Repeat className="h-5 w-5" />
+                                </Button>
+                            </div>
+                            <Button variant="ghost" size="icon" className={cn("rounded-full text-muted-foreground hover:bg-sky-500/10 hover:text-sky-500", optimisticSaved && "text-sky-500")} onClick={handleSave} disabled={!currentUser}>
+                                <Bookmark className={cn("h-5 w-5", optimisticSaved && "fill-current")} />
                             </Button>
                         </div>
                          {(optimisticLikeCount > 0 || post.commentCount > 0) && (
@@ -447,17 +470,22 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                 )}
                 
                 <div className="px-2 pt-1 pb-2">
-                    <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className={cn("rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive", optimisticLiked && "text-destructive")} onClick={handleLike} disabled={!currentUser}>
-                           <Heart className={cn("h-5 w-5", optimisticLiked && "fill-current")} />
-                        </Button>
-                        {!post.commentsDisabled && (
-                            <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary" onClick={() => setShowComments(true)}>
-                                <MessageCircle className="h-5 w-5" />
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className={cn("rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive", optimisticLiked && "text-destructive")} onClick={handleLike} disabled={!currentUser}>
+                               <Heart className={cn("h-5 w-5", optimisticLiked && "fill-current")} />
                             </Button>
-                        )}
-                        <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-green-500/10 hover:text-green-500" onClick={handleRetweet} disabled={!currentUser || isOwner}>
-                           <Repeat className="h-5 w-5" />
+                            {!post.commentsDisabled && (
+                                <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary" onClick={() => setShowComments(true)}>
+                                    <MessageCircle className="h-5 w-5" />
+                                </Button>
+                            )}
+                            <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-green-500/10 hover:text-green-500" onClick={handleRetweet} disabled={!currentUser || isOwner}>
+                               <Repeat className="h-5 w-5" />
+                            </Button>
+                        </div>
+                         <Button variant="ghost" size="icon" className={cn("rounded-full text-muted-foreground hover:bg-sky-500/10 hover:text-sky-500", optimisticSaved && "text-sky-500")} onClick={handleSave} disabled={!currentUser}>
+                            <Bookmark className={cn("h-5 w-5", optimisticSaved && "fill-current")} />
                         </Button>
                     </div>
 

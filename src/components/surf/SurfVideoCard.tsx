@@ -4,10 +4,10 @@ import type { Post } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { Heart, MessageCircle, Play, Pause, Volume2, VolumeX, Bookmark, MoreHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { likePost } from '@/lib/actions/postActions';
+import { likePost, toggleSavePost } from '@/lib/actions/postActions';
 import CommentSheet from '@/components/comments/CommentSheet';
 import { useToast } from '@/hooks/use-toast';
 
@@ -27,6 +27,15 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
 
   const [optimisticLiked, setOptimisticLiked] = useState(post.likes?.includes(user?.uid || ''));
   const [optimisticLikeCount, setOptimisticLikeCount] = useState(post.likeCount);
+  const [optimisticSaved, setOptimisticSaved] = useState(post.savedBy?.includes(user?.uid || ''));
+  const [optimisticSaveCount, setOptimisticSaveCount] = useState(post.saveCount || 0);
+
+  useEffect(() => {
+    setOptimisticLiked(post.likes?.includes(user?.uid || ''));
+    setOptimisticLikeCount(post.likeCount || 0);
+    setOptimisticSaved(post.savedBy?.includes(user?.uid || ''));
+    setOptimisticSaveCount(post.saveCount || 0);
+  }, [post, user]);
 
   useEffect(() => {
     if (isActive && videoRef.current) {
@@ -62,7 +71,6 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
         uid: user.uid,
         displayName: userData.username,
         photoURL: userData.photoURL || null,
-        userAvatarFrame: userData.selectedAvatarFrame || ''
       });
     } catch (error) {
       setOptimisticLiked(wasLiked);
@@ -87,6 +95,24 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
         setShowLikeAnimation(false);
     }, 600);
   }, [user, optimisticLiked, handleLike, toast]);
+  
+  const handleSave = useCallback(async () => {
+    if (!user) {
+        toast({ variant: 'destructive', description: 'Kaydetmek için giriş yapmalısınız.' });
+        return;
+    }
+    const wasSaved = optimisticSaved;
+    setOptimisticSaved(!wasSaved);
+    setOptimisticSaveCount(p => wasSaved ? p - 1 : p + 1);
+
+    try {
+        await toggleSavePost(post.id, user.uid);
+    } catch (error) {
+        setOptimisticSaved(wasSaved);
+        setOptimisticSaveCount(p => wasSaved ? p + 1 : p - 1);
+        toast({ variant: "destructive", description: "Kaydedilirken bir hata oluştu." });
+    }
+}, [user, post.id, optimisticSaved, toast]);
 
 
   return (
@@ -133,6 +159,13 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
               <Button variant="ghost" className="flex-col h-auto p-0 text-white" onClick={(e) => { e.stopPropagation(); setShowComments(true); }}>
                 <MessageCircle className="h-8 w-8" />
                 <span className="text-xs font-semibold">{post.commentCount}</span>
+              </Button>
+              <Button variant="ghost" className="flex-col h-auto p-0 text-white" onClick={(e) => { e.stopPropagation(); handleSave(); }}>
+                <Bookmark className={cn("h-8 w-8", optimisticSaved && "fill-white text-white")} />
+                <span className="text-xs font-semibold">{optimisticSaveCount}</span>
+              </Button>
+               <Button variant="ghost" className="flex-col h-auto p-0 text-white" onClick={(e) => { e.stopPropagation(); /* TODO: Implement more options */ }}>
+                <MoreHorizontal className="h-8 w-8" />
               </Button>
               <Button variant="ghost" className="h-auto p-0 text-white" size="icon" onClick={(e) => { e.stopPropagation(); setIsMuted(p => !p); }}>
                 {isMuted ? <VolumeX className="h-7 w-7" /> : <Volume2 className="h-7 w-7" />}

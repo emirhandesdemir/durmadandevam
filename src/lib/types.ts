@@ -207,10 +207,11 @@ export interface Post {
     videoUrl?: string;
     editedWithAI?: boolean;
     createdAt: Timestamp | { seconds: number; nanoseconds: number };
-    likes: string[]; // Beğenen kullanıcıların UID'lerini tutan dizi
+    likes: string[];
     likeCount: number;
     commentCount: number;
     saveCount?: number;
+    savedBy?: string[];
     language?: string;
     commentsDisabled?: boolean;
     likesHidden?: boolean;

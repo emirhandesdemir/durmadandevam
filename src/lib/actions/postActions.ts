@@ -15,7 +15,7 @@ import {
     addDoc,
     collection
 } from "firebase/firestore";
-import { ref, deleteObject } from "firebase/storage";
+import { ref, deleteObject, uploadBytesResumable } from "firebase/storage";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
 import { findUserByUsername } from "./userActions";
@@ -63,8 +63,6 @@ export async function createPost(postData: {
     videoUrl?: string;
     editedWithAI?: boolean;
     language: string;
-    commentsDisabled?: boolean;
-    likesHidden?: boolean;
 }) {
     const newPostRef = doc(collection(db, 'posts'));
     const userRef = doc(db, 'users', postData.uid);
@@ -83,8 +81,8 @@ export async function createPost(postData: {
             likes: [],
             likeCount: 0,
             commentCount: 0,
-            commentsDisabled: postData.commentsDisabled ?? false,
-            likesHidden: postData.likesHidden ?? false,
+            saveCount: 0,
+            savedBy: [],
         };
         transaction.set(newPostRef, newPostData);
         
@@ -93,7 +91,7 @@ export async function createPost(postData: {
             postCount: increment(1)
         };
 
-        if (postCount === 0 && !postData.videoUrl) { // Only give reward for first non-video post
+        if (postCount === 0 && !postData.videoUrl) {
             userUpdates.diamonds = increment(90);
         }
         
@@ -183,7 +181,7 @@ export async function updatePost(postId: string, updates: { text?: string; comme
 
 export async function likePost(
     postId: string,
-    currentUser: { uid: string, displayName: string | null, photoURL: string | null, selectedAvatarFrame?: string }
+    currentUser: { uid: string, displayName: string | null, photoURL: string | null, }
 ) {
     const postRef = doc(db, "posts", postId);
     
@@ -218,8 +216,49 @@ export async function likePost(
         }
     });
     revalidatePath('/home');
-    revalidatePath(`/profile/*`);
     revalidatePath('/surf');
+    revalidatePath(`/profile/*`);
+}
+
+export async function toggleSavePost(postId: string, userId: string) {
+    if (!postId || !userId) {
+        throw new Error("Post ID and User ID are required.");
+    }
+
+    const postRef = doc(db, "posts", postId);
+    const userRef = doc(db, "users", userId);
+
+    await runTransaction(db, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        const postDoc = await transaction.get(postRef);
+
+        if (!userDoc.exists()) throw new Error("User not found.");
+        if (!postDoc.exists()) throw new Error("Post not found.");
+
+        const userData = userDoc.data();
+        
+        const isCurrentlySaved = (userData.savedPosts || []).includes(postId);
+
+        if (isCurrentlySaved) {
+            // Unsave the post
+            transaction.update(userRef, { savedPosts: arrayRemove(postId) });
+            transaction.update(postRef, {
+                savedBy: arrayRemove(userId),
+                saveCount: increment(-1)
+            });
+        } else {
+            // Save the post
+            transaction.update(userRef, { savedPosts: arrayUnion(postId) });
+            transaction.update(postRef, {
+                savedBy: arrayUnion(userId),
+                saveCount: increment(1)
+            });
+        }
+    });
+
+    revalidatePath('/home');
+    revalidatePath('/surf');
+    revalidatePath(`/profile/${userId}`);
 }
 
 
