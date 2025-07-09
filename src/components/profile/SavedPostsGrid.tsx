@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { Post, UserProfile } from '@/lib/types';
+import type { Post } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSavedPosts } from '@/lib/actions/userActions';
 import { Loader2, Bookmark, Lock, Video } from 'lucide-react';
@@ -39,6 +39,8 @@ export default function SavedPostsGrid({ userId }: SavedPostsGridProps) {
     }
 
     if (!isOwnProfile) {
+        // This case should not be reached if the tab is correctly hidden.
+        // It's a fallback.
         return (
           <div className="text-center py-10 mt-4 text-muted-foreground">
             <Lock className="h-12 w-12 mx-auto mb-4" />

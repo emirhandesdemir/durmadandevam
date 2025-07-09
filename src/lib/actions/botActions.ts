@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getCountFromServer, query, where, serverTimestamp, getDocs, orderBy, limit, doc, setDoc, updateDoc, writeBatch, increment, FieldValue } from 'firebase/firestore';
+import { collection, addDoc, getCountFromServer, query, where, serverTimestamp, getDocs, orderBy, limit, doc, setDoc, updateDoc, writeBatch, increment, arrayUnion } from 'firebase/firestore';
 import type { BotActivityLog, UserProfile, GameSettings, Post } from '../types';
 import { deepSerialize } from '../server-utils';
 import { createNotification } from './notificationActions';
@@ -11,8 +11,8 @@ import { createNotification } from './notificationActions';
 const randomElement = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
 // Predefined bot data
-const femaleUsernames = ['elif_dans', 'melis_kahve', 'zeynep_geziyor', 'ayla_sanat', 'selin_muzik', 'derya_gunes'];
-const maleUsernames = ['can_spor', 'emir_tech'];
+const femaleUsernames = ['Elif Dans', 'Melis Kahve', 'Zeynep Geziyor', 'Ayla Sanat', 'Selin Müzik', 'Derya Güneş'];
+const maleUsernames = ['Can Spor', 'Emir Teknoloji'];
 const bios = [
     "Kahve ve kitap tutkunu ☕📚",
     "Dans etmeyi çok seviyorum 💃",
@@ -81,7 +81,7 @@ export async function createInitialBots() {
     try {
         const usersCol = collection(db, 'users');
         for (let i = 0; i < 6; i++) {
-            const username = femaleUsernames[i] || `kadin_bot_${i}`;
+            const username = (femaleUsernames[i] || `kadin_bot_${i}`).replace(' ', '_');
             const existingUserQuery = query(usersCol, where('username', '==', username), where('isBot', '==', true));
             const existingUserSnap = await getDocs(existingUserQuery);
             if (existingUserSnap.empty) {
@@ -96,7 +96,7 @@ export async function createInitialBots() {
             }
         }
         for (let i = 0; i < 2; i++) {
-            const username = maleUsernames[i] || `erkek_bot_${i}`;
+            const username = (maleUsernames[i] || `erkek_bot_${i}`).replace(' ', '_');
             const existingUserQuery = query(usersCol, where('username', '==', username), where('isBot', '==', true));
             const existingUserSnap = await getDocs(existingUserQuery);
              if (existingUserSnap.empty) {
@@ -185,7 +185,7 @@ export async function triggerBotPostNow(contentType: 'image' | 'text' | 'video')
     switch(contentType) {
         case 'image': newPost.imageUrl = `https://picsum.photos/600/800?random=${Date.now()}`; newPost.text = randomElement(botCaptions); break;
         case 'video': newPost.videoUrl = 'https://samplelib.com/lib/preview/mp4/sample-5s.mp4'; newPost.text = randomElement(botCaptions); break;
-        default: newPost.text = randomElement(botTextPosts); break;
+        default: newPost.text = randomElement(botTextPosts); newPost.imageUrl = ''; newPost.videoUrl = ''; break;
     }
     
     const postRef = await addDoc(collection(db, 'posts'), newPost);

@@ -129,6 +129,7 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
           loop
           muted={isMuted}
           playsInline
+          preload="auto"
           className="h-full w-full object-cover"
         />
 

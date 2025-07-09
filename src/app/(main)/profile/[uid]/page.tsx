@@ -1,71 +1,106 @@
-// Bu, bir kullanıcının profil sayfasını oluşturan sunucu bileşenidir.
-// Sayfa yüklendiğinde sunucuda çalışır, veritabanından gerekli verileri
-// (kullanıcı profili, gönderi sayısı vb.) çeker ve sayfayı oluşturur.
+'use client';
+
 import { doc, getDoc, collection, query, where, getCountFromServer } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { notFound } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import ProfilePosts from '@/components/profile/ProfilePosts';
 import ProfileViewLogger from '@/components/profile/ProfileViewLogger';
 import { Separator } from '@/components/ui/separator';
 import { deepSerialize } from '@/lib/server-utils';
-import { Grid3x3, FileText, Bookmark } from 'lucide-react';
+import { Grid3x3, FileText, Bookmark, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SavedPostsGrid from '@/components/profile/SavedPostsGrid';
+import type { UserProfile } from '@/lib/types';
+
 
 interface UserProfilePageProps {
   params: { uid: string };
 }
 
-export default async function UserProfilePage({ params }: UserProfilePageProps) {
+export default function UserProfilePage({ params }: UserProfilePageProps) {
   const { uid } = params;
+  const { user: currentUser } = useAuth();
+  const [profileUser, setProfileUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  // Veritabanı sorguları için referanslar oluştur.
-  const profileUserRef = doc(db, 'users', uid);
-  const postsQuery = query(collection(db, 'posts'), where('uid', '==', uid));
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!uid) return;
+      setLoading(true);
+      setError(false);
+      try {
+        const profileUserRef = doc(db, 'users', uid);
+        const postsQuery = query(collection(db, 'posts'), where('uid', '==', uid));
+        
+        const [profileUserSnap, postsCountSnap] = await Promise.all([
+          getDoc(profileUserRef),
+          getCountFromServer(postsQuery)
+        ]);
 
-  // Kullanıcı verisini ve gönderi sayısını aynı anda, paralel olarak çek.
-  // Bu, sayfa yükleme süresini optimize eder.
-  const [profileUserSnap, postsCountSnap] = await Promise.all([
-    getDoc(profileUserRef),
-    getCountFromServer(postsQuery)
-  ]);
+        if (!profileUserSnap.exists()) {
+          setError(true);
+          return;
+        }
 
-  // Eğer kullanıcı veritabanında bulunamazsa, 404 sayfasına yönlendir.
-  if (!profileUserSnap.exists()) {
-    notFound();
+        const profileUserData = profileUserSnap.data();
+        profileUserData.postCount = postsCountSnap.data().count;
+        const serializableProfileUser = deepSerialize(profileUserData);
+        setProfileUser(serializableProfileUser);
+      } catch (e) {
+        console.error("Failed to fetch user data:", e);
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchUserData();
+  }, [uid]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
-  // Gelen verileri işle.
-  const profileUserData = profileUserSnap.data();
-  profileUserData.postCount = postsCountSnap.data().count;
+  if (error) {
+    notFound();
+  }
+  
+  if (!profileUser) {
+      return null;
+  }
 
-  // Firestore'dan gelen ve Timestamp gibi serileştirilemeyen nesneler içeren veriyi
-  // istemci bileşenlerine güvenle aktarılabilen düz JSON formatına çevir.
-  const serializableProfileUser = deepSerialize(profileUserData);
+  const isOwnProfile = currentUser?.uid === profileUser.uid;
 
   return (
     <>
-      {/* Bu görünmez bileşen, profil görüntüleme olayını kaydeder. */}
       <ProfileViewLogger targetUserId={uid} />
       
       <div className="w-full mx-auto max-w-4xl py-4">
-        {/* Profilin üst kısmını (avatar, isim, takipçi sayısı vb.) oluşturan bileşen. */}
-        <ProfileHeader profileUser={serializableProfileUser} />
+        <ProfileHeader profileUser={profileUser} />
         
         <Separator className="my-4" />
 
-        {/* Sekmeli Gönderiler Bölümü */}
         <Tabs defaultValue="posts" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className={cn("grid w-full", isOwnProfile ? "grid-cols-3" : "grid-cols-2")}>
                 <TabsTrigger value="posts">
                     <Grid3x3 className="h-5 w-5 mr-2" />
                     Gönderiler
                 </TabsTrigger>
-                 <TabsTrigger value="saved">
-                    <Bookmark className="h-5 w-5 mr-2" />
-                    Kaydedilenler
-                </TabsTrigger>
+                {isOwnProfile && (
+                     <TabsTrigger value="saved">
+                        <Bookmark className="h-5 w-5 mr-2" />
+                        Kaydedilenler
+                    </TabsTrigger>
+                )}
                  <TabsTrigger value="texts">
                     <FileText className="h-5 w-5 mr-2" />
                     Yazılar
@@ -77,12 +112,13 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
                     postType="image"
                 />
             </TabsContent>
-            <TabsContent value="saved" className="mt-4">
-                 <SavedPostsGrid 
-                    userId={uid}
-                    profileUser={serializableProfileUser}
-                 />
-            </TabsContent>
+            {isOwnProfile && (
+                <TabsContent value="saved" className="mt-4">
+                     <SavedPostsGrid 
+                        userId={uid}
+                     />
+                </TabsContent>
+            )}
             <TabsContent value="texts" className="mt-4">
                  <ProfilePosts 
                     userId={uid} 
