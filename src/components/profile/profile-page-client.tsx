@@ -21,10 +21,11 @@ import { doc, updateDoc } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { Textarea } from "../ui/textarea";
 import { useRouter } from 'next/navigation';
-import { findUserByUsername } from "@/lib/actions/userActions";
+import { findUserByUsername, updateUserPosts, updateUserComments } from "@/lib/actions/userActions";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../common/LanguageSwitcher";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
+import Link from "next/link";
 
 export default function ProfilePageClient() {
     const { user, userData, loading, handleLogout } = useAuth();
