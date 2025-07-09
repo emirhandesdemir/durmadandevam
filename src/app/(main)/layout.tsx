@@ -3,93 +3,8 @@
 
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/Header";
-import { useState, useEffect } from 'react';
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Button } from '@/components/ui/button';
-import { Download, X } from 'lucide-react';
-import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
-import NotificationPermissionManager from "@/components/common/NotificationPermissionManager";
-import IncomingCallManager from "@/components/common/IncomingCallManager";
-
-interface BeforeInstallPromptEvent extends Event {
-  readonly platforms: Array<string>;
-  readonly userChoice: Promise<{
-    outcome: 'accepted' | 'dismissed',
-    platform: string
-  }>;
-  prompt(): Promise<void>;
-}
-
-function PwaInstallBar() {
-  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setInstallPrompt(e as BeforeInstallPromptEvent);
-      
-      if (sessionStorage.getItem('pwaInstallDismissed') !== 'true') {
-        setIsVisible(true);
-      }
-    };
-
-    if (typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches) {
-      return;
-    }
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
-  }, []);
-
-  const handleInstallClick = () => {
-    if (!installPrompt) return;
-    
-    installPrompt.prompt();
-    installPrompt.userChoice.then((choiceResult) => {
-      if (choiceResult.outcome === 'accepted') {
-        console.log('User accepted the A2HS prompt');
-      } else {
-        console.log('User dismissed the A2HS prompt');
-      }
-      setIsVisible(false);
-      setInstallPrompt(null);
-    });
-  };
-
-  const handleDismiss = () => {
-    setIsVisible(false);
-    sessionStorage.setItem('pwaInstallDismissed', 'true');
-  };
-  
-  if (!isVisible || !installPrompt) {
-      return null;
-  }
-  
-  return (
-        <div
-          className="relative z-[100] flex items-center justify-center gap-x-4 gap-y-2 bg-secondary text-secondary-foreground p-3 text-sm font-medium flex-wrap"
-        >
-          <span>Uygulama deneyimini bir üst seviyeye taşı!</span>
-          <Button size="sm" onClick={handleInstallClick} className="shrink-0">
-            <Download className="mr-2 h-4 w-4"/>
-            Uygulamayı Yükle
-          </Button>
-          <button 
-            onClick={handleDismiss} 
-            className="absolute top-1 right-1 sm:top-1/2 sm:-translate-y-1/2 rounded-full p-1.5 text-secondary-foreground/70 hover:text-secondary-foreground hover:bg-black/10 transition-colors"
-            aria-label="Kapat"
-          >
-            <X className="h-4 w-4"/>
-          </button>
-        </div>
-  );
-}
-
 
 /**
  * Ana Uygulama Düzeni (Main App Layout)
@@ -105,19 +20,13 @@ export default function MainAppLayout({
 }) {
   const pathname = usePathname();
 
-  const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/');
+  const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/');
   const isHeaderlessPage = isFullPageLayout;
   const isHomePage = pathname === '/home';
 
   return (
     <>
-      <NotificationPermissionManager />
-      <IncomingCallManager />
-      <PremiumWelcomeManager />
-      
       <div className="relative flex h-dvh w-full flex-col bg-background overflow-hidden">
-        <PwaInstallBar />
-        
         <main 
           className={cn(
             "flex-1 flex flex-col",
@@ -134,7 +43,8 @@ export default function MainAppLayout({
           
            <div
                 className={cn(
-                  isFullPageLayout ? "flex-1 flex flex-col overflow-hidden" : "",
+                  "flex-1 flex flex-col",
+                  isFullPageLayout ? "overflow-hidden" : "",
                   !isHomePage && !isFullPageLayout && "p-4"
                 )}
              >
