@@ -1,3 +1,4 @@
+
 // src/app/(main)/rooms/[id]/page.tsx
 "use client";
 
