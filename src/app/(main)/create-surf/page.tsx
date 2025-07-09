@@ -35,8 +35,8 @@ export default function CreateSurfPage() {
         toast({ variant: 'destructive', description: 'Lütfen bir video dosyası seçin.' });
         return;
       }
-      if (file.size > 50 * 1024 * 1024) { // 50MB limit
-        toast({ variant: 'destructive', description: 'Video boyutu 50MB\'dan büyük olamaz.' });
+      if (file.size > 20 * 1024 * 1024) { // 20MB limit
+        toast({ variant: 'destructive', description: 'Video boyutu 20MB\'dan büyük olamaz.' });
         return;
       }
       setVideoFile(file);
@@ -146,7 +146,7 @@ export default function CreateSurfPage() {
             >
                 <Clapperboard className="h-12 w-12 text-muted-foreground" />
                 <p className="mt-2 text-sm text-muted-foreground">Video seçmek için tıkla</p>
-                <p className="text-xs text-muted-foreground">(Maks. 50MB)</p>
+                <p className="text-xs text-muted-foreground">(Maks. 20MB)</p>
             </button>
         )}
         <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="video/*" className="hidden" />
