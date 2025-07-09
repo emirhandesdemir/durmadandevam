@@ -184,6 +184,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [user, handleLogout, toast]);
 
+  const loading = authLoading || firestoreLoading;
+
   // Effect for handling redirection logic
   useEffect(() => {
     const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
@@ -203,7 +205,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, userData, pathname, router, loading]);
 
 
-  const loading = authLoading || firestoreLoading;
   const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
