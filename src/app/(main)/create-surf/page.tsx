@@ -1,3 +1,4 @@
+
 // src/app/(main)/create-surf/page.tsx
 'use client';
 
@@ -55,7 +56,7 @@ export default function CreateSurfPage() {
 
     setIsSubmitting(true);
     try {
-      const storagePath = `upload/posts/videos/${user.uid}/${Date.now()}_${videoFile.name}`;
+      const storagePath = `upload/video/${user.uid}/${Date.now()}_${videoFile.name}`;
       const videoRef = ref(storage, storagePath);
       await uploadBytes(videoRef, videoFile);
       const videoUrl = await getDownloadURL(videoRef);

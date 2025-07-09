@@ -1,40 +1,42 @@
+
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Helper function to check if the user is authenticated.
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    // Allow read access to all files for everyone.
-    // This allows public access to profile pictures, post images, etc.
-    match /{allPaths=**} {
+    // Allow public read access to user avatars
+    match /upload/avatars/{userId}/{allPaths=**} {
       allow read;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // --- Specific Write Rules ---
-
-    // Allow authenticated users to upload their own avatar.
-    // The path must be `avatars/{userId}/avatar.jpg`.
-    match /upload/avatars/{userId}/{fileName} {
-      allow write: if isAuthenticated() && request.auth.uid == userId && fileName == 'avatar.jpg';
-    }
-
-    // Allow authenticated users to upload images for their posts.
-    // The path must be `posts/images/{userId}/{anyFileName}`.
-    match /upload/posts/images/{userId}/{fileName} {
-      allow write: if isAuthenticated() && request.auth.uid == userId;
-    }
-
-    // Allow authenticated users to upload videos for their posts.
-    match /upload/posts/videos/{userId}/{fileName} {
-      allow write: if isAuthenticated() && request.auth.uid == userId;
+    // Allow authenticated users to write to posts images
+    match /upload/posts/images/{userId}/{allPaths=**} {
+       allow read;
+       allow write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Allow authenticated users to upload music files to their own room's playlist.
-    match /music/{roomId}/{fileName} {
-      allow write: if isAuthenticated();
+     // Allow authenticated users to write to posts videos
+    match /upload/video/{userId}/{allPaths=**} {
+       allow read;
+       allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+     // Allow authenticated users to write to dms
+    match /dms/{chatId}/{folder}/{allPaths=**} {
+       allow read;
+       allow write: if request.auth != null;
+    }
+
+    // Allow authenticated users to write to room media
+    match /upload/rooms/{roomId}/{folder}/{allPaths=**} {
+       allow read;
+       allow write: if request.auth != null;
+    }
+    
+    // Allow authenticated users to write to music folder
+    match /music/{roomId}/{allPaths=**} {
+        allow read;
+        allow write: if request.auth != null;
     }
   }
 }
