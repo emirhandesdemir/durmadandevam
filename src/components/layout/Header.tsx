@@ -64,12 +64,14 @@ export default function Header({}: HeaderProps) {
                             <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>{userData?.username}</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem asChild>
-                                    <Link href="/profile">
-                                        <Settings className="mr-2 h-4 w-4" />
-                                        <span>Ayarlar & Profil</span>
-                                    </Link>
-                                </DropdownMenuItem>
+                                {userData && (
+                                  <DropdownMenuItem asChild>
+                                      <Link href={`/profile/${userData.uid}`}>
+                                          <User className="mr-2 h-4 w-4" />
+                                          <span>Profilim</span>
+                                      </Link>
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem asChild>
                                     <Link href="/store">
                                         <Store className="mr-2 h-4 w-4" />
