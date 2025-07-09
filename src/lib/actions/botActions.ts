@@ -2,16 +2,14 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getCountFromServer, query, where, serverTimestamp, getDocs, orderBy, limit, doc, setDoc, updateDoc, writeBatch, increment, arrayUnion } from 'firebase/firestore';
+import { collection, addDoc, getCountFromServer, query, where, serverTimestamp, getDocs, doc, setDoc, writeBatch } from 'firebase/firestore';
 import type { BotActivityLog, UserProfile, Post } from '../types';
 import { deepSerialize } from '../server-utils';
-import { createNotification } from './notificationActions';
 
 // Helper function
 const randomElement = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
 // Predefined bot data
-const femaleUsernames = ['Elif Dans', 'Melis Kahve', 'Zeynep Geziyor', 'Ayla Sanat', 'Selin Müzik', 'Derya Güneş'];
 const bios = [
     "Kahve ve kitap tutkunu ☕📚",
     "Dans etmeyi çok seviyorum 💃",
@@ -50,6 +48,16 @@ const welcomeDms = [
     "Selam, yeni bir yüz görmek ne güzel! Hadi bir oda oluştur da görelim seni.",
 ];
 
+const femaleFirstNames = [
+    'Ayşe', 'Fatma', 'Emine', 'Hatice', 'Zeynep', 'Elif', 'Meryem', 'Şerife', 'Sultan', 'Zehra',
+    'Hanife', 'Zeliha', 'Havva', 'Songül', 'Leyla', 'Yasemin', 'Derya', 'Gülcan', 'Sevim', 'Sibel',
+    'Bahar', 'Deniz', 'Eylül', 'Gizem', 'İrem', 'Melike', 'Pınar', 'Seda', 'Tuğba', 'Yağmur'
+];
+const turkishLastNames = [
+    'Yılmaz', 'Kaya', 'Demir', 'Çelik', 'Şahin', 'Yıldız', 'Yıldırım', 'Öztürk', 'Aydın', 'Özdemir',
+    'Arslan', 'Doğan', 'Kılıç', 'Çetin', 'Kara', 'Koç', 'Kurt', 'Özcan', 'Polat', 'Tekin'
+];
+
 const generateFallbackAvatar = (seed: string) => {
     const getHash = (str: string) => {
         let hash = 0;
@@ -81,6 +89,32 @@ const generateFallbackAvatar = (seed: string) => {
     return `data:image/svg+xml;base64,${btoa(svg)}`;
 };
 
+async function generateUniqueBotUsername(): Promise<string> {
+    let username = '';
+    let isUnique = false;
+    let attempts = 0;
+    while (!isUnique && attempts < 20) {
+        const randomFirstName = randomElement(femaleFirstNames);
+        const randomLastName = randomElement(turkishLastNames);
+        username = `${randomFirstName} ${randomLastName}`;
+        
+        const existingUserQuery = query(collection(db, 'users'), where('username', '==', username));
+        const existingUserSnap = await getDocs(existingUserQuery);
+        
+        if (existingUserSnap.empty) {
+            isUnique = true;
+        }
+        attempts++;
+    }
+
+    if (!isUnique) {
+        return `BotUser${Date.now()}`;
+    }
+
+    return username;
+}
+
+
 export async function getBots(): Promise<UserProfile[]> {
     const botsQuery = query(collection(db, 'users'), where('isBot', '==', true));
     const snapshot = await getDocs(botsQuery);
@@ -109,55 +143,59 @@ export async function getBotActivityLogs(): Promise<BotActivityLog[]> {
 
 export async function createInitialBots() {
     let createdCount = 0;
+    const botsToCreate = 8; // Create 8 new bots each time
+
     try {
         const usersCol = collection(db, 'users');
-        for (let i = 0; i < 6; i++) {
-            const username = femaleUsernames[i] || `KadinBot${i}`;
-            const existingUserQuery = query(usersCol, where('username', '==', username), where('isBot', '==', true));
-            const existingUserSnap = await getDocs(existingUserQuery);
+        const batch = writeBatch(db);
 
-            if (existingUserSnap.empty) {
-                const newBotRef = doc(usersCol);
-                const seed = username.replace(/\s+/g, '').toLowerCase();
-                let photoURL = '';
+        for (let i = 0; i < botsToCreate; i++) {
+            const username = await generateUniqueBotUsername();
+            
+            const newBotRef = doc(usersCol);
+            const seed = username.replace(/\s+/g, '').toLowerCase();
+            let photoURL = '';
 
-                try {
-                    // Fetch realistic avatar from randomuser.me using a seed for consistency
-                    const response = await fetch(`https://randomuser.me/api/?gender=female&seed=${seed}`);
-                    if (!response.ok) {
-                        throw new Error(`API responded with status ${response.status}`);
-                    }
-                    const data = await response.json();
-                    photoURL = data.results[0]?.picture?.large;
-
-                    if (!photoURL) {
-                        throw new Error("No picture URL found in API response.");
-                    }
-                } catch (apiError: any) {
-                    console.warn(`Could not fetch avatar for ${username} from API: ${apiError.message}. Using fallback.`);
-                    photoURL = generateFallbackAvatar(seed); // Use fallback SVG avatar
+            try {
+                const response = await fetch(`https://randomuser.me/api/?gender=female&seed=${seed}`);
+                if (!response.ok) {
+                    throw new Error(`API responded with status ${response.status}`);
                 }
+                const data = await response.json();
+                photoURL = data.results[0]?.picture?.large;
 
-                const newBot: Partial<UserProfile> = {
-                    username: username,
-                    email: `${seed}@bot.hiwewalk.com`,
-                    photoURL: photoURL,
-                    isBot: true,
-                    bio: bios[i] || "Yeni maceralar peşinde...",
-                    gender: 'female',
-                    role: 'user',
-                    followers: [],
-                    following: [],
-                    postCount: 0,
-                    diamonds: 0,
-                    privateProfile: false,
-                    acceptsFollowRequests: true,
-                    followRequests: [],
-                };
-                await setDoc(newBotRef, { ...newBot, uid: newBotRef.id, createdAt: serverTimestamp() });
-                createdCount++;
+                if (!photoURL) {
+                    throw new Error("No picture URL found in API response.");
+                }
+            } catch (apiError: any) {
+                console.warn(`Could not fetch avatar for ${username} from API: ${apiError.message}. Using fallback.`);
+                photoURL = generateFallbackAvatar(seed);
             }
+
+            const newBot: Partial<UserProfile> = {
+                username: username,
+                email: `${seed}@bot.hiwewalk.com`,
+                photoURL: photoURL,
+                isBot: true,
+                bio: randomElement(bios),
+                gender: 'female',
+                role: 'user',
+                followers: [],
+                following: [],
+                postCount: 0,
+                diamonds: 0,
+                privateProfile: false,
+                acceptsFollowRequests: true,
+                followRequests: [],
+                uid: newBotRef.id,
+                createdAt: serverTimestamp() as any,
+            };
+            batch.set(newBotRef, newBot);
+            createdCount++;
         }
+
+        await batch.commit();
+
         return { success: true, createdCount };
     } catch (error: any) {
         console.error("Error creating initial bots:", error);
