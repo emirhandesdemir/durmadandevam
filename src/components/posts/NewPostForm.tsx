@@ -133,15 +133,24 @@ export default function NewPostForm() {
     : [];
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (mentionQuery !== null && filteredSuggestions.length > 0) {
-          if (e.key === 'ArrowDown') e.preventDefault(); setActiveSuggestionIndex(prev => (prev + 1) % filteredSuggestions.length);
-          else if (e.key === 'ArrowUp') e.preventDefault(); setActiveSuggestionIndex(prev => (prev - 1 + filteredSuggestions.length) % filteredSuggestions.length);
-          else if (e.key === 'Enter' || e.key === 'Tab') e.preventDefault(); handleMentionSelect(filteredSuggestions[activeSuggestionIndex].username);
-          else if (e.key === 'Escape') e.preventDefault(); setMentionQuery(null);
-      } else if (e.key === 'Enter' && !e.shiftKey) {
+    if (mentionQuery !== null && filteredSuggestions.length > 0) {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setActiveSuggestionIndex(prev => (prev + 1) % filteredSuggestions.length);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setActiveSuggestionIndex(prev => (prev - 1 + filteredSuggestions.length) % filteredSuggestions.length);
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+            e.preventDefault();
+            handleMentionSelect(filteredSuggestions[activeSuggestionIndex].username);
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            setMentionQuery(null);
+        }
+    } else if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         handleShare();
-      }
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
