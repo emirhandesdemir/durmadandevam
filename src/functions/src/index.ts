@@ -115,7 +115,11 @@ export const botPostContent = functions.region("us-central1").pubsub.schedule('e
     switch(contentType) {
         case 'image': newPost.imageUrl = `https://picsum.photos/600/800?random=${Date.now()}`; newPost.text = randomElement(botCaptions); break;
         case 'video': newPost.videoUrl = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4'; newPost.text = randomElement(botCaptions); break;
-        default: newPost.text = randomElement(botTextPosts); break;
+        default: 
+            newPost.text = randomElement(botTextPosts);
+            newPost.imageUrl = '';
+            newPost.videoUrl = '';
+            break;
     }
     
     const postRef = await db.collection('posts').add(newPost);
@@ -155,7 +159,7 @@ export const botInteract = functions.region("us-central1").pubsub.schedule('ever
     const randomBotDoc = randomElement(botsSnapshot.docs);
     const botUser = { id: randomBotDoc.id, ...randomBotDoc.data() } as any;
 
-    const postsQuery = db.collection('posts').where('isBot', '!=', true).orderBy('createdAt', 'desc').limit(20);
+    const postsQuery = db.collection('posts').where('isBotPost', '!=', true).orderBy('isBotPost').orderBy('createdAt', 'desc').limit(20);
     const postsSnapshot = await postsQuery.get();
     if (postsSnapshot.empty) return null;
     const randomPostDoc = randomElement(postsSnapshot.docs);

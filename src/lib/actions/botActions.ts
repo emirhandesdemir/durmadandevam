@@ -2,9 +2,10 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getCountFromServer, query, where, serverTimestamp, getDocs, doc, setDoc, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, getCountFromServer, query, where, serverTimestamp, getDocs, doc, setDoc, writeBatch, orderBy, limit, updateDoc, increment, arrayUnion } from 'firebase/firestore';
 import type { BotActivityLog, UserProfile, Post } from '../types';
 import { deepSerialize } from '../server-utils';
+import { createNotification } from './notificationActions';
 
 // Helper function
 const randomElement = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
@@ -71,7 +72,7 @@ const generateFallbackAvatar = (seed: string) => {
 
     const hash = getHash(seed);
     const hue = hash % 360;
-    const saturation = 70 + (hash % 10);
+    const saturation = 70 + (hash % 10); 
     const lightness = 45 + (hash % 10);
     const lightness2 = lightness + 15;
 
@@ -143,7 +144,7 @@ export async function getBotActivityLogs(): Promise<BotActivityLog[]> {
 
 export async function createInitialBots() {
     let createdCount = 0;
-    const botsToCreate = 8; // Create 8 new bots each time
+    const botsToCreate = 8;
 
     try {
         const usersCol = collection(db, 'users');
