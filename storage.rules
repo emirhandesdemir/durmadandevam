@@ -2,75 +2,39 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-
-    // =================================
-    //  Helper Functions
-    // =================================
-
-    function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
+    // Helper function to check if the user is authenticated.
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
-    function isImage() {
-      return request.resource.contentType.matches('image/.*');
+    // Allow read access to all files for everyone.
+    // This allows public access to profile pictures, post images, etc.
+    match /{allPaths=**} {
+      allow read;
     }
 
-    function isAudio() {
-      return request.resource.contentType.matches('audio/.*');
-    }
-    
-    function isVideo() {
-        return request.resource.contentType.matches('video/.*');
-    }
+    // --- Specific Write Rules ---
 
-    function isValidSize(maxSizeInMB) {
-      return request.resource.size < maxSizeInMB * 1024 * 1024;
-    }
-
-    // =================================
-    //  Storage Rules
-    // =================================
-
-    // Profile Avatars
-    // Allow any authenticated user to read.
-    // Allow user to write only to their own avatar path.
-    // Must be an image and under 5MB.
+    // Allow authenticated users to upload their own avatar.
+    // The path must be `avatars/{userId}/avatar.jpg`.
     match /upload/avatars/{userId}/{fileName} {
-      allow read;
-      allow write: if isOwner(userId) && isImage() && isValidSize(5);
-    }
-    
-    // Post Images
-    // Allow any authenticated user to read.
-    // Allow user to write only to their own posts.
-    // Must be an image and under 10MB.
-    match /upload/posts/{userId}/{postId}/{fileName} {
-      allow read;
-      allow write: if isOwner(userId) && isImage() && isValidSize(10);
+      allow write: if isAuthenticated() && request.auth.uid == userId && fileName == 'avatar.jpg';
     }
 
-    // Room Chat Files (Images/Videos)
-    // Allow any authenticated user to read.
-    // Allow only room participants to write.
-    // Must be an image or video and under 25MB.
-    match /upload/rooms/{roomId}/{fileType}/{fileName} {
-      allow read;
-      allow write: if request.auth != null &&
-                      exists(/databases/$(database)/documents/rooms/$(roomId)) &&
-                      request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.participants &&
-                      (isImage() || isVideo()) &&
-                      isValidSize(25);
+    // Allow authenticated users to upload images for their posts.
+    // The path must be `posts/images/{userId}/{anyFileName}`.
+    match /upload/posts/images/{userId}/{fileName} {
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Allow authenticated users to upload videos for their posts.
+    match /upload/posts/videos/{userId}/{fileName} {
+      allow write: if isAuthenticated() && request.auth.uid == userId;
     }
     
-    // Direct Message Files (Images/Audio)
-    // Allow only chat participants to read and write.
-    // Must be an image or audio file and under 15MB.
-    match /dms/{chatId}/{fileType}/{fileName} {
-      allow read, write: if request.auth != null &&
-                           exists(/databases/$(database)/documents/directMessagesMetadata/$(chatId)) &&
-                           request.auth.uid in get(/databases/$(database)/documents/directMessagesMetadata/$(chatId)).data.participantUids &&
-                           (isImage() || isAudio()) &&
-                           isValidSize(15);
+    // Allow authenticated users to upload music files to their own room's playlist.
+    match /music/{roomId}/{fileName} {
+      allow write: if isAuthenticated();
     }
   }
 }
