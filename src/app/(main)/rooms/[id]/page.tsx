@@ -1,4 +1,3 @@
-
 // src/app/(main)/rooms/[id]/page.tsx
 "use client";
 
@@ -8,15 +7,14 @@ import { doc, onSnapshot, collection, query, orderBy, limit, where, Timestamp } 
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { VoiceChatProvider, useVoiceChat } from '@/contexts/VoiceChatContext';
+import { useVoiceChat } from '@/contexts/VoiceChatContext';
 import { Loader2 } from 'lucide-react';
 import TextChat from '@/components/chat/text-chat';
 import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
 import RoomHeader from '@/components/rooms/RoomHeader';
-import VoiceAudioPlayer from '@/components/voice/VoiceAudioPlayer';
-import ActiveCallBar from '@/components/voice/ActiveCallBar';
+import { AnimatePresence, motion } from 'framer-motion';
 
-import type { Room, Message, Giveaway, ActiveGameSession } from '@/lib/types';
+import type { Room, ActiveGame, GameSettings, Message, Giveaway, ActiveGameSession, MindWarSession } from '@/lib/types';
 import RoomFooter from '@/components/rooms/RoomFooter';
 import SpeakerLayout from '@/components/rooms/SpeakerLayout';
 import RoomInfoCards from '@/components/rooms/RoomInfoCards';
@@ -24,20 +22,24 @@ import GameResultCard from '@/components/game/GameResultCard';
 import GiveawayCard from '@/components/rooms/GiveawayCard';
 import { cn } from '@/lib/utils';
 import GiveawayDialog from '@/components/rooms/GiveawayDialog';
+
+// Import new game components and actions
+import RoomGameCard from '@/components/game/RoomGameCard';
+import { startGameInRoom, submitAnswer, endGameWithoutWinner } from '@/lib/actions/gameActions';
 import GameLobbyDialog from '@/components/game/GameLobbyDialog';
 import ActiveGameArea from '@/components/game/ActiveGameArea';
+import MindWarLobby from '@/components/games/mindwar/MindWarLobby';
 import MindWarMainUI from '@/components/games/mindwar/MindWarMainUI';
-import type { MindWarSession } from '@/lib/types';
 
 
-function RoomPageContent() {
+export default function RoomPage() {
     const params = useParams();
     const router = useRouter();
     const { toast } = useToast();
     const roomId = params.id as string;
     
     // --- Auth & Contexts ---
-    const { user, userData, loading: authLoading } = useAuth();
+    const { user, userData, featureFlags, loading: authLoading } = useAuth();
     const { setActiveRoomId } = useVoiceChat();
 
     // --- Component State ---
@@ -49,11 +51,15 @@ function RoomPageContent() {
     const [isGiveawayDialogOpen, setIsGiveawayDialogOpen] = useState(false);
     const [isGameLobbyOpen, setIsGameLobbyOpen] = useState(false);
     const chatScrollRef = useRef<HTMLDivElement>(null);
-
-    // --- Game State ---
-    const [activeGame, setActiveGame] = useState<ActiveGameSession | null>(null);
-    const [mindWarSession, setMindWarSession] = useState<MindWarSession | null>(null);
-    const [finishedGame, setFinishedGame] = useState<any>(null);
+    
+    // Quiz Game State
+    const [finishedQuizGame, setFinishedQuizGame] = useState<any>(null);
+    const [activeQuizGame, setActiveQuizGame] = useState<ActiveGame | null>(null);
+    const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
+    
+    // New Interactive Game State
+    const [activeGameSession, setActiveGameSession] = useState<ActiveGameSession | null>(null);
+    const [activeMindWarSession, setActiveMindWarSession] = useState<MindWarSession | null>(null);
 
     const isHost = user?.uid === room?.createdBy.uid;
 
@@ -62,7 +68,7 @@ function RoomPageContent() {
         return () => setActiveRoomId(null);
     }, [roomId, setActiveRoomId]);
 
-    // Room and messages listener
+    // Firestore Listeners (Room, Messages, Games)
     useEffect(() => {
         if (!roomId) return;
         
@@ -82,70 +88,156 @@ function RoomPageContent() {
             setMessagesLoading(false);
         });
         
-        return () => { roomUnsub(); messagesUnsub(); };
+        const finishedGameQuery = query(collection(db, 'rooms', roomId, 'games'), where('status', '==', 'finished'), orderBy('finishedAt', 'desc'), limit(1));
+        const finishedGameUnsub = onSnapshot(finishedGameQuery, (snapshot) => {
+            if (!snapshot.empty) {
+                const gameDoc = snapshot.docs[0];
+                const gameData = { id: gameDoc.id, ...gameDoc.data() } as any;
+                if (gameData.finishedAt && Date.now() - gameData.finishedAt.toMillis() < 15000) {
+                     setFinishedQuizGame(gameData);
+                     const timer = setTimeout(() => setFinishedQuizGame(null), 10000);
+                     return () => clearTimeout(timer);
+                }
+            }
+            setFinishedQuizGame(null);
+        });
+        
+        // Listener for new interactive game sessions
+        const gameSessionUnsub = onSnapshot(query(collection(db, 'rooms', roomId, 'game_sessions'), where('status', '!=', 'finished'), limit(1)), (snapshot) => {
+            setActiveGameSession(snapshot.empty ? null : { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ActiveGameSession);
+        });
+
+        // Listener for Mind Wars sessions
+        const mindWarSessionUnsub = onSnapshot(query(collection(db, 'rooms', roomId, 'mindWarSessions'), where('status', '!=', 'finished'), limit(1)), (snapshot) => {
+            setActiveMindWarSession(snapshot.empty ? null : { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as MindWarSession);
+        });
+        
+        return () => { roomUnsub(); messagesUnsub(); finishedGameUnsub(); gameSessionUnsub(); mindWarSessionUnsub(); };
     }, [roomId, router, toast]);
     
-    // Listen for active Mind War session
-    useEffect(() => {
-        if (!room?.activeMindWarSessionId) {
-            setMindWarSession(null);
-            return;
-        }
-        const mindWarUnsub = onSnapshot(doc(db, "rooms", roomId, "mindWarSessions", room.activeMindWarSessionId), (docSnap) => {
-            if (docSnap.exists()) {
-                setMindWarSession({id: docSnap.id, ...docSnap.data()} as MindWarSession);
-            } else {
-                setMindWarSession(null);
-            }
-        });
-        return () => mindWarUnsub();
-    }, [room?.activeMindWarSessionId, roomId]);
-
-
-    // Listen for other active games (dice, rps, etc)
-    useEffect(() => {
-        if (!roomId) return;
-        const q = query(collection(db, 'rooms', roomId, 'games'), where('status', 'in', ['pending', 'active']), limit(1));
-        const unsub = onSnapshot(q, (snapshot) => {
-            if (!snapshot.empty) {
-                setActiveGame({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ActiveGameSession);
-            } else {
-                setActiveGame(null);
-            }
-        });
-        return () => unsub();
-    }, [roomId]);
-    
-
+    // Auto-scroll chat
     useEffect(() => {
         if (chatScrollRef.current) { chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight; }
     }, [messages]);
+
+    // --- QUIZ GAME LOGIC ---
+    // Fetch game settings
+    useEffect(() => {
+        const settingsRef = doc(db, 'config', 'gameSettings');
+        const settingsUnsub = onSnapshot(settingsRef, (docSnap) => {
+            if (docSnap.exists()) setGameSettings(docSnap.data() as GameSettings);
+        });
+        return () => settingsUnsub();
+    }, []);
     
+    // Listen for active quiz games
+    useEffect(() => {
+        if (!roomId || !gameSettings) return;
+
+        const gamesQuery = query(collection(db, 'rooms', roomId, 'games'), where('status', '==', 'active'), limit(1));
+        let gameTimeout: NodeJS.Timeout;
+
+        const activeGameRef = { current: activeQuizGame };
+
+        const unsubscribe = onSnapshot(gamesQuery, (snapshot) => {
+            clearTimeout(gameTimeout);
+            if (!snapshot.empty) {
+                const gameData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ActiveGame;
+                activeGameRef.current = gameData;
+                setActiveQuizGame(gameData);
+
+                const startTime = (gameData.startTime as Timestamp).toMillis();
+                const questionDuration = (gameSettings.questionTimerSeconds || 15) * 1000;
+                const timeElapsed = Date.now() - startTime;
+                const timeLeftMs = questionDuration - timeElapsed;
+
+                if (timeLeftMs > 0) {
+                    gameTimeout = setTimeout(() => {
+                        if (activeGameRef.current?.id === gameData.id) {
+                            endGameWithoutWinner(roomId, gameData.id);
+                        }
+                    }, timeLeftMs);
+                } else {
+                    endGameWithoutWinner(roomId, gameData.id);
+                }
+            } else {
+                activeGameRef.current = null;
+                setActiveQuizGame(null);
+            }
+        });
+        return () => { unsubscribe(); clearTimeout(gameTimeout); };
+    }, [roomId, gameSettings, activeQuizGame]);
+
+    // Autostart quiz game based on timestamp
+    useEffect(() => {
+        // Conditions to not run the effect
+        if (!room || !user || !featureFlags?.quizGameEnabled || activeQuizGame) {
+            return;
+        }
+
+        // Only the host is responsible for triggering the game
+        const isHost = user.uid === room.createdBy.uid;
+        if (!isHost) {
+            return;
+        }
+        
+        // Ensure timestamp exists before trying to use it
+        if (!room.nextGameTimestamp) {
+            return;
+        }
+
+        const nextGameTime = (room.nextGameTimestamp as Timestamp).toMillis();
+        const now = Date.now();
+        
+        const delay = nextGameTime - now;
+
+        if (delay <= 0) {
+            // Time is up, start immediately.
+            startGameInRoom(roomId).catch(err => console.error("Failed to auto-start game:", err));
+        } else {
+            // Time is in the future, set a timeout.
+            const timer = setTimeout(() => {
+                startGameInRoom(roomId).catch(err => console.error("Failed to auto-start game with timer:", err));
+            }, delay);
+
+            // Cleanup the timeout if the component unmounts or deps change.
+            return () => clearTimeout(timer);
+        }
+    }, [room, user, featureFlags?.quizGameEnabled, activeQuizGame, roomId]);
+
+    const handleAnswerSubmit = useCallback(async (answerIndex: number) => {
+        if (!activeQuizGame || !user) return;
+        try {
+            await submitAnswer(roomId, activeQuizGame.id, user.uid, answerIndex);
+        } catch (error: any) {
+            toast({ variant: 'destructive', description: error.message });
+        }
+    }, [activeQuizGame, user, roomId, toast]);
+    
+    // --- END GAME LOGIC ---
+
     const isLoading = authLoading || !room;
     if (isLoading) return <div className="flex h-full items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
-    
+
     const renderGameContent = () => {
-        if (mindWarSession && user && userData) {
-            return (
-                <MindWarMainUI 
-                    session={mindWarSession}
-                    roomId={roomId}
-                    currentUser={{uid: user.uid, username: userData.username, photoURL: userData.photoURL || null }}
-                />
-            )
+        if (activeMindWarSession && user && userData) {
+             return <MindWarMainUI session={activeMindWarSession} currentUser={{uid: user.uid, username: userData.username, photoURL: userData.photoURL || null}} roomId={roomId} />;
         }
-        if (activeGame && user) {
-            return <ActiveGameArea game={activeGame} roomId={roomId} currentUser={{uid: user.uid, username: user.displayName || 'Bilinmeyen'}} />;
+        if (activeGameSession && user) {
+            return <ActiveGameArea game={activeGameSession} roomId={roomId} currentUser={{uid: user.uid, username: userData?.username || 'Biri'}} />
         }
-        if (finishedGame) {
-           return <GameResultCard game={finishedGame} />;
+        if (finishedQuizGame) {
+            return <GameResultCard game={finishedQuizGame} />;
+        }
+        if (activeQuizGame && gameSettings) {
+            return <RoomGameCard game={activeQuizGame} settings={gameSettings} onAnswerSubmit={handleAnswerSubmit} onTimerEnd={() => {}} currentUserId={user!.uid} />;
         }
         if (room.giveaway && room.giveaway.status !== 'idle') {
-            return <GiveawayCard giveaway={room.giveaway} roomId={roomId} isHost={isHost} />
+            return <GiveawayCard giveaway={room.giveaway} roomId={roomId} isHost={isHost} />;
         }
         return null;
     };
-
+    
     const gameContent = renderGameContent();
 
     return (
@@ -155,24 +247,33 @@ function RoomPageContent() {
                     room={room} 
                     isHost={isHost} 
                     onParticipantListToggle={() => setIsParticipantSheetOpen(true)} 
+                    onBackClick={() => router.back()}
                     isSpeakerLayoutCollapsed={isSpeakerLayoutCollapsed}
                     onToggleCollapse={() => setIsSpeakerLayoutCollapsed(p => !p)}
                 />
                 
-                <>
+                <AnimatePresence>
                     {!isSpeakerLayoutCollapsed && (
-                         <div
+                         <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3, ease: 'easeInOut' }}
                             className="overflow-hidden"
                         >
                             <SpeakerLayout room={room} />
-                        </div>
+                        </motion.div>
                     )}
-                </>
+                </AnimatePresence>
 
                 <main ref={chatScrollRef} className="flex-1 flex flex-col overflow-y-auto">
                     {gameContent && (
                         <div className="p-4">
-                            {gameContent}
+                            <AnimatePresence mode="wait">
+                                <motion.div key={activeGameSession?.id || activeQuizGame?.id || activeMindWarSession?.id || 'info'} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                                    {gameContent}
+                                </motion.div>
+                            </AnimatePresence>
                         </div>
                     )}
                     <RoomInfoCards room={room} isOwner={isHost} />
@@ -189,24 +290,12 @@ function RoomPageContent() {
                 roomId={roomId}
                 isHost={isHost}
             />
-             {isHost && (
-                 <GameLobbyDialog 
-                    isOpen={isGameLobbyOpen}
-                    onOpenChange={setIsGameLobbyOpen}
-                    roomId={roomId}
-                    participants={room.participants}
-                />
-            )}
-            <VoiceAudioPlayer />
-            <ActiveCallBar />
+            {room.participants && <GameLobbyDialog
+                isOpen={isGameLobbyOpen}
+                onOpenChange={setIsGameLobbyOpen}
+                roomId={roomId}
+                participants={room.participants}
+            />}
         </>
     );
-}
-
-export default function RoomPage() {
-    return (
-        <VoiceChatProvider>
-            <RoomPageContent />
-        </VoiceChatProvider>
-    )
 }

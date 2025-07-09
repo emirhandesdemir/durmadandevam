@@ -1,73 +1,200 @@
-
 // src/app/(main)/layout.tsx
 'use client';
 
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/Header";
-import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
-import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
 import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
 import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
+import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
+import { useState, useRef, useEffect } from 'react';
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { Button } from '@/components/ui/button';
+import { Download, X } from 'lucide-react';
 import ActiveCallBar from "@/components/voice/ActiveCallBar";
+import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
+
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: Array<string>;
+  readonly userChoice: Promise<{
+    outcome: 'accepted' | 'dismissed',
+    platform: string
+  }>;
+  prompt(): Promise<void>;
+}
+
+function PwaInstallBar() {
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [showIosInstall, setShowIosInstall] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    // Check if running in standalone mode or if the user has already dismissed the banner
+    const isStandalone = typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches;
+    if (isStandalone || sessionStorage.getItem('pwaInstallDismissed') === 'true') {
+      return;
+    }
+    
+    // Handler for browsers that support 'beforeinstallprompt'
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e as BeforeInstallPromptEvent);
+      setIsVisible(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Handler for iOS devices
+    const isIos = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    if(isIos) {
+        setShowIosInstall(true);
+        setIsVisible(true);
+    }
+    
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    installPrompt.userChoice.then(() => {
+      setIsVisible(false);
+      setInstallPrompt(null); // Clear the prompt once used
+    });
+  };
+
+  const handleDismiss = () => {
+    setIsVisible(false);
+    sessionStorage.setItem('pwaInstallDismissed', 'true');
+  };
+  
+  if (!isVisible) {
+    return null;
+  }
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: -100, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        className="relative z-[100] flex items-center justify-center gap-x-4 gap-y-2 bg-primary text-primary-foreground p-3 text-sm font-medium flex-wrap"
+      >
+        {installPrompt && (
+          <>
+            <span>Uygulama deneyimini bir üst seviyeye taşı!</span>
+            <Button size="sm" onClick={handleInstallClick} className="shrink-0 bg-primary-foreground text-primary hover:bg-primary-foreground/90">
+              <Download className="mr-2 h-4 w-4"/>
+              Uygulamayı Yükle
+            </Button>
+          </>
+        )}
+        {showIosInstall && !installPrompt && (
+            <div className="flex items-center gap-2 text-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 hidden sm:inline-block"><path d="M12 20v-8"/><path d="M9 15l3-3 3 3"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/></svg>
+                <span>Uygulamayı ana ekrana eklemek için <strong>Paylaş</strong> simgesine, ardından <strong>"Ana Ekrana Ekle"</strong>ye dokunun.</span>
+            </div>
+        )}
+        <button 
+          onClick={handleDismiss} 
+          className="absolute top-1 right-1 sm:top-1/2 sm:-translate-y-1/2 rounded-full p-1.5 text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+          aria-label="Kapat"
+        >
+          <X className="h-4 w-4"/>
+        </button>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 
 /**
  * Ana Uygulama Düzeni (Main App Layout)
  * 
  * Bu bileşen, kullanıcı giriş yaptıktan sonra görünen tüm sayfalar için
- * genel bir çerçeve (iskelet) oluşturur. Header, BottomNav gibi ortak 
- * UI elemanlarını içerir.
+ * genel bir çerçeve (iskelet) oluşturur. Header, BottomNav, sesli sohbet
+ * bileşenleri ve sayfa geçiş animasyonları gibi ortak UI elemanlarını içerir.
  */
 export default function MainAppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const scrollRef = useRef<HTMLElement>(null);
+  const { scrollY } = useScroll({ container: scrollRef });
+  const [hidden, setHidden] = useState(false);
   const pathname = usePathname();
 
-  // Bazı sayfaların (oda ve dm detay) tam ekran düzen kullanması ve
-  // header göstermemesi gerekir. Bu kontrolü burada yapıyoruz.
-  const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/');
+  const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/');
   const isHeaderlessPage = isFullPageLayout;
   const isHomePage = pathname === '/home';
 
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    const previous = scrollY.getPrevious() ?? 0;
+    if (latest > previous && latest > 150) {
+      setHidden(true);
+    } else {
+      setHidden(false);
+    }
+  });
+
+  const pageVariants = {
+    initial: { opacity: 0 },
+    animate: { opacity: 1, transition: { duration: 0.4, ease: "easeInOut" } },
+    exit: { opacity: 0, transition: { duration: 0.2, ease: "easeOut" } },
+  };
+
 
   return (
-      <VoiceChatProvider>
-        <PremiumWelcomeManager />
-        <div className="relative flex h-screen w-full flex-col bg-background overflow-hidden">
+    <VoiceChatProvider>
+      <PremiumWelcomeManager />
+      
+      <div className="relative flex h-screen w-full flex-col bg-background overflow-hidden">
+        <PwaInstallBar />
+        
+        <main 
+          ref={scrollRef} 
+          className={cn(
+            "flex-1 flex flex-col hide-scrollbar pb-20",
+            isFullPageLayout ? "overflow-hidden" : "overflow-y-auto"
+          )}
+        >
+           {!isHeaderlessPage && (
+              <motion.header
+                variants={{ visible: { y: 0 }, hidden: { y: "-100%" } }}
+                animate={hidden ? "hidden" : "visible"}
+                transition={{ duration: 0.35, ease: "easeInOut" }}
+                className="sticky top-0 z-40"
+              >
+                <Header />
+              </motion.header>
+           )}
           
-          {/* Ana içerik alanı */}
-          <main 
-            className={cn(
-              "flex-1 flex flex-col",
-              isFullPageLayout ? "overflow-hidden" : "overflow-y-auto pb-24" // Tam ekran sayfalarda kaydırmayı engelle.
-            )}
-          >
-             {/* Header'ı olmayan sayfalarda Header'ı render etme. */}
-             {!isHeaderlessPage && (
-                <header
-                  className="sticky top-0 z-40"
-                >
-                  <Header />
-                </header>
-             )}
-            
-             <div
-                  className={cn(
-                    "flex-1 flex flex-col",
-                    isFullPageLayout ? "overflow-hidden" : "",
-                    !isHomePage && !isFullPageLayout && "p-4"
-                  )}
-               >
-                {children}
-               </div>
-          </main>
-          
-          <VoiceAudioPlayer />
-          <ActiveCallBar />
-          <BottomNav />
-        </div>
-      </VoiceChatProvider>
+           <AnimatePresence mode="wait">
+             <motion.div
+                key={pathname}
+                variants={pageVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                className={cn(
+                  "flex-1 flex flex-col",
+                  isFullPageLayout ? "overflow-hidden" : "",
+                  !isHomePage && !isFullPageLayout && "p-4"
+                )}
+             >
+              {children}
+             </motion.div>
+           </AnimatePresence>
+        </main>
+        
+        <VoiceAudioPlayer />
+        <ActiveCallBar />
+        <BottomNav />
+      </div>
+    </VoiceChatProvider>
   );
 }
