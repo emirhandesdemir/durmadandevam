@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getCountFromServer, query, where, serverTimestamp, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, addDoc, getCountFromServer, query, where, serverTimestamp, getDocs, orderBy, limit, doc, setDoc } from 'firebase/firestore';
 import type { BotActivityLog, UserProfile } from '../types';
 import { deepSerialize } from '../server-utils';
 
