@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageCircle, Plus, Play } from 'lucide-react';
+import { Home, MessageCircle, Plus, Clapperboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -25,8 +25,8 @@ export default function BottomNav() {
   const navItems = useMemo(() => [
     { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
     { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
-    { id: 'create-post', href: '/create-post', icon: Plus, label: 'Oluştur'},
-    { id: 'surf', href: '/surf', icon: Play, label: 'Surf' },
+    { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
+    { id: 'surf', href: '/surf', icon: Clapperboard, label: 'Surf' },
     { id: 'profile', href: `/profile/${user.uid}`, icon: Avatar, label: 'Profil' },
   ], [user.uid]);
 
@@ -53,10 +53,10 @@ export default function BottomNav() {
                                 <AvatarFallback className="text-xs bg-muted">{user.displayName?.charAt(0)}</AvatarFallback>
                             </Avatar>
                        ) : (
-                            <Icon className={cn("h-6 w-6", item.id === 'create-post' && 'h-8 w-8 text-primary bg-primary/20 p-1.5 rounded-full')} />
+                            <Icon className={cn("h-6 w-6", item.id === 'create' && 'h-8 w-8 text-primary bg-primary/20 p-1.5 rounded-full')} />
                        )}
                     </div>
-                    {item.id !== 'create-post' && (
+                    {item.id !== 'create' && (
                         <span className="text-[10px] font-medium">{item.label}</span>
                     )}
                   </Link>

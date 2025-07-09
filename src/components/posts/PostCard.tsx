@@ -94,7 +94,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
         setOptimisticLikeCount(post.likeCount);
         setEditingCommentsDisabled(post.commentsDisabled ?? false);
         setEditingLikesHidden(post.likesHidden ?? false);
-    }, [post.likeCount, post.likes, post.commentsDisabled, post.likesHidden, currentUser]);
+    }, [post, currentUser]);
 
 
     const isOwner = currentUser?.uid === post.uid;

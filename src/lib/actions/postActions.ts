@@ -59,9 +59,12 @@ export async function createPost(postData: {
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
     text: string;
-    imageUrl: string;
+    imageUrl?: string;
+    videoUrl?: string;
     editedWithAI?: boolean;
     language: string;
+    commentsDisabled?: boolean;
+    likesHidden?: boolean;
 }) {
     const newPostRef = doc(collection(db, 'posts'));
     const userRef = doc(db, 'users', postData.uid);
@@ -76,13 +79,12 @@ export async function createPost(postData: {
         
         const newPostData = {
             ...postData,
-            videoUrl: "", // Ensure videoUrl is empty
             createdAt: serverTimestamp(),
             likes: [],
             likeCount: 0,
             commentCount: 0,
-            commentsDisabled: false,
-            likesHidden: false,
+            commentsDisabled: postData.commentsDisabled ?? false,
+            likesHidden: postData.likesHidden ?? false,
         };
         transaction.set(newPostRef, newPostData);
         
@@ -91,7 +93,7 @@ export async function createPost(postData: {
             postCount: increment(1)
         };
 
-        if (postCount === 0) {
+        if (postCount === 0 && !postData.videoUrl) { // Only give reward for first non-video post
             userUpdates.diamonds = increment(90);
         }
         
@@ -105,6 +107,9 @@ export async function createPost(postData: {
     });
 
     revalidatePath('/home');
+    if (postData.videoUrl) {
+      revalidatePath('/surf');
+    }
     if (postData.uid) {
         revalidatePath(`/profile/${postData.uid}`);
     }
@@ -152,6 +157,7 @@ export async function deletePost(postId: string) {
             }
         });
         revalidatePath('/home');
+        revalidatePath('/surf');
     } catch (error) {
         console.error("Gönderi silinirken hata oluştu:", error);
         throw new Error("Gönderi silinemedi.");
@@ -177,7 +183,7 @@ export async function updatePost(postId: string, updates: { text?: string; comme
 
 export async function likePost(
     postId: string,
-    currentUser: { uid: string, displayName: string | null, photoURL: string | null }
+    currentUser: { uid: string, displayName: string | null, photoURL: string | null, selectedAvatarFrame?: string }
 ) {
     const postRef = doc(db, "posts", postId);
     
@@ -213,6 +219,7 @@ export async function likePost(
     });
     revalidatePath('/home');
     revalidatePath(`/profile/*`);
+    revalidatePath('/surf');
 }
 
 
