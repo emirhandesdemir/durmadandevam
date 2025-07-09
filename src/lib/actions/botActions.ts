@@ -50,13 +50,16 @@ const welcomeDms = [
     "Selam, yeni bir yüz görmek ne güzel! Hadi bir oda oluştur da görelim seni.",
 ];
 
-async function fetchRandomAvatar() {
+async function fetchRandomAvatar(seed: string) {
     try {
-        const response = await fetch(`https://randomuser.me/api/?gender=female&inc=picture`);
+        const response = await fetch(`https://randomuser.me/api/?gender=female&seed=${seed}`);
         const data = await response.json();
-        return data.results[0].picture.large;
+        if (data?.results?.[0]?.picture?.large) {
+            return data.results[0].picture.large;
+        }
+        throw new Error("Invalid API response structure from randomuser.me");
     } catch (error) {
-        console.error("Could not fetch avatar, using placeholder.", error);
+        console.error(`Could not fetch avatar for seed ${seed}, using placeholder.`, error);
         return 'https://placehold.co/128x128.png';
     }
 }
@@ -97,8 +100,9 @@ export async function createInitialBots() {
             const existingUserSnap = await getDocs(existingUserQuery);
             if (existingUserSnap.empty) {
                 const newBotRef = doc(usersCol);
+                const seed = username.replace(/\s+/g, '').toLowerCase();
                 const newBot: Partial<UserProfile> = {
-                    username: username, email: `${username.replace(' ','_').toLowerCase()}@bot.hiwewalk.com`, photoURL: await fetchRandomAvatar(),
+                    username: username, email: `${username.replace(' ','_').toLowerCase()}@bot.hiwewalk.com`, photoURL: await fetchRandomAvatar(seed),
                     isBot: true, bio: bios[i] || "Yeni maceralar peşinde...", gender: 'female', role: 'user', followers: [], following: [],
                     postCount: 0, diamonds: 0, privateProfile: false, acceptsFollowRequests: true, followRequests: [],
                 };
