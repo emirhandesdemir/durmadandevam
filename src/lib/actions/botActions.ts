@@ -1,8 +1,9 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getCountFromServer, query, where, serverTimestamp, doc } from 'firebase/firestore';
-import type { UserProfile } from '../types';
+import { collection, addDoc, getCountFromServer, query, where, serverTimestamp, getDocs, orderBy, limit } from 'firebase/firestore';
+import type { BotActivityLog, UserProfile } from '../types';
+import { deepSerialize } from '../server-utils';
 
 // Predefined bot data
 const femaleUsernames = ['elif_dans', 'melis_kahve', 'zeynep_geziyor', 'ayla_sanat', 'selin_muzik', 'derya_gunes'];
@@ -19,9 +20,6 @@ const bios = [
 ];
 
 async function fetchRandomAvatar(gender: 'women' | 'men', index: number) {
-    // This is a simplified approach. A real implementation might need a more robust way
-    // to get unique avatars, as the randomuser.me API might return the same one.
-    // For this purpose, we'll just use the index to vary the seed.
     try {
         const response = await fetch(`https://randomuser.me/api/?gender=${gender === 'women' ? 'female' : 'male'}&inc=picture&seed=${gender}${index}${Date.now()}`);
         const data = await response.json();
@@ -38,6 +36,20 @@ export async function getBotCount() {
     return snapshot.data().count;
 }
 
+export async function getBotActivityLogs(): Promise<BotActivityLog[]> {
+    const logsRef = collection(db, 'botActivityLogs');
+    const q = query(logsRef, orderBy('timestamp', 'desc'), limit(20));
+    const snapshot = await getDocs(q);
+
+    const logs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+    } as BotActivityLog));
+    
+    return deepSerialize(logs);
+}
+
+
 export async function createInitialBots() {
     let createdCount = 0;
     try {
@@ -49,7 +61,8 @@ export async function createInitialBots() {
             const existingUserQuery = query(usersCol, where('username', '==', username), where('isBot', '==', true));
             const existingUserSnap = await getDocs(existingUserQuery);
             if (existingUserSnap.empty) {
-                const newBot: Omit<UserProfile, 'uid'|'createdAt'> = {
+                const newBotRef = doc(usersCol);
+                const newBot: Omit<UserProfile, 'uid' | 'createdAt'> = {
                     username: username,
                     email: `${username}@bot.hiwewalk.com`,
                     photoURL: await fetchRandomAvatar('women', i),
@@ -65,7 +78,7 @@ export async function createInitialBots() {
                     acceptsFollowRequests: true,
                     followRequests: [],
                 };
-                await addDoc(usersCol, { ...newBot, createdAt: serverTimestamp() });
+                await setDoc(newBotRef, { ...newBot, uid: newBotRef.id, createdAt: serverTimestamp() });
                 createdCount++;
             }
         }
@@ -76,7 +89,8 @@ export async function createInitialBots() {
             const existingUserQuery = query(usersCol, where('username', '==', username), where('isBot', '==', true));
             const existingUserSnap = await getDocs(existingUserQuery);
              if (existingUserSnap.empty) {
-                const newBot: Omit<UserProfile, 'uid'|'createdAt'> = {
+                const newBotRef = doc(usersCol);
+                const newBot: Omit<UserProfile, 'uid' | 'createdAt'> = {
                     username: username,
                     email: `${username}@bot.hiwewalk.com`,
                     photoURL: await fetchRandomAvatar('men', i),
@@ -92,7 +106,7 @@ export async function createInitialBots() {
                     acceptsFollowRequests: true,
                     followRequests: [],
                 };
-                await addDoc(usersCol, { ...newBot, createdAt: serverTimestamp() });
+                 await setDoc(newBotRef, { ...newBot, uid: newBotRef.id, createdAt: serverTimestamp() });
                 createdCount++;
             }
         }

@@ -4,9 +4,11 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Bot, Loader2, Sparkles, UserCheck } from 'lucide-react';
+import { Bot, Loader2, Sparkles, UserCheck, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createInitialBots, getBotCount } from '@/lib/actions/botActions';
+import StatCard from '@/components/admin/stat-card';
+import BotActivityFeed from '@/components/admin/BotActivityFeed';
 
 export default function BotManagerPage() {
     const { toast } = useToast();
@@ -57,39 +59,44 @@ export default function BotManagerPage() {
                 </div>
             </div>
             
-            <Card className="mt-8">
-                <CardHeader>
-                    <CardTitle>Bot Durumu</CardTitle>
-                    <CardDescription>
-                        Sistemdeki mevcut bot kullanıcı sayısı.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="text-4xl font-bold flex items-center gap-3">
-                        {loadingCount ? <Loader2 className="h-8 w-8 animate-spin" /> : botCount}
-                        <span className="text-lg text-muted-foreground font-normal">bot</span>
-                    </div>
-                </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
+                <div className="lg:col-span-1 space-y-6">
+                    <StatCard title="Toplam Bot Sayısı" value={botCount} icon={Bot} isLoading={loadingCount} />
 
-            <Card className="mt-6">
-                <CardHeader>
-                    <CardTitle>Başlangıç Botlarını Oluştur</CardTitle>
-                    <CardDescription>
-                        Bu işlem, sisteme 8 adet (6 kadın, 2 erkek) başlangıç botu ekler. Bu botlar otomatik olarak içerik paylaşmaya ve etkileşimde bulunmaya başlayacaktır. Bu işlemi sadece bir kez çalıştırmanız önerilir.
-                    </CardDescription>
-                </CardHeader>
-                <CardFooter>
-                    <Button onClick={handleCreateBots} disabled={isCreating}>
-                        {isCreating ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                            <Sparkles className="mr-2 h-4 w-4" />
-                        )}
-                        {isCreating ? 'Botlar Oluşturuluyor...' : '8 Başlangıç Botu Oluştur'}
-                    </Button>
-                </CardFooter>
-            </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Başlangıç Botlarını Oluştur</CardTitle>
+                            <CardDescription>
+                                Bu işlem, sisteme 8 adet (6 kadın, 2 erkek) başlangıç botu ekler. Bu botlar otomatik olarak içerik paylaşmaya ve etkileşimde bulunmaya başlayacaktır. Bu işlemi sadece bir kez çalıştırmanız önerilir.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardFooter>
+                            <Button onClick={handleCreateBots} disabled={isCreating}>
+                                {isCreating ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Sparkles className="mr-2 h-4 w-4" />
+                                )}
+                                {isCreating ? 'Botlar Oluşturuluyor...' : '8 Başlangıç Botu Oluştur'}
+                            </Button>
+                        </CardFooter>
+                    </Card>
+                </div>
+                <div className="lg:col-span-2">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-3">
+                                <History className="h-6 w-6 text-primary"/>
+                                Son Bot Aktiviteleri
+                            </CardTitle>
+                             <CardDescription>Botların gerçekleştirdiği son beğenme ve yorum yapma eylemleri.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <BotActivityFeed />
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
         </div>
     );
 }

@@ -1,4 +1,3 @@
-
 // src/lib/actions/gameActions.ts
 'use server';
 
@@ -19,7 +18,7 @@ import {
     where,
     setDoc
 } from "firebase/firestore";
-import type { GameQuestion, GameSettings, ActiveGame } from "../types";
+import type { GameQuestion, GameSettings, ActiveGame, Room } from "../types";
 import { revalidatePath } from "next/cache";
 import { generateQuizQuestion } from '@/ai/flows/generateQuizQuestionFlow';
 
@@ -40,6 +39,8 @@ export async function getGameSettings(): Promise<GameSettings> {
             imageUploadQuality: 0.9,
             audioBitrate: 64,
             videoBitrate: 1000,
+            botPostIntervalHours: 1,
+            botInteractIntervalMinutes: 15,
             ...firestoreData
         } as GameSettings;
     }
@@ -53,6 +54,8 @@ export async function getGameSettings(): Promise<GameSettings> {
         imageUploadQuality: 0.9,
         audioBitrate: 64,
         videoBitrate: 1000,
+        botPostIntervalHours: 1,
+        botInteractIntervalMinutes: 15,
     };
 }
 
