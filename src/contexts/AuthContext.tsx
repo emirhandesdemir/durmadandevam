@@ -188,21 +188,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Effect for handling redirection logic
   useEffect(() => {
-    const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
-    const isOnboardingPage = pathname === '/onboarding';
+    const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/onboarding');
     
     if (loading) return; // Wait until all loading is finished
 
-    if (user && userData) { // User is logged in and has data
-        if (!userData.bio && !isOnboardingPage) {
-            router.replace('/onboarding');
-        } else if (isAuthPage) {
+    if (user) { // User is logged in
+        if (isAuthPage) {
             router.replace('/home');
         }
-    } else if (!user && !isAuthPage) { // User is not logged in and not on an auth page
+    } else if (!isAuthPage) { // User is not logged in and not on an auth page
         router.replace('/login');
     }
-  }, [user, userData, pathname, router, loading]);
+  }, [user, loading, pathname, router]);
 
 
   const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms };
