@@ -15,23 +15,39 @@ import PostCard from '@/components/posts/PostCard';
 
 interface ProfilePostsProps {
   userId: string;
-  profileUser: UserProfile;
-  postType: 'image' | 'text';
 }
 
-export default function ProfilePosts({ userId, profileUser, postType }: ProfilePostsProps) {
+export default function ProfilePosts({ userId }: ProfilePostsProps) {
     const { userData: currentUserData, loading: authLoading } = useAuth();
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
+    const [profileUser, setProfileUser] = useState<UserProfile | null>(null);
     const [selectedPost, setSelectedPost] = useState<Post | null>(null);
     
+    // Listen for real-time updates on the profile user's document
+    useEffect(() => {
+        const userDocRef = doc(db, 'users', userId);
+        const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                setProfileUser(docSnap.data() as UserProfile);
+            } else {
+                setProfileUser(null);
+            }
+        });
+        return () => unsubscribe();
+    }, [userId]);
+
     const isOwnProfile = currentUserData?.uid === userId;
     const isFollower = profileUser?.followers?.includes(currentUserData?.uid || '') || false;
     const canViewContent = !profileUser?.privateProfile || isFollower || isOwnProfile;
     const amIBlockedByThisUser = profileUser?.blockedUsers?.includes(currentUserData?.uid || '');
 
     useEffect(() => {
-        if (authLoading) return;
+        if (authLoading || !profileUser) {
+            // Wait for auth and profile data to be loaded
+            return;
+        }
+
         if (!canViewContent || amIBlockedByThisUser) {
             setLoading(false);
             setPosts([]);
@@ -42,8 +58,7 @@ export default function ProfilePosts({ userId, profileUser, postType }: ProfileP
         const postsRef = collection(db, 'posts');
         const q = query(
             postsRef, 
-            where('uid', '==', userId), 
-            where('retweetOf', '==', null), // Retweetleri gösterme
+            where('uid', '==', userId),
             orderBy('createdAt', 'desc')
         );
         
@@ -58,10 +73,6 @@ export default function ProfilePosts({ userId, profileUser, postType }: ProfileP
 
         return () => unsubscribe();
     }, [userId, canViewContent, authLoading, amIBlockedByThisUser, profileUser]);
-
-    const filteredPosts = posts.filter(post => {
-        return postType === 'image' ? !!post.imageUrl : !post.imageUrl;
-    });
 
     if (authLoading || loading) {
         return <div className="flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -86,7 +97,7 @@ export default function ProfilePosts({ userId, profileUser, postType }: ProfileP
         );
     }
   
-    if (filteredPosts.length === 0) {
+    if (posts.length === 0) {
         return (
              <div className="text-center py-10 mt-4 text-muted-foreground">
                 <CameraOff className="h-12 w-12 mx-auto mb-4" />
@@ -95,58 +106,11 @@ export default function ProfilePosts({ userId, profileUser, postType }: ProfileP
         )
     }
 
-    if (postType === 'image') {
-        return (
-             <>
-                <div className="grid grid-cols-3 gap-1">
-                    {filteredPosts.map((post) => (
-                        <button 
-                            key={post.id} 
-                            className="group relative aspect-square block bg-muted/50 focus:outline-none"
-                            onClick={() => setSelectedPost(post)}
-                        >
-                            <Image
-                                src={post.imageUrl!}
-                                alt="Kullanıcı gönderisi"
-                                fill
-                                className="object-cover"
-                                onContextMenu={(e) => e.preventDefault()}
-                            />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center text-white opacity-0 group-hover:opacity-100">
-                                <div className="flex items-center gap-4">
-                                    <div className="flex items-center gap-1">
-                                        <Heart className="h-5 w-5 fill-white"/>
-                                        <span className="font-bold text-sm">{post.likeCount}</span>
-                                    </div>
-                                    {!post.commentsDisabled && (
-                                         <div className="flex items-center gap-1">
-                                            <MessageCircle className="h-5 w-5 fill-white"/>
-                                            <span className="font-bold text-sm">{post.commentCount}</span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </button>
-                    ))}
-                </div>
-                 {selectedPost && (
-                    <PostViewerDialog 
-                        post={selectedPost} 
-                        open={!!selectedPost} 
-                        onOpenChange={(open) => { if (!open) setSelectedPost(null) }}
-                    />
-                )}
-            </>
-        )
-    }
-
-    if (postType === 'text') {
-        return (
-            <div className="space-y-0">
-                {filteredPosts.map(post => (
-                    <PostCard key={post.id} post={post} />
-                ))}
-            </div>
-        )
-    }
+    return (
+        <div className="space-y-0">
+            {posts.map(post => (
+                <PostCard key={post.id} post={post} />
+            ))}
+        </div>
+    )
 }

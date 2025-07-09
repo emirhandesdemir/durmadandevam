@@ -5,17 +5,20 @@ import { useAuth } from "@/contexts/AuthContext";
 import PostsFeed from "@/components/posts/PostsFeed";
 import { Card, CardContent } from "@/components/ui/card";
 import { EyeOff } from "lucide-react";
+import FirstPostRewardCard from "@/components/posts/FirstPostRewardCard";
 
 /**
  * Ana Sayfa (Home Page)
  * 
  * Uygulamanın ana giriş sayfasıdır. Kullanıcı giriş yaptıktan sonra bu sayfayı görür.
  * Admin panelinden kontrol edilebilen bir özellik bayrağına göre gönderi akışını gösterir.
+ * Ayrıca yeni kullanıcılara ilk gönderi için bir ödül kartı gösterir.
  */
 export default function HomePage() {
-  const { featureFlags, loading } = useAuth();
+  const { userData, featureFlags, loading } = useAuth();
   
-  // Özellik bayrağı yüklenirken veya devre dışı bırakılmışsa farklı bir içerik göster
+  // Özellik bayrağı (feature flag) yüklenirken veya gönderi akışı devre dışı bırakılmışsa
+  // kullanıcıya bilgilendirici bir kart göster.
   if (!loading && !featureFlags?.postFeedEnabled) {
     return (
       <div className="flex h-full items-center justify-center p-4">
@@ -32,11 +35,18 @@ export default function HomePage() {
     );
   }
 
+  // Gönderi akışı aktifse bu bölüm render edilir.
   return (
-    // Sayfanın ana sarmalayıcısı, arka plan rengini ve minimum yüksekliği ayarlar.
     <div className="min-h-screen bg-background text-foreground">
       <main>
         <div className="flex flex-col items-center gap-4">
+          {/* Eğer kullanıcı yeni ise ve henüz hiç gönderi paylaşmamışsa, ödül kartını göster. */}
+          {!loading && userData?.postCount === 0 && (
+             <div className="w-full px-4 pt-4">
+                <FirstPostRewardCard />
+            </div>
+          )}
+          {/* Tüm gönderilerin listelendiği ana akış bileşeni. */}
           <PostsFeed />
         </div>
       </main>

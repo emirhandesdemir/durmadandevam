@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Post } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck, Sparkles, Repeat, EyeOff } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck, Sparkles, Repeat, EyeOff, FileVideo } from "lucide-react";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -205,7 +205,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                 <div className={cn("relative flex flex-col pt-3 bg-background", !isStandalone && "border-b")}>
                     <div className="flex items-start gap-3 px-4 pb-2">
                          <Link href={`/profile/${post.uid}`}>
-                            <div>
+                            <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
                                 <Avatar className="relative z-[1] h-10 w-10">
                                     <AvatarImage src={post.userAvatar || undefined} />
                                     <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
@@ -262,6 +262,16 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                                 />
                             </div>
                         )}
+                        {originalPost.videoUrl && (
+                             <div className="relative w-full aspect-video bg-black mt-1">
+                                <video
+                                    src={originalPost.videoUrl}
+                                    controls
+                                    className="w-full h-full object-contain"
+                                    onContextMenu={(e) => e.preventDefault()}
+                                />
+                            </div>
+                        )}
                     </div>
                     
                     <div className="px-2 pt-1 pb-2">
@@ -302,7 +312,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
             <div className={cn("relative flex flex-col bg-background", !isStandalone && "border-b")}>
                 <div className="flex items-start gap-3 p-4">
                      <Link href={`/profile/${post.uid}`}>
-                        <div>
+                        <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
                             <Avatar className="relative z-[1] h-10 w-10">
                                 <AvatarImage src={post.userAvatar || undefined} />
                                 <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
@@ -387,6 +397,16 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                             width={800}
                             height={800}
                             className="h-auto w-full max-h-[70vh] object-cover"
+                            onContextMenu={(e) => e.preventDefault()}
+                        />
+                    </div>
+                )}
+                 {post.videoUrl && !isEditing && (
+                    <div className="relative w-full aspect-video bg-black mt-2">
+                        <video
+                            src={post.videoUrl}
+                            controls
+                            className="h-full w-full object-contain"
                             onContextMenu={(e) => e.preventDefault()}
                         />
                     </div>
