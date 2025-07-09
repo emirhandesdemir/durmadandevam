@@ -4,10 +4,11 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Post } from '@/lib/types';
-import { Loader2, VideoOff, Compass } from 'lucide-react';
+import { Loader2, VideoOff, Compass, ArrowLeft } from 'lucide-react';
 import SurfVideoCard from './SurfVideoCard';
 import { Button } from '../ui/button';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function SurfFeed() {
   const [videoPosts, setVideoPosts] = useState<Post[]>([]);
@@ -15,6 +16,7 @@ export default function SurfFeed() {
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const postsRef = collection(db, 'posts');
@@ -91,12 +93,23 @@ export default function SurfFeed() {
   }
 
   return (
-    <div ref={containerRef} data-surf-feed-container className="h-full w-full overflow-y-auto snap-y snap-mandatory overscroll-behavior-contain scroll-smooth hide-scrollbar">
-      {videoPosts.map((post, index) => (
-        <div key={post.id} data-index={index} className="h-full w-full snap-start relative flex items-center justify-center bg-black">
-          <SurfVideoCard post={post} isActive={index === activeIndex} />
+    <div className="relative h-full w-full bg-black">
+        <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.back()}
+            className="absolute top-4 left-4 z-20 text-white bg-black/30 hover:bg-black/50 rounded-full"
+            aria-label="Geri"
+        >
+            <ArrowLeft className="h-6 w-6" />
+        </Button>
+        <div ref={containerRef} data-surf-feed-container className="h-full w-full overflow-y-auto snap-y snap-mandatory overscroll-behavior-contain scroll-smooth hide-scrollbar">
+            {videoPosts.map((post, index) => (
+                <div key={post.id} data-index={index} className="h-full w-full snap-start relative flex items-center justify-center bg-black">
+                <SurfVideoCard post={post} isActive={index === activeIndex} />
+                </div>
+            ))}
         </div>
-      ))}
     </div>
   );
 }

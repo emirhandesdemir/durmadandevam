@@ -12,7 +12,6 @@ const randomElement = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.len
 
 // Predefined bot data
 const femaleUsernames = ['Elif Dans', 'Melis Kahve', 'Zeynep Geziyor', 'Ayla Sanat', 'Selin Müzik', 'Derya Güneş'];
-const maleUsernames = ['Can Spor', 'Emir Teknoloji'];
 const bios = [
     "Kahve ve kitap tutkunu ☕📚",
     "Dans etmeyi çok seviyorum 💃",
@@ -20,8 +19,6 @@ const bios = [
     "Yeni yerler keşfetmek en büyük hobim 🌍",
     "Müzik ruhun gıdasıdır 🎶",
     "Hayatı akışına bırakıyorum 🧘‍♀️",
-    "Spor benim yaşam tarzım 🏋️‍♂️",
-    "Teknoloji ve gelecek 🚀"
 ];
 
 const botTextPosts = [
@@ -46,9 +43,9 @@ const botComments = [
     "Mutlaka devam et 👏👏",
 ];
 
-async function fetchRandomAvatar(gender: 'women' | 'men', index: number) {
+async function fetchRandomAvatar(gender: 'women', seed: string) {
     try {
-        const response = await fetch(`https://randomuser.me/api/?gender=${gender === 'women' ? 'female' : 'male'}&inc=picture&seed=${gender}${index}${Date.now()}`);
+        const response = await fetch(`https://randomuser.me/api/?gender=${gender === 'women' ? 'female' : 'male'}&inc=picture&seed=${seed}`);
         const data = await response.json();
         return data.results[0].picture.large;
     } catch (error) {
@@ -94,26 +91,11 @@ export async function createInitialBots() {
             if (existingUserSnap.empty) {
                 const newBotRef = doc(usersCol);
                 const newBot: Partial<UserProfile> = {
-                    username: username, email: `${username.replace(' ','_').toLowerCase()}@bot.hiwewalk.com`, photoURL: await fetchRandomAvatar('women', i),
+                    username: username, email: `${username.replace(' ','_').toLowerCase()}@bot.hiwewalk.com`, photoURL: await fetchRandomAvatar('women', username),
                     isBot: true, bio: bios[i] || "Yeni maceralar peşinde...", gender: 'female', role: 'user', followers: [], following: [],
                     postCount: 0, diamonds: 0, privateProfile: false, acceptsFollowRequests: true, followRequests: [],
                 };
                 await setDoc(newBotRef, { ...newBot, uid: newBotRef.id, createdAt: serverTimestamp() });
-                createdCount++;
-            }
-        }
-        for (let i = 0; i < 2; i++) {
-            const username = maleUsernames[i] || `ErkekBot${i}`;
-            const existingUserQuery = query(usersCol, where('username', '==', username), where('isBot', '==', true));
-            const existingUserSnap = await getDocs(existingUserQuery);
-             if (existingUserSnap.empty) {
-                const newBotRef = doc(usersCol);
-                const newBot: Partial<UserProfile> = {
-                    username: username, email: `${username.replace(' ','_').toLowerCase()}@bot.hiwewalk.com`, photoURL: await fetchRandomAvatar('men', i),
-                    isBot: true, bio: bios[6 + i] || "Hayatı dolu dolu yaşa.", gender: 'male', role: 'user', followers: [],
-                    following: [], postCount: 0, diamonds: 0, privateProfile: false, acceptsFollowRequests: true, followRequests: [],
-                };
-                 await setDoc(newBotRef, { ...newBot, uid: newBotRef.id, createdAt: serverTimestamp() });
                 createdCount++;
             }
         }
@@ -124,28 +106,6 @@ export async function createInitialBots() {
     }
 }
 
-export async function getBotAutomationStatus(): Promise<boolean> {
-    const settingsRef = doc(db, 'config', 'gameSettings');
-    const docSnap = await getDoc(settingsRef);
-    if (docSnap.exists()) {
-        const settings = docSnap.data() as GameSettings;
-        return settings.botAutomationEnabled ?? true;
-    }
-    return true;
-}
-
-export async function toggleBotAutomation(enabled: boolean) {
-    const settingsRef = doc(db, 'config', 'gameSettings');
-    try {
-        await setDoc(settingsRef, { botAutomationEnabled: enabled }, { merge: true });
-        return { success: true };
-    } catch (error: any) {
-        console.error("Error toggling bot automation:", error);
-        return { success: false, error: error.message };
-    }
-}
-
-// --- Manual Trigger Functions ---
 
 async function getRandomBot(): Promise<UserProfile & { id: string }> {
     const botsQuery = query(collection(db, 'users'), where('isBot', '==', true));
