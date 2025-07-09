@@ -2,7 +2,7 @@
 'use server';
 
 import { db, storage } from '@/lib/firebase';
-import type { Report, UserProfile } from '../types';
+import type { Report, UserProfile, Post } from '../types';
 import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, orderBy, setDoc, collectionGroup } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
@@ -138,8 +138,6 @@ export async function saveFCMToken(userId: string, token: string) {
   }
   const userRef = doc(db, 'users', userId);
   try {
-    // Use setDoc with merge to avoid "No document to update" error
-    // if the user document is not yet created.
     await setDoc(userRef, {
       fcmTokens: arrayUnion(token),
     }, { merge: true });
@@ -329,4 +327,38 @@ export async function hidePost(userId: string, postId: string) {
     } catch (error) {
         console.error("Error hiding post:", error);
     }
+}
+
+
+export async function getSavedPosts(userId: string): Promise<Post[]> {
+    const userRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+        throw new Error("Kullanıcı bulunamadı.");
+    }
+
+    const savedPostIds: string[] = userSnap.data().savedPosts || [];
+
+    if (savedPostIds.length === 0) {
+        return [];
+    }
+
+    const savedPosts: Post[] = [];
+    // Firestore 'in' query has a limit of 30 items
+    for (let i = 0; i < savedPostIds.length; i += 30) {
+        const batchIds = savedPostIds.slice(i, i + 30);
+        const postsQuery = query(collection(db, 'posts'), where('__name__', 'in', batchIds));
+        const postsSnapshot = await getDocs(postsQuery);
+        postsSnapshot.forEach(doc => {
+            savedPosts.push({ id: doc.id, ...doc.data() } as Post);
+        });
+    }
+
+    // Sort posts by original saved order (most recent first)
+    const sortedPosts = savedPosts.sort((a, b) => {
+        return savedPostIds.indexOf(b.id) - savedPostIds.indexOf(a.id);
+    });
+
+    return deepSerialize(sortedPosts);
 }

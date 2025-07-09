@@ -4,8 +4,10 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Post } from '@/lib/types';
-import { Loader2, VideoOff } from 'lucide-react';
+import { Loader2, VideoOff, Compass } from 'lucide-react';
 import SurfVideoCard from './SurfVideoCard';
+import { Button } from '../ui/button';
+import Link from 'next/link';
 
 export default function SurfFeed() {
   const [videoPosts, setVideoPosts] = useState<Post[]>([]);
@@ -78,15 +80,18 @@ export default function SurfFeed() {
   if (videoPosts.length === 0) {
     return (
       <div className="flex flex-col h-full items-center justify-center text-center text-muted-foreground p-4">
-        <VideoOff className="h-16 w-16 mb-4" />
-        <h3 className="font-semibold text-lg">Henüz Video Yok</h3>
-        <p>Keşfedilecek videolar burada görünecek.</p>
+        <Compass className="h-16 w-16 mb-4" />
+        <h3 className="font-semibold text-lg text-foreground">Keşfedilecek Video Yok</h3>
+        <p className="mt-2">Surf akışını başlatan ilk kişi sen ol!</p>
+         <Button asChild className="mt-4">
+            <Link href="/create-post">Video Yükle</Link>
+        </Button>
       </div>
     );
   }
 
   return (
-    <div ref={containerRef} className="h-full w-full overflow-y-auto snap-y snap-mandatory hide-scrollbar">
+    <div ref={containerRef} data-surf-feed-container className="h-full w-full overflow-y-auto snap-y snap-mandatory hide-scrollbar">
       {videoPosts.map((post, index) => (
         <div key={post.id} data-index={index} className="h-full w-full snap-start relative flex items-center justify-center bg-black">
           <SurfVideoCard post={post} isActive={index === activeIndex} />

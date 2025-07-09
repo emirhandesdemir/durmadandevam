@@ -2,8 +2,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Home, MessageCircle, Plus, Clapperboard } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Home, MessageCircle, Plus, Compass } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -11,6 +11,7 @@ import { useMemo } from 'react';
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user } = useAuth();
 
   if (!user) {
@@ -21,14 +22,29 @@ export default function BottomNav() {
   if ((pathname.startsWith('/rooms/') && pathname !== '/rooms') || (pathname.startsWith('/call/'))) {
     return null;
   }
+
+  const handleSurfClick = (e: React.MouseEvent) => {
+    if (pathname === '/surf') {
+      e.preventDefault();
+      const surfContainer = document.querySelector('[data-surf-feed-container]');
+      surfContainer?.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleSurfDoubleClick = (e: React.MouseEvent) => {
+    if (pathname === '/surf') {
+      e.preventDefault();
+      router.refresh();
+    }
+  };
   
   const navItems = useMemo(() => [
     { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
     { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
     { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
-    { id: 'surf', href: '/surf', icon: Clapperboard, label: 'Surf' },
+    { id: 'surf', href: '/surf', icon: Compass, label: 'Surf', onClick: handleSurfClick, onDoubleClick: handleSurfDoubleClick },
     { id: 'profile', href: `/profile/${user.uid}`, icon: Avatar, label: 'Profil' },
-  ], [user.uid]);
+  ], [user.uid, pathname, router]);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 w-full border-t bg-background/95 backdrop-blur-sm">
@@ -41,6 +57,8 @@ export default function BottomNav() {
                   <Link
                     key={item.id}
                     href={item.href}
+                    onClick={item.onClick}
+                    onDoubleClick={item.onDoubleClick}
                     className={cn(
                       'flex h-full w-16 flex-col items-center justify-center gap-1 text-muted-foreground transition-colors',
                       isActive ? 'text-primary' : 'hover:text-primary'
