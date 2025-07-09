@@ -42,10 +42,17 @@ const botComments = [
     "Yine harikasın 🫶",
     "Mutlaka devam et 👏👏",
 ];
+const welcomeDms = [
+    "Selam, uygulamaya hoş geldin! 🎉 Umarız harika vakit geçirirsin.",
+    "Merhaba! Aramıza katıldığın için çok mutluyuz. 😊",
+    "Hoş geldin! Yardıma ihtiyacın olursa çekinme. 🙋‍♀️",
+    "Naber? Uygulamayı keşfetmeye başla, harika şeyler var!",
+    "Selam, yeni bir yüz görmek ne güzel! Hadi bir oda oluştur da görelim seni.",
+];
 
-async function fetchRandomAvatar(gender: 'women', seed: string) {
+async function fetchRandomAvatar() {
     try {
-        const response = await fetch(`https://randomuser.me/api/?gender=${gender === 'women' ? 'female' : 'male'}&inc=picture&seed=${seed}`);
+        const response = await fetch(`https://randomuser.me/api/?gender=female&inc=picture`);
         const data = await response.json();
         return data.results[0].picture.large;
     } catch (error) {
@@ -91,7 +98,7 @@ export async function createInitialBots() {
             if (existingUserSnap.empty) {
                 const newBotRef = doc(usersCol);
                 const newBot: Partial<UserProfile> = {
-                    username: username, email: `${username.replace(' ','_').toLowerCase()}@bot.hiwewalk.com`, photoURL: await fetchRandomAvatar('women', username),
+                    username: username, email: `${username.replace(' ','_').toLowerCase()}@bot.hiwewalk.com`, photoURL: await fetchRandomAvatar(),
                     isBot: true, bio: bios[i] || "Yeni maceralar peşinde...", gender: 'female', role: 'user', followers: [], following: [],
                     postCount: 0, diamonds: 0, privateProfile: false, acceptsFollowRequests: true, followRequests: [],
                 };
