@@ -82,7 +82,6 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showComments, setShowComments] = useState(false);
     const [postToRetweet, setPostToRetweet] = useState<Post | null>(null);
-    const [showLikeAnimation, setShowLikeAnimation] = useState(false);
     
     useEffect(() => {
         setOptimisticLiked(post.likes?.includes(currentUser?.uid || ''));
@@ -133,13 +132,6 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
             setOptimisticLikeCount(previousLikeCount);
             console.error("Error liking post:", error);
             toast({ variant: "destructive", description: "Beğenirken bir hata oluştu." });
-        }
-    };
-    
-    const handleDoubleClick = () => {
-        if (!currentUser) return;
-        if (!optimisticLiked) {
-            handleLike();
         }
     };
 
@@ -252,7 +244,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                             {originalPost.text && <p className="whitespace-pre-wrap text-sm mt-2 line-clamp-4">{originalPost.text}</p>}
                         </div>
                         {originalPost.imageUrl && (
-                             <div className="relative w-full aspect-video bg-muted" onDoubleClick={handleDoubleClick}>
+                             <div className="relative w-full aspect-video bg-muted">
                                 <Image 
                                     src={originalPost.imageUrl} 
                                     alt="Retweeted post" 
@@ -390,7 +382,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                  )}
                 
                 {post.imageUrl && !isEditing && (
-                    <div className="relative w-full bg-muted cursor-pointer" onDoubleClick={handleDoubleClick}>
+                    <div className="relative w-full bg-muted cursor-pointer">
                         <Image
                             src={post.imageUrl}
                             alt="Gönderi resmi"

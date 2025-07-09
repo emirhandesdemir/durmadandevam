@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageCircle, Plus, Store } from 'lucide-react';
+import { Home, MessageCircle, Plus, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -26,7 +26,7 @@ export default function BottomNav() {
     { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
     { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
     { id: 'create-post', href: '/create-post', icon: Plus, label: 'Oluştur'},
-    { id: 'store', href: '/store', icon: Store, label: 'Mağaza' },
+    { id: 'surf', href: '/surf', icon: Play, label: 'Surf' },
     { id: 'profile', href: `/profile/${user.uid}`, icon: Avatar, label: 'Profil' },
   ], [user.uid]);
 

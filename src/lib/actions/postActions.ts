@@ -55,10 +55,12 @@ export async function createPost(postData: {
     uid: string;
     username: string;
     userAvatar: string | null;
+    userAvatarFrame: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
     text: string;
-    imageUrl?: string;
+    imageUrl: string;
+    videoUrl: string;
     editedWithAI?: boolean;
     language: string;
     commentsDisabled?: boolean;
@@ -209,6 +211,7 @@ export async function retweetPost(
         uid: string; 
         username: string; 
         userAvatar: string | null;
+        userAvatarFrame: string | undefined;
         userRole?: 'admin' | 'user';
         userGender?: 'male' | 'female';
     },
@@ -235,6 +238,7 @@ export async function retweetPost(
             userAvatar: originalPostData.userAvatar,
             text: originalPostData.text,
             imageUrl: originalPostData.imageUrl,
+            videoUrl: originalPostData.videoUrl,
             createdAt: originalPostData.createdAt,
         };
 
@@ -242,10 +246,12 @@ export async function retweetPost(
             uid: retweeter.uid,
             username: retweeter.username,
             userAvatar: retweeter.userAvatar,
+            userAvatarFrame: retweeter.userAvatarFrame,
             userRole: retweeter.userRole,
             userGender: retweeter.userGender,
             text: quoteText || '', // Use the quote text here
             imageUrl: '', // Retweet has no image of its own
+            videoUrl: '', // Retweet has no video of its own
             createdAt: serverTimestamp(),
             likes: [],
             likeCount: 0,
