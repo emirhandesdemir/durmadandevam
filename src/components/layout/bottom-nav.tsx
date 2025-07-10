@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageCircle, Plus, Compass, Search } from 'lucide-react';
+import { Home, MessageCircle, Plus, Search, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMemo } from 'react';
@@ -23,7 +23,7 @@ export default function BottomNav({ onSearchClick }: BottomNavProps) {
         { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
         { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
         { id: 'search', href: '#', icon: Search, label: 'Ara', onClick: onSearchClick },
-        { id: 'profile', href: `/profile/${user.uid}`, icon: Compass, label: 'Profil' },
+        { id: 'profile', href: `/profile/${user.uid}`, icon: User, label: 'Profil' },
       ]
   }, [user, onSearchClick]);
 

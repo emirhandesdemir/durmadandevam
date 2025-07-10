@@ -69,7 +69,7 @@ export default function MatchmakingPage() {
         <div className="flex h-full flex-col items-center justify-center text-center p-4">
              <Card className="w-full max-w-md">
                 <CardHeader>
-                     <UserX className="h-12 w-12 mx-auto text-destructive mb-4"/>
+                     <UserX className="mx-auto h-12 w-12 text-destructive" />
                     <CardTitle>Cinsiyet Bilgisi Eksik</CardTitle>
                     <CardDescription>
                         Eşleşme sistemini kullanabilmek için profilinizde cinsiyet bilginizin kayıtlı olması gerekmektedir.
