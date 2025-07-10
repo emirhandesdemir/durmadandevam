@@ -3,14 +3,18 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Send, Bell } from "lucide-react";
+import { Send, Bell, Search } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { auth } from "@/lib/firebase";
 
-export default function Header() {
+interface HeaderProps {
+    onSearchClick: () => void;
+}
+
+export default function Header({ onSearchClick }: HeaderProps) {
     const { themeSettings, userData, totalUnreadDms } = useAuth();
     
     const appName = themeSettings?.appName || 'HiweWalk';
@@ -25,6 +29,10 @@ export default function Header() {
                 </Link>
                 
                 <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" className="rounded-full" onClick={onSearchClick}>
+                        <Search className="h-5 w-5" />
+                        <span className="sr-only">Kullanıcı Ara</span>
+                    </Button>
                     <Button variant="ghost" size="icon" className="rounded-full" asChild>
                         <Link href="/dm">
                             <div className="relative">
