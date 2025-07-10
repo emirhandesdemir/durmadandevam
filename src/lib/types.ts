@@ -325,7 +325,6 @@ export interface VoiceParticipant {
 }
 
 export interface QuizQuestion {
-    id?: string;
     question: string;
     options: string[];
     correctOptionIndex: number;
@@ -335,20 +334,20 @@ export interface ActiveGame {
     id: string;
     questions: QuizQuestion[];
     currentQuestionIndex: number;
-    scores: { [uid: string]: number };
+    scores: { [key: string]: number }; // uid -> score
     answeredBy: { [questionIndex: number]: string[] };
-    startTime: Timestamp;
-    questionStartTime: Timestamp;
-    status: 'active' | 'finished';
-    winnerId?: string | null;
+    status: 'countdown' | 'active' | 'finished';
+    countdownStartTime?: Timestamp;
+    startTime?: Timestamp;
     finishedAt?: Timestamp;
+    winners?: { uid: string, username: string, photoURL: string | null, score: number, reward: number }[];
 }
 
+
 export interface GameSettings {
-    dailyDiamondLimit: number;
     gameIntervalMinutes: number;
     questionTimerSeconds: number;
-    rewardAmount: number;
+    rewardAmount: number; // This can now be a base amount
     cooldownSeconds: number;
     afkTimeoutMinutes: number;
     imageUploadQuality: number;

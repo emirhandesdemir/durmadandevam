@@ -26,6 +26,7 @@ import GiveawayDialog from '@/components/rooms/GiveawayDialog';
 import RoomGameCard from '@/components/game/RoomGameCard';
 import GameCountdownCard from '@/components/game/GameCountdownCard';
 import { startGameInRoom, submitAnswer, endGameWithoutWinner } from '@/lib/actions/gameActions';
+import GameLobbyDialog from '@/components/game/GameLobbyDialog';
 
 
 export default function RoomPage() {
@@ -45,6 +46,7 @@ export default function RoomPage() {
     const [isParticipantSheetOpen, setIsParticipantSheetOpen] = useState(false);
     const [isSpeakerLayoutCollapsed, setIsSpeakerLayoutCollapsed] = useState(false);
     const [isGiveawayDialogOpen, setIsGiveawayDialogOpen] = useState(false);
+    const [isGameLobbyOpen, setIsGameLobbyOpen] = useState(false);
     const chatScrollRef = useRef<HTMLDivElement>(null);
     
     // --- Game State ---
@@ -110,7 +112,7 @@ export default function RoomPage() {
     useEffect(() => {
         if (!roomId || !gameSettings) return;
 
-        const gamesQuery = query(collection(db, 'rooms', roomId, 'games'), where('status', '==', 'active'), limit(1));
+        const gamesQuery = query(collection(db, 'rooms', roomId, 'games'), where('status', 'in', ['countdown', 'active']), limit(1));
         
         const unsubscribe = onSnapshot(gamesQuery, (snapshot) => {
             if (!snapshot.empty) {
@@ -122,27 +124,6 @@ export default function RoomPage() {
         });
         return () => unsubscribe();
     }, [roomId, gameSettings]);
-
-    // Autostart quiz game based on timestamp
-    useEffect(() => {
-        if (!room || !user || !featureFlags?.quizGameEnabled || activeQuiz) return;
-        if (user.uid !== room.createdBy.uid) return;
-        if (!room.nextGameTimestamp) return;
-
-        const nextGameTime = (room.nextGameTimestamp as Timestamp).toMillis();
-        const now = Date.now();
-        const delay = nextGameTime - now;
-
-        if (delay <= 0) {
-            startGameInRoom(roomId).catch(err => console.error("Failed to auto-start game:", err));
-        } else {
-            const timer = setTimeout(() => {
-                startGameInRoom(roomId).catch(err => console.error("Failed to auto-start game with timer:", err));
-            }, delay);
-            return () => clearTimeout(timer);
-        }
-    }, [room, user, featureFlags?.quizGameEnabled, activeQuiz, roomId]);
-
 
     const handleAnswerSubmit = useCallback(async (answerIndex: number) => {
         if (!activeQuiz || !user) return;
@@ -160,7 +141,10 @@ export default function RoomPage() {
         if (finishedGame) {
            return <GameResultCard game={finishedGame} />;
         }
-        if (activeQuiz && gameSettings && user) {
+        if (activeQuiz?.status === 'countdown') {
+            return <GameCountdownCard game={activeQuiz} />;
+        }
+        if (activeQuiz?.status === 'active' && gameSettings && user) {
             return <RoomGameCard game={activeQuiz} settings={gameSettings} onAnswerSubmit={handleAnswerSubmit} currentUserId={user!.uid} />;
         }
         if (room.giveaway && room.giveaway.status !== 'idle') {
@@ -202,7 +186,7 @@ export default function RoomPage() {
                     <TextChat messages={messages} loading={messagesLoading} room={room} />
                 </main>
 
-                <RoomFooter room={room} onGameLobbyOpen={() => {}} onGiveawayOpen={() => setIsGiveawayDialogOpen(true)} />
+                <RoomFooter room={room} onGameLobbyOpen={() => setIsGameLobbyOpen(true)} onGiveawayOpen={() => setIsGiveawayDialogOpen(true)} />
             </div>
 
             <ParticipantListSheet isOpen={isParticipantSheetOpen} onOpenChange={setIsParticipantSheetOpen} room={room} />
@@ -211,6 +195,12 @@ export default function RoomPage() {
                 setIsOpen={setIsGiveawayDialogOpen} 
                 roomId={roomId}
                 isHost={isHost}
+            />
+            <GameLobbyDialog
+                isOpen={isGameLobbyOpen}
+                onOpenChange={setIsGameLobbyOpen}
+                roomId={roomId}
+                participants={room.participants || []}
             />
         </>
     );
