@@ -11,6 +11,7 @@ import { ThemeProvider } from '@/components/layout/ThemeProvider';
 import NetworkStatusNotifier from '@/components/common/NetworkStatusNotifier';
 import I18nProvider from '@/components/common/I18nProvider';
 import NotificationPermissionManager from '@/components/common/NotificationPermissionManager';
+import 'leaflet/dist/leaflet.css';
 
 // Google Fonts'tan Inter font ailesini yüklüyoruz.
 const inter = Inter({ 
