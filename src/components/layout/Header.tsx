@@ -10,10 +10,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 interface HeaderProps {
-    onSearchClick: () => void;
 }
 
-export default function Header({ onSearchClick }: HeaderProps) {
+export default function Header({}: HeaderProps) {
     const { themeSettings, userData, totalUnreadDms } = useAuth();
     
     const appName = themeSettings?.appName || 'HiweWalk';
@@ -28,10 +27,6 @@ export default function Header({ onSearchClick }: HeaderProps) {
                 </Link>
                 
                 <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="rounded-full" onClick={onSearchClick}>
-                        <Search className="h-5 w-5" />
-                        <span className="sr-only">Kullanıcı Ara</span>
-                    </Button>
                     <Button variant="ghost" size="icon" className="rounded-full" asChild>
                         <Link href="/dm">
                             <div className="relative">

@@ -3,16 +3,17 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageCircle, Plus, Search, User } from 'lucide-react';
+import { Home, MessageCircle, Plus, Compass, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMemo } from 'react';
 
 interface BottomNavProps {
-  onSearchClick: () => void;
+  onExploreClick: () => void;
+  isExploreMenuOpen: boolean;
 }
 
-export default function BottomNav({ onSearchClick }: BottomNavProps) {
+export default function BottomNav({ onExploreClick, isExploreMenuOpen }: BottomNavProps) {
   const pathname = usePathname();
   const { user } = useAuth();
   
@@ -21,11 +22,11 @@ export default function BottomNav({ onSearchClick }: BottomNavProps) {
     return [
         { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
         { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
+        { id: 'explore', href: '#', icon: Compass, label: 'Keşfet', onClick: onExploreClick },
         { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
-        { id: 'search', href: '#', icon: Search, label: 'Ara', onClick: onSearchClick },
         { id: 'profile', href: `/profile/${user.uid}`, icon: User, label: 'Profil' },
       ]
-  }, [user, onSearchClick]);
+  }, [user, onExploreClick]);
 
   if (!user) {
     return null;
@@ -43,6 +44,9 @@ export default function BottomNav({ onSearchClick }: BottomNavProps) {
                 const Icon = item.icon;
                 const isActive = item.href ? (item.id === 'rooms' ? pathname.startsWith('/rooms') : pathname === item.href) : false;
                 
+                const isExploreButton = item.id === 'explore';
+                const buttonActiveStyle = isExploreButton ? isExploreMenuOpen : isActive;
+
                 return (
                   <Link
                     key={item.id}
@@ -54,13 +58,20 @@ export default function BottomNav({ onSearchClick }: BottomNavProps) {
                       }
                     }}
                     className={cn(
-                      'flex h-full w-full flex-col items-center justify-center gap-1 text-muted-foreground transition-colors',
-                      isActive ? 'text-primary' : 'hover:text-primary',
+                      'flex h-full w-full flex-col items-center justify-center gap-1 transition-colors',
+                      buttonActiveStyle ? 'text-primary' : 'text-muted-foreground hover:text-primary',
                       item.id === 'create' ? 'relative -top-3' : ''
                     )}
                   >
-                    <div className={cn("flex items-center justify-center h-8 w-12 rounded-full", isActive && item.id !== 'create' ? 'bg-primary/10' : '')}>
-                       <Icon className={cn("h-6 w-6", item.id === 'create' && 'h-10 w-10 text-primary bg-primary/20 p-2 rounded-full')} />
+                    <div className={cn(
+                      "flex items-center justify-center h-8 w-12 rounded-full transition-all duration-300", 
+                      buttonActiveStyle && item.id !== 'create' ? 'bg-primary/10' : ''
+                    )}>
+                       <Icon className={cn(
+                         "h-6 w-6 transition-transform", 
+                         item.id === 'create' && 'h-10 w-10 text-primary bg-primary/20 p-2 rounded-full',
+                         isExploreButton && isExploreMenuOpen && 'rotate-180'
+                        )} />
                     </div>
                     {item.id !== 'create' && (
                         <span className="text-[10px] font-medium">{item.label}</span>

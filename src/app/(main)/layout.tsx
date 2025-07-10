@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
 import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
-import UserSearchDialog from "@/components/search/UserSearchDialog";
+import ExploreMenu from "@/components/layout/ExploreMenu";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -115,7 +115,7 @@ export default function MainAppLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isExploreMenuOpen, setIsExploreMenuOpen] = useState(false);
 
   const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/');
   const isHeaderlessPage = isFullPageLayout;
@@ -135,7 +135,7 @@ export default function MainAppLayout({
         >
             {!isHeaderlessPage && (
                 <header className="sticky top-0 z-40">
-                    <Header onSearchClick={() => setIsSearchOpen(true)} />
+                    <Header />
                 </header>
             )}
             
@@ -150,9 +150,9 @@ export default function MainAppLayout({
             </div>
         </main>
         
-        <BottomNav onSearchClick={() => setIsSearchOpen(true)} />
+        <ExploreMenu isOpen={isExploreMenuOpen} onOpenChange={setIsExploreMenuOpen} />
+        <BottomNav onExploreClick={() => setIsExploreMenuOpen(prev => !prev)} isExploreMenuOpen={isExploreMenuOpen} />
       </div>
-      <UserSearchDialog isOpen={isSearchOpen} onOpenChange={setIsSearchOpen} />
     </>
   );
 }
