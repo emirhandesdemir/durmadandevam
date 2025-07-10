@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, MessageCircle, Plus, Compass, Search } from 'lucide-react';
+import { Home, MessageCircle, Plus, Compass, Search, Swords } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMemo, useState } from 'react';
@@ -42,9 +42,9 @@ export default function BottomNav() {
   const navItems = useMemo(() => [
     { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
     { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
+    { id: 'matchmaking', href: '/matchmaking', icon: Swords, label: 'Eşleşme' },
     { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
     { id: 'surf', href: '/surf', icon: Compass, label: 'Surf', onClick: handleSurfClick, onDoubleClick: handleSurfDoubleClick },
-    { id: 'search', icon: Search, label: 'Ara' },
   ], [pathname, router]);
 
   return (
@@ -55,34 +55,20 @@ export default function BottomNav() {
                   const Icon = item.icon;
                   const isActive = item.href ? (item.id === 'rooms' ? pathname.startsWith('/rooms') : pathname === item.href) : false;
                   
-                  if (item.id === 'search') {
-                      return (
-                          <button
-                              key={item.id}
-                              onClick={() => setIsSearchOpen(true)}
-                              className={cn(
-                                'flex h-full w-16 flex-col items-center justify-center gap-1 text-muted-foreground transition-colors hover:text-primary'
-                              )}
-                          >
-                            <Icon className="h-6 w-6" />
-                            <span className="text-[10px] font-medium">{item.label}</span>
-                          </button>
-                      );
-                  }
-
                   return (
                     <Link
                       key={item.id}
-                      href={item.href}
-                      onClick={item.onClick}
-                      onDoubleClick={item.onDoubleClick}
+                      href={item.href || '#'}
+                      onClick={item.id === 'surf' ? handleSurfClick : undefined}
+                      onDoubleClick={item.id === 'surf' ? handleSurfDoubleClick : undefined}
                       className={cn(
-                        'flex h-full w-16 flex-col items-center justify-center gap-1 text-muted-foreground transition-colors',
-                        isActive ? 'text-primary' : 'hover:text-primary'
+                        'flex h-full w-full flex-col items-center justify-center gap-1 text-muted-foreground transition-colors',
+                        isActive ? 'text-primary' : 'hover:text-primary',
+                        item.id === 'create' ? 'relative -top-3' : ''
                       )}
                     >
-                      <div className="relative">
-                         <Icon className={cn("h-6 w-6", item.id === 'create' && 'h-8 w-8 text-primary bg-primary/20 p-1.5 rounded-full')} />
+                      <div className={cn("flex items-center justify-center h-8 w-12 rounded-full", isActive && item.id !== 'create' ? 'bg-primary/10' : '')}>
+                         <Icon className={cn("h-6 w-6", item.id === 'create' && 'h-10 w-10 text-primary bg-primary/20 p-2 rounded-full')} />
                       </div>
                       {item.id !== 'create' && (
                           <span className="text-[10px] font-medium">{item.label}</span>
