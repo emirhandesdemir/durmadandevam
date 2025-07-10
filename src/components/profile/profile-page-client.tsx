@@ -1,3 +1,4 @@
+
 // src/components/profile/profile-page-client.tsx
 "use client";
 
@@ -8,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Palette, Loader2, Sparkles, Lock, Camera, Gift, Copy, Users, Globe, User as UserIcon, Shield, Sun, Moon, Laptop } from "lucide-react";
+import { LogOut, Palette, Loader2, Sparkles, Lock, Camera, Gift, Copy, Users, Globe, User as UserIcon, Shield, Sun, Moon, Laptop, Brush } from "lucide-react";
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
@@ -26,6 +27,7 @@ import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../common/LanguageSwitcher";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import Link from "next/link";
+import BlockedUsersDialog from "./BlockedUsersDialog";
 
 export default function ProfilePageClient() {
     const { user, userData, loading, handleLogout } = useAuth();
@@ -43,6 +45,8 @@ export default function ProfilePageClient() {
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [inviteLink, setInviteLink] = useState("");
+    const [isBlockedUsersOpen, setIsBlockedUsersOpen] = useState(false);
+
 
     // Populate state from userData
     useEffect(() => {
@@ -96,8 +100,8 @@ export default function ProfilePageClient() {
         try {
             const userDocRef = doc(db, 'users', user.uid);
             const updates: { [key: string]: any } = {};
-            
-            // Check for username change and availability
+            const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
+    
             if (username !== userData?.username) {
                 if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
                     toast({ variant: "destructive", title: "Geçersiz Kullanıcı Adı", description: "Kullanıcı adı 3-20 karakter uzunluğunda olmalı ve sadece harf, rakam veya alt çizgi içermelidir." });
@@ -111,24 +115,19 @@ export default function ProfilePageClient() {
                     return;
                 }
                 updates.username = username;
-                await updateProfile(auth.currentUser, { displayName: username });
+                authProfileUpdates.displayName = username;
             }
     
-            // Check for bio change
-            if (bio !== userData?.bio) {
-                updates.bio = bio;
-            }
+            if (bio !== userData?.bio) updates.bio = bio;
     
-            // Check for avatar change
             if (newAvatar) {
                 const newAvatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.jpg`);
                 await uploadString(newAvatarRef, newAvatar, 'data_url');
                 const finalPhotoURL = await getDownloadURL(newAvatarRef);
                 updates.photoURL = finalPhotoURL;
-                await updateProfile(auth.currentUser, { photoURL: finalPhotoURL });
+                authProfileUpdates.photoURL = finalPhotoURL;
             }
             
-            // Privacy settings
             if(privateProfile !== userData?.privateProfile) updates.privateProfile = privateProfile;
             if(acceptsFollowRequests !== userData?.acceptsFollowRequests) updates.acceptsFollowRequests = acceptsFollowRequests;
     
@@ -136,12 +135,16 @@ export default function ProfilePageClient() {
                 await updateDoc(userDocRef, updates);
             }
     
+            if (Object.keys(authProfileUpdates).length > 0) {
+                 await updateProfile(auth.currentUser, authProfileUpdates);
+            }
+
             toast({
                 title: "Başarılı!",
                 description: "Profiliniz başarıyla güncellendi.",
             });
-            setNewAvatar(null); // Reset avatar change state after saving
-    
+            setNewAvatar(null);
+            
         } catch (error: any) {
             toast({
                 title: "Hata",
@@ -210,24 +213,26 @@ export default function ProfilePageClient() {
                                 <div className="space-y-6">
                                     <div>
                                         <Label className="text-base font-medium">Tema</Label>
-                                        <RadioGroup value={theme} onValueChange={setTheme} className="grid grid-cols-3 gap-2 pt-2">
+                                        <RadioGroup value={theme} onValueChange={setTheme} className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-2">
                                             <Label htmlFor="light-theme" className={cn("flex flex-col items-center justify-center rounded-lg border-2 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer", theme === 'light' && "border-primary")}>
                                                 <RadioGroupItem value="light" id="light-theme" className="sr-only" />
-                                                <div className="flex items-center gap-2 font-semibold">
-                                                    <Sun className="h-4 w-4" />Aydınlık
-                                                </div>
+                                                <Sun className="mb-2 h-6 w-6" />
+                                                <span className="font-bold text-xs">Aydınlık</span>
                                             </Label>
                                             <Label htmlFor="dark-theme" className={cn("flex flex-col items-center justify-center rounded-lg border-2 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer", theme === 'dark' && "border-primary")}>
                                                 <RadioGroupItem value="dark" id="dark-theme" className="sr-only" />
-                                                <div className="flex items-center gap-2 font-semibold">
-                                                    <Moon className="h-4 w-4" />Karanlık
-                                                </div>
+                                                <Moon className="mb-2 h-6 w-6" />
+                                                <span className="font-bold text-xs">Karanlık</span>
+                                            </Label>
+                                             <Label htmlFor="pastel-theme" className={cn("flex flex-col items-center justify-center rounded-lg border-2 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer", theme === 'pastel' && "border-primary")}>
+                                                <RadioGroupItem value="pastel" id="pastel-theme" className="sr-only" />
+                                                <Brush className="mb-2 h-6 w-6" />
+                                                <span className="font-bold text-xs">Pastel</span>
                                             </Label>
                                             <Label htmlFor="system-theme" className={cn("flex flex-col items-center justify-center rounded-lg border-2 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer", theme === 'system' && "border-primary")}>
                                                 <RadioGroupItem value="system" id="system-theme" className="sr-only" />
-                                                <div className="flex items-center gap-2 font-semibold">
-                                                    <Laptop className="h-4 w-4" />Sistem
-                                                </div>
+                                                <Laptop className="mb-2 h-6 w-6" />
+                                                <span className="font-bold text-xs">Sistem</span>
                                             </Label>
                                         </RadioGroup>
                                     </div>
@@ -247,7 +252,7 @@ export default function ProfilePageClient() {
                                     <CardDescription>Hesabınızın gizliliğini ve kimlerin sizinle etkileşim kurabileceğini yönetin.</CardDescription>
                                 </CardHeader>
                             </AccordionTrigger>
-                             <AccordionContent className="p-6 pt-0">
+                             <AccordionContent className="p-6 pt-0 space-y-4">
                                  <div className="flex items-center justify-between">
                                     <div>
                                         <Label htmlFor="privacy-mode">Gizli Hesap</Label>
@@ -255,13 +260,15 @@ export default function ProfilePageClient() {
                                     </div>
                                     <Switch id="privacy-mode" checked={privateProfile} onCheckedChange={setPrivateProfile} />
                                 </div>
-                                 <div className="flex items-center justify-between mt-4">
+                                 <div className="flex items-center justify-between">
                                     <div>
                                         <Label htmlFor="requests-mode" className={cn("transition-colors", !privateProfile && "text-muted-foreground/50")}>Takip İsteklerine İzin Ver</Label>
                                         <p className={cn("text-xs text-muted-foreground transition-colors", !privateProfile && "text-muted-foreground/50")}>Kapalıysa, kimse size takip isteği gönderemez.</p>
                                     </div>
                                     <Switch id="requests-mode" checked={acceptsFollowRequests} onCheckedChange={setAcceptsFollowRequests} disabled={!privateProfile}/>
                                 </div>
+                                <Button variant="outline" onClick={() => {}} disabled>Takip İstekleri ({userData.followRequests?.length || 0})</Button>
+                                <Button variant="outline" onClick={() => setIsBlockedUsersOpen(true)}>Engellenenler</Button>
                             </AccordionContent>
                         </Card>
                     </AccordionItem>
@@ -309,44 +316,42 @@ export default function ProfilePageClient() {
                     </AccordionItem>
                 </Accordion>
                     
-                    {userData.role === 'admin' && (
-                        <Card>
-                            <CardHeader>
-                                <div className="flex items-center gap-3">
-                                    <Shield className="h-6 w-6 text-primary" />
-                                    <CardTitle>Yönetim</CardTitle>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <Button asChild>
-                                    <Link href="/admin">
-                                        <Shield className="mr-2 h-4 w-4" />
-                                        Yönetim Paneline Git
-                                    </Link>
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    )}
-                    
+                {userData.role === 'admin' && (
                     <Card>
                         <CardHeader>
-                            <CardTitle>Hesap İşlemleri</CardTitle>
+                            <div className="flex items-center gap-3">
+                                <Shield className="h-6 w-6 text-primary" />
+                                <CardTitle>Yönetim</CardTitle>
+                            </div>
                         </CardHeader>
                         <CardContent>
-                            <Button variant="destructive" onClick={handleLogout}>
-                                <LogOut className="mr-2 h-4 w-4" />Çıkış Yap
+                            <Button asChild>
+                                <Link href="/admin">
+                                    <Shield className="mr-2 h-4 w-4" />
+                                    Yönetim Paneline Git
+                                </Link>
                             </Button>
                         </CardContent>
                     </Card>
+                )}
+                    
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Hesap İşlemleri</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <Button variant="destructive" onClick={handleLogout}>
+                            <LogOut className="mr-2 h-4 w-4" />Çıkış Yap
+                        </Button>
+                    </CardContent>
+                </Card>
 
             </div>
 
             <>
             {hasChanges && (
-                <div
-                    className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t"
-                >
-                    <div className="container mx-auto flex justify-between items-center max-w-2xl">
+                <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
+                    <div className="container mx-auto flex justify-between items-center max-w-4xl">
                         <p className="text-sm font-semibold">Kaydedilmemiş değişiklikleriniz var.</p>
                         <Button onClick={handleSaveChanges} disabled={isSaving}>
                             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -365,6 +370,7 @@ export default function ProfilePageClient() {
               onCropComplete={handleCropComplete} 
               circularCrop={true}
             />
+            <BlockedUsersDialog isOpen={isBlockedUsersOpen} onOpenChange={setIsBlockedUsersOpen} blockedUserIds={userData.blockedUsers || []}/>
         </>
     );
 }

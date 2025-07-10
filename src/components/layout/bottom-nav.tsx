@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageCircle, Plus, Compass, User } from 'lucide-react';
+import { Home, MessageCircle, Plus, Compass, Clapperboard, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMemo } from 'react';
@@ -17,7 +17,7 @@ interface BottomNavProps {
 
 export default function BottomNav({ onExploreClick, isExploreMenuOpen }: BottomNavProps) {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   
   const navItems = useMemo(() => {
     if (!user) return [];
@@ -25,16 +25,16 @@ export default function BottomNav({ onExploreClick, isExploreMenuOpen }: BottomN
         { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
         { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
         { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
-        { id: 'explore', href: '#', icon: Compass, label: 'Keşfet', onClick: onExploreClick },
+        { id: 'surf', href: '/surf', icon: Clapperboard, label: 'Surf' },
         { id: 'profile', href: `/profile/${user.uid}`, icon: User, label: 'Profil' },
       ]
-  }, [user, onExploreClick]);
+  }, [user]);
 
   if (!user) {
     return null;
   }
   
-  if ((pathname.startsWith('/rooms/') && pathname !== '/rooms') || (pathname.startsWith('/call/')) || pathname.startsWith('/surf')) {
+  if ((pathname.startsWith('/rooms/') && pathname !== '/rooms') || (pathname.startsWith('/call/'))) {
     return null;
   }
   
@@ -43,10 +43,9 @@ export default function BottomNav({ onExploreClick, isExploreMenuOpen }: BottomN
         <nav className="mx-auto flex h-16 max-w-md items-center justify-around">
             {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = item.href ? (item.id === 'rooms' ? pathname.startsWith('/rooms') : pathname === item.href) : false;
+                const isActive = item.href ? (pathname.startsWith(item.href)) : false;
                 
-                const isExploreButton = item.id === 'explore';
-                const buttonActiveStyle = isExploreButton ? isExploreMenuOpen : isActive;
+                const buttonActiveStyle = isActive;
 
                 const buttonContent = (
                      <div className={cn(
@@ -57,11 +56,17 @@ export default function BottomNav({ onExploreClick, isExploreMenuOpen }: BottomN
                             "flex items-center justify-center h-8 w-12 rounded-full transition-all duration-300", 
                             buttonActiveStyle && item.id !== 'create' ? 'bg-primary/10' : ''
                         )}>
-                            <Icon className={cn(
-                                "h-6 w-6 transition-transform", 
-                                item.id === 'create' && 'h-10 w-10 text-primary bg-primary/20 p-2 rounded-full shadow-lg',
-                                isExploreButton && isExploreMenuOpen && 'rotate-180'
-                            )} />
+                             {item.id === 'profile' ? (
+                                <Avatar className={cn("h-7 w-7 transition-all", isActive && "ring-2 ring-primary ring-offset-2 ring-offset-background")}>
+                                    <AvatarImage src={userData?.photoURL || undefined} />
+                                    <AvatarFallback className="text-xs bg-muted">{user.displayName?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                            ) : (
+                                <Icon className={cn(
+                                    "h-6 w-6 transition-transform", 
+                                    item.id === 'create' && 'h-10 w-10 text-primary bg-primary/20 p-2 rounded-full shadow-lg'
+                                )} />
+                            )}
                         </div>
                         {item.id !== 'create' && (
                             <span className="text-[10px] font-medium">{item.label}</span>
@@ -73,12 +78,6 @@ export default function BottomNav({ onExploreClick, isExploreMenuOpen }: BottomN
                   <Link
                     key={item.id}
                     href={item.href || '#'}
-                    onClick={(e) => {
-                      if (item.onClick) {
-                        e.preventDefault();
-                        item.onClick();
-                      }
-                    }}
                     className={cn(
                       'flex h-full flex-1 flex-col items-center justify-center transition-colors',
                       buttonActiveStyle ? 'text-primary' : 'text-muted-foreground hover:text-primary',

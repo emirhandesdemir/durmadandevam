@@ -110,7 +110,7 @@ export default function MainAppLayout({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/');
-  const isHeaderlessPage = isFullPageLayout;
+  const isHeaderlessPage = isFullPageLayout || pathname.startsWith('/surf');
   const isHomePage = pathname === '/home';
 
   return (
@@ -121,7 +121,8 @@ export default function MainAppLayout({
         
         <main 
             className={cn(
-            "flex-1 flex flex-col hide-scrollbar pb-20",
+            "flex-1 flex flex-col hide-scrollbar",
+            isHeaderlessPage ? "pb-0" : "pb-16",
             isFullPageLayout ? "overflow-hidden" : "overflow-y-auto"
             )}
         >
@@ -135,7 +136,7 @@ export default function MainAppLayout({
                 className={cn(
                     "flex-1 flex flex-col",
                     isFullPageLayout ? "overflow-hidden" : "",
-                    !isHomePage && !isFullPageLayout && "p-4"
+                    !isHomePage && !isFullPageLayout && !pathname.startsWith('/surf') && "p-4"
                 )}
             >
                 {children}
