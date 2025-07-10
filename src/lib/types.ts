@@ -114,15 +114,11 @@ export interface UserProfile {
     postCount?: number;
     role: 'admin' | 'user';
     gender?: 'male' | 'female';
-    age?: number;
-    city?: string;
-    country?: string;
     createdAt: Timestamp;
     lastActionTimestamp?: Timestamp; // For rate limiting
     lastAdWatchedAt?: Timestamp; // For ad reward cooldown
     privateProfile: boolean;
     acceptsFollowRequests: boolean;
-    showOnlineStatus?: boolean;
     followers: string[];
     following: string[];
     followRequests: FollowRequest[];
@@ -225,6 +221,7 @@ export interface Post {
         uid: string;
         username: string;
         userAvatar?: string | null;
+        userAvatarFrame?: string;
         text: string;
         imageUrl?: string;
         videoUrl?: string;
@@ -238,6 +235,7 @@ export interface Comment {
     uid: string;
     username: string;
     userAvatar?: string;
+    userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     text: string;
     createdAt: Timestamp;
@@ -245,7 +243,6 @@ export interface Comment {
         commentId: string;
         username: string;
     } | null;
-    userAvatarFrame?: string;
 }
 
 export interface Like {

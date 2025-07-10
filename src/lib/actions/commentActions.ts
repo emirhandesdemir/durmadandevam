@@ -22,6 +22,7 @@ interface AddCommentArgs {
         uid: string;
         displayName: string | null;
         photoURL: string | null;
+        userAvatarFrame?: string;
         role?: 'admin' | 'user';
     };
     replyTo?: {
@@ -30,7 +31,7 @@ interface AddCommentArgs {
     }
 }
 
-async function handleMentions(text: string, postId: string, sender: { uid: string, displayName: string | null, photoURL: string | null }) {
+async function handleMentions(text: string, postId: string, sender: { uid: string, displayName: string | null, photoURL: string | null, userAvatarFrame?: string }) {
     const mentionRegex = /(?<!\S)@\w+/g;
     const mentions = text.match(mentionRegex);
 
@@ -39,13 +40,17 @@ async function handleMentions(text: string, postId: string, sender: { uid: strin
         for (const username of usernames) {
             const mentionedUser = await findUserByUsername(username.substring(1)); // Remove @
             if (mentionedUser && mentionedUser.uid !== sender.uid) {
+                const postSnap = await getDoc(doc(db, "posts", postId));
+                const postData = postSnap.data();
                 await createNotification({
                     recipientId: mentionedUser.uid,
                     senderId: sender.uid,
                     senderUsername: sender.displayName || "Biri",
                     senderAvatar: sender.photoURL,
+                    senderAvatarFrame: sender.userAvatarFrame,
                     type: 'mention',
                     postId: postId,
+                    postImage: postData?.imageUrl || null,
                     commentText: text,
                 });
             }
@@ -69,6 +74,7 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
         uid: user.uid,
         username: user.displayName || "Anonim Kullanıcı",
         userAvatar: user.photoURL,
+        userAvatarFrame: user.userAvatarFrame || '',
         userRole: user.role || 'user',
         text: text,
         createdAt: serverTimestamp(),
@@ -91,6 +97,7 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
             senderId: user.uid,
             senderUsername: user.displayName || "Biri",
             senderAvatar: user.photoURL,
+            senderAvatarFrame: user.userAvatarFrame,
             type: 'comment',
             postId: postId,
             postImage: postData.imageUrl || null,
@@ -103,6 +110,7 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
         uid: user.uid,
         displayName: user.displayName,
         photoURL: user.photoURL,
+        userAvatarFrame: user.userAvatarFrame,
     });
 
     await batch.commit();

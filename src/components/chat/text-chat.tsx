@@ -26,6 +26,8 @@ interface TextChatProps {
   room: Room;
 }
 
+const BOT_UID = "ai-bot-walk";
+
 export default function TextChat({ messages, loading, room }: TextChatProps) {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
@@ -88,14 +90,15 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
         }
         
         const isCurrentUser = msg.uid === currentUser.uid;
+        const isBot = msg.uid === BOT_UID;
         const isParticipantHost = msg.uid === room.createdBy.uid;
         const isParticipantModerator = room.moderators?.includes(msg.uid);
         const isPrivileged = isParticipantHost || isParticipantModerator;
         
         return (
           <div key={msg.id} className={cn("flex items-end gap-3 w-full animate-in fade-in slide-in-from-bottom-4 duration-500 group", isCurrentUser && "flex-row-reverse")}>
-             <Link href={`/profile/${msg.uid}`}>
-                <div>
+             <Link href={!isBot ? `/profile/${msg.uid}` : '#'}>
+                <div className={cn("avatar-frame-wrapper", msg.selectedAvatarFrame)}>
                     <Avatar className="relative z-[1] h-8 w-8">
                         <AvatarImage src={msg.photoURL || undefined} />
                         <AvatarFallback>{msg.username?.charAt(0).toUpperCase()}</AvatarFallback>
@@ -112,6 +115,11 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
                 </div>
 
                 <div className="relative group/message">
+                     {msg.selectedBubble && !isBot && (
+                        <div className={`bubble-wrapper ${msg.selectedBubble}`}>
+                            {Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}
+                        </div>
+                    )}
                     <div className={cn(
                         "p-2 rounded-2xl relative", 
                         isCurrentUser 

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Palette, Loader2, Sparkles, Lock, Camera, Gift, Copy, Users, Globe, User as UserIcon, Shield, Sun, Moon, Laptop, Brush } from "lucide-react";
+import { LogOut, Palette, Loader2, Sparkles, Lock, Camera, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush } from "lucide-react";
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
@@ -28,6 +28,25 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "..
 import Link from "next/link";
 import BlockedUsersDialog from "./BlockedUsersDialog";
 
+const bubbleOptions = [
+    { id: "", name: "Yok" },
+    { id: "bubble-style-1", name: "Neon" },
+    { id: "bubble-style-2", name: "Okyanus" },
+    { id: "bubble-style-3", name: "Gün Batımı" },
+    { id: "bubble-style-4", name: "Orman" },
+    { id: "bubble-style-fire", name: "Alevli" },
+    { id: "bubble-style-premium", name: "Premium", isPremium: true },
+];
+
+const avatarFrameOptions = [
+    { id: "", name: "Yok" },
+    { id: "avatar-frame-angel", name: "Melek Kanadı" },
+    { id: "avatar-frame-devil", name: "Şeytan Kanadı" },
+    { id: "avatar-frame-snake", name: "Yılan" },
+    { id: "avatar-frame-tech", name: "Tekno Aura" },
+    { id: "avatar-frame-premium", name: "Premium", isPremium: true },
+];
+
 export default function ProfilePageClient() {
     const { user, userData, loading, handleLogout } = useAuth();
     const router = useRouter();
@@ -41,10 +60,14 @@ export default function ProfilePageClient() {
     const [acceptsFollowRequests, setAcceptsFollowRequests] = useState(true);
     const [newAvatar, setNewAvatar] = useState<string | null>(null);
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+    const [selectedBubble, setSelectedBubble] = useState("");
+    const [selectedAvatarFrame, setSelectedAvatarFrame] = useState("");
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [inviteLink, setInviteLink] = useState("");
     const [isBlockedUsersOpen, setIsBlockedUsersOpen] = useState(false);
+
+    const isPremium = userData?.premiumUntil && userData.premiumUntil.toDate() > new Date();
 
 
     // Populate state from userData
@@ -54,6 +77,8 @@ export default function ProfilePageClient() {
             setBio(userData.bio || "");
             setPrivateProfile(userData.privateProfile || false);
             setAcceptsFollowRequests(userData.acceptsFollowRequests ?? true);
+            setSelectedBubble(userData.selectedBubble || "");
+            setSelectedAvatarFrame(userData.selectedAvatarFrame || "");
         }
         if (user) {
             const encodedRef = btoa(user.uid);
@@ -68,9 +93,11 @@ export default function ProfilePageClient() {
             bio !== (userData.bio || "") ||
             privateProfile !== (userData.privateProfile || false) || 
             acceptsFollowRequests !== (userData.acceptsFollowRequests ?? true) ||
-            newAvatar !== null
+            newAvatar !== null || 
+            selectedBubble !== (userData?.selectedBubble || "") || 
+            selectedAvatarFrame !== (userData?.selectedAvatarFrame || "")
         );
-    }, [username, bio, privateProfile, acceptsFollowRequests, newAvatar, userData]);
+    }, [username, bio, privateProfile, acceptsFollowRequests, newAvatar, selectedBubble, selectedAvatarFrame, userData]);
     
     const handleAvatarClick = () => { fileInputRef.current?.click(); };
 
@@ -129,6 +156,8 @@ export default function ProfilePageClient() {
             
             if(privateProfile !== userData?.privateProfile) updates.privateProfile = privateProfile;
             if(acceptsFollowRequests !== userData?.acceptsFollowRequests) updates.acceptsFollowRequests = acceptsFollowRequests;
+            if(selectedBubble !== userData?.selectedBubble) updates.selectedBubble = selectedBubble;
+            if(selectedAvatarFrame !== userData?.selectedAvatarFrame) updates.selectedAvatarFrame = selectedAvatarFrame;
     
             if (Object.keys(updates).length > 0) {
                 await updateDoc(userDocRef, updates);
@@ -230,11 +259,39 @@ export default function ProfilePageClient() {
                                             </Label>
                                         </RadioGroup>
                                     </div>
+                                    <div>
+                                        <Label className="text-base font-medium">Sohbet Baloncuğu</Label>
+                                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-2">
+                                            {bubbleOptions.map(option => (
+                                                <button key={option.id} onClick={() => setSelectedBubble(option.id)} disabled={option.isPremium && !isPremium} className={cn("flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer p-2 aspect-square hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50", selectedBubble === option.id ? "border-primary" : "")}>
+                                                    <div className="relative h-12 w-12 bg-muted rounded-full overflow-hidden">
+                                                        {option.id !== "" && (<div className={`bubble-wrapper ${option.id}`}>{Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}</div>)}
+                                                        {option.isPremium && <Crown className="absolute top-1 right-1 h-4 w-4 text-red-500"/>}
+                                                    </div>
+                                                    <span className="text-xs font-bold text-center">{option.name}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <Label className="text-base font-medium">Avatar Çerçevesi</Label>
+                                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-2">
+                                            {avatarFrameOptions.map(option => (
+                                                <button key={option.id} onClick={() => setSelectedAvatarFrame(option.id)} disabled={option.isPremium && !isPremium} className={cn("flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer p-2 aspect-square hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50", selectedAvatarFrame === option.id ? "border-primary" : "")}>
+                                                    <div className={cn("avatar-frame-wrapper h-12 w-12", option.id)}>
+                                                        <Avatar className="relative z-[1] h-full w-full bg-muted" />
+                                                        {option.isPremium && <Crown className="absolute top-0 right-0 h-4 w-4 text-red-500"/>}
+                                                    </div>
+                                                    <span className="text-xs font-bold text-center">{option.name}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                             </AccordionContent>
                         </Card>
                     </AccordionItem>
-
+                    
                     <AccordionItem value="item-2" asChild>
                          <Card>
                              <AccordionTrigger className="p-6">
@@ -341,7 +398,6 @@ export default function ProfilePageClient() {
 
             </div>
 
-            <>
             {hasChanges && (
                 <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
                     <div className="container mx-auto flex justify-between items-center max-w-4xl">
@@ -353,7 +409,7 @@ export default function ProfilePageClient() {
                     </div>
                 </div>
             )}
-            </>
+            
 
             <ImageCropperDialog 
               isOpen={!!imageToCrop} 

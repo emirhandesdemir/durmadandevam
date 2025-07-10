@@ -20,7 +20,7 @@ import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
 import { findUserByUsername } from "./userActions";
 
-async function handlePostMentions(postId: string, text: string, sender: { uid: string; displayName: string | null; photoURL: string | null; }) {
+async function handlePostMentions(postId: string, text: string, sender: { uid: string; displayName: string | null; photoURL: string | null; userAvatarFrame?: string }) {
     if (!text) return;
     const mentionRegex = /(?<!\S)@\w+/g;
     const mentions = text.match(mentionRegex);
@@ -40,6 +40,7 @@ async function handlePostMentions(postId: string, text: string, sender: { uid: s
                         senderId: sender.uid,
                         senderUsername: sender.displayName || "Biri",
                         senderAvatar: sender.photoURL,
+                        senderAvatarFrame: sender.userAvatarFrame,
                         type: 'mention',
                         postId: postId,
                         postImage: postData?.imageUrl || null,
@@ -102,6 +103,7 @@ export async function createPost(postData: {
         uid: postData.uid,
         displayName: postData.username,
         photoURL: postData.userAvatar,
+        userAvatarFrame: postData.userAvatarFrame
     });
 
     revalidatePath('/home');
@@ -181,7 +183,7 @@ export async function updatePost(postId: string, updates: { text?: string; comme
 
 export async function likePost(
     postId: string,
-    currentUser: { uid: string, displayName: string | null, photoURL: string | null, }
+    currentUser: { uid: string, displayName: string | null, photoURL: string | null, selectedAvatarFrame?: string }
 ) {
     const postRef = doc(db, "posts", postId);
     
@@ -208,6 +210,7 @@ export async function likePost(
                     senderId: currentUser.uid,
                     senderUsername: currentUser.displayName || "Biri",
                     senderAvatar: currentUser.photoURL,
+                    senderAvatarFrame: currentUser.selectedAvatarFrame,
                     type: 'like',
                     postId: postId,
                     postImage: postData.imageUrl || null,
@@ -268,7 +271,7 @@ export async function retweetPost(
         uid: string; 
         username: string; 
         userAvatar: string | null;
-        userAvatarFrame: string | undefined;
+        userAvatarFrame?: string;
         userRole?: 'admin' | 'user';
         userGender?: 'male' | 'female';
     },
@@ -293,6 +296,7 @@ export async function retweetPost(
             uid: originalPostData.uid,
             username: originalPostData.username,
             userAvatar: originalPostData.userAvatar,
+            userAvatarFrame: originalPostData.userAvatarFrame,
             text: originalPostData.text,
             imageUrl: originalPostData.imageUrl,
             videoUrl: originalPostData.videoUrl,
@@ -330,6 +334,7 @@ export async function retweetPost(
             senderId: retweeter.uid,
             senderUsername: retweeter.username,
             senderAvatar: retweeter.userAvatar,
+            senderAvatarFrame: retweeter.userAvatarFrame,
             type: 'retweet',
             postId: newPostRef.id,
         });
