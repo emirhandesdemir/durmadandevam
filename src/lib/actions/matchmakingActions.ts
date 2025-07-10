@@ -2,7 +2,7 @@
 'use server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, runTransaction, arrayUnion, serverTimestamp, setDoc, collection, query, where, limit, deleteDoc, updateDoc, arrayRemove, writeBatch } from 'firebase/firestore';
-import type { DirectMessageMetadata, MatchmakingChat, UserProfile } from '../types';
+import type { DirectMessageMetadata, MatchmakingChat, UserProfile, Timestamp } from '../types';
 import { getChatId } from '../utils';
 import { createNotification } from './notificationActions';
 
