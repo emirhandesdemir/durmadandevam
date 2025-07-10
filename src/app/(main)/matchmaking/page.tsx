@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { onSnapshot, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { MatchmakingChat } from '@/lib/types';
+import Link from 'next/link';
 
 export default function MatchmakingPage() {
   const { user, userData, loading: authLoading } = useAuth();
