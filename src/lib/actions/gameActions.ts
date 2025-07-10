@@ -17,11 +17,13 @@ import {
     getDocs,
     Timestamp,
     increment,
-    writeBatch
+    writeBatch,
+    arrayUnion
 } from "firebase/firestore";
-import type { GameSettings, ActiveGame, Room, QuizQuestion } from "../types";
+import type { GameSettings, ActiveGame, Room, QuizQuestion, UserProfile } from "../types";
 import { revalidatePath } from "next/cache";
 import { generateQuizQuestion } from '@/ai/flows/generateQuizQuestionFlow';
+import { addSystemMessage } from "./roomActions";
 
 // Ayarları almak için fonksiyon
 export async function getGameSettings(): Promise<GameSettings> {
@@ -30,7 +32,7 @@ export async function getGameSettings(): Promise<GameSettings> {
     const defaults: GameSettings = {
         gameIntervalMinutes: 5,
         questionTimerSeconds: 20,
-        rewardAmount: 10, // Base reward for a full game
+        rewardAmount: 10,
         cooldownSeconds: 30,
         afkTimeoutMinutes: 8,
         imageUploadQuality: 0.9,
@@ -61,7 +63,7 @@ export async function startGameInRoom(roomId: string) {
         scores: {},
         answeredBy: {},
     };
-    await addDoc(gamesRef, newGameData);
+    const newGameRef = await addDoc(gamesRef, newGameData);
     
     await addDoc(collection(roomRef, 'messages'), {
         type: 'game',
@@ -71,35 +73,28 @@ export async function startGameInRoom(roomId: string) {
         username: 'System'
     });
 
-    // Schedule question generation
-    // In a real app, this would be a scheduled Cloud Function or a robust queueing system.
-    // For this demo, we'll simulate it with a delay.
     setTimeout(async () => {
         try {
-            await generateQuestionsForGame(roomId);
+            await generateQuestionsForGame(roomId, newGameRef.id);
         } catch (error) {
             console.error(`[Game ID: ${roomId}] Failed to generate questions:`, error);
-            // Optionally, cancel the game
         }
-    }, 60 * 1000); // 1 minute
+    }, 60 * 1000); 
 
     revalidatePath(`/rooms/${roomId}`);
     return { success: true };
 }
 
 
-async function generateQuestionsForGame(roomId: string) {
+async function generateQuestionsForGame(roomId: string, gameId: string) {
     const roomRef = doc(db, 'rooms', roomId);
-    const gamesQuery = query(collection(roomRef, 'games'), where('status', '==', 'countdown'), limit(1));
-    const gamesSnapshot = await getDocs(gamesQuery);
+    const gameRef = doc(db, 'rooms', roomId, 'games', gameId);
+    const gameDoc = await getDoc(gameRef);
 
-    if (gamesSnapshot.empty) {
-        console.log("Geri sayım yapan oyun bulunamadı, soru üretme iptal edildi.");
+    if (!gameDoc.exists() || gameDoc.data()?.status !== 'countdown') {
+        console.log("Geri sayım yapan oyun bulunamadı veya durum değişti, soru üretme iptal edildi.");
         return;
     }
-
-    const gameDoc = gamesSnapshot.docs[0];
-    const gameRef = gameDoc.ref;
 
     try {
         const questions: QuizQuestion[] = [];
@@ -146,7 +141,7 @@ export async function submitAnswer(roomId: string, gameId: string, userId: strin
         if (gameData.status !== 'active') throw new Error("Oyun aktif değil.");
         
         const questionIndex = gameData.currentQuestionIndex;
-        if (gameData.answeredBy[questionIndex]?.includes(userId)) {
+        if ((gameData.answeredBy || {})[questionIndex]?.includes(userId)) {
             throw new Error("Bu soruya zaten cevap verdin.");
         }
 
@@ -154,10 +149,12 @@ export async function submitAnswer(roomId: string, gameId: string, userId: strin
         const isCorrect = currentQuestion.correctOptionIndex === answerIndex;
 
         const updates: { [key: string]: any } = {};
-        updates[`answeredBy.${questionIndex}`] = arrayUnion(userId);
+        const answeredByPath = `answeredBy.${questionIndex}`;
+        updates[answeredByPath] = arrayUnion(userId);
 
         if (isCorrect) {
-            updates[`scores.${userId}`] = increment(1);
+            const scorePath = `scores.${userId}`;
+            updates[scorePath] = increment(1);
         }
 
         transaction.update(gameRef, updates);
@@ -166,7 +163,7 @@ export async function submitAnswer(roomId: string, gameId: string, userId: strin
 
 export async function endGame(roomId: string, gameId: string) {
     const roomRef = doc(db, 'rooms', roomId);
-    const gameRef = doc(db, 'rooms', gameId);
+    const gameRef = doc(db, 'rooms', roomId, 'games', gameId);
     
     await runTransaction(db, async (transaction) => {
         const gameDoc = await transaction.get(gameRef);
@@ -174,21 +171,31 @@ export async function endGame(roomId: string, gameId: string) {
         
         const gameData = gameDoc.data() as ActiveGame;
         const scores = gameData.scores || {};
+        const answeredBy = gameData.answeredBy || {};
         
+        const allParticipants = new Set<string>();
+        Object.values(answeredBy).forEach(uids => {
+            uids.forEach(uid => allParticipants.add(uid));
+        });
+
         const maxScore = Math.max(0, ...Object.values(scores));
         const winnersData: ActiveGame['winners'] = [];
-        
+        const winnerUids = new Set<string>();
+        const rewards = [5, 10, 15];
+        let winnerMessage = "Kimse doğru cevap veremedi!";
+
         if (maxScore > 0) {
-            const winnerUids = Object.keys(scores).filter(uid => scores[uid] === maxScore);
-            const userDocs = await Promise.all(winnerUids.map(uid => transaction.get(doc(db, 'users', uid))));
+            const winnerIdList = Object.keys(scores).filter(uid => scores[uid] === maxScore);
+            const userDocsPromises = winnerIdList.map(uid => transaction.get(doc(db, 'users', uid)));
+            const userDocs = await Promise.all(userDocsPromises);
             
-            const rewards = [5, 10, 15];
             const reward = rewards[maxScore - 1] || 15;
 
             userDocs.forEach((userDoc, index) => {
                 if (userDoc.exists()) {
-                    const userData = userDoc.data();
-                    const winnerUid = winnerUids[index];
+                    const userData = userDoc.data() as UserProfile;
+                    const winnerUid = winnerIdList[index];
+                    winnerUids.add(winnerUid);
                     winnersData.push({
                         uid: winnerUid,
                         username: userData.username,
@@ -199,13 +206,26 @@ export async function endGame(roomId: string, gameId: string) {
                     transaction.update(userDoc.ref, { diamonds: increment(reward) });
                 }
             });
+
+            if (winnersData.length > 0) {
+                 winnerMessage = `Kazanan(lar): ${winnersData.map(w => `@${w.username}`).join(', ')} - ${winnersData[0].reward} elmas kazandılar! 🏆`;
+            }
         }
         
+        const consolationPrize = 3;
+        const participantUpdatePromises: Promise<void>[] = [];
+        allParticipants.forEach(participantId => {
+            if (!winnerUids.has(participantId)) {
+                const userRef = doc(db, 'users', participantId);
+                participantUpdatePromises.push(Promise.resolve(transaction.update(userRef, { diamonds: increment(consolationPrize) })));
+            }
+        });
+        await Promise.all(participantUpdatePromises);
+
+
         transaction.update(gameRef, { status: 'finished', finishedAt: serverTimestamp(), winners: winnersData });
         
-        const settings = await getGameSettings();
-        const intervalMillis = settings.gameIntervalMinutes * 60 * 1000;
-        transaction.update(roomRef, { nextGameTimestamp: Timestamp.fromMillis(Date.now() + intervalMillis) });
+        await addSystemMessage(roomId, `Oyun bitti! ${winnerMessage}`);
     });
 }
 
@@ -217,10 +237,25 @@ export async function endGameWithoutWinner(roomId: string, gameId: string) {
     await runTransaction(db, async (transaction) => {
         const gameDoc = await transaction.get(gameRef);
         if (!gameDoc.exists() || gameDoc.data().status !== 'active') return;
+        const gameData = gameDoc.data();
+        
+        const answeredBy = gameData.answeredBy || {};
+        const allParticipants = new Set<string>();
+        Object.values(answeredBy).forEach((uids: any) => {
+            uids.forEach((uid: string) => allParticipants.add(uid));
+        });
+
+        const consolationPrize = 3;
+        for (const participantId of allParticipants) {
+             const userRef = doc(db, 'users', participantId);
+             transaction.update(userRef, { diamonds: increment(consolationPrize) });
+        }
+        
+        const message = allParticipants.size > 0 
+            ? 'Süre doldu! Katılan herkes teselli ödülü olarak 3 elmas kazandı! 🥳'
+            : 'Süre doldu! Kimse katılmadı.';
 
         transaction.update(gameRef, { status: 'finished', finishedAt: serverTimestamp() });
-        const settings = await getGameSettings();
-        const intervalMillis = settings.gameIntervalMinutes * 60 * 1000;
-        transaction.update(roomRef, { nextGameTimestamp: Timestamp.fromMillis(Date.now() + intervalMillis) });
+        await addSystemMessage(roomId, message);
     });
 }

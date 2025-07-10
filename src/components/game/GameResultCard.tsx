@@ -2,7 +2,7 @@
 'use client';
 import type { ActiveGame, GameSettings } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
-import { Trophy, Gem, Meh } from 'lucide-react';
+import { Trophy, Gem, Meh, Gift } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface GameResultCardProps {
@@ -12,8 +12,11 @@ interface GameResultCardProps {
 
 export default function GameResultCard({ game, settings }: GameResultCardProps) {
   const { userData } = useAuth();
-  const winner = game.winner;
-  const prize = settings?.rewardAmount || 10; // Default to 10 if not provided
+  const winners = game.winners || [];
+  const prize = winners[0]?.reward || 10;
+  
+  const isWinner = userData ? winners.some(w => w.uid === userData.uid) : false;
+  const participated = userData ? Object.values(game.answeredBy || {}).flat().includes(userData.uid) : false;
 
   return (
     <Card className="w-full bg-card border-primary/20 shadow-lg animate-in fade-in duration-500 rounded-2xl overflow-hidden">
@@ -23,24 +26,29 @@ export default function GameResultCard({ game, settings }: GameResultCardProps) 
           <span>Oyun Bitti!</span>
         </div>
         
-        {winner && winner === userData?.username ? (
+        {isWinner ? (
           <div className="flex flex-col items-center gap-2">
-             <p className="font-bold text-primary text-xl">Tebrikler, {winner}!</p>
-             <p className="text-sm text-muted-foreground">Doğru cevabı bildin ve <span className="font-bold text-foreground flex items-center justify-center gap-1">{prize} <Gem className="h-4 w-4 text-cyan-400"/></span> kazandın!</p>
+             <p className="font-bold text-primary text-xl">Tebrikler, Kazandın!</p>
+             <p className="text-sm text-muted-foreground">Doğru cevaplarınla <span className="font-bold text-foreground flex items-center justify-center gap-1">{prize} <Gem className="h-4 w-4 text-cyan-400"/></span> kazandın!</p>
           </div>
-        ) : winner ? (
+        ) : participated ? (
+           <div className="flex flex-col items-center gap-2">
+             <Gift className="h-8 w-8 text-muted-foreground" />
+             <p className="font-bold text-lg">Katılımın İçin Teşekkürler!</p>
+             <p className="text-sm text-muted-foreground">Teselli ödülü olarak <span className="font-bold text-foreground flex items-center justify-center gap-1">3 <Gem className="h-4 w-4 text-cyan-400"/></span> kazandın.</p>
+          </div>
+        ) : winners.length > 0 ? (
             <div className="flex flex-col items-center gap-2">
-                <p className="font-bold text-primary text-xl">{winner} kazandı!</p>
-                <p className="text-sm text-muted-foreground">{prize} elmas kazandı.</p>
+                <p className="font-bold text-primary text-xl">{winners.map(w => w.username).join(', ')} kazandı!</p>
+                <p className="text-sm text-muted-foreground">{prize} elmas kazandılar.</p>
             </div>
         ) : (
           <div className="flex flex-col items-center gap-2 py-4">
              <Meh className="h-16 w-16 text-muted-foreground" />
-             <p className="font-bold text-lg">Berabere!</p>
-             <p className="text-sm text-muted-foreground">Kimse kazanamadı. Tekrar deneyin!</p>
+             <p className="font-bold text-lg">Kimse Bilemedi!</p>
+             <p className="text-sm text-muted-foreground">Katılan herkes teselli ödülü kazandı. Tekrar deneyin!</p>
           </div>
         )}
-
       </CardContent>
     </Card>
   );
