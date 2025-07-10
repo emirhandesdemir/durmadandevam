@@ -50,30 +50,31 @@ export default function NotificationPermissionManager() {
     if (typeof window === 'undefined' || !window.OneSignal) return;
 
     window.OneSignal.push(function() {
-      OneSignal.init({
+      window.OneSignal.init({
         appId: oneSignalAppId,
         allowLocalhostAsSecureOrigin: true,
-        serviceWorkerPath: 'sw.js',
       }).then(() => {
         console.log("[OneSignal] SDK Initialized.");
         
         // Handle user login/logout for identification
         if (user) {
           console.log(`[OneSignal] Identifying user with external ID: ${user.uid}`);
-          OneSignal.login(user.uid);
+          window.OneSignal.login(user.uid);
         } else {
           console.log("[OneSignal] User is null, logging out from OneSignal.");
-          OneSignal.logout();
+          if (window.OneSignal.User.getPushSubscription()) {
+              window.OneSignal.logout();
+          }
         }
 
         // Check for permission after init and user identification
-        if (OneSignal.Notifications.permission === 'default') {
+        if (window.OneSignal.Notifications.permission === 'default') {
           promptForPermission();
         }
       });
 
       // Listener for notification permission changes
-      OneSignal.Notifications.addEventListener('permissionChange', (permission: boolean) => {
+      window.OneSignal.Notifications.addEventListener('permissionChange', (permission: boolean) => {
         console.log("[OneSignal] New permission state:", permission);
         if (permission) {
             toast({
