@@ -5,7 +5,7 @@ import { useTheme } from "next-themes";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Palette, Sun, Moon, Laptop, Brush } from "lucide-react";
+import { Palette, Sun, Moon, Laptop } from "lucide-react";
 
 export default function ThemeSettingsPage() {
   const { theme, setTheme } = useTheme();
@@ -30,7 +30,7 @@ export default function ThemeSettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <RadioGroup value={theme} onValueChange={setTheme} className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <RadioGroup value={theme} onValueChange={setTheme} className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Label htmlFor="light-theme" className="flex flex-col items-center justify-center rounded-lg border-2 bg-card p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
               <RadioGroupItem value="light" id="light-theme" className="sr-only" />
               <Sun className="mb-3 h-8 w-8" />
@@ -41,12 +41,6 @@ export default function ThemeSettingsPage() {
               <RadioGroupItem value="dark" id="dark-theme" className="sr-only" />
               <Moon className="mb-3 h-8 w-8" />
               <span className="font-bold">Karanlık</span>
-            </Label>
-
-            <Label htmlFor="pastel-theme" className="flex flex-col items-center justify-center rounded-lg border-2 bg-card p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
-              <RadioGroupItem value="pastel" id="pastel-theme" className="sr-only" />
-              <Brush className="mb-3 h-8 w-8" />
-              <span className="font-bold">Pastel</span>
             </Label>
             
             <Label htmlFor="system-theme" className="flex flex-col items-center justify-center rounded-lg border-2 bg-card p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">

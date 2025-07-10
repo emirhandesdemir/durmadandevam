@@ -1,4 +1,3 @@
-
 // src/components/profile/profile-page-client.tsx
 "use client";
 
@@ -213,7 +212,7 @@ export default function ProfilePageClient() {
                                 <div className="space-y-6">
                                     <div>
                                         <Label className="text-base font-medium">Tema</Label>
-                                        <RadioGroup value={theme} onValueChange={setTheme} className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-2">
+                                        <RadioGroup value={theme} onValueChange={setTheme} className="grid grid-cols-2 md:grid-cols-3 gap-2 pt-2">
                                             <Label htmlFor="light-theme" className={cn("flex flex-col items-center justify-center rounded-lg border-2 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer", theme === 'light' && "border-primary")}>
                                                 <RadioGroupItem value="light" id="light-theme" className="sr-only" />
                                                 <Sun className="mb-2 h-6 w-6" />
@@ -223,11 +222,6 @@ export default function ProfilePageClient() {
                                                 <RadioGroupItem value="dark" id="dark-theme" className="sr-only" />
                                                 <Moon className="mb-2 h-6 w-6" />
                                                 <span className="font-bold text-xs">Karanlık</span>
-                                            </Label>
-                                             <Label htmlFor="pastel-theme" className={cn("flex flex-col items-center justify-center rounded-lg border-2 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer", theme === 'pastel' && "border-primary")}>
-                                                <RadioGroupItem value="pastel" id="pastel-theme" className="sr-only" />
-                                                <Brush className="mb-2 h-6 w-6" />
-                                                <span className="font-bold text-xs">Pastel</span>
                                             </Label>
                                             <Label htmlFor="system-theme" className={cn("flex flex-col items-center justify-center rounded-lg border-2 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer", theme === 'system' && "border-primary")}>
                                                 <RadioGroupItem value="system" id="system-theme" className="sr-only" />
@@ -267,7 +261,6 @@ export default function ProfilePageClient() {
                                     </div>
                                     <Switch id="requests-mode" checked={acceptsFollowRequests} onCheckedChange={setAcceptsFollowRequests} disabled={!privateProfile}/>
                                 </div>
-                                <Button variant="outline" onClick={() => {}} disabled>Takip İstekleri ({userData.followRequests?.length || 0})</Button>
                                 <Button variant="outline" onClick={() => setIsBlockedUsersOpen(true)}>Engellenenler</Button>
                             </AccordionContent>
                         </Card>
