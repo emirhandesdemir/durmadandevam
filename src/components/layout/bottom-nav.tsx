@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, MessageCircle, Plus, Compass, Swords } from 'lucide-react';
+import { Home, MessageCircle, Plus, Compass } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMemo } from 'react';
@@ -33,7 +33,6 @@ export default function BottomNav() {
     return [
         { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
         { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
-        { id: 'matchmaking', href: '/matchmaking', icon: Swords, label: 'Eşleşme' },
         { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
         { id: 'surf', href: '/surf', icon: Compass, label: 'Surf', onClick: handleSurfClick, onDoubleClick: handleSurfDoubleClick },
       ]
