@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
 import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
 import ExploreMenu from "@/components/layout/ExploreMenu";
+import UserSearchDialog from "@/components/search/UserSearchDialog";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -26,13 +27,11 @@ function PwaInstallBar() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Check if running in standalone mode or if the user has already dismissed the banner
     const isStandalone = typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches;
     if (isStandalone || sessionStorage.getItem('pwaInstallDismissed') === 'true') {
       return;
     }
     
-    // Handler for browsers that support 'beforeinstallprompt'
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setInstallPrompt(e as BeforeInstallPromptEvent);
@@ -41,7 +40,6 @@ function PwaInstallBar() {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // Handler for iOS devices
     const isIos = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     if(isIos) {
         setShowIosInstall(true);
@@ -58,7 +56,7 @@ function PwaInstallBar() {
     installPrompt.prompt();
     installPrompt.userChoice.then(() => {
       setIsVisible(false);
-      setInstallPrompt(null); // Clear the prompt once used
+      setInstallPrompt(null);
     });
   };
 
@@ -102,13 +100,6 @@ function PwaInstallBar() {
 }
 
 
-/**
- * Ana Uygulama Düzeni (Main App Layout)
- * 
- * Bu bileşen, kullanıcı giriş yaptıktan sonra görünen tüm sayfalar için
- * genel bir çerçeve (iskelet) oluşturur. Header, BottomNav gibi ortak 
- * UI elemanlarını içerir.
- */
 export default function MainAppLayout({
   children,
 }: {
@@ -116,6 +107,7 @@ export default function MainAppLayout({
 }) {
   const pathname = usePathname();
   const [isExploreMenuOpen, setIsExploreMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/');
   const isHeaderlessPage = isFullPageLayout;
@@ -124,6 +116,7 @@ export default function MainAppLayout({
   return (
     <>
       <PremiumWelcomeManager />
+      <UserSearchDialog isOpen={isSearchOpen} onOpenChange={setIsSearchOpen} />
       <div className="relative flex h-screen w-full flex-col bg-background overflow-hidden">
         <PwaInstallBar />
         
@@ -150,7 +143,11 @@ export default function MainAppLayout({
             </div>
         </main>
         
-        <ExploreMenu isOpen={isExploreMenuOpen} onOpenChange={setIsExploreMenuOpen} />
+        <ExploreMenu 
+          isOpen={isExploreMenuOpen} 
+          onOpenChange={setIsExploreMenuOpen}
+          onSearchClick={() => setIsSearchOpen(true)}
+        />
         <BottomNav onExploreClick={() => setIsExploreMenuOpen(prev => !prev)} isExploreMenuOpen={isExploreMenuOpen} />
       </div>
     </>

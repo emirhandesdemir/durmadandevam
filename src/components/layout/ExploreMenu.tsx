@@ -2,12 +2,13 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Map, Users } from 'lucide-react';
+import { Map, Search, UserSearch } from 'lucide-react';
 import Link from 'next/link';
 
 interface ExploreMenuProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  onSearchClick: () => void;
 }
 
 const menuVariants = {
@@ -21,7 +22,13 @@ const itemVariants = {
   visible: { opacity: 1, y: 0 },
 };
 
-export default function ExploreMenu({ isOpen, onOpenChange }: ExploreMenuProps) {
+export default function ExploreMenu({ isOpen, onOpenChange, onSearchClick }: ExploreMenuProps) {
+  
+  const handleSearchClick = () => {
+    onOpenChange(false);
+    onSearchClick();
+  };
+  
   return (
     <AnimatePresence>
       {isOpen && (
@@ -43,11 +50,9 @@ export default function ExploreMenu({ isOpen, onOpenChange }: ExploreMenuProps) 
               </Button>
             </motion.div>
             <motion.div variants={itemVariants} transition={{ delay: 0.15 }}>
-              <Button asChild variant="secondary" className="h-20 w-full flex-col gap-1 rounded-xl">
-                <Link href="/matchmaking" onClick={() => onOpenChange(false)}>
-                   <Users className="h-6 w-6" />
-                  <span className="text-xs font-semibold">Rastgele Eşleş</span>
-                </Link>
+              <Button variant="secondary" className="h-20 w-full flex-col gap-1 rounded-xl" onClick={handleSearchClick}>
+                   <UserSearch className="h-6 w-6" />
+                  <span className="text-xs font-semibold">Kullanıcı Ara</span>
               </Button>
             </motion.div>
           </div>
