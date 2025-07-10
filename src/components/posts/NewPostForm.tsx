@@ -63,6 +63,7 @@ export default function NewPostForm() {
   const [isAiEditing, setIsAiEditing] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [wasEditedByAI, setWasEditedByAI] = useState(false);
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
   // Video states
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
