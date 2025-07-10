@@ -49,8 +49,7 @@ export default function BottomNav({ onExploreClick, isExploreMenuOpen }: BottomN
 
                 const buttonContent = (
                      <div className={cn(
-                        "relative flex flex-col items-center justify-center gap-1 transition-all duration-200",
-                        item.id === 'create' ? '-translate-y-3' : ''
+                        "relative flex flex-col items-center justify-center gap-1 transition-all duration-200"
                      )}>
                         <div className={cn(
                             "flex items-center justify-center h-8 w-12 rounded-full transition-all duration-300", 
@@ -58,12 +57,10 @@ export default function BottomNav({ onExploreClick, isExploreMenuOpen }: BottomN
                         )}>
                             <Icon className={cn(
                                 "h-6 w-6 transition-transform", 
-                                item.id === 'create' && 'h-10 w-10 text-primary bg-primary/20 p-2 rounded-full shadow-lg'
+                                item.id === 'create' && 'text-primary'
                             )} />
                         </div>
-                        {item.id !== 'create' && (
-                            <span className="text-[10px] font-medium">{item.label}</span>
-                        )}
+                        <span className="text-[10px] font-medium">{item.label}</span>
                     </div>
                 );
 
