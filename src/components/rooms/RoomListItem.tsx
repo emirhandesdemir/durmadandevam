@@ -2,7 +2,7 @@
 'use client';
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowRight, Clock, Users, XCircle, Zap, Gift } from "lucide-react";
+import { ArrowRight, Clock, Users, XCircle, Zap, Gift, Crown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -120,13 +120,10 @@ export default function RoomListItem({ room }: RoomListItemProps) {
             <CardContent className="p-3 pt-0 flex-1">
                 <div className="flex items-center justify-between">
                     <Link href={`/profile/${room.createdBy.uid}`} className="flex items-center gap-2 overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                        <div className={cn("avatar-frame-wrapper", room.createdBy.selectedAvatarFrame)}>
-                             <Avatar className="relative z-[1] h-8 w-8">
-                                <AvatarImage src={room.createdBy.photoURL || undefined} />
-                                <AvatarFallback>{room.createdBy.username?.charAt(0)}</AvatarFallback>
-                            </Avatar>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                             <Crown className="h-3 w-3 text-yellow-500" />
+                            <span className="truncate">{room.createdBy.username}</span>
                         </div>
-                        <span className="text-xs font-medium truncate">{room.createdBy.username}</span>
                     </Link>
                     <div className="flex -space-x-2">
                         {participants.slice(0, 4).map(p => (

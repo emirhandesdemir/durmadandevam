@@ -1,7 +1,7 @@
 // src/app/(main)/rooms/[id]/page.tsx
 "use client";
 
-import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, onSnapshot, collection, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -126,8 +126,7 @@ export default function RoomPage() {
                  <RoomHeader 
                     room={room} 
                     isHost={isHost} 
-                    onParticipantListToggle={() => setIsParticipantSheetOpen(true)} 
-                    onBackClick={() => router.back()}
+                    onParticipantListToggle={() => setIsParticipantSheetOpen(true)}
                     isSpeakerLayoutCollapsed={isSpeakerLayoutCollapsed}
                     onToggleCollapse={() => setIsSpeakerLayoutCollapsed(p => !p)}
                 />

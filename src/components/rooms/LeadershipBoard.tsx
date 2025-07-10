@@ -10,6 +10,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Award, Users, Crown, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 
 const medalColors = [
     'border-yellow-400 bg-yellow-400/10 hover:bg-yellow-400/20', // Gold
@@ -32,7 +34,7 @@ export default function LeadershipBoard() {
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const roomsData = snapshot.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as Room))
-                .filter(room => !room.expiresAt || (room.expiresAt as Timestamp).toDate() > new Date());
+                .filter(room => room.type !== 'event' && (!room.expiresAt || (room.expiresAt as Timestamp).toDate() > new Date()));
             
             setTopRooms(roomsData);
             setLoading(false);
@@ -77,8 +79,13 @@ export default function LeadershipBoard() {
                                 <div className="flex items-center justify-between">
                                     <div className="flex-1 overflow-hidden">
                                         <p className="font-bold truncate">{room.name}</p>
-                                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                            <Crown className="h-3 w-3" />
+                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                            <div className={cn("avatar-frame-wrapper", room.createdBy.selectedAvatarFrame)}>
+                                                <Avatar className="relative z-[1] h-4 w-4">
+                                                    <AvatarImage src={room.createdBy.photoURL || undefined} />
+                                                    <AvatarFallback>{room.createdBy.username?.charAt(0)}</AvatarFallback>
+                                                </Avatar>
+                                            </div>
                                             <span className="truncate">{room.createdBy.username}</span>
                                         </div>
                                     </div>
