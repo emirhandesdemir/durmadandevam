@@ -208,7 +208,7 @@ export interface Post {
     musicUrl?: string; // New field for music
     editedWithAI?: boolean;
     createdAt: Timestamp | { seconds: number; nanoseconds: number };
-    likes: string[];
+    likes: string[]; // Beğenen kullanıcıların UID'lerini tutan dizi
     likeCount: number;
     commentCount: number;
     saveCount?: number;
@@ -504,4 +504,16 @@ export interface GameInviteMessageData {
     acceptedPlayers: { uid: string, username: string, photoURL: string | null }[];
     declinedPlayers: { uid: string, username: string, photoURL: string | null }[];
     status: 'pending' | 'accepted' | 'declined' | 'cancelled';
+}
+
+export interface BotActivityLog {
+    id: string;
+    botUserId: string;
+    botUsername: string;
+    actionType: 'post_text' | 'post_image' | 'post_video' | 'like' | 'comment' | 'follow' | 'dm_sent';
+    targetUserId?: string;
+    targetUsername?: string;
+    targetPostId?: string;
+    details: string;
+    timestamp: Timestamp;
 }

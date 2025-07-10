@@ -3,32 +3,33 @@
  * @fileOverview Rastgele ve eğlenceli quiz soruları üreten bir Genkit akışı.
  *
  * - generateQuizQuestions - İnternetten üç trivia sorusu, her biri için 4 seçenek ve doğru cevabı alır.
- * - QuizQuestionSchema - Tek bir sorunun veri yapısı.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import type { QuizQuestion } from '@/lib/types';
 
-// Tek bir quiz sorusunun yapısını tanımlayan şema
-export const QuizQuestionSchema = z.object({
+
+// Define the Zod schema for a single quiz question internally
+const QuizQuestionSchema = z.object({
   question: z.string().describe("The trivia question in Turkish."),
   options: z.array(z.string()).length(4).describe("An array of four possible answers in Turkish."),
   correctOptionIndex: z.number().min(0).max(3).describe("The zero-based index of the correct answer in the options array."),
 });
 
-// Akışın çıktısı, üç soruluk bir dizi olacak
+// The flow's output will be an array of three questions
 const QuizQuestionArraySchema = z.array(QuizQuestionSchema).length(3);
 
-export type QuizQuestion = z.infer<typeof QuizQuestionSchema>;
-export type QuizQuestionArrayOutput = z.infer<typeof QuizQuestionArraySchema>;
+// Type for the array of questions
+type QuizQuestionArrayOutput = z.infer<typeof QuizQuestionArraySchema>;
 
 
-// Dışa aktarılan ana fonksiyon
+// The main exported async function
 export async function generateQuizQuestions(): Promise<QuizQuestionArrayOutput> {
   return generateQuizQuestionFlow({});
 }
 
-// Genkit akışı tanımı
+// Genkit flow definition
 const generateQuizQuestionFlow = ai.defineFlow(
   {
     name: 'generateQuizQuestionFlow',
@@ -48,7 +49,7 @@ const generateQuizQuestionFlow = ai.defineFlow(
           schema: QuizQuestionArraySchema,
       },
       config: {
-        temperature: 1.2, // Daha yaratıcı ve çeşitli sorular için sıcaklığı artır
+        temperature: 1.2, // Increase temperature for more creative and varied questions
       },
     });
     
