@@ -17,6 +17,7 @@ import { saveFCMToken } from '@/lib/actions/userActions';
 export default function NotificationPermissionManager() {
   const { toast, dismiss } = useToast();
   const { user } = useAuth();
+  const vapidKey = "BEv3RhiBuZQ8cDg2SAQf41tY_ijOEBJyCDLUY648St78CRgE57v8HWYUDBu6huI_kxzF_gKyelZi3Qbfgs8PMaE"; // Provided VAPID key
 
   const requestPermissionAndGetToken = useCallback(async () => {
     if (!messaging || !user) return;
@@ -27,7 +28,7 @@ export default function NotificationPermissionManager() {
         console.log('Notification permission granted.');
         
         const currentToken = await getToken(messaging, {
-          vapidKey: 'YOUR_VAPID_KEY_FROM_FIREBASE_CONSOLE', // TODO: Replace with your actual VAPID key
+          vapidKey: vapidKey,
         });
 
         if (currentToken) {
@@ -57,7 +58,7 @@ export default function NotificationPermissionManager() {
         variant: 'destructive',
       });
     }
-  }, [user, toast]);
+  }, [user, toast, vapidKey]);
 
   const promptForPermission = useCallback(() => {
     const { id } = toast({
@@ -82,14 +83,14 @@ export default function NotificationPermissionManager() {
     // Check if permission is already granted or denied.
     if ('Notification' in window) {
         if (Notification.permission === 'default') {
-            promptForPermission();
-        } else if (Notification.permission === 'granted') {
-            // If already granted, ensure token is up-to-date
-            requestPermissionAndGetToken();
+            // Wait a bit before prompting to not overwhelm the user on first load
+            const timer = setTimeout(() => {
+               promptForPermission();
+            }, 5000); 
+            return () => clearTimeout(timer);
         }
     }
-
-  }, [user, promptForPermission, requestPermissionAndGetToken]);
+  }, [user, promptForPermission]);
 
   return null; // This component does not render anything
 }
