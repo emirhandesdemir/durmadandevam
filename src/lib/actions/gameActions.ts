@@ -22,7 +22,7 @@ import {
 } from "firebase/firestore";
 import type { GameSettings, ActiveGame, Room, QuizQuestion, UserProfile } from "../types";
 import { revalidatePath } from "next/cache";
-import { generateQuizQuestion } from '@/ai/flows/generateQuizQuestionFlow';
+import { generateQuizQuestions } from '@/ai/flows/generateQuizQuestionFlow';
 import { addSystemMessage } from "./roomActions";
 
 // Ayarları almak için fonksiyon
@@ -97,11 +97,7 @@ async function generateQuestionsForGame(roomId: string, gameId: string) {
     }
 
     try {
-        const questions: QuizQuestion[] = [];
-        for (let i = 0; i < 3; i++) {
-            const questionData = await generateQuizQuestion({});
-            questions.push(questionData);
-        }
+        const questions = await generateQuizQuestions();
 
         await updateDoc(gameRef, {
             questions: questions,
@@ -181,6 +177,8 @@ export async function endGame(roomId: string, gameId: string) {
         const maxScore = Math.max(0, ...Object.values(scores));
         const winnersData: ActiveGame['winners'] = [];
         const winnerUids = new Set<string>();
+        
+        // Ödül mantığı: 1 doğru=5, 2=10, 3=15
         const rewards = [5, 10, 15];
         let winnerMessage = "Kimse doğru cevap veremedi!";
 
@@ -189,7 +187,7 @@ export async function endGame(roomId: string, gameId: string) {
             const userDocsPromises = winnerIdList.map(uid => transaction.get(doc(db, 'users', uid)));
             const userDocs = await Promise.all(userDocsPromises);
             
-            const reward = rewards[maxScore - 1] || 15;
+            const reward = rewards[maxScore - 1] || 15; // 3+ doğru cevap için 15 ver
 
             userDocs.forEach((userDoc, index) => {
                 if (userDoc.exists()) {
@@ -208,15 +206,17 @@ export async function endGame(roomId: string, gameId: string) {
             });
 
             if (winnersData.length > 0) {
-                 winnerMessage = `Kazanan(lar): ${winnersData.map(w => `@${w.username}`).join(', ')} - ${winnersData[0].reward} elmas kazandılar! 🏆`;
+                 winnerMessage = `Kazanan(lar): ${winnersData.map(w => `@${w.username}`).join(', ')} - ${reward} elmas kazandılar! 🏆`;
             }
         }
         
+        // Teselli ödülü mantığı
         const consolationPrize = 3;
         const participantUpdatePromises: Promise<void>[] = [];
         allParticipants.forEach(participantId => {
-            if (!winnerUids.has(participantId)) {
+            if (!winnerUids.has(participantId)) { // Eğer kazanan değilse
                 const userRef = doc(db, 'users', participantId);
+                // transaction.update'i doğrudan çağırmak yerine, bir promise dizisine ekle
                 participantUpdatePromises.push(Promise.resolve(transaction.update(userRef, { diamonds: increment(consolationPrize) })));
             }
         });
@@ -228,7 +228,6 @@ export async function endGame(roomId: string, gameId: string) {
         await addSystemMessage(roomId, `Oyun bitti! ${winnerMessage}`);
     });
 }
-
 
 export async function endGameWithoutWinner(roomId: string, gameId: string) {
      const roomRef = doc(db, 'rooms', roomId);
@@ -245,6 +244,7 @@ export async function endGameWithoutWinner(roomId: string, gameId: string) {
             uids.forEach((uid: string) => allParticipants.add(uid));
         });
 
+        // Teselli ödülü mantığı
         const consolationPrize = 3;
         for (const participantId of allParticipants) {
              const userRef = doc(db, 'users', participantId);
