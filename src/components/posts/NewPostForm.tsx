@@ -12,6 +12,8 @@ import { applyImageFilter } from "@/lib/actions/imageActions";
 import { createPost } from "@/lib/actions/postActions";
 import { getFollowingForSuggestions } from "@/lib/actions/userActions";
 import type { UserProfile } from "@/lib/types";
+import { FFmpeg } from '@ffmpeg/ffmpeg';
+import { fetchFile, toBlobURL } from '@ffmpeg/util';
 
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -19,12 +21,22 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
-import { Image as ImageIcon, Send, Loader2, X, Sparkles, RefreshCcw, Video, File, Clapperboard } from "lucide-react";
+import { Image as ImageIcon, Send, Loader2, X, Sparkles, RefreshCcw, Video, File, Clapperboard, Music, CheckCircle } from "lucide-react";
 import { ScrollArea } from "../ui/scroll-area";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
 import { Input } from "../ui/input";
 import { useTranslation } from "react-i18next";
 import { Progress } from "../ui/progress";
+import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter } from "../ui/dialog";
+
+const royaltyFreeMusic = [
+  { title: "Upbeat Funk", url: "https://cdn.pixabay.com/download/audio/2022/08/04/audio_2bbe6a8d0a.mp3" },
+  { title: "Chill Lofi", url: "https://cdn.pixabay.com/download/audio/2022/02/10/audio_b42e7c4f75.mp3" },
+  { title: "Inspiring Cinematic", url: "https://cdn.pixabay.com/download/audio/2022/08/02/audio_88c382fbb2.mp3" },
+  { title: "Happy Whistle", url: "https://cdn.pixabay.com/download/audio/2022/06/14/audio_f5d13d7f95.mp3" },
+  { title: "Epic Adventure", url: "https://cdn.pixabay.com/download/audio/2022/10/25/audio_511b816a75.mp3" }
+];
+
 
 async function dataUriToBlob(dataUri: string): Promise<Blob> {
     const response = await fetch(dataUri);
@@ -53,10 +65,14 @@ export default function NewPostForm() {
 
   // Video states
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const ffmpegRef = useRef(new FFmpeg());
+  const [isMusicDialogOpen, setIsMusicDialogOpen] = useState(false);
+  const [selectedMusic, setSelectedMusic] = useState<{ title: string; url: string } | null>(null);
+
   
   // General states
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -68,6 +84,23 @@ export default function NewPostForm() {
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
+    useEffect(() => {
+    const loadFfmpeg = async () => {
+      const ffmpeg = ffmpegRef.current;
+      if (!ffmpeg.loaded) {
+        ffmpeg.on('log', ({ message }) => {
+          console.log(message);
+        });
+        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
+        await ffmpeg.load({
+          coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+          wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+        });
+      }
+    };
+    loadFfmpeg();
+  }, []);
+
   useEffect(() => {
     const sharedTitle = searchParams.get('title');
     const sharedText = searchParams.get('text');
@@ -190,6 +223,7 @@ export default function NewPostForm() {
       setVideoPreview(null);
       setOriginalCroppedImage(null);
       setWasEditedByAI(false);
+      setSelectedMusic(null);
       if(fileInputRef.current) fileInputRef.current.value = "";
   }
 
@@ -197,7 +231,7 @@ export default function NewPostForm() {
     if (!croppedImage || !aiPrompt.trim()) return;
 
     setIsAiEditing(false); // Close dialog
-    setIsAiLoading(true);
+    setIsProcessing(true);
     try {
         const result = await applyImageFilter({ photoDataUri: croppedImage, style: aiPrompt });
         if (result.success && result.data?.styledPhotoDataUri) {
@@ -211,7 +245,7 @@ export default function NewPostForm() {
     } catch (error: any) {
         toast({ variant: "destructive", title: "AI Düzenleme Hatası", description: error.message });
     } finally {
-        setIsAiLoading(false);
+        setIsProcessing(false);
     }
   };
 
@@ -233,34 +267,50 @@ export default function NewPostForm() {
     try {
         let imageUrl = "";
         let videoUrl = "";
-
+        let finalBlob: Blob | null = null;
+        
         if (file) {
-            let fileToUpload: Blob = file;
             if (fileType === 'image' && croppedImage) {
-                fileToUpload = await dataUriToBlob(croppedImage);
+                finalBlob = await dataUriToBlob(croppedImage);
+            } else if (fileType === 'video') {
+                 if (selectedMusic) {
+                    setIsProcessing(true);
+                    toast({ description: 'Müzik videoya ekleniyor...' });
+                    const ffmpeg = ffmpegRef.current;
+                    await ffmpeg.writeFile('input.mp4', await fetchFile(file));
+                    await ffmpeg.writeFile('audio.mp3', await fetchFile(selectedMusic.url));
+                    await ffmpeg.exec(['-i', 'input.mp4', '-i', 'audio.mp3', '-c:v', 'copy', '-c:a', 'aac', '-map', '0:v:0', '-map', '1:a:0', '-shortest', 'output.mp4']);
+                    const data = await ffmpeg.readFile('output.mp4') as Uint8Array;
+                    finalBlob = new Blob([data.buffer], { type: 'video/mp4' });
+                    setIsProcessing(false);
+                } else {
+                    finalBlob = file;
+                }
             }
 
-            const storagePath = `upload/posts/${fileType === 'image' ? 'images' : 'videos'}/${user.uid}/${Date.now()}_${file.name}`;
-            const fileRef = ref(storage, storagePath);
-            const uploadTask = uploadBytesResumable(fileRef, fileToUpload);
+            if (finalBlob) {
+                const storagePath = `upload/posts/${fileType}s/${user.uid}/${Date.now()}_${file.name}`;
+                const fileRef = ref(storage, storagePath);
+                const uploadTask = uploadBytesResumable(fileRef, finalBlob);
 
-            await new Promise<void>((resolve, reject) => {
-                uploadTask.on('state_changed',
-                    (snapshot) => {
-                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                        setUploadProgress(progress);
-                    }, 
-                    (error) => reject(error),
-                    async () => {
-                        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                        if (fileType === 'image') imageUrl = downloadURL;
-                        else if (fileType === 'video') videoUrl = downloadURL;
-                        resolve();
-                    }
-                );
-            });
+                await new Promise<void>((resolve, reject) => {
+                    uploadTask.on('state_changed',
+                        (snapshot) => {
+                            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                            setUploadProgress(progress);
+                        }, 
+                        (error) => reject(error),
+                        async () => {
+                            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                            if (fileType === 'image') imageUrl = downloadURL;
+                            else if (fileType === 'video') videoUrl = downloadURL;
+                            resolve();
+                        }
+                    );
+                });
+            }
         }
-
+        
         await createPost({
             uid: user.uid,
             username: userData.username,
@@ -290,7 +340,7 @@ export default function NewPostForm() {
     }
   };
 
-  const isLoading = isSubmitting || isAiLoading;
+  const isLoading = isSubmitting || isProcessing;
 
   return (
     <>
@@ -317,13 +367,12 @@ export default function NewPostForm() {
                         />
                     </div>
                 </PopoverAnchor>
-                {/* Mention Popover */}
             </Popover>
 
-          {isAiLoading && (
+          {isProcessing && (
             <div className="flex items-center gap-2 text-sm text-primary p-2 bg-primary/10 rounded-lg animate-in fade-in">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Yapay zeka resmi düzenliyor, lütfen bekleyin...</span>
+                <span>Video işleniyor, lütfen bekleyin...</span>
             </div>
           )}
 
@@ -360,17 +409,29 @@ export default function NewPostForm() {
         </div>
         
         <div className="flex items-center justify-between border-t border-border/50 bg-muted/20 px-4 py-2">
-          <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*,video/*" className="hidden" />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading || !!file}
-          >
-            <File className="h-5 w-5" />
-            <span className="sr-only">Dosya Ekle</span>
-          </Button>
+          <div className="flex items-center gap-1">
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*,video/*" className="hidden" />
+            <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isLoading || !!file}
+            >
+                <File className="h-5 w-5" />
+                <span className="sr-only">Dosya Ekle</span>
+            </Button>
+             <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                onClick={() => setIsMusicDialogOpen(true)}
+                disabled={isLoading || fileType !== 'video'}
+            >
+                <Music className="h-5 w-5" />
+                <span className="sr-only">Müzik Ekle</span>
+            </Button>
+          </div>
           
           <Button 
             className="rounded-full font-semibold px-4"
@@ -401,17 +462,392 @@ export default function NewPostForm() {
             value={aiPrompt}
             onChange={(e) => setAiPrompt(e.target.value)}
             placeholder="örn: make it a watercolor painting"
-            disabled={isAiLoading}
+            disabled={isProcessing}
             />
             <AlertDialogFooter>
-            <AlertDialogCancel disabled={isAiLoading}>İptal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleAiEdit} disabled={!aiPrompt || isAiLoading}>
-                {isAiLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <AlertDialogCancel disabled={isProcessing}>İptal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleAiEdit} disabled={!aiPrompt || isProcessing}>
+                {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Uygula
             </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
+     <Dialog open={isMusicDialogOpen} onOpenChange={setIsMusicDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Müzik Seç</DialogTitle>
+            <DialogDescription>Videonuz için bir arka plan müziği seçin.</DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="h-72 rounded-md border p-2">
+            <div className="space-y-2">
+                {royaltyFreeMusic.map(music => (
+                    <button key={music.title} onClick={() => setSelectedMusic(music)} className="w-full flex items-center justify-between p-2 rounded-md hover:bg-muted">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-secondary rounded-md"><Music className="h-5 w-5"/></div>
+                            <span className="text-sm font-medium">{music.title}</span>
+                        </div>
+                        {selectedMusic?.url === music.url && <CheckCircle className="h-5 w-5 text-primary"/>}
+                    </button>
+                ))}
+            </div>
+          </ScrollArea>
+          <DialogFooter>
+            <Button onClick={() => setIsMusicDialogOpen(false)}>Tamam</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
+}
+
+```
+  <change>
+    <file>/src/app/globals.css</file>
+    <content><![CDATA[@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 262.1 83.3% 57.8%;
+    --radius: 1rem;
+  }
+ 
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 210 40% 98%;
+    --card: 240 4.8% 11.0%;
+    --card-foreground: 210 40% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 262.1 83.3% 57.8%;
+  }
+
+  .pastel {
+    --background: 210 36% 96%;
+    --foreground: 222 47% 11%;
+    --card: 210 40% 98%;
+    --card-foreground: 222 47% 11%;
+    --popover: 210 40% 98%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 198 93% 60%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 210 30% 92%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 30% 92%;
+    --muted-foreground: 215 28% 44%;
+    --accent: 210 30% 92%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 198 93% 60%;
+  }
+}
+ 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    -webkit-user-select: none; /* Safari */
+    -moz-user-select: none;    /* Firefox */
+    -ms-user-select: none;     /* IE10+/Edge */
+    user-select: none;         /* Standard */
+    -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: contain;
+  }
+  .auth-bg {
+    background: linear-gradient(-45deg, #73A580, #E9967A, #F5F5DC, #73A580);
+    background-size: 400% 400%;
+    animation: gradientBG 15s ease infinite;
+  }
+
+  @keyframes gradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+}
+
+/* Chat Bubble Styles */
+@layer components {
+  .bubble-wrapper {
+    @apply absolute -inset-2 pointer-events-none;
+  }
+  .bubble {
+    @apply absolute rounded-full;
+    animation: float 6s ease-in-out infinite;
+  }
+
+  /* Bubble Animation */
+  @keyframes float {
+    0% { transform: translateY(0px) scale(1); opacity: 0.7; }
+    50% { transform: translateY(-20px) scale(1.1); opacity: 1; }
+    100% { transform: translateY(0px) scale(1); opacity: 0.7; }
+  }
+
+  /* Style 1: Neon Party */
+  .bubble-style-1 .bubble:nth-child(1) { @apply bg-fuchsia-500 w-3 h-3 top-[5%] left-[75%]; animation-delay: 0s; }
+  .bubble-style-1 .bubble:nth-child(2) { @apply bg-cyan-400 w-4 h-4 top-[70%] left-[5%]; animation-delay: 1.5s; }
+  .bubble-style-1 .bubble:nth-child(3) { @apply bg-lime-400 w-2 h-2 top-[85%] left-[80%]; animation-delay: 3s; }
+  .bubble-style-1 .bubble:nth-child(4) { @apply bg-rose-500 w-3 h-3 top-[30%] left-[10%]; animation-delay: 4.5s; }
+  .bubble-style-1 .bubble:nth-child(5) { @apply bg-orange-400 w-2 h-2 top-[5%] left-[20%]; animation-delay: 2s; }
+
+  /* Style 2: Ocean Deep */
+  .bubble-style-2 .bubble:nth-child(1) { @apply bg-blue-500 w-4 h-4 top-[5%] left-[15%]; animation-delay: 0s; }
+  .bubble-style-2 .bubble:nth-child(2) { @apply bg-teal-400 w-3 h-3 top-[65%] left-[80%]; animation-delay: 1s; }
+  .bubble-style-2 .bubble:nth-child(3) { @apply bg-sky-300 w-2 h-2 top-[90%] left-[15%]; animation-delay: 2s; }
+  .bubble-style-2 .bubble:nth-child(4) { @apply bg-indigo-400 w-4 h-4 top-[30%] left-[70%]; animation-delay: 3s; }
+  .bubble-style-2 .bubble:nth-child(5) { @apply bg-cyan-200 w-2 h-2 top-[50%] left-[5%]; animation-delay: 4s; }
+
+  /* Style 3: Sunset Glow */
+  .bubble-style-3 .bubble:nth-child(1) { @apply bg-red-500 w-3 h-3 top-[85%] left-[75%]; animation-delay: 0s; }
+  .bubble-style-3 .bubble:nth-child(2) { @apply bg-orange-500 w-4 h-4 top-[15%] left-[5%]; animation-delay: 0.5s; }
+  .bubble-style-3 .bubble:nth-child(3) { @apply bg-amber-400 w-2 h-2 top-[50%] left-[80%]; animation-delay: 1s; }
+  .bubble-style-3 .bubble:nth-child(4) { @apply bg-yellow-300 w-3 h-3 top-[85%] left-[20%]; animation-delay: 1.5s; }
+  .bubble-style-3 .bubble:nth-child(5) { @apply bg-pink-400 w-2 h-2 top-[5%] left-[60%]; animation-delay: 2s; }
+
+  /* Style 4: Forest Whisper */
+  .bubble-style-4 .bubble:nth-child(1) { @apply bg-green-600 w-3 h-3 top-[20%] left-[5%]; animation-delay: 0s; }
+  .bubble-style-4 .bubble:nth-child(2) { @apply bg-emerald-500 w-4 h-4 top-[75%] left-[75%]; animation-delay: 1.2s; }
+  .bubble-style-4 .bubble:nth-child(3) { @apply bg-lime-500 w-2 h-2 top-[90%] left-[5%]; animation-delay: 2.4s; }
+  .bubble-style-4 .bubble:nth-child(4) { @apply bg-teal-400 w-3 h-3 top-[5%] left-[75%]; animation-delay: 3.6s; }
+  .bubble-style-4 .bubble:nth-child(5) { @apply bg-green-300 w-2 h-2 top-[50%] left-[40%]; animation-delay: 4.8s; }
+
+  /* Style 5: Fiery */
+  .bubble-style-fire {
+      filter: blur(0.5px);
+  }
+  .bubble-style-fire .bubble {
+      border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+      animation: flame-float 3s ease-in-out infinite, flame-flicker 1.5s ease-in-out infinite;
+  }
+  .bubble-style-fire .bubble:nth-child(1) { @apply bg-red-600 w-4 h-5 top-[60%] left-[10%]; animation-delay: 0s; }
+  .bubble-style-fire .bubble:nth-child(2) { @apply bg-orange-500 w-3 h-4 top-[15%] left-[80%]; animation-delay: 0.5s; }
+  .bubble-style-fire .bubble:nth-child(3) { @apply bg-yellow-400 w-2 h-3 top-[75%] left-[60%]; animation-delay: 1s; }
+  .bubble-style-fire .bubble:nth-child(4) { @apply bg-orange-400 w-4 h-4 top-[80%] left-[25%]; animation-delay: 1.5s; }
+  .bubble-style-fire .bubble:nth-child(5) { @apply bg-red-500 w-3 h-3 top-[5%] left-[40%]; animation-delay: 2s; }
+
+  @keyframes flame-float {
+    0% { transform: translateY(0) rotate(-5deg); opacity: 0.8; }
+    50% { transform: translateY(-15px) rotate(5deg); opacity: 1; }
+    100% { transform: translateY(0) rotate(-5deg); opacity: 0.8; }
+  }
+  @keyframes flame-flicker {
+    0% { transform: scale(1); box-shadow: 0 0 10px #fef08a, 0 0 20px #f97316; }
+    50% { transform: scale(1.1); box-shadow: 0 0 15px #fef08a, 0 0 30px #f97316; }
+    100% { transform: scale(1); box-shadow: 0 0 10px #fef08a, 0 0 20px #f97316; }
+  }
+
+  /* NEW: Premium Gold Bubble */
+  .bubble-style-premium .bubble {
+    animation-name: float, premium-flicker;
+    animation-duration: 4s, 2s;
+    animation-timing-function: ease-in-out, ease-in-out;
+    animation-iteration-count: infinite, infinite;
+  }
+  .bubble-style-premium .bubble:nth-child(1) { @apply bg-amber-400 w-3 h-3 top-[10%] left-[80%]; animation-delay: 0s; }
+  .bubble-style-premium .bubble:nth-child(2) { @apply bg-yellow-500 w-4 h-4 top-[75%] left-[10%]; animation-delay: 1s; }
+  .bubble-style-premium .bubble:nth-child(3) { @apply bg-amber-300 w-2 h-2 top-[90%] left-[90%]; animation-delay: 2s; }
+  .bubble-style-premium .bubble:nth-child(4) { @apply bg-yellow-400 w-3 h-3 top-[35%] left-[20%]; animation-delay: 3s; }
+  .bubble-style-premium .bubble:nth-child(5) { @apply bg-amber-200 w-2 h-2 top-[5%] left-[30%]; animation-delay: 1.5s; }
+
+  @keyframes premium-flicker {
+    0%, 100% { box-shadow: 0 0 5px #fcd34d, 0 0 10px #f59e0b; }
+    50% { box-shadow: 0 0 10px #fcd34d, 0 0 20px #f59e0b; }
+  }
+}
+
+/* Avatar Frame Styles */
+@layer components {
+  .avatar-frame-wrapper {
+    position: relative;
+  }
+  .avatar-frame-angel::before, .avatar-frame-angel::after,
+  .avatar-frame-devil::before, .avatar-frame-devil::after,
+  .avatar-frame-snake::before,
+  .avatar-frame-tech::before,
+  .avatar-frame-premium::before {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .avatar-frame-angel::before, .avatar-frame-angel::after,
+  .avatar-frame-devil::before, .avatar-frame-devil::after {
+    top: 50%;
+    width: 50%;
+    height: 50%;
+    background-size: contain;
+    background-repeat: no-repeat;
+    transform: translateY(-50%);
+    transition: transform 0.3s ease-in-out;
+  }
+  .avatar-frame-wrapper:hover .avatar-frame-angel::before,
+  .avatar-frame-wrapper:hover .avatar-frame-angel::after,
+  .avatar-frame-wrapper:hover .avatar-frame-devil::before,
+  .avatar-frame-wrapper:hover .avatar-frame-devil::after {
+     transform: translateY(-50%) scale(1.1);
+  }
+
+  @keyframes wing-flap {
+    0%, 100% { transform: translateY(-50%) rotateZ(-5deg) scale(1.0); }
+    50% { transform: translateY(-50%) rotateZ(5deg) scale(1.05); }
+  }
+
+  /* Angel Wings */
+  .avatar-frame-angel::before {
+    left: 0;
+    transform-origin: bottom right;
+    animation: wing-flap 2.5s ease-in-out infinite;
+    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3cfilter id='angel-glow' x='-50%25' y='-50%25' width='200%25' height='200%25'%3e%3cfeGaussianBlur stdDeviation='3' result='coloredBlur'/%3e%3cfeMerge%3e%3cfeMergeNode in='coloredBlur'/%3e%3cfeMergeNode in='SourceGraphic'/%3e%3c/feMerge%3e%3c/filter%3e%3c/defs%3e%3cpath d='M95,50 C70,20 50,30 20,0 C40,50 40,70 95,50 Z' fill='rgba(255,255,255,0.9)' filter='url(%23angel-glow)'/%3e%3c/svg%3e");
+  }
+  .avatar-frame-angel::after {
+    right: 0;
+    transform: translateY(-50%) scaleX(-1);
+    transform-origin: bottom left;
+    animation: wing-flap 2.5s ease-in-out infinite reverse;
+    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3cfilter id='angel-glow' x='-50%25' y='-50%25' width='200%25' height='200%25'%3e%3cfeGaussianBlur stdDeviation='3' result='coloredBlur'/%3e%3cfeMerge%3e%3cfeMergeNode in='coloredBlur'/%3e%3cfeMergeNode in='SourceGraphic'/%3e%3c/feMerge%3e%3c/filter%3e%3c/defs%3e%3cpath d='M95,50 C70,20 50,30 20,0 C40,50 40,70 95,50 Z' fill='rgba(255,255,255,0.9)' filter='url(%23angel-glow)'/%3e%3c/svg%3e");
+  }
+
+  /* Devil Wings */
+  .avatar-frame-devil::before {
+    left: 0;
+    top: 45%;
+    transform-origin: top right;
+    animation: wing-flap 3s ease-in-out infinite;
+    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3clinearGradient id='devil-grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3e%3cstop offset='0%25' style='stop-color:%23dc2626;stop-opacity:1' /%3e%3cstop offset='100%25' style='stop-color:%234c1d95;stop-opacity:1' /%3e%3c/linearGradient%3e%3cfilter id='devil-glow'%3e%3cfeGaussianBlur stdDeviation='2'/%3e%3c/filter%3e%3c/defs%3e%3cpath d='M5,50 C30,80 50,70 80,100 C60,50 60,30 5,50 Z' fill='url(%23devil-grad)' filter='url(%23devil-glow)'/%3e%3c/svg%3e");
+  }
+  .avatar-frame-devil::after {
+    right: 0;
+    top: 45%;
+    transform: translateY(-50%) scaleX(-1);
+    transform-origin: top left;
+    animation: wing-flap 3s ease-in-out infinite reverse;
+    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3clinearGradient id='devil-grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3e%3cstop offset='0%25' style='stop-color:%23dc2626;stop-opacity:1' /%3e%3cstop offset='100%25' style='stop-color:%234c1d95;stop-opacity:1' /%3e%3c/linearGradient%3e%3cfilter id='devil-glow'%3e%3cfeGaussianBlur stdDeviation='2'/%3e%3c/filter%3e%3c/defs%3e%3cpath d='M5,50 C30,80 50,70 80,100 C60,50 60,30 5,50 Z' fill='url(%23devil-grad)' filter='url(%23devil-glow)'/%3e%3c/svg%3e");
+  }
+
+  /* Snake & Tech Frames */
+  @keyframes tech-orbit { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  .avatar-frame-snake::before {
+    inset: -4px;
+    background-size: 100% 100%;
+    animation: tech-orbit 8s linear infinite;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-10 -10 120 120'%3E%3Cpath d='M50,0 A50,50 0 1,1 49.9,0' stroke='%234ade80' stroke-width='6' stroke-dasharray='150 164' fill='none'/%3E%3C/svg%3E");
+  }
+  .avatar-frame-tech::before {
+    inset: -6px;
+    background-size: 100% 100%;
+    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3cfilter id='tech-glow'%3e%3cfeGaussianBlur in='SourceGraphic' stdDeviation='2' /%3e%3c/filter%3e%3c/defs%3e%3ccircle cx='60' cy='60' r='55' stroke='%230ea5e9' stroke-width='4' stroke-dasharray='15 25' fill='none' filter='url(%23tech-glow)'%3e%3canimateTransform attributeName='transform' type='rotate' from='0 60 60' to='360 60 60' dur='10s' repeatCount='indefinite' /%3e%3c/circle%3e%3ccircle cx='60' cy='60' r='50' stroke='%2334d399' stroke-width='2' stroke-dasharray='5 15' fill='none'%3e%3canimateTransform attributeName='transform' type='rotate' from='360 60 60' to='0 60 60' dur='15s' repeatCount='indefinite' /%3e%3c/circle%3e%3c/svg%3e");
+  }
+
+  /* Premium Gold Avatar Frame */
+  .avatar-frame-premium::before {
+    inset: -5px;
+    border-radius: 9999px;
+    border: 2px solid;
+    border-color: #f59e0b;
+    animation: premium-glow 2s ease-in-out infinite alternate;
+  }
+
+  @keyframes premium-glow {
+    from {
+      box-shadow: 0 0 2px #f59e0b, 0 0 4px #f59e0b, 0 0 6px #d97706;
+    }
+    to {
+      box-shadow: 0 0 4px #f59e0b, 0 0 8px #d97706, 0 0 12px #b45309;
+    }
+  }
+}
+
+/* NEW: Animated DM Input Border */
+@layer components {
+  .dm-input-glow {
+    position: relative;
+    padding: 2px; /* Border width */
+    border-radius: 9999px; /* rounded-full */
+    background: linear-gradient(90deg, #10b981, #8b5cf6, #ec4899);
+    animation: dm-glow-anim 4s linear infinite;
+    background-size: 200% 200%;
+  }
+
+  @keyframes dm-glow-anim {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+}
+
+.event-room-bg {
+    background-image:
+        radial-gradient(at 27% 37%, hsla(215,98%,61%,0.4) 0px, transparent 50%),
+        radial-gradient(at 97% 21%, hsla(125,98%,72%,0.4) 0px, transparent 50%),
+        radial-gradient(at 52% 99%, hsla(355,98%,76%,0.4) 0px, transparent 50%),
+        radial-gradient(at 10% 29%, hsla(256,96%,68%,0.4) 0px, transparent 50%),
+        radial-gradient(at 97% 96%, hsla(38,98%,70%,0.4) 0px, transparent 50%),
+        radial-gradient(at 33% 50%, hsla(222,97%,71%,0.4) 0px, transparent 50%),
+        radial-gradient(at 79% 53%, hsla(343,98%,74%,0.4) 0px, transparent 50%);
+    background-size: 100% 100%;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+@keyframes like-pop {
+  0% { opacity: 0; transform: scale(0.5); }
+  30% { opacity: 0.9; transform: scale(1.2); }
+  60% { opacity: 0.9; transform: scale(1.0); }
+  100% { opacity: 0; transform: scale(1.0); }
+}
+.animate-like-pop {
+  animation: like-pop 0.6s ease-in-out forwards;
+}
+
+@layer utilities {
+  .rooms-page-bg {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='450' height='450'%3e%3ctext x='50%25' y='50%25' font-family='Arial Black, sans-serif' font-size='50' font-style='italic' font-weight='900' fill='hsl(var(--foreground))' fill-opacity='0.02' dominant-baseline='middle' text-anchor='middle' transform='rotate(-20 225 225)'%3eHiweWalk%3c/text%3e%3c/svg%3e");
+    background-size: 450px 450px;
+    background-repeat: repeat;
+  }
 }
