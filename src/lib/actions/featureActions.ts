@@ -21,12 +21,7 @@ export async function getFeatureFlags(): Promise<FeatureFlags> {
     // Varsayılan bayraklar (eğer doküman yoksa)
     return {
         quizGameEnabled: true,
-        postFeedEnabled: true,
         contentModerationEnabled: true,
-        botNewUserOnboardEnabled: true,
-        botAutoPostEnabled: true,
-        botAutoInteractEnabled: true,
-        botAutoRoomInteractEnabled: true,
     };
 }
 

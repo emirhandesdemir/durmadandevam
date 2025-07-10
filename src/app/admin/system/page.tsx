@@ -14,14 +14,17 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Settings, Loader2, UserX, Database, Signal } from "lucide-react";
+import { Settings, Loader2, Gamepad2, UserX, Database, Signal } from "lucide-react";
 import { GameSettings as GameSettingsType } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 
 // Form validasyon şeması
 const settingsSchema = z.object({
-  dailyDiamondLimit: z.coerce.number().min(0, "Limit 0'dan küçük olamaz."),
+  gameIntervalMinutes: z.coerce.number().min(1, "Aralık en az 1 dakika olmalıdır."),
+  questionTimerSeconds: z.coerce.number().min(5, "Süre en az 5 saniye olmalıdır."),
+  rewardAmount: z.coerce.number().min(1, "Ödül en az 1 olabilir."),
+  cooldownSeconds: z.coerce.number().min(10, "Bekleme süresi en az 10 saniye olmalıdır."),
   afkTimeoutMinutes: z.coerce.number().min(1, "AFK süresi en az 1 dakika olmalıdır."),
   imageUploadQuality: z.coerce.number().min(0.1, "Kalite en az 0.1 olmalı").max(1, "Kalite en fazla 1 olabilir"),
   audioBitrate: z.coerce.number().min(16, "Bit hızı en az 16 olmalı").max(128, "Bit hızı en fazla 128 olabilir"),
@@ -37,7 +40,10 @@ export default function SystemSettingsPage() {
     const form = useForm<z.infer<typeof settingsSchema>>({
         resolver: zodResolver(settingsSchema),
         defaultValues: {
-            dailyDiamondLimit: 50,
+            gameIntervalMinutes: 5,
+            questionTimerSeconds: 20,
+            rewardAmount: 10,
+            cooldownSeconds: 30,
             afkTimeoutMinutes: 8,
             imageUploadQuality: 0.92,
             audioBitrate: 64,
@@ -50,8 +56,17 @@ export default function SystemSettingsPage() {
         const settingsRef = doc(db, 'config', 'gameSettings');
         const unsubscribe = onSnapshot(settingsRef, (docSnap) => {
             if (docSnap.exists()) {
-                const settings = docSnap.data() as GameSettingsType;
-                form.reset(settings); // Formu gelen veriyle güncelle
+                const settings = docSnap.data() as Partial<GameSettingsType>;
+                form.reset({
+                    gameIntervalMinutes: settings.gameIntervalMinutes || 5,
+                    questionTimerSeconds: settings.questionTimerSeconds || 20,
+                    rewardAmount: settings.rewardAmount || 10,
+                    cooldownSeconds: settings.cooldownSeconds || 30,
+                    afkTimeoutMinutes: settings.afkTimeoutMinutes || 8,
+                    imageUploadQuality: settings.imageUploadQuality || 0.92,
+                    audioBitrate: settings.audioBitrate || 64,
+                    videoBitrate: settings.videoBitrate || 1000,
+                });
             }
             setLoading(false);
         });
@@ -98,6 +113,39 @@ export default function SystemSettingsPage() {
         <form onSubmit={form.handleSubmit(onSubmit)}>
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mt-8">
                 <div className="space-y-8">
+                     <Card>
+                        <CardHeader>
+                            <div className="flex items-center gap-3">
+                                <Gamepad2 className="h-6 w-6 text-muted-foreground" />
+                                <CardTitle>Quiz Oyunu Ayarları</CardTitle>
+                            </div>
+                            <CardDescription>
+                                Oda içi quiz oyununun çalışma şeklini ve ödüllerini buradan yönetin.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            {loading ? (
+                                <div className="space-y-6">
+                                    <Skeleton className="h-16 w-full" /><Skeleton className="h-16 w-full" />
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <FormField control={form.control} name="gameIntervalMinutes" render={({ field }) => (
+                                        <FormItem><FormLabel>Oyun Aralığı (Dakika)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                    <FormField control={form.control} name="questionTimerSeconds" render={({ field }) => (
+                                        <FormItem><FormLabel>Soru Süresi (Saniye)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                    <FormField control={form.control} name="rewardAmount" render={({ field }) => (
+                                        <FormItem><FormLabel>Doğru Cevap Ödülü (Elmas)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                    <FormField control={form.control} name="cooldownSeconds" render={({ field }) => (
+                                        <FormItem className="md:col-span-2"><FormLabel>Oyun Sonrası Bekleme (Saniye)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
                     <Card>
                         <CardHeader>
                             <div className="flex items-center gap-3">

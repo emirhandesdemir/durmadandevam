@@ -9,13 +9,13 @@ import type { FeatureFlags } from "@/lib/types";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { SlidersHorizontal, Loader2, Newspaper, FileLock2 } from "lucide-react";
+import { SlidersHorizontal, Loader2, Gamepad2, FileLock2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
  * Yönetim Paneli - Özellik Yönetimi Sayfası
  * 
- * Bu sayfa, yöneticinin uygulamadaki ana modülleri (gönderi akışı vb.)
+ * Bu sayfa, yöneticinin uygulamadaki ana modülleri (gönderi akışı, quiz oyunu vb.)
  * gerçek zamanlı olarak açıp kapatmasına olanak tanır.
  */
 export default function FeatureManagementPage() {
@@ -92,6 +92,34 @@ export default function FeatureManagementPage() {
             </div>
 
             <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 {/* Quiz Oyunu Kartı */}
+                 <Card>
+                    <CardHeader>
+                        <div className="flex items-center gap-3">
+                             <Gamepad2 className="h-6 w-6 text-primary" />
+                            <CardTitle>Oyunlar</CardTitle>
+                        </div>
+                        <CardDescription>Oda içi oyun ve etkileşim modülleri.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                            <div className="space-y-0.5">
+                                <Label htmlFor="quiz-game" className="text-base">
+                                    Quiz Oyunu
+                                </Label>
+                                <p className="text-xs text-muted-foreground">
+                                    Odaların içinde periyodik olarak quiz oyunlarını etkinleştirir.
+                                </p>
+                            </div>
+                            <Switch
+                                id="quiz-game"
+                                checked={flags?.quizGameEnabled ?? true}
+                                onCheckedChange={(value) => handleFlagChange('quizGameEnabled', value)}
+                                disabled={saving}
+                            />
+                        </div>
+                    </CardContent>
+                </Card>
                  {/* İçerik Moderasyon Kartı */}
                  <Card>
                     <CardHeader>

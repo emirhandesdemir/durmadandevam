@@ -294,6 +294,7 @@ export interface Room {
     currentTrackName?: string;
     giveaway?: Giveaway;
     activeMindWarSessionId?: string | null; // Zihin Savaşları oturum ID'si
+    nextGameTimestamp?: Timestamp;
 }
 
 export interface PlaylistTrack {
@@ -323,8 +324,32 @@ export interface VoiceParticipant {
     selectedAvatarFrame?: string;
 }
 
+export interface QuizQuestion {
+    id?: string;
+    question: string;
+    options: string[];
+    correctOptionIndex: number;
+}
+
+export interface ActiveGame {
+    id: string;
+    questions: QuizQuestion[];
+    currentQuestionIndex: number;
+    scores: { [uid: string]: number };
+    answeredBy: { [questionIndex: number]: string[] };
+    startTime: Timestamp;
+    questionStartTime: Timestamp;
+    status: 'active' | 'finished';
+    winnerId?: string | null;
+    finishedAt?: Timestamp;
+}
+
 export interface GameSettings {
     dailyDiamondLimit: number;
+    gameIntervalMinutes: number;
+    questionTimerSeconds: number;
+    rewardAmount: number;
+    cooldownSeconds: number;
     afkTimeoutMinutes: number;
     imageUploadQuality: number;
     audioBitrate: number;
@@ -333,7 +358,7 @@ export interface GameSettings {
 
 
 export interface FeatureFlags {
-    postFeedEnabled: boolean;
+    quizGameEnabled: boolean;
     contentModerationEnabled: boolean;
 }
 
