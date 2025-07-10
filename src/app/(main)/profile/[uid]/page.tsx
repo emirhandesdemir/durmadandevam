@@ -10,11 +10,6 @@ import ProfileViewLogger from '@/components/profile/ProfileViewLogger';
 import { Separator } from '@/components/ui/separator';
 import { deepSerialize } from '@/lib/server-utils';
 import { Grid3x3, FileText, Bookmark } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import SavedPostsGrid from '@/components/profile/SavedPostsGrid';
-import { auth } from '@/lib/firebase'; // We need a way to check current user server-side if possible, though it's tricky.
-import { headers } from 'next/headers';
-
 
 interface UserProfilePageProps {
   params: { uid: string };
@@ -47,11 +42,6 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
   // istemci bileşenlerine güvenle aktarılabilen düz JSON formatına çevir.
   const serializableProfileUser = deepSerialize(profileUserData);
   
-  // A simple way to check for the current user's session on the server.
-  // This is a placeholder as proper server-side session management can be complex.
-  // For this component, we'll pass the check down to the client component.
-  const isOwnProfile = false; // This will be determined on the client
-
   return (
     <>
       {/* Bu görünmez bileşen, profil görüntüleme olayını kaydeder. */}
@@ -63,31 +53,10 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
         
         <Separator className="my-4" />
 
-        {/* Sekmeli Gönderiler Bölümü */}
-        <Tabs defaultValue="posts" className="w-full">
-             <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="posts">
-                    <Grid3x3 className="h-5 w-5 mr-2" />
-                    Gönderiler
-                </TabsTrigger>
-                <TabsTrigger value="texts">
-                    <FileText className="h-5 w-5 mr-2" />
-                    Yazılar
-                </TabsTrigger>
-            </TabsList>
-            <TabsContent value="posts" className="mt-4">
-                <ProfilePosts 
-                    userId={uid} 
-                    postType="image"
-                />
-            </TabsContent>
-            <TabsContent value="texts" className="mt-4">
-                 <ProfilePosts 
-                    userId={uid} 
-                    postType="text"
-                />
-            </TabsContent>
-        </Tabs>
+        {/* Tüm gönderiler için tek bir grid */}
+        <div className="w-full border-t pt-4">
+            <ProfilePosts userId={uid} />
+        </div>
       </div>
     </>
   );

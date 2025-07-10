@@ -18,10 +18,9 @@ import { Timestamp } from 'firebase/firestore';
 
 interface ProfilePostsProps {
   userId: string;
-  postType: 'image' | 'text';
 }
 
-export default function ProfilePosts({ userId, postType }: ProfilePostsProps) {
+export default function ProfilePosts({ userId }: ProfilePostsProps) {
     const { userData: currentUserData, loading: authLoading } = useAuth();
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
@@ -58,8 +57,6 @@ export default function ProfilePosts({ userId, postType }: ProfilePostsProps) {
 
         setLoading(true);
         const postsRef = collection(db, 'posts');
-        // A simplified query to fetch all posts by the user, ordered by date.
-        // This avoids complex indexes and potential Firestore errors.
         const q = query(postsRef, where('uid', '==', userId), orderBy('createdAt', 'desc'));
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -74,18 +71,6 @@ export default function ProfilePosts({ userId, postType }: ProfilePostsProps) {
         return () => unsubscribe();
     }, [userId, canViewContent, authLoading, amIBlockedByThisUser, profileUser]);
 
-    const filteredPosts = useMemo(() => {
-        return posts.filter(post => {
-            const hasImage = !!post.imageUrl;
-            const hasVideo = !!post.videoUrl;
-
-            if (postType === 'image') return hasImage;
-            if (postType === 'text') return !hasImage && !hasVideo;
-            
-            return false;
-        });
-    }, [posts, postType]);
-    
     if (authLoading || loading) {
         return <div className="flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin" /></div>;
     }
@@ -109,93 +94,66 @@ export default function ProfilePosts({ userId, postType }: ProfilePostsProps) {
         );
     }
   
-    if (filteredPosts.length === 0) {
+    if (posts.length === 0) {
         return (
              <div className="text-center py-10 mt-4 text-muted-foreground">
-                {postType === 'image' ? <CameraOff className="h-12 w-12 mx-auto mb-4" /> : <FileTextIcon className="h-12 w-12 mx-auto mb-4" />}
-                <h2 className="text-lg font-semibold">{postType === 'image' ? 'Henüz Resimli Gönderi Yok' : 'Henüz Metin Paylaşımı Yok'}</h2>
+                <CameraOff className="h-12 w-12 mx-auto mb-4" />
+                <h2 className="text-lg font-semibold">Henüz Hiç Gönderi Yok</h2>
             </div>
         )
     }
 
-    if (postType === 'image') {
-        return (
-            <>
-                <div className="grid grid-cols-3 gap-1">
-                    {filteredPosts.map((post) => (
-                        <button 
-                            key={post.id} 
-                            className="group relative aspect-square block bg-muted/50 focus:outline-none"
-                            onClick={() => setSelectedPost(post)}
-                        >
-                            <Image
+    return (
+        <>
+            <div className="grid grid-cols-3 gap-1">
+                {posts.map((post) => (
+                    <button 
+                        key={post.id} 
+                        className="group relative aspect-square block bg-muted/50 focus:outline-none"
+                        onClick={() => setSelectedPost(post)}
+                    >
+                        {post.imageUrl ? (
+                           <Image
                                 src={post.imageUrl!}
                                 alt="Kullanıcı gönderisi"
                                 fill
                                 className="object-cover"
                                 onContextMenu={(e) => e.preventDefault()}
                             />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center text-white opacity-0 group-hover:opacity-100">
-                            <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-1">
-                                    <Heart className="h-5 w-5 fill-white"/>
-                                    <span className="font-bold text-sm">{post.likeCount}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                    <MessageCircle className="h-5 w-5 fill-white"/>
-                                    <span className="font-bold text-sm">{post.commentCount}</span>
-                                </div>
+                        ) : post.videoUrl ? (
+                            <div className="w-full h-full flex items-center justify-center bg-black">
+                                <Video className="h-12 w-12 text-white/50"/>
+                                <video src={post.videoUrl} className="absolute inset-0 w-full h-full object-cover -z-10" muted/>
                             </div>
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center p-2">
+                                <FileTextIcon className="h-6 w-6 text-muted-foreground" />
                             </div>
-                        </button>
-                    ))}
-                </div>
-                 {selectedPost && (
-                    <PostViewerDialog 
-                        post={selectedPost} 
-                        open={!!selectedPost} 
-                        onOpenChange={(open) => {
-                            if (!open) setSelectedPost(null)
-                        }}
-                    />
-                )}
-            </>
-        );
-    }
-
-    if (postType === 'text') {
-        return (
-             <>
-                <div className="space-y-3">
-                    {filteredPosts.map((post) => (
-                         <button 
-                            key={post.id} 
-                            className="w-full text-left"
-                            onClick={() => setSelectedPost(post)}
-                        >
-                            <Card className="p-4 hover:bg-muted/50 transition-colors">
-                                <p className="line-clamp-4 text-sm whitespace-pre-wrap">{post.text}</p>
-                                <div className="flex items-center gap-4 text-xs text-muted-foreground mt-3 pt-3 border-t">
-                                     <span>{formatDistanceToNow(toDate(post.createdAt as Timestamp), { addSuffix: true, locale: tr })}</span>
-                                    <div className="flex items-center gap-1"><Heart className="h-4 w-4"/> {post.likeCount}</div>
-                                    <div className="flex items-center gap-1"><MessageCircle className="h-4 w-4"/> {post.commentCount}</div>
-                                </div>
-                            </Card>
-                        </button>
-                    ))}
-                </div>
-                 {selectedPost && (
-                    <PostViewerDialog 
-                        post={selectedPost} 
-                        open={!!selectedPost} 
-                        onOpenChange={(open) => {
-                            if (!open) setSelectedPost(null)
-                        }}
-                    />
-                )}
-            </>
-        )
-    }
-
-    return null;
+                        )}
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center text-white opacity-0 group-hover:opacity-100">
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-1">
+                                <Heart className="h-5 w-5 fill-white"/>
+                                <span className="font-bold text-sm">{post.likeCount}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <MessageCircle className="h-5 w-5 fill-white"/>
+                                <span className="font-bold text-sm">{post.commentCount}</span>
+                            </div>
+                        </div>
+                        </div>
+                    </button>
+                ))}
+            </div>
+             {selectedPost && (
+                <PostViewerDialog 
+                    post={selectedPost} 
+                    open={!!selectedPost} 
+                    onOpenChange={(open) => {
+                        if (!open) setSelectedPost(null)
+                    }}
+                />
+            )}
+        </>
+    );
 }

@@ -15,7 +15,7 @@ import {
     addDoc,
     collection
 } from "firebase/firestore";
-import { ref, deleteObject, uploadBytesResumable } from "firebase/storage";
+import { ref, deleteObject } from "firebase/storage";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
 import { findUserByUsername } from "./userActions";
@@ -183,7 +183,7 @@ export async function updatePost(postId: string, updates: { text?: string; comme
 
 export async function likePost(
     postId: string,
-    currentUser: { uid: string, displayName: string | null, photoURL: string | null, selectedAvatarFrame?: string }
+    currentUser: { uid: string, displayName: string | null, photoURL: string | null, userAvatarFrame?: string }
 ) {
     const postRef = doc(db, "posts", postId);
     
@@ -210,7 +210,7 @@ export async function likePost(
                     senderId: currentUser.uid,
                     senderUsername: currentUser.displayName || "Biri",
                     senderAvatar: currentUser.photoURL,
-                    senderAvatarFrame: currentUser.selectedAvatarFrame,
+                    senderAvatarFrame: currentUser.userAvatarFrame,
                     type: 'like',
                     postId: postId,
                     postImage: postData.imageUrl || null,
