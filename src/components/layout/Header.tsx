@@ -3,16 +3,14 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Search, Send, Bell } from "lucide-react";
+import { Send, Bell } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { auth } from "@/lib/firebase";
 
-interface HeaderProps {
-}
-
-export default function Header({}: HeaderProps) {
+export default function Header() {
     const { themeSettings, userData, totalUnreadDms } = useAuth();
     
     const appName = themeSettings?.appName || 'HiweWalk';
