@@ -1,9 +1,10 @@
+
 // src/contexts/VoiceChatContext.tsx
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, onSnapshot, doc, serverTimestamp, query, where, deleteDoc, addDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, serverTimestamp, query, where, deleteDoc, addDoc, getDoc, updateDoc, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Room, VoiceParticipant, PlaylistTrack } from '../types';
 import { joinVoiceChat, leaveVoice, toggleSelfMute as toggleMuteAction, toggleScreenShare as toggleScreenShareAction, toggleVideo as toggleVideoAction, updateLastActive } from '@/lib/actions/voiceActions';
@@ -160,7 +161,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             
             setLocalStream(stream);
             
-            const result = await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL }, { initialMuteState: options?.muted ?? false });
+            const result = await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: user.displayName || 'Biri', photoURL: user.photoURL }, { initialMuteState: options?.muted ?? false });
             if (!result.success) {
                 throw new Error(result.error || 'Sesli sohbete katılamadınız.');
             }
