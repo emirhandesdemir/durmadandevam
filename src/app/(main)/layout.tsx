@@ -3,6 +3,9 @@
 
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/Header";
+import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
+import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
+import ActiveCallBar from "@/components/voice/ActiveCallBar";
 import { useState, useEffect } from 'react';
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -114,7 +117,7 @@ export default function MainAppLayout({
   const isHomePage = pathname === '/home';
 
   return (
-    <>
+    <VoiceChatProvider>
       <PremiumWelcomeManager />
       <div className="relative flex h-screen w-full flex-col bg-background overflow-hidden">
         <PwaInstallBar />
@@ -150,7 +153,9 @@ export default function MainAppLayout({
         />
         <BottomNav onExploreClick={() => setIsExploreMenuOpen(prev => !prev)} isExploreMenuOpen={isExploreMenuOpen} />
         <UserSearchDialog isOpen={isSearchOpen} onOpenChange={setIsSearchOpen} />
+        <VoiceAudioPlayer />
+        <ActiveCallBar />
       </div>
-    </>
+    </VoiceChatProvider>
   );
 }

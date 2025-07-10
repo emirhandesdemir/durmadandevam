@@ -1,7 +1,7 @@
 // src/app/(main)/rooms/[id]/page.tsx
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, onSnapshot, collection, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -12,7 +12,6 @@ import { Loader2 } from 'lucide-react';
 import TextChat from '@/components/chat/text-chat';
 import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
 import RoomHeader from '@/components/rooms/RoomHeader';
-import { AnimatePresence, motion } from 'framer-motion';
 
 import type { Room, Message, Giveaway, ActiveGameSession, MindWarSession } from '@/lib/types';
 import RoomFooter from '@/components/rooms/RoomFooter';
@@ -133,28 +132,20 @@ export default function RoomPage() {
                     onToggleCollapse={() => setIsSpeakerLayoutCollapsed(p => !p)}
                 />
                 
-                <AnimatePresence>
+                <>
                     {!isSpeakerLayoutCollapsed && (
-                         <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                         <div
                             className="overflow-hidden"
                         >
                             <SpeakerLayout room={room} />
-                        </motion.div>
+                        </div>
                     )}
-                </AnimatePresence>
+                </>
 
                 <main ref={chatScrollRef} className="flex-1 flex flex-col overflow-y-auto">
                     {gameContent && (
                         <div className="p-4">
-                            <AnimatePresence mode="wait">
-                                <motion.div key={activeGameSession?.id || activeMindWarSession?.id || 'info'} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                                    {gameContent}
-                                </motion.div>
-                            </AnimatePresence>
+                            {gameContent}
                         </div>
                     )}
                     <RoomInfoCards room={room} isOwner={isHost} />
