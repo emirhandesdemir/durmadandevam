@@ -64,6 +64,8 @@ export async function createPost(postData: {
     videoUrl?: string;
     editedWithAI?: boolean;
     language: string;
+    commentsDisabled?: boolean;
+    likesHidden?: boolean;
 }) {
     const newPostRef = doc(collection(db, 'posts'));
     const userRef = doc(db, 'users', postData.uid);
@@ -177,6 +179,7 @@ export async function updatePost(postId: string, updates: { text?: string; comme
         const postData = postSnap.data();
         revalidatePath('/home');
         revalidatePath(`/profile/${postData.uid}`);
+        revalidatePath('/surf');
     }
 }
 
@@ -343,4 +346,13 @@ export async function retweetPost(
 
     revalidatePath('/home');
     revalidatePath(`/profile/${retweeter.uid}`);
+}
+
+export async function updatePostMusic(postId: string, musicUrl: string | null) {
+  if (!postId) throw new Error("Post ID is required.");
+  const postRef = doc(db, "posts", postId);
+  await updateDoc(postRef, {
+    musicUrl: musicUrl,
+  });
+  revalidatePath('/surf');
 }

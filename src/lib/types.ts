@@ -205,6 +205,7 @@ export interface Post {
     text: string;
     imageUrl?: string;
     videoUrl?: string;
+    musicUrl?: string; // New field for music
     editedWithAI?: boolean;
     createdAt: Timestamp | { seconds: number; nanoseconds: number };
     likes: string[];

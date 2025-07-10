@@ -4,12 +4,13 @@ import type { Post } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Play, Pause, Volume2, VolumeX, Bookmark, MoreHorizontal } from 'lucide-react';
+import { Heart, MessageCircle, Play, Pause, Volume2, VolumeX, Bookmark, MoreHorizontal, Music } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { likePost, toggleSavePost } from '@/lib/actions/postActions';
 import CommentSheet from '@/components/comments/CommentSheet';
 import { useToast } from '@/hooks/use-toast';
+import EditMusicDialog from './EditMusicDialog';
 
 interface SurfVideoCardProps {
   post: Post;
@@ -21,9 +22,10 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
   const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true); // Default to muted
   const [showComments, setShowComments] = useState(false);
   const [showLikeAnimation, setShowLikeAnimation] = useState(false);
+  const [isEditMusicOpen, setIsEditMusicOpen] = useState(false);
 
   const [optimisticLiked, setOptimisticLiked] = useState(post.likes?.includes(user?.uid || ''));
   const [optimisticLikeCount, setOptimisticLikeCount] = useState(post.likeCount);
@@ -42,6 +44,7 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
         videoRef.current.play().then(() => setIsPlaying(true)).catch(e => console.error("Video play failed", e));
     } else if (videoRef.current) {
         videoRef.current.pause();
+        videoRef.current.currentTime = 0; // Rewind on becoming inactive
         setIsPlaying(false);
     }
   }, [isActive]);
@@ -166,10 +169,13 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
                 <Bookmark className={cn("h-8 w-8", optimisticSaved && "fill-white text-white")} />
                 <span className="text-xs font-semibold">{optimisticSaveCount}</span>
               </Button>
-               <Button variant="ghost" className="flex-col h-auto p-0 text-white" onClick={(e) => { e.stopPropagation(); /* TODO: Implement more options */ }}>
-                <MoreHorizontal className="h-8 w-8" />
-              </Button>
-              <Button variant="ghost" className="h-auto p-0 text-white" size="icon" onClick={(e) => { e.stopPropagation(); setIsMuted(p => !p); }}>
+              {user?.uid === post.uid && (
+                <Button variant="ghost" className="flex-col h-auto p-0 text-white" onClick={(e) => { e.stopPropagation(); setIsEditMusicOpen(true); }}>
+                    <Music className="h-8 w-8" />
+                    <span className="text-xs font-semibold">Müzik</span>
+                </Button>
+              )}
+               <Button variant="ghost" className="h-auto p-0 text-white" size="icon" onClick={(e) => { e.stopPropagation(); setIsMuted(p => !p); }}>
                 {isMuted ? <VolumeX className="h-7 w-7" /> : <Volume2 className="h-7 w-7" />}
               </Button>
             </div>
@@ -177,6 +183,7 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
         </div>
       </div>
       <CommentSheet open={showComments} onOpenChange={setShowComments} post={post} />
+      <EditMusicDialog isOpen={isEditMusicOpen} onOpenChange={setIsEditMusicOpen} post={post} />
     </>
   );
 }

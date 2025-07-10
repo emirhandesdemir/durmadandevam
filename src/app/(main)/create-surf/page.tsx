@@ -10,14 +10,13 @@ import { storage } from '@/lib/firebase';
 import { createPost } from '@/lib/actions/postActions';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Clapperboard, X, Send, ChevronLeft, Music, Search, CheckCircle } from 'lucide-react';
+import { Loader2, Clapperboard, X, Send, ChevronLeft, Music, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import { Progress } from '@/components/ui/progress';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Input } from '@/components/ui/input';
 
 const royaltyFreeMusic = [
   { title: "Upbeat Funk", url: "https://cdn.pixabay.com/download/audio/2022/08/04/audio_2bbe6a8d0a.mp3" },
