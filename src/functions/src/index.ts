@@ -36,12 +36,18 @@ export const onBroadcastCreate = functions.region("us-central1").firestore
 
         const message: admin.messaging.MulticastMessage = {
             tokens: [...new Set(tokens)], // Remove duplicate tokens
-            data: {
+            notification: {
                 title: title,
                 body: body,
-                link: `https://hiwewalkbeta.netlify.app${link || '/'}`,
-                icon: "/icons/icon.svg",
             },
+            webpush: {
+                fcmOptions: {
+                    link: `https://hiwewalkbeta.netlify.app${link || '/'}`
+                },
+                notification: {
+                    icon: "/icons/icon.svg",
+                }
+            }
         };
 
         try {
@@ -71,6 +77,8 @@ export const sendPushNotification = functions.region("us-central1").firestore
             console.log(`User ${userId} has no FCM tokens.`);
             return;
         }
+
+        const tokens: string[] = userData.fcmTokens;
 
         let title = "Yeni bir bildiriminiz var!";
         let body = "Uygulamayı açarak kontrol edin.";
@@ -146,13 +154,19 @@ export const sendPushNotification = functions.region("us-central1").firestore
         }
 
         const message: admin.messaging.MulticastMessage = {
-            tokens: userData.fcmTokens,
-            data: {
-                title,
-                body,
-                link: `https://hiwewalkbeta.netlify.app${link}`,
-                icon: notificationData.senderAvatar || "/icons/icon.svg",
+            tokens: tokens,
+            notification: {
+                title: title,
+                body: body,
             },
+            webpush: {
+                fcmOptions: {
+                    link: `https://hiwewalkbeta.netlify.app${link}`
+                },
+                 notification: {
+                    icon: notificationData.senderAvatar || "/icons/icon.svg",
+                }
+            }
         };
 
         try {
