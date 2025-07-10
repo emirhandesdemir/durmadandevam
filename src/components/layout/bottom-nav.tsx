@@ -3,27 +3,16 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, MessageCircle, Plus, Compass, Search, Swords } from 'lucide-react';
+import { Home, MessageCircle, Plus, Compass, Swords } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
-import { useMemo, useState } from 'react';
-import UserSearchDialog from '../search/UserSearchDialog';
+import { useMemo } from 'react';
 
 export default function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useAuth();
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-
-  if (!user) {
-    return null;
-  }
-
-  // Hide nav on specific full-screen pages
-  if ((pathname.startsWith('/rooms/') && pathname !== '/rooms') || (pathname.startsWith('/call/'))) {
-    return null;
-  }
-
+  
   const handleSurfClick = (e: React.MouseEvent) => {
     if (pathname === '/surf') {
       e.preventDefault();
@@ -38,15 +27,27 @@ export default function BottomNav() {
       router.refresh();
     }
   };
-  
-  const navItems = useMemo(() => [
-    { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
-    { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
-    { id: 'matchmaking', href: '/matchmaking', icon: Swords, label: 'Eşleşme' },
-    { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
-    { id: 'surf', href: '/surf', icon: Compass, label: 'Surf', onClick: handleSurfClick, onDoubleClick: handleSurfDoubleClick },
-  ], [pathname, router]);
 
+  const navItems = useMemo(() => {
+    if (!user) return [];
+    return [
+        { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
+        { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
+        { id: 'matchmaking', href: '/matchmaking', icon: Swords, label: 'Eşleşme' },
+        { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
+        { id: 'surf', href: '/surf', icon: Compass, label: 'Surf', onClick: handleSurfClick, onDoubleClick: handleSurfDoubleClick },
+      ]
+  }, [user, pathname, router]);
+
+  if (!user) {
+    return null;
+  }
+
+  // Hide nav on specific full-screen pages
+  if ((pathname.startsWith('/rooms/') && pathname !== '/rooms') || (pathname.startsWith('/call/'))) {
+    return null;
+  }
+  
   return (
     <>
       <div className="fixed bottom-0 left-0 right-0 z-50 w-full border-t bg-background/95 backdrop-blur-sm">
@@ -78,7 +79,6 @@ export default function BottomNav() {
               })}
           </nav>
       </div>
-      <UserSearchDialog isOpen={isSearchOpen} onOpenChange={setIsSearchOpen} />
     </>
   );
 }
