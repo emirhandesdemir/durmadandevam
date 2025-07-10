@@ -24,7 +24,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -57,28 +56,33 @@ export default function CreateRoomForm() {
 
         setIsLoading(true);
 
+        // Optimistic UI: Redirect immediately
+        router.push('/rooms');
+        toast({
+            title: 'Oda Oluşturuluyor...',
+            description: `"${values.name}" odanız oluşturuluyor ve kısa süre içinde listede görünecektir.`,
+        });
+
         try {
-            const result = await createRoom(user.uid, { ...values, language: i18n.language }, {
+            await createRoom(user.uid, { ...values, language: i18n.language }, {
                 username: userData.username,
                 photoURL: userData.photoURL || null,
                 role: userData.role || 'user',
                 selectedAvatarFrame: userData.selectedAvatarFrame || '',
             });
-
-            if (result.success && result.roomId) {
-                toast({
-                    title: 'Oda Oluşturuldu!',
-                    description: `"${values.name}" odasına yönlendiriliyorsunuz...`,
-                });
-                router.push(`/rooms/${result.roomId}`);
-            } else {
-                 throw new Error("Oda ID'si alınamadı.");
-            }
+            // The user is already redirected, so no further action is needed on success.
         } catch (error: any) {
+            // If the background operation fails, navigate back (optional) or just show an error.
             console.error("Error creating community: ", error);
-            toast({ title: "Hata", description: `Oluşturulurken bir hata oluştu: ${error.message}`, variant: "destructive" });
+            // We show a persistent error toast so the user knows something went wrong.
+            toast({ 
+                title: "Oda Oluşturma Başarısız", 
+                description: `Odanız oluşturulurken bir hata oluştu: ${error.message}`, 
+                variant: "destructive",
+                duration: 9000
+            });
         } finally {
-            setIsLoading(false);
+            // Do not set isLoading to false, as we've already navigated away.
         }
     }
 
@@ -110,7 +114,7 @@ export default function CreateRoomForm() {
                         
                         <Button type="submit" size="lg" className="w-full rounded-full py-6 text-lg font-semibold bg-gradient-to-r from-red-500 to-blue-600 text-white shadow-lg transition-transform hover:scale-105 disabled:opacity-75" disabled={isLoading}>
                              {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-                             Oluştur (10 Elmas)
+                             Oda Oluştur
                         </Button>
                     </form>
                 </Form>
