@@ -59,7 +59,7 @@ export default function RootLayout({
   return (
     <html lang="tr" suppressHydrationWarning>
       <head>
-        <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" async></script>
+        {/* FCM için gerekli script'ler doğrudan ekleniyor. */}
       </head>
       <body
         className={cn(

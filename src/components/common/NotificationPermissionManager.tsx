@@ -6,28 +6,59 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '../ui/button';
 import { BellRing } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-
-declare global {
-  interface Window {
-    OneSignal: any;
-  }
-}
+import { messaging } from '@/lib/firebase';
+import { getToken } from 'firebase/messaging';
+import { saveFCMToken } from '@/lib/actions/userActions';
 
 /**
- * Manages all OneSignal SDK interactions: initialization, permission requests,
- * and user identification. This is the single source of truth for OneSignal.
+ * Manages all Firebase Cloud Messaging (FCM) interactions: permission requests,
+ * token generation, and saving the token to the user's profile.
  */
 export default function NotificationPermissionManager() {
   const { toast, dismiss } = useToast();
-  const { user } = useAuth(); // Get the current user from AuthContext
-  const oneSignalAppId = "51c67432-a305-43fc-a4c8-9c5d9d478d1c";
+  const { user } = useAuth();
 
-  // Handles the logic for requesting notification permissions from the user.
-  const requestPermission = useCallback(() => {
-    window.OneSignal?.Notifications.requestPermission();
-  }, []);
+  const requestPermissionAndGetToken = useCallback(async () => {
+    if (!messaging || !user) return;
 
-  // Asks the user to enable notifications via a dismissible toast.
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        console.log('Notification permission granted.');
+        
+        const currentToken = await getToken(messaging, {
+          vapidKey: 'YOUR_VAPID_KEY_FROM_FIREBASE_CONSOLE', // TODO: Replace with your actual VAPID key
+        });
+
+        if (currentToken) {
+          console.log('FCM Token:', currentToken);
+          await saveFCMToken(user.uid, currentToken);
+          toast({
+            title: 'Bildirimler Etkinleştirildi!',
+            description: 'Artık önemli güncellemeleri kaçırmayacaksınız.',
+          });
+        } else {
+          console.log('No registration token available. Request permission to generate one.');
+          throw new Error('Jeton alınamadı. Bildirim izninin verildiğinden emin olun.');
+        }
+      } else {
+        console.log('Unable to get permission to notify.');
+        toast({
+            title: 'Bildirimler Engellendi',
+            description: 'Bildirimleri etkinleştirmek için tarayıcı ayarlarınızı kontrol edebilirsiniz.',
+            variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      console.error('An error occurred while retrieving token. ', error);
+      toast({
+        title: 'Bildirim Hatası',
+        description: 'Bildirimler etkinleştirilemedi. Lütfen tarayıcı ayarlarınızı kontrol edip tekrar deneyin.',
+        variant: 'destructive',
+      });
+    }
+  }, [user, toast]);
+
   const promptForPermission = useCallback(() => {
     const { id } = toast({
       title: 'Bildirimleri Etkinleştir',
@@ -35,7 +66,7 @@ export default function NotificationPermissionManager() {
       duration: Infinity,
       action: (
         <Button onClick={() => {
-          requestPermission();
+          requestPermissionAndGetToken();
           dismiss(id);
         }}>
           <BellRing className="mr-2 h-4 w-4" />
@@ -43,54 +74,22 @@ export default function NotificationPermissionManager() {
         </Button>
       ),
     });
-  }, [toast, dismiss, requestPermission]);
+  }, [toast, dismiss, requestPermissionAndGetToken]);
 
-  // Combined effect for initializing OneSignal and handling user state
   useEffect(() => {
-    if (typeof window === 'undefined' || !window.OneSignal) return;
-
-    window.OneSignal.push(function() {
-      window.OneSignal.init({
-        appId: oneSignalAppId,
-        allowLocalhostAsSecureOrigin: true,
-      }).then(() => {
-        console.log("[OneSignal] SDK Initialized.");
-        
-        // Handle user login/logout for identification
-        if (user) {
-          console.log(`[OneSignal] Identifying user with external ID: ${user.uid}`);
-          window.OneSignal.login(user.uid);
-        } else {
-          console.log("[OneSignal] User is null, logging out from OneSignal.");
-          if (window.OneSignal.User.getPushSubscription()) {
-              window.OneSignal.logout();
-          }
+    if (typeof window === 'undefined' || !user || !messaging) return;
+    
+    // Check if permission is already granted or denied.
+    if ('Notification' in window) {
+        if (Notification.permission === 'default') {
+            promptForPermission();
+        } else if (Notification.permission === 'granted') {
+            // If already granted, ensure token is up-to-date
+            requestPermissionAndGetToken();
         }
+    }
 
-        // Check for permission after init and user identification
-        if (window.OneSignal.Notifications.permission === 'default') {
-          promptForPermission();
-        }
-      });
-
-      // Listener for notification permission changes
-      window.OneSignal.Notifications.addEventListener('permissionChange', (permission: boolean) => {
-        console.log("[OneSignal] New permission state:", permission);
-        if (permission) {
-            toast({
-                title: 'Teşekkürler!',
-                description: 'Artık önemli etkinlikler için bildirim alacaksınız.',
-            });
-        } else {
-            toast({
-                title: 'Bildirimler Engellendi',
-                description: 'Bildirimleri etkinleştirmek için tarayıcı ayarlarınızı kontrol edebilirsiniz.',
-                variant: 'destructive'
-            });
-        }
-      });
-    });
-  }, [user, oneSignalAppId, promptForPermission, toast]);
+  }, [user, promptForPermission, requestPermissionAndGetToken]);
 
   return null; // This component does not render anything
 }
