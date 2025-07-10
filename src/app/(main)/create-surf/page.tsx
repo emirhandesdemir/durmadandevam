@@ -14,9 +14,10 @@ import { Loader2, Clapperboard, X, Send, ChevronLeft, Music, CheckCircle } from 
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import { Progress } from '@/components/ui/progress';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import dynamic from 'next/dynamic';
 
 const royaltyFreeMusic = [
   { title: "Upbeat Funk", url: "https://cdn.pixabay.com/download/audio/2022/08/04/audio_2bbe6a8d0a.mp3" },
@@ -26,7 +27,7 @@ const royaltyFreeMusic = [
   { title: "Epic Adventure", url: "https://cdn.pixabay.com/download/audio/2022/10/25/audio_511b816a75.mp3" }
 ];
 
-export default function CreateSurfPage() {
+function CreateSurfPage() {
   const router = useRouter();
   const { user, userData } = useAuth();
   const { toast } = useToast();
@@ -43,10 +44,15 @@ export default function CreateSurfPage() {
   
   const ffmpegRef = useRef(new FFmpeg());
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
 
   useEffect(() => {
     const loadFfmpeg = async () => {
       const ffmpeg = ffmpegRef.current;
+      if (ffmpeg.loaded) {
+          setFfmpegLoaded(true);
+          return;
+      }
       ffmpeg.on('log', ({ message }) => {
         console.log(message);
       });
@@ -55,6 +61,7 @@ export default function CreateSurfPage() {
         coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
         wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
       });
+      setFfmpegLoaded(true);
     };
     loadFfmpeg();
   }, []);
@@ -80,6 +87,7 @@ export default function CreateSurfPage() {
   const handleShare = async () => {
     if (!user || !userData) { toast({ variant: 'destructive', description: 'Giriş yapmalısınız.' }); return; }
     if (!videoFile) { toast({ variant: 'destructive', description: 'Lütfen bir video seçin.' }); return; }
+    if (!ffmpegLoaded) { toast({ variant: 'destructive', description: 'Video işlemcisi henüz hazır değil, lütfen bir saniye bekleyin.' }); return; }
 
     setIsProcessing(true);
     let finalVideoBlob: Blob = videoFile;
@@ -194,3 +202,8 @@ export default function CreateSurfPage() {
     </div>
   );
 }
+
+// Since ffmpeg.wasm is not compatible with SSR, we disable SSR for this page.
+export default dynamic(() => Promise.resolve(CreateSurfPage), {
+  ssr: false,
+});
