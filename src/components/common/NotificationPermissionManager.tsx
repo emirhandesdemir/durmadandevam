@@ -47,33 +47,29 @@ export default function NotificationPermissionManager() {
 
   // Effect for initializing OneSignal and handling user state changes
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !window.OneSignal) return;
 
-    window.OneSignal = window.OneSignal || [];
     window.OneSignal.push(function() {
-        console.log('[OneSignal] Initializing SDK...');
-        window.OneSignal.init({
+        OneSignal.init({
           appId: oneSignalAppId,
           allowLocalhostAsSecureOrigin: true,
-          // Explicitly define the service worker path. next-pwa generates sw.js in public root.
           serviceWorkerPath: 'sw.js',
         }).then(() => {
           console.log("[OneSignal] SDK Initialized.");
           
-          // Check for permission after init
-          if (window.OneSignal.Notifications.permission === 'default') {
+          if (OneSignal.Notifications.permission === 'default') {
             promptForPermission();
           }
 
-          // Handle user login/logout for identification
           if (user) {
             console.log(`[OneSignal] Identifying user with external ID: ${user.uid}`);
-            window.OneSignal.login(user.uid);
+            OneSignal.login(user.uid);
+          } else {
+             OneSignal.logout();
           }
         });
 
-      // Listener for notification permission changes
-      window.OneSignal.Notifications.addEventListener('permissionChange', (permission: boolean) => {
+      OneSignal.Notifications.addEventListener('permissionChange', (permission: boolean) => {
         console.log("[OneSignal] New permission state:", permission);
         if (permission) {
             toast({
@@ -93,20 +89,17 @@ export default function NotificationPermissionManager() {
   
   // This separate effect handles user login/logout after the initial setup.
   useEffect(() => {
-     if (typeof window === 'undefined' || !window.OneSignal) return;
-     window.OneSignal.push(function() {
-        if (user) {
-            if (!window.OneSignal.User.hasExternalId() || window.OneSignal.User.getExternalId() !== user.uid) {
-                console.log(`[OneSignal] Auth state changed. Logging in user: ${user.uid}`);
-                window.OneSignal.login(user.uid);
-            }
-        } else {
-            if (window.OneSignal.User.hasExternalId()) {
-                console.log("[OneSignal] Auth state changed. User is null, logging out from OneSignal.");
-                window.OneSignal.logout();
-            }
-        }
-     });
+    if (typeof window === 'undefined' || !window.OneSignal) return;
+    
+    window.OneSignal.push(function() {
+      if (user) {
+        console.log(`[OneSignal] Auth state changed. Logging in user: ${user.uid}`);
+        window.OneSignal.login(user.uid);
+      } else {
+        console.log("[OneSignal] Auth state changed. User is null, logging out from OneSignal.");
+        window.OneSignal.logout();
+      }
+    });
   }, [user]);
 
   return null; // This component does not render anything
