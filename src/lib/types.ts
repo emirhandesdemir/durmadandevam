@@ -3,11 +3,13 @@ import { Timestamp } from "firebase/firestore";
 
 export interface MatchmakingChat {
     id: string;
-    participants: { [uid: string]: { username: string, photoURL: string | null } };
+    participants: { [uid: string]: { username: string, photoURL: string | null, age?: number } };
     participantUids: string[];
     status: 'active' | 'revealing' | 'ended' | 'abandoned';
     createdAt: Timestamp;
-    reactions?: { [uid: string]: 'like' | 'pass' };
+    reactions?: { [uid: string]: 'like' };
+    // Add a field for the permanent chat ID once created
+    permanentChatId?: string;
 }
 
 // Zihin Savaşları Oyunu Veri Yapıları
@@ -52,7 +54,6 @@ export interface MindWarSession {
   winner?: string | null; // Kazanan oyuncu veya takım
   endSummary?: { // Oyun sonu özeti
     narrative: string;
-    winner: string | null;
     scores: {
       [uid: string]: {
         intelligence: number;
@@ -61,6 +62,7 @@ export interface MindWarSession {
         reward: number;
       };
     };
+    winner?: string | null;
   };
   createdAt: Timestamp; // Başlangıç zamanı
 }
@@ -126,6 +128,7 @@ export interface UserProfile {
     age?: number;
     city?: string;
     country?: string;
+    interests?: string[]; // İlgi alanları için yeni alan
     createdAt: Timestamp;
     lastActionTimestamp?: Timestamp; // For rate limiting
     lastAdWatchedAt?: Timestamp; // For ad reward cooldown
@@ -300,7 +303,6 @@ export interface Room {
     currentTrackName?: string;
     giveaway?: Giveaway;
     activeMindWarSessionId?: string | null; // Zihin Savaşları oturum ID'si
-    nextGameTimestamp?: Timestamp;
 }
 
 export interface PlaylistTrack {
@@ -524,3 +526,5 @@ export interface BotActivityLog {
     details: string;
     timestamp: Timestamp;
 }
+
+    

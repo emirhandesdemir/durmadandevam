@@ -3,191 +3,110 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Default deny all access
-    match /{document=**} {
-      allow read, write: if false;
-    }
-    
-    // Helper functions
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    function isUser(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data;
-    }
-
-    function isAdmin() {
-      return isAuthenticated() && getUserData(request.auth.uid).role == 'admin';
-    }
-
-    function isNotBanned() {
-      return isAuthenticated() && getUserData(request.auth.uid).isBanned != true;
-    }
-
-    // Rate limiting function: checks if last action was at least X seconds ago.
-    // Use on write operations to prevent spam.
-    function isRateLimited(seconds) {
-      let lastAction = getUserData(request.auth.uid).lastActionTimestamp;
-      // Allow if no previous action or if enough time has passed.
-      return lastAction == null || request.time > lastAction + duration.value(seconds, 's');
-    }
-
-    // USERS collection
+    // General user profiles can be read by anyone, but only the owner can write.
     match /users/{userId} {
-      // Anyone can read a user profile (if it's not private)
-      allow get: if isAuthenticated() && (resource.data.privateProfile == false || resource.data.followers.has(request.auth.uid) || isUser(userId));
-      
-      // Users can list other users (for search, etc.) but not their private subcollections
-      allow list: if isAuthenticated();
-
-      // A user can update their own document, but with restrictions.
-      allow update: if isUser(userId) && isNotBanned() && isRateLimited(2)
-                    // Ensure a user cannot change protected fields
-                    && request.resource.data.uid == userId
-                    && request.resource.data.email == resource.data.email
-                    && request.resource.data.role == resource.data.role
-                    && request.resource.data.diamonds == resource.data.diamonds
-                    && request.resource.data.matchmakingRights == resource.data.matchmakingRights
-                    && request.resource.data.referralCount == resource.data.referralCount
-                    && request.resource.data.reportCount == resource.data.reportCount
-                    && request.resource.data.isBanned == resource.data.isBanned;
-      
-      // New user documents are created via server-side logic (Auth trigger), not directly by clients.
-      allow create: if false;
-      allow delete: if false; // Users cannot delete their accounts directly
-
-      match /profileViewers/{viewerId} {
-        allow write: if isAuthenticated() && viewerId == request.auth.uid; // Can only log your own view
-        allow read: if isUser(userId); // Only the profile owner can see who viewed them
-      }
-      
-      match /notifications/{notificationId} {
-        allow read, write: if isUser(userId); // Only user can access their own notifications
-      }
+      allow read: if true;
+      allow write: if request.auth.uid == userId;
     }
     
-    // POSTS collection
-    match /posts/{postId} {
-      function isOwner() {
-        return resource.data.uid == request.auth.uid;
-      }
-
-      function isLiking() {
-        let diff = request.resource.data.diff(resource.data);
-        return diff.affectedKeys().hasOnly(['likes', 'likeCount']) &&
-               (diff.addedKeys().has('likes') || diff.removedKeys().has('likes'));
-      }
-    
-      allow read: if isAuthenticated();
-      
-      allow create: if isAuthenticated() && isNotBanned() && isRateLimited(10)
-                    && request.resource.data.uid == request.auth.uid;
-
-      allow update: if isAuthenticated() && isNotBanned() && 
-                    ( (isOwner() && isRateLimited(10)) || (isLiking() && isRateLimited(1)) );
-
-      allow delete: if isAuthenticated() && isNotBanned() && isOwner();
-
-      // Comments subcollection
-      match /comments/{commentId} {
-        allow read: if isAuthenticated();
-        // Allow authenticated, non-banned users to create comments with rate limiting.
-        allow create: if isAuthenticated() && isNotBanned() && isRateLimited(5)
-                      && request.resource.data.uid == request.auth.uid;
-        // Only the owner of the comment can delete it.
-        allow delete: if isAuthenticated() && isNotBanned() && resource.data.uid == request.auth.uid;
-      }
+    // Notifications can only be accessed by the recipient.
+    match /users/{userId}/notifications/{notificationId} {
+        allow read, write, delete: if request.auth.uid == userId;
     }
 
-    // ROOMS collection
-    match /rooms/{roomId} {
-      allow read: if isAuthenticated();
-      // Room creation is handled by a server-side action which validates diamonds etc.
-      allow create: if false;
-      
-      // Only participants can update a room (e.g. join/leave voice). Specific logic is in server actions.
-      // This is a broad rule; server actions provide finer control.
-      allow update: if isAuthenticated() && isNotBanned();
-
-      // Only room owner can delete
-      allow delete: if isAuthenticated() && resource.data.createdBy.uid == request.auth.uid;
-
-      // Subcollections
-      match /messages/{messageId} {
-        // Anyone in the room can read messages
-        allow read: if isAuthenticated() && resource.data.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.participants;
-        // Only participants can write messages
-        allow create: if isAuthenticated() && isNotBanned() && isRateLimited(1)
-                      && request.resource.data.uid == request.auth.uid
-                      && request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.participants;
-      }
-
-      match /voiceParticipants/{participantId} {
-        // Anyone in the room can read who is in voice chat
-        allow read: if isAuthenticated();
-        // Only the user themselves can write to their own participant document (join/leave/mute)
-        allow write: if isUser(participantId);
-        // Only the host/moderator can delete (kick) a participant document
-        allow delete: if isAuthenticated() && 
-                       (get(/databases/$(database)/documents/rooms/$(roomId)).data.createdBy.uid == request.auth.uid ||
-                        request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.moderators);
-      }
-      
-       match /playlist/{trackId} {
-        allow read: if isAuthenticated();
-        allow write: if isAuthenticated(); // Handled by server actions
-      }
-
-      // Other subcollections are mostly managed server-side.
-      match /{subcollection}/{docId} {
-        allow read, write: if isAuthenticated(); // Broad rule, assuming server logic handles specifics
-      }
+    // Profile viewers can only be written to, not read by clients.
+    match /users/{userId}/profileViewers/{viewerId} {
+        allow read: if false; // Clients should not be able to list viewers
+        allow write: if request.auth.uid == viewerId;
     }
-    
-    // DIRECT MESSAGES
-    match /directMessages/{chatId}/messages/{messageId} {
-        // Only participants of the chat can read/write messages
-        allow read, write: if isAuthenticated() && request.auth.uid in chatId.split('_');
-    }
-    
+
+    // Direct Messages
     match /directMessagesMetadata/{chatId} {
-        // Only participants can read/update their chat metadata
-        allow read, update: if isAuthenticated() && request.auth.uid in resource.data.participantUids;
-        // Nobody can create/delete metadata directly
-        allow create, delete: if false;
+      allow read: if request.auth.uid in resource.data.participantUids;
+      // Writes are handled by server actions.
+      allow write: if false; 
     }
-    
-    // MATCHMAKING QUEUE
-    match /matchmakingQueue/{userId} {
-        // Users can only add/remove themselves from the queue
-        allow write, delete: if isUser(userId);
-        allow read: if isAuthenticated(); // Other users need to read to find a match
-    }
-
-    // CONFIG - Read-only for clients
-    match /config/{docId} {
-      allow read: if true; // Some config might be needed before auth
+    match /directMessages/{chatId}/messages/{messageId} {
+      allow read: if get(/databases/$(database)/documents/directMessagesMetadata/$(chatId)).data.participantUids[0] == request.auth.uid || get(/databases/$(database)/documents/directMessagesMetadata/$(chatId)).data.participantUids[1] == request.auth.uid;
+       // Writes are handled by server actions.
       allow write: if false;
     }
     
-    // AUDIT LOGS & REPORTS - Server-only write access
-    match /auditLogs/{logId} {
-      allow read, write: if false;
+    // Rooms are public
+    match /rooms/{roomId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      // Only the owner can delete or significantly update a room.
+      allow update, delete: if request.auth.uid == resource.data.createdBy.uid;
+    }
+    
+    // Room subcollections
+    match /rooms/{roomId}/{subcollection}/{docId} {
+        // Anyone can read messages and other public subcollections
+        allow read: if true;
+        // Only authenticated users can write (create/update/delete)
+        allow write: if request.auth != null;
     }
 
+    // Reports can only be created by authenticated users. Admins can read them.
     match /reports/{reportId} {
-      allow read, write: if false;
+      allow read: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow create: if request.auth != null;
+      allow update, delete: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Audit logs are admin-only
+    match /auditLogs/{logId} {
+      allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Configuration can be read by anyone, written by admins.
+    match /config/{configId} {
+      allow read: if true;
+      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
-     // PORTALS - Read-only for clients
-    match /portals/{docId} {
-      allow read: if isAuthenticated();
-      allow write: if false;
+    // Posts can be read by anyone, written by their owner.
+    match /posts/{postId} {
+        allow read: if true;
+        allow create: if request.auth.uid == request.resource.data.uid;
+        allow update, delete: if request.auth.uid == resource.data.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Comments can be read by anyone, written by their owner.
+    match /posts/{postId}/comments/{commentId} {
+        allow read: if true;
+        allow create: if request.auth.uid == request.resource.data.uid;
+        allow update, delete: if request.auth.uid == resource.data.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Live streams can be read by anyone, written only by their host or an admin
+    match /lives/{liveId} {
+        allow read: if true;
+        allow create: if request.auth != null;
+        allow update: if request.auth.uid == resource.data.hostId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        allow delete: if request.auth.uid == resource.data.hostId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Matchmaking Queue
+    match /matchQueue/{userId} {
+      allow read: if request.auth != null; // Allow reading to check for matches
+      allow create: if request.auth.uid == userId; // Users can only add themselves
+      allow delete: if request.auth.uid == userId; // Users can only remove themselves
+      allow update: if false; // Prevent modification
+    }
+    
+    // Temporary Match Rooms
+    match /matchRooms/{matchId} {
+      allow read: if request.auth.uid in resource.data.participantUids;
+      allow write: if request.auth.uid in resource.data.participantUids;
+    }
+    
+     // Temporary Match Room Messages
+    match /matchRooms/{matchId}/messages/{messageId} {
+      allow read, write: if get(/databases/$(database)/documents/matchRooms/$(matchId)).data.participantUids[0] == request.auth.uid || get(/databases/$(database)/documents/matchRooms/$(matchId)).data.participantUids[1] == request.auth.uid;
     }
   }
 }
+
+    

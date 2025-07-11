@@ -11,7 +11,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { onSnapshot, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { MatchmakingChat } from '@/lib/types';
 import Link from 'next/link';
 
 export default function MatchmakingPage() {
@@ -20,25 +19,28 @@ export default function MatchmakingPage() {
   const { toast } = useToast();
   const [status, setStatus] = useState<'idle' | 'searching' | 'found'>('idle');
 
+  // Eşleştirme aramasını başlatan fonksiyon
   const handleStartSearch = async () => {
     if (!user || !userData) return;
     setStatus('searching');
     try {
       const result = await findMatch(user.uid, {
-        gender: userData.gender || 'male', // default for safety
+        gender: userData.gender || 'male',
         username: userData.username,
         photoURL: userData.photoURL,
         age: userData.age,
         city: userData.city,
+        interests: userData.interests,
       });
-
+      
       if (result.status === 'matched' && result.chatId) {
-        // Match found immediately, navigate.
+        // Anında bir eşleşme bulundu, sohbet odasına yönlendir.
         router.push(`/matchmaking/chat/${result.chatId}`);
       } else if (result.status === 'searching') {
-        // No immediate match, inform the user and wait for the listener.
-        toast({ description: "Eşleşme bulunamadı, arkaplanda aranmaya devam ediyor..." });
+        // Hemen bir eşleşme bulunamadı, kullanıcıya bilgi ver ve arka planda beklemeye devam et.
+        toast({ description: "Eşleşme aranıyor, lütfen bekleyin..." });
       } else if (result.status === 'already_in_chat' && result.chatId) {
+        // Kullanıcı zaten bir odada, oraya yönlendir.
         router.push(`/matchmaking/chat/${result.chatId}`);
       }
 
@@ -48,16 +50,19 @@ export default function MatchmakingPage() {
     }
   };
   
+  // Eşleşme aramasını iptal etme
   const handleCancelSearch = async () => {
     if (!user) return;
     setStatus('idle');
     try {
       await cancelMatchmaking(user.uid);
+      toast({ description: "Eşleşme araması iptal edildi." });
     } catch (error: any) {
         toast({ variant: 'destructive', description: error.message });
     }
   };
 
+  // Arka planda eşleşme bulunduğunda yönlendirme yapmak için dinleyici
   useEffect(() => {
     if (status !== 'searching' || !user) return;
 
@@ -73,11 +78,13 @@ export default function MatchmakingPage() {
   }, [status, user, router]);
 
 
+  // Auth verisi yüklenirken yükleme ekranı
   if (authLoading) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-10 w-10 animate-spin" /></div>;
   }
   
-  if (!userData?.gender || !userData.age || !userData.city) {
+  // Eşleştirme için gerekli profil bilgileri eksikse uyarı göster
+  if (!userData?.gender || !userData.age || !userData.city || !userData.interests || userData.interests.length === 0) {
     return (
         <div className="flex h-full flex-col items-center justify-center text-center p-4">
              <Card className="w-full max-w-md">
@@ -85,7 +92,7 @@ export default function MatchmakingPage() {
                      <UserX className="mx-auto h-12 w-12 text-destructive" />
                     <CardTitle>Profil Bilgileri Eksik</CardTitle>
                     <CardDescription>
-                        Otomatik eşleşme sistemini kullanabilmek için profilinizde **cinsiyet, yaş ve şehir** bilgilerinizin kayıtlı olması gerekmektedir.
+                        Otomatik eşleşme sistemini kullanabilmek için profilinizde **cinsiyet, yaş, şehir ve ilgi alanları** bilgilerinizin eksiksiz olması gerekmektedir.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -121,7 +128,7 @@ export default function MatchmakingPage() {
           <CardHeader>
             <CardTitle>Yeni Bir Maceraya Hazır mısın?</CardTitle>
             <CardDescription>
-              Butona tıkla ve 4 dakikalık sürpriz bir sohbete başla. Süre sonunda eşinle birbirinizi beğenirseniz, kalıcı sohbete geçersiniz!
+              Butona tıkla ve 5 dakikalık sürpriz bir sohbete başla. Süre sonunda eşinle birbirinizi beğenirseniz, kalıcı sohbete geçersiniz!
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -135,3 +142,5 @@ export default function MatchmakingPage() {
     </div>
   );
 }
+
+    
