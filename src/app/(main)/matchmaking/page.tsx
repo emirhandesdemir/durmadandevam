@@ -24,13 +24,20 @@ export default function MatchmakingPage() {
     if (!user || !userData) return;
     setStatus('searching');
     try {
-      await findMatch(user.uid, {
+      const result = await findMatch(user.uid, {
         gender: userData.gender || 'male', // default for safety
         username: userData.username,
         photoURL: userData.photoURL,
         age: userData.age,
         city: userData.city,
       });
+
+      if (result.status === 'searching') {
+          toast({ description: "Eşleşme bulunamadı, arkaplanda aranmaya devam ediyor..." });
+      } else if (result.status === 'matched' && result.chatId) {
+          router.replace(`/matchmaking/chat/${result.chatId}`);
+      }
+
     } catch (error: any) {
       toast({ variant: 'destructive', description: error.message });
       setStatus('idle');

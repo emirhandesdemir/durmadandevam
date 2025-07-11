@@ -15,6 +15,7 @@ import {
   getDoc,
   arrayUnion,
   getDocs,
+  orderBy,
 } from 'firebase/firestore';
 import type { MatchmakingChat, UserProfile, Timestamp } from '../types';
 import { getChatId } from '../utils';
@@ -68,6 +69,7 @@ export async function findMatch(
             where('city', '==', userInfo.city),
             where('age', '>=', ageLowerBound),
             where('age', '<=', ageUpperBound),
+            orderBy('timestamp', 'asc'),
             limit(1)
         );
         const citySnapshot = await transaction.get(cityQuery);
@@ -78,19 +80,10 @@ export async function findMatch(
 
     // 2. Fallback: Opposite gender
     if (!matchDoc) {
-        const genderQuery = query(pendingRef, where('gender', '==', preferredGender), limit(1));
+        const genderQuery = query(pendingRef, where('gender', '==', preferredGender), orderBy('timestamp', 'asc'), limit(1));
         const genderSnapshot = await transaction.get(genderQuery);
         if (!genderSnapshot.empty) {
             matchDoc = genderSnapshot.docs[0];
-        }
-    }
-
-    // 3. Fallback: Any gender (for users who wait a long time)
-    if (!matchDoc) {
-        const anyQuery = query(pendingRef, where('uid', '!=', userId), limit(1));
-        const anySnapshot = await transaction.get(anyQuery);
-        if (!anySnapshot.empty) {
-            matchDoc = anySnapshot.docs[0];
         }
     }
 
