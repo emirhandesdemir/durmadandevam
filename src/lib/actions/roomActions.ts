@@ -26,11 +26,13 @@ const BOT_USER_INFO = {
 export async function triggerBotResponse(roomId: string, messageAuthorId: string, messageText: string) {
     if (messageAuthorId === BOT_USER_INFO.uid) return;
 
-    // Respond if mentioned directly OR randomly (25% chance)
+    // Determine if the bot should respond
     const isMentioned = messageText.toLowerCase().includes('@walk');
-    const shouldRespondRandomly = Math.random() < 0.25; 
+    const isQuestion = messageText.includes('?');
+    // Respond if mentioned, to a question (50% chance), or randomly (40% chance)
+    const shouldRespond = isMentioned || (isQuestion && Math.random() < 0.5) || Math.random() < 0.40;
     
-    if (!isMentioned && !shouldRespondRandomly) {
+    if (!shouldRespond) {
         return;
     }
 
