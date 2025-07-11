@@ -34,9 +34,8 @@ export default function MatchmakingPage() {
 
       if (result.status === 'searching') {
           toast({ description: "Eşleşme bulunamadı, arkaplanda aranmaya devam ediyor..." });
-      } else if (result.status === 'matched' && result.chatId) {
-          router.replace(`/matchmaking/chat/${result.chatId}`);
       }
+      // The useEffect will handle the redirect for 'matched' status.
 
     } catch (error: any) {
       toast({ variant: 'destructive', description: error.message });
