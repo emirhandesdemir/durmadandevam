@@ -32,10 +32,15 @@ export default function MatchmakingPage() {
         city: userData.city,
       });
 
-      if (result.status === 'searching') {
-          toast({ description: "Eşleşme bulunamadı, arkaplanda aranmaya devam ediyor..." });
+      if (result.status === 'matched' && result.chatId) {
+        // Match found immediately, navigate.
+        router.push(`/matchmaking/chat/${result.chatId}`);
+      } else if (result.status === 'searching') {
+        // No immediate match, inform the user and wait for the listener.
+        toast({ description: "Eşleşme bulunamadı, arkaplanda aranmaya devam ediyor..." });
+      } else if (result.status === 'already_in_chat' && result.chatId) {
+        router.push(`/matchmaking/chat/${result.chatId}`);
       }
-      // The useEffect will handle the redirect for 'matched' status.
 
     } catch (error: any) {
       toast({ variant: 'destructive', description: error.message });
@@ -60,7 +65,7 @@ export default function MatchmakingPage() {
         const data = doc.data();
         if (data?.activeMatchmakingChatId) {
             setStatus('found');
-            router.replace(`/matchmaking/chat/${data.activeMatchmakingChatId}`);
+            router.push(`/matchmaking/chat/${data.activeMatchmakingChatId}`);
         }
     });
 

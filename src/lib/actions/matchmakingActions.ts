@@ -19,6 +19,7 @@ import {
 } from 'firebase/firestore';
 import type { MatchmakingChat, UserProfile, Timestamp } from '../types';
 import { getChatId } from '../utils';
+import { revalidatePath } from 'next/cache';
 
 const PENDING_MATCHES = 'pendingMatches';
 
@@ -59,7 +60,6 @@ export async function findMatch(
 
     let matchDoc = null;
 
-    // 1. Priority: Same city, opposite gender, similar age
     if (userInfo.city && userInfo.age) {
         const ageLowerBound = userInfo.age - 5;
         const ageUpperBound = userInfo.age + 5;
@@ -69,6 +69,7 @@ export async function findMatch(
             where('city', '==', userInfo.city),
             where('age', '>=', ageLowerBound),
             where('age', '<=', ageUpperBound),
+            orderBy('age', 'asc'),
             orderBy('timestamp', 'asc'),
             limit(1)
         );
@@ -78,7 +79,6 @@ export async function findMatch(
         }
     }
 
-    // 2. Fallback: Opposite gender
     if (!matchDoc) {
         const genderQuery = query(pendingRef, where('gender', '==', preferredGender), orderBy('timestamp', 'asc'), limit(1));
         const genderSnapshot = await transaction.get(genderQuery);
@@ -88,7 +88,6 @@ export async function findMatch(
     }
 
     if (matchDoc) {
-      // MATCH FOUND
       const matchedUser = matchDoc.data() as MatchmakingUser;
       transaction.delete(matchDoc.ref);
 
@@ -116,9 +115,8 @@ export async function findMatch(
       transaction.update(doc(db, 'users', userId), { activeMatchmakingChatId: chatId });
       transaction.update(doc(db, 'users', matchedUser.uid), { activeMatchmakingChatId: chatId });
 
-      return { success: true, status: 'matched', chatId };
+      return { success: true, status: 'matched', chatId: chatId };
     } else {
-      // NO MATCH FOUND, add to queue
       const queueDoc = doc(pendingRef, userId);
       const queueData: MatchmakingUser = {
         uid: userId,
