@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview Firestore ile ilgili genel yardımcı fonksiyonları içerir.
  * Özellikle toplu silme işlemleri için kullanılır.
@@ -75,13 +74,14 @@ export async function deleteRoomWithSubcollections(roomId: string) {
     const roomRef = doc(db, 'rooms', roomId);
 
     // Firestore alt koleksiyonlarını sil.
-    const subcollections = ['messages', 'voiceParticipants', 'signals', 'games'];
+    const subcollections = ['messages', 'voiceParticipants', 'signals', 'games', 'game_sessions', 'playlist'];
     for (const sub of subcollections) {
         await deleteCollection(collection(roomRef, sub), 50);
     }
 
     // Storage'daki ilgili dosyaları sil.
     await deleteStorageFolder(`upload/rooms/${roomId}`);
+    await deleteStorageFolder(`music/${roomId}`);
 
 
     // Ana oda dokümanını sil.

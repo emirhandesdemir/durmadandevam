@@ -3,17 +3,17 @@
 
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/Header";
-import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
-import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
-import ActiveCallBar from "@/components/voice/ActiveCallBar";
 import { useState, useEffect } from 'react';
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
 import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
-import ExploreMenu from "@/components/layout/ExploreMenu";
 import UserSearchDialog from "@/components/search/UserSearchDialog";
+import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
+import ActiveCallBar from "@/components/voice/ActiveCallBar";
+import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
+
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -109,10 +109,9 @@ export default function MainAppLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const [isExploreMenuOpen, setIsExploreMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/');
+  const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/') || pathname.startsWith('/matchmaking/');
   const isHeaderlessPage = isFullPageLayout || pathname.startsWith('/surf');
   const isHomePage = pathname === '/home';
 
@@ -146,12 +145,7 @@ export default function MainAppLayout({
             </div>
         </main>
         
-        <ExploreMenu 
-          isOpen={isExploreMenuOpen} 
-          onOpenChange={setIsExploreMenuOpen}
-          onSearchClick={() => { setIsSearchOpen(true); setIsExploreMenuOpen(false); }}
-        />
-        <BottomNav onExploreClick={() => setIsExploreMenuOpen(prev => !prev)} isExploreMenuOpen={isExploreMenuOpen} />
+        <BottomNav onSearchClick={() => setIsSearchOpen(true)} />
         <UserSearchDialog isOpen={isSearchOpen} onOpenChange={setIsSearchOpen} />
         <VoiceAudioPlayer />
         <ActiveCallBar />

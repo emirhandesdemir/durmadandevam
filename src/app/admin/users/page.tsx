@@ -1,26 +1,13 @@
-
 // src/app/admin/users/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, onSnapshot, query, orderBy, Timestamp } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Users, Loader2 } from "lucide-react";
 import UsersTable from "@/components/admin/UsersTable";
+import type { UserProfile } from '@/lib/types';
 
-// Kullanıcı verisinin arayüzü
-export interface UserData {
-    uid: string;
-    username: string;
-    email: string;
-    role: 'admin' | 'user';
-    createdAt: Timestamp;
-    photoURL?: string;
-    diamonds?: number;
-    isBanned?: boolean;
-    reportCount?: number;
-    referralCount?: number;
-}
 
 /**
  * Kullanıcı Yöneticisi Sayfası
@@ -29,7 +16,7 @@ export interface UserData {
  * ve onları bir tablo içinde yönetmek için arayüz sağlar.
  */
 export default function UserManagerPage() {
-    const [users, setUsers] = useState<UserData[]>([]);
+    const [users, setUsers] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -42,7 +29,7 @@ export default function UserManagerPage() {
             const usersData = querySnapshot.docs.map(doc => ({
                 ...doc.data(),
                 uid: doc.id, // doküman ID'sini uid olarak ekle.
-            } as UserData));
+            } as UserProfile));
             setUsers(usersData);
             setLoading(false);
         }, (error) => {
@@ -50,7 +37,7 @@ export default function UserManagerPage() {
             setLoading(false);
         });
 
-        // Component DOM'dan kaldırıldığında (unmount) dinleyiciyi temizle.
+        // Component unmount olduğunda dinleyiciyi temizle.
         // Bu, hafıza sızıntılarını önler.
         return () => unsubscribe();
     }, []);

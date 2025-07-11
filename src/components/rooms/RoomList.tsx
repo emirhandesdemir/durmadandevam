@@ -14,6 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { joinRoom } from "@/lib/actions/roomActions";
 import { useTranslation } from "react-i18next";
+import Link from "next/link";
+import { ChevronRight, Swords } from "lucide-react";
 
 interface RoomListProps {
   searchTerm: string;
@@ -128,6 +130,7 @@ export default function RoomList({ searchTerm }: RoomListProps) {
 
   return (
     <div className="space-y-4">
+        
         <div className="flex justify-end">
             <Button variant="outline" onClick={handleRandomJoin} disabled={isJoiningRandom}>
                 {isJoiningRandom ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Shuffle className="mr-2 h-4 w-4" />}

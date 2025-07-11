@@ -3,21 +3,18 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageCircle, Plus, Compass, Clapperboard } from 'lucide-react';
+import { Home, MessageCircle, Plus, Clapperboard, Compass } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMemo } from 'react';
-import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
-import { motion } from 'framer-motion';
 
 interface BottomNavProps {
-  onExploreClick: () => void;
-  isExploreMenuOpen: boolean;
+  onSearchClick: () => void;
 }
 
-export default function BottomNav({ onExploreClick, isExploreMenuOpen }: BottomNavProps) {
+export default function BottomNav({ onSearchClick }: BottomNavProps) {
   const pathname = usePathname();
-  const { user, userData } = useAuth();
+  const { user } = useAuth();
   
   const navItems = useMemo(() => {
     if (!user) return [];
@@ -25,7 +22,6 @@ export default function BottomNav({ onExploreClick, isExploreMenuOpen }: BottomN
         { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
         { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
         { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
-        { id: 'explore', icon: Compass, label: 'Keşfet' },
         { id: 'surf', href: '/surf', icon: Clapperboard, label: 'Surf' },
       ]
   }, [user]);
@@ -34,7 +30,9 @@ export default function BottomNav({ onExploreClick, isExploreMenuOpen }: BottomN
     return null;
   }
   
-  if ((pathname.startsWith('/rooms/') && pathname !== '/rooms') || (pathname.startsWith('/call/'))) {
+  const isFullPageLayout = (pathname.startsWith('/rooms/') && pathname !== '/rooms') || (pathname.startsWith('/call/'));
+
+  if (isFullPageLayout) {
     return null;
   }
   
@@ -43,55 +41,46 @@ export default function BottomNav({ onExploreClick, isExploreMenuOpen }: BottomN
         <nav className="mx-auto flex h-16 max-w-md items-center justify-around">
             {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = item.id === 'explore' ? isExploreMenuOpen : (item.href ? pathname.startsWith(item.href) : false);
+                const isActive = item.href ? pathname === item.href || (item.href !== '/home' && pathname.startsWith(item.href)) : false;
                 
-                const buttonActiveStyle = isActive;
+                const isCreateButton = item.id === 'create';
 
-                const buttonContent = (
+                return (
+                  <Link
+                    key={item.id}
+                    href={item.href || '#'}
+                    className={cn(
+                      'flex h-full flex-1 flex-col items-center justify-center transition-colors',
+                       isCreateButton ? '' : (isActive ? 'text-primary' : 'text-muted-foreground hover:text-primary')
+                    )}
+                  >
                      <div className={cn(
                         "relative flex flex-col items-center justify-center gap-1 transition-all duration-200"
                      )}>
                         <div className={cn(
-                            "flex items-center justify-center h-8 w-12 rounded-full transition-all duration-300", 
-                            buttonActiveStyle && item.id !== 'create' ? 'bg-primary/10' : ''
+                            "flex items-center justify-center h-12 w-12 rounded-full transition-all duration-300", 
+                            isCreateButton ? 'bg-primary text-primary-foreground' : (isActive ? 'bg-primary/10' : '')
                         )}>
                             <Icon className={cn(
-                                "h-6 w-6 transition-transform", 
-                                item.id === 'create' && 'text-primary'
+                                "h-6 w-6 transition-transform"
                             )} />
                         </div>
-                        <span className="text-[10px] font-medium">{item.label}</span>
+                        {!isCreateButton && <span className="text-[10px] font-medium">{item.label}</span>}
                     </div>
+                  </Link>
                 );
-
-                if (item.href) {
-                     return (
-                      <Link
-                        key={item.id}
-                        href={item.href}
-                        className={cn(
-                          'flex h-full flex-1 flex-col items-center justify-center transition-colors',
-                          buttonActiveStyle ? 'text-primary' : 'text-muted-foreground hover:text-primary',
-                        )}
-                      >
-                        {buttonContent}
-                      </Link>
-                    );
-                }
-                
-                return (
-                    <button
-                        key={item.id}
-                        onClick={onExploreClick}
-                        className={cn(
-                        'flex h-full flex-1 flex-col items-center justify-center transition-colors',
-                        buttonActiveStyle ? 'text-primary' : 'text-muted-foreground hover:text-primary',
-                        )}
-                    >
-                        {buttonContent}
-                    </button>
-                )
             })}
+             <button
+                onClick={onSearchClick}
+                className={'flex h-full flex-1 flex-col items-center justify-center transition-colors text-muted-foreground hover:text-primary'}
+            >
+                <div className="relative flex flex-col items-center justify-center gap-1 transition-all duration-200">
+                    <div className={cn("flex items-center justify-center h-12 w-12 rounded-full transition-all duration-300")}>
+                        <Compass className="h-6 w-6" />
+                    </div>
+                    <span className="text-[10px] font-medium">Keşfet</span>
+                </div>
+            </button>
         </nav>
     </div>
   );

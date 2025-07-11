@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import type { UserData } from "@/app/admin/users/page";
+import type { UserProfile } from "@/lib/types";
 import { format } from "date-fns";
 import { tr } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
@@ -44,7 +44,7 @@ import ManagePremiumDialog from "./ManagePremiumDialog"; // Import the new dialo
 import { cn } from "@/lib/utils";
 
 interface UsersTableProps {
-  users: UserData[];
+  users: UserProfile[];
 }
 
 /**
@@ -53,11 +53,11 @@ interface UsersTableProps {
 export default function UsersTable({ users }: UsersTableProps) {
     const { toast } = useToast();
     const [isProcessing, setIsProcessing] = useState<string | null>(null); // Hangi kullanıcının işlendiğini tutar
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState<UserData | null>(null);
-    const [showDiamondDialog, setShowDiamondDialog] = useState<UserData | null>(null);
-    const [showPremiumDialog, setShowPremiumDialog] = useState<UserData | null>(null); // State for the premium dialog
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState<UserProfile | null>(null);
+    const [showDiamondDialog, setShowDiamondDialog] = useState<UserProfile | null>(null);
+    const [showPremiumDialog, setShowPremiumDialog] = useState<UserProfile | null>(null); // State for the premium dialog
 
-    const handleDeleteUser = async (user: UserData) => {
+    const handleDeleteUser = async (user: UserProfile) => {
         setIsProcessing(user.uid);
         const result = await deleteUserFromFirestore(user.uid);
         if (result.success) {
@@ -69,7 +69,7 @@ export default function UsersTable({ users }: UsersTableProps) {
         setIsProcessing(null);
     };
     
-    const handleToggleAdmin = async (user: UserData) => {
+    const handleToggleAdmin = async (user: UserProfile) => {
         const newRole = user.role === 'admin' ? 'user' : 'admin';
         // Son adminin yetkisinin alınmasını engelle
         if(user.role === 'admin' && users.filter(u => u.role === 'admin').length <= 1) {
@@ -87,7 +87,7 @@ export default function UsersTable({ users }: UsersTableProps) {
         setIsProcessing(null);
     }
     
-    const handleToggleBan = async (user: UserData) => {
+    const handleToggleBan = async (user: UserProfile) => {
         const newBanState = !user.isBanned;
         setIsProcessing(user.uid);
         const result = await banUser(user.uid, newBanState);
