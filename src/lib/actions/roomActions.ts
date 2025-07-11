@@ -6,7 +6,7 @@ import { deleteRoomWithSubcollections } from '@/lib/firestoreUtils';
 import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch, arrayUnion, arrayRemove, updateDoc, runTransaction, increment, setDoc, query, where, getDocs, orderBy, deleteField } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { createNotification } from './notificationActions';
-import type { Room, Message, PlaylistTrack } from '../types';
+import type { Room, Message, PlaylistTrack, UserProfile } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { revalidatePath } from 'next/cache';
 import { generateRoomResponse } from '@/ai/flows/roomChatFlow';
@@ -23,13 +23,16 @@ const BOT_USER_INFO = {
 
 
 // This function is not awaited in the main flow to avoid blocking UI.
-async function triggerBotResponse(roomId: string, messageAuthorId: string) {
-    // The bot should not respond to itself
+export async function triggerBotResponse(roomId: string, messageAuthorId: string, messageText: string) {
     if (messageAuthorId === BOT_USER_INFO.uid) return;
 
-    // Define a probability for the bot to respond to a generic message.
-    const shouldRespond = Math.random() < 0.25; // 25% chance
-    if (!shouldRespond) return;
+    // Respond if mentioned directly OR randomly (25% chance)
+    const isMentioned = messageText.toLowerCase().includes('@walk');
+    const shouldRespondRandomly = Math.random() < 0.25; 
+    
+    if (!isMentioned && !shouldRespondRandomly) {
+        return;
+    }
 
     const messagesRef = collection(db, 'rooms', roomId, 'messages');
     const q = query(messagesRef, orderBy('createdAt', 'desc'), limit(10));
@@ -268,8 +271,8 @@ export async function joinRoom(roomId: string, userInfo: UserInfo) {
     if (!roomSnap.exists()) throw new Error("Oda bulunamadı.");
     const roomData = roomSnap.data();
     
-    const isExpired = roomData.expiresAt && (roomData.expiresAt as Timestamp).toDate() < new Date();
-    if(isExpired && roomData.type !== 'event') throw new Error("Bu odanın süresi dolmuş.");
+    const isExpired = roomData.expiresAt && (roomData.expiresAt as Timestamp).toDate() < new Date() && roomData.type !== 'event';
+    if(isExpired) throw new Error("Bu odanın süresi dolmuş.");
 
     const isFull = (roomData.participants?.length || 0) >= roomData.maxParticipants;
     if (isFull) throw new Error("Bu oda dolu.");
@@ -409,25 +412,28 @@ export async function increaseParticipantLimit(roomId: string, userId: string) {
         
         const roomData = roomDoc.data();
         const userData = userDoc.data();
-
+        
         const isHost = roomData.createdBy.uid === userId;
         const isModerator = roomData.moderators?.includes(userId);
+        const isPremium = userData.premiumUntil && userData.premiumUntil.toDate() > new Date();
 
         if (!isHost && !isModerator) {
             throw new Error("Bu işlemi yapma yetkiniz yok.");
         }
         
-        if ((userData.diamonds || 0) < cost) {
+        if (!isPremium && (userData.diamonds || 0) < cost) {
             throw new Error(`Katılımcı limitini artırmak için ${cost} elmasa ihtiyacınız var.`);
         }
         
-        transaction.update(userRef, { diamonds: increment(-cost) });
+        if (!isPremium) {
+             transaction.update(userRef, { diamonds: increment(-cost) });
+        }
         transaction.update(roomRef, { maxParticipants: increment(1) });
     });
 
     const roomSnap = await getDoc(roomRef);
     const newLimit = roomSnap.data()?.maxParticipants;
-    await addSystemMessage(roomId, `👤 Oda sahibi/moderatörü, katılımcı limitini ${newLimit}'e yükseltti! Bu işlem ${cost} elmasa mal oldu.`);
+    await addSystemMessage(roomId, `👤 Oda sahibi/moderatörü, katılımcı limitini ${newLimit}'e yükseltti!`);
     return { success: true };
 }
 
