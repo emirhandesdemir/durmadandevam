@@ -20,7 +20,7 @@ import {
     writeBatch,
     arrayUnion
 } from "firebase/firestore";
-import type { GameSettings, ActiveGame, Room, QuizQuestion, UserProfile } from "../types";
+import type { GameSettings, ActiveGame, Room, UserProfile } from "../types";
 import { revalidatePath } from "next/cache";
 import { generateQuizQuestions } from '@/ai/flows/generateQuizQuestionFlow';
 import { addSystemMessage } from "./roomActions";
@@ -54,6 +54,7 @@ export async function startGameInRoom(roomId: string) {
         throw new Error("Zaten aktif bir oyun veya geri sayım var.");
     }
     
+    // Create the game document first with a 'countdown' status
     const gamesRef = collection(roomRef, 'games');
     const newGameData: Partial<ActiveGame> = {
         status: 'countdown',
@@ -64,66 +65,34 @@ export async function startGameInRoom(roomId: string) {
         answeredBy: {},
     };
     const newGameRef = await addDoc(gamesRef, newGameData);
-    
-    await addDoc(collection(roomRef, 'messages'), {
-        type: 'game',
-        text: `⏳ Quiz oyunu 1 dakika içinde başlıyor!`,
-        createdAt: serverTimestamp(),
-        uid: 'system',
-        username: 'System'
-    });
 
+    // Announce the countdown
+    await addSystemMessage(roomId, "⏳ Quiz oyunu 1 dakika içinde başlıyor!");
+
+    // After 1 minute, generate questions and start the game
     setTimeout(async () => {
         try {
-            await generateQuestionsForGame(roomId, newGameRef.id);
+            const questions = await generateQuizQuestions();
+            const gameRef = doc(db, 'rooms', roomId, 'games', newGameRef.id);
+            
+            await updateDoc(gameRef, {
+                questions: questions,
+                status: 'active',
+                startTime: serverTimestamp(),
+            });
+            
+            await addSystemMessage(roomId, "Oyun başladı! İlk soru geliyor...");
+
         } catch (error) {
-            console.error(`[Game ID: ${roomId}] Failed to generate questions:`, error);
+            console.error(`[Game ID: ${roomId}] Failed to generate questions and start game:`, error);
+            const gameRef = doc(db, 'rooms', roomId, 'games', newGameRef.id);
+            await updateDoc(gameRef, { status: 'finished', finishedAt: serverTimestamp() });
+             await addSystemMessage(roomId, "Hata nedeniyle oyun başlatılamadı.");
         }
     }, 60 * 1000); 
 
     revalidatePath(`/rooms/${roomId}`);
     return { success: true };
-}
-
-
-async function generateQuestionsForGame(roomId: string, gameId: string) {
-    const roomRef = doc(db, 'rooms', roomId);
-    const gameRef = doc(db, 'rooms', roomId, 'games', gameId);
-    const gameDoc = await getDoc(gameRef);
-
-    if (!gameDoc.exists() || gameDoc.data()?.status !== 'countdown') {
-        console.log("Geri sayım yapan oyun bulunamadı veya durum değişti, soru üretme iptal edildi.");
-        return;
-    }
-
-    try {
-        const questions = await generateQuizQuestions();
-
-        await updateDoc(gameRef, {
-            questions: questions,
-            status: 'active',
-            startTime: serverTimestamp(),
-        });
-        
-        await addDoc(collection(roomRef, 'messages'), {
-            type: 'game',
-            text: `Oyun başladı! İlk soru geliyor...`,
-            createdAt: serverTimestamp(),
-            uid: 'system',
-            username: 'System'
-        });
-
-    } catch (error) {
-        console.error("AI soru üretirken hata:", error);
-        await updateDoc(gameRef, { status: 'finished' });
-        await addDoc(collection(roomRef, 'messages'), {
-            type: 'game',
-            text: `Üzgünüz, bir hata nedeniyle oyun başlatılamadı.`,
-            createdAt: serverTimestamp(),
-            uid: 'system',
-            username: 'System'
-        });
-    }
 }
 
 export async function submitAnswer(roomId: string, gameId: string, userId: string, answerIndex: number) {
@@ -178,8 +147,7 @@ export async function endGame(roomId: string, gameId: string) {
         const winnersData: ActiveGame['winners'] = [];
         const winnerUids = new Set<string>();
         
-        // Ödül mantığı: 1 doğru=5, 2=10, 3=15
-        const rewards = [5, 10, 15];
+        const rewards = [5, 10, 15]; // 1, 2, 3 correct answers
         let winnerMessage = "Kimse doğru cevap veremedi!";
 
         if (maxScore > 0) {
@@ -187,7 +155,7 @@ export async function endGame(roomId: string, gameId: string) {
             const userDocsPromises = winnerIdList.map(uid => transaction.get(doc(db, 'users', uid)));
             const userDocs = await Promise.all(userDocsPromises);
             
-            const reward = rewards[maxScore - 1] || 15; // 3+ doğru cevap için 15 ver
+            const reward = rewards[maxScore - 1] || 15; 
 
             userDocs.forEach((userDoc, index) => {
                 if (userDoc.exists()) {
@@ -210,13 +178,11 @@ export async function endGame(roomId: string, gameId: string) {
             }
         }
         
-        // Teselli ödülü mantığı
         const consolationPrize = 3;
         const participantUpdatePromises: Promise<void>[] = [];
         allParticipants.forEach(participantId => {
-            if (!winnerUids.has(participantId)) { // Eğer kazanan değilse
+            if (!winnerUids.has(participantId)) { 
                 const userRef = doc(db, 'users', participantId);
-                // transaction.update'i doğrudan çağırmak yerine, bir promise dizisine ekle
                 participantUpdatePromises.push(Promise.resolve(transaction.update(userRef, { diamonds: increment(consolationPrize) })));
             }
         });
@@ -244,7 +210,6 @@ export async function endGameWithoutWinner(roomId: string, gameId: string) {
             uids.forEach((uid: string) => allParticipants.add(uid));
         });
 
-        // Teselli ödülü mantığı
         const consolationPrize = 3;
         for (const participantId of allParticipants) {
              const userRef = doc(db, 'users', participantId);
