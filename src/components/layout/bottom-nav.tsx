@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageCircle, Plus, Clapperboard, Compass } from 'lucide-react';
+import { Home, MessageCircle, Plus, Clapperboard, Swords } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMemo } from 'react';
@@ -23,6 +23,7 @@ export default function BottomNav({ onSearchClick }: BottomNavProps) {
         { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
         { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
         { id: 'surf', href: '/surf', icon: Clapperboard, label: 'Surf' },
+        { id: 'matchmaking', href: '/matchmaking', icon: Swords, label: 'Maç' },
       ]
   }, [user]);
 
@@ -41,7 +42,7 @@ export default function BottomNav({ onSearchClick }: BottomNavProps) {
         <nav className="mx-auto flex h-16 max-w-md items-center justify-around">
             {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = item.href ? pathname === item.href || (item.href !== '/home' && pathname.startsWith(item.href)) : false;
+                const isActive = item.href ? pathname.startsWith(item.href) : false;
                 
                 const isCreateButton = item.id === 'create';
 
@@ -70,17 +71,6 @@ export default function BottomNav({ onSearchClick }: BottomNavProps) {
                   </Link>
                 );
             })}
-             <button
-                onClick={onSearchClick}
-                className={'flex h-full flex-1 flex-col items-center justify-center transition-colors text-muted-foreground hover:text-primary'}
-            >
-                <div className="relative flex flex-col items-center justify-center gap-1 transition-all duration-200">
-                    <div className={cn("flex items-center justify-center h-12 w-12 rounded-full transition-all duration-300")}>
-                        <Compass className="h-6 w-6" />
-                    </div>
-                    <span className="text-[10px] font-medium">Keşfet</span>
-                </div>
-            </button>
         </nav>
     </div>
   );
