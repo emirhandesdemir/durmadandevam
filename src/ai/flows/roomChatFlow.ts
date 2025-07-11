@@ -15,10 +15,8 @@ const RoomChatInputSchema = z.object({
 });
 export type RoomChatInput = z.infer<typeof RoomChatInputSchema>;
 
-// Output schema for the flow
-const RoomChatOutputSchema = z.object({
-  response: z.string().describe("The AI's response, or an empty string if it chooses not to respond."),
-});
+// Output schema for the flow - Simplified to a direct string response
+const RoomChatOutputSchema = z.string().describe("The AI's response, or an empty string if it chooses not to respond.");
 export type RoomChatOutput = z.infer<typeof RoomChatOutputSchema>;
 
 // The main exported function
@@ -37,7 +35,6 @@ const roomChatFlow = ai.defineFlow(
     // Construct the prompt for the model
     const systemPrompt = `You are "Walk", a witty, friendly, and helpful AI chat participant in a social chat room. Your responses MUST be in TURKISH.
 - You are part of a casual conversation. Keep your messages short, engaging, and natural, like a real person.
-- DO NOT act like a generic assistant. You have a personality. Be curious, sometimes funny, sometimes insightful.
 - IMPORTANT: If a user mentions you with "@Walk", you MUST respond to them.
 - In other cases, you should NOT respond to every single message. Only respond if you have something meaningful, interesting, or funny to add. If the conversation is flowing well without you, or if you have nothing to add, output an empty string.
 - You should be more likely to respond if someone asks a question (e.g. contains a "?").
@@ -54,17 +51,15 @@ const roomChatFlow = ai.defineFlow(
       })),
       config: {
         temperature: 0.9,
-      },
-      output: {
-        schema: RoomChatOutputSchema,
       }
     });
 
     if (!output) {
       // If AI fails to generate, just return an empty response.
-      return { response: "" };
+      return "";
     }
 
-    return { response: output.response };
+    // Return the text directly
+    return output.text || "";
   }
 );

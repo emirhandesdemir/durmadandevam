@@ -29,8 +29,8 @@ export async function triggerBotResponse(roomId: string, messageAuthorId: string
     // Determine if the bot should respond
     const isMentioned = messageText.toLowerCase().includes('@walk');
     const isQuestion = messageText.includes('?');
-
-    // Respond if mentioned, to a question (50% chance), or randomly (40% chance)
+    
+    // Always respond if mentioned. Otherwise, respond based on probability.
     const shouldRespond = isMentioned || (isQuestion && Math.random() < 0.5) || Math.random() < 0.40;
     
     if (!shouldRespond) {
@@ -51,8 +51,8 @@ export async function triggerBotResponse(roomId: string, messageAuthorId: string
 
     try {
         const aiResponse = await generateRoomResponse({ chatHistory });
-        if (aiResponse.response) {
-            await addBotMessage(roomId, aiResponse.response);
+        if (aiResponse) { // Response is now a direct string
+            await addBotMessage(roomId, aiResponse);
         }
     } catch (error) {
         console.error("AI bot response error:", error);
@@ -80,7 +80,7 @@ async function addBotMessage(roomId: string, text: string) {
 export async function createEventRoom(
     creatorId: string,
     roomData: { name: string, description: string, language: string },
-    creatorInfo: { username: string, photoURL: string | null, role: string }
+    creatorInfo: { username: string, photoURL: string | null, role: string, selectedAvatarFrame?: string }
 ) {
     if (!creatorId) throw new Error("Kullanıcı ID'si gerekli.");
     if (creatorInfo.role !== 'admin') throw new Error("Bu işlemi yapma yetkiniz yok.");
@@ -99,6 +99,7 @@ export async function createEventRoom(
             username: creatorInfo.username,
             photoURL: creatorInfo.photoURL,
             role: creatorInfo.role,
+            selectedAvatarFrame: creatorInfo.selectedAvatarFrame || '',
         },
         moderators: [creatorId],
         participants: [],
@@ -141,7 +142,11 @@ export async function createRoom(
         if (!userDoc.exists()) throw new Error("Kullanıcı bulunamadı.");
         
         const userData = userDoc.data();
-        if ((userData.diamonds || 0) < roomCost) {
+        
+        const unlimitedUntil = userData.unlimitedRoomCreationUntil as Timestamp | undefined;
+        const isUnlimited = unlimitedUntil && unlimitedUntil.toDate() > new Date();
+
+        if (!isUnlimited && (userData.diamonds || 0) < roomCost) {
             throw new Error(`Oda oluşturmak için ${roomCost} elmasa ihtiyacınız var.`);
         }
         
@@ -173,10 +178,15 @@ export async function createRoom(
         };
 
         transaction.set(newRoomRef, newRoom);
-        transaction.update(userRef, { 
-            diamonds: increment(-roomCost),
-            lastActionTimestamp: serverTimestamp()
-        });
+
+        if (!isUnlimited) {
+            transaction.update(userRef, { 
+                diamonds: increment(-roomCost),
+                lastActionTimestamp: serverTimestamp()
+            });
+        } else {
+            transaction.update(userRef, { lastActionTimestamp: serverTimestamp() });
+        }
         
         return { success: true, roomId: newRoomRef.id };
     });
