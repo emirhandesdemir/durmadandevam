@@ -3,7 +3,7 @@
 
 import { db, storage } from '@/lib/firebase';
 import { deleteRoomWithSubcollections } from '@/lib/firestoreUtils';
-import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch, arrayUnion, arrayRemove, updateDoc, runTransaction, increment, setDoc, query, where, getDocs, orderBy, deleteField } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch, arrayUnion, arrayRemove, updateDoc, runTransaction, increment, setDoc, query, where, getDocs, orderBy, deleteField, limit } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { createNotification } from './notificationActions';
 import type { Room, Message, PlaylistTrack, UserProfile } from '../types';
@@ -249,7 +249,7 @@ export async function deleteExpiredRoom(roomId: string) {
         const roomData = roomDoc.data();
         const expiresAt = roomData.expiresAt as Timestamp | undefined;
 
-        if (expiresAt && expiresAt.toMillis() <= Date.now()) {
+        if (expiresAt && expiresAt.toMillis() <= Date.now() && roomData.type !== 'event') {
             await deleteRoomWithSubcollections(roomId);
             return { success: true, message: "Süresi dolan oda başarıyla silindi." };
         } else {
