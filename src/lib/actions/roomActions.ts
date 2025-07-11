@@ -29,6 +29,7 @@ export async function triggerBotResponse(roomId: string, messageAuthorId: string
     // Determine if the bot should respond
     const isMentioned = messageText.toLowerCase().includes('@walk');
     const isQuestion = messageText.includes('?');
+
     // Respond if mentioned, to a question (50% chance), or randomly (40% chance)
     const shouldRespond = isMentioned || (isQuestion && Math.random() < 0.5) || Math.random() < 0.40;
     
