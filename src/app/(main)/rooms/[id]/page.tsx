@@ -25,7 +25,7 @@ import GiveawayDialog from '@/components/rooms/GiveawayDialog';
 // Quiz Game Components & Actions
 import RoomGameCard from '@/components/game/RoomGameCard';
 import GameCountdownCard from '@/components/game/GameCountdownCard';
-import { startGameInRoom, submitAnswer, endGameWithoutWinner } from '@/lib/actions/gameActions';
+import { startGameInRoom, submitAnswer, endGameWithoutWinner, generateQuestionsForGame, advanceToNextQuestion } from '@/lib/actions/gameActions';
 import GameLobbyDialog from '@/components/game/GameLobbyDialog';
 
 
@@ -124,6 +124,44 @@ export default function RoomPage() {
         });
         return () => unsubscribe();
     }, [roomId, gameSettings]);
+
+    // Handle game state transitions (countdown -> active)
+    useEffect(() => {
+        if (activeQuiz?.status !== 'countdown' || !isHost) return;
+
+        const countdownEnd = (activeQuiz.countdownStartTime as Timestamp).toMillis() + 60000;
+        const now = Date.now();
+        
+        if (now >= countdownEnd) {
+            generateQuestionsForGame(roomId, activeQuiz.id);
+        } else {
+            const timer = setTimeout(() => {
+                generateQuestionsForGame(roomId, activeQuiz.id);
+            }, countdownEnd - now);
+            return () => clearTimeout(timer);
+        }
+    }, [activeQuiz, isHost, roomId]);
+
+     // Handle question timer and auto-advance
+    useEffect(() => {
+        if (activeQuiz?.status !== 'active' || !gameSettings || !isHost) return;
+
+        const startTime = (activeQuiz.startTime as Timestamp).toMillis();
+        const duration = (gameSettings.questionTimerSeconds || 20) * 1000;
+        const timeUp = startTime + duration;
+        
+        const now = Date.now();
+
+        if (now >= timeUp) {
+            advanceToNextQuestion(roomId, activeQuiz.id);
+        } else {
+            const timer = setTimeout(() => {
+                advanceToNextQuestion(roomId, activeQuiz.id);
+            }, timeUp - now);
+            return () => clearTimeout(timer);
+        }
+
+    }, [activeQuiz, gameSettings, isHost, roomId]);
 
     const handleAnswerSubmit = useCallback(async (answerIndex: number) => {
         if (!activeQuiz || !user) return;

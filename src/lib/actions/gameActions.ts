@@ -25,7 +25,6 @@ import { revalidatePath } from "next/cache";
 import { generateQuizQuestions } from '@/ai/flows/generateQuizQuestionFlow';
 import { addSystemMessage } from "./roomActions";
 
-// Ayarları almak için fonksiyon
 export async function getGameSettings(): Promise<GameSettings> {
     const settingsRef = doc(db, 'config', 'gameSettings');
     const docSnap = await getDoc(settingsRef);
@@ -54,7 +53,6 @@ export async function startGameInRoom(roomId: string) {
         throw new Error("Zaten aktif bir oyun veya geri sayım var.");
     }
     
-    // Create the game document first with a 'countdown' status
     const gamesRef = collection(roomRef, 'games');
     const newGameData: Partial<ActiveGame> = {
         status: 'countdown',
@@ -62,38 +60,39 @@ export async function startGameInRoom(roomId: string) {
         questions: [],
         currentQuestionIndex: 0,
         scores: {},
-        answeredBy: {},
+        answeredBy: [],
     };
-    const newGameRef = await addDoc(gamesRef, newGameData);
-
-    // Announce the countdown
+    await addDoc(gamesRef, newGameData);
+    
     await addSystemMessage(roomId, "⏳ Quiz oyunu 1 dakika içinde başlıyor!");
-
-    // After 1 minute, generate questions and start the game
-    setTimeout(async () => {
-        try {
-            const questions = await generateQuizQuestions();
-            const gameRef = doc(db, 'rooms', roomId, 'games', newGameRef.id);
-            
-            await updateDoc(gameRef, {
-                questions: questions,
-                status: 'active',
-                startTime: serverTimestamp(),
-            });
-            
-            await addSystemMessage(roomId, "Oyun başladı! İlk soru geliyor...");
-
-        } catch (error) {
-            console.error(`[Game ID: ${roomId}] Failed to generate questions and start game:`, error);
-            const gameRef = doc(db, 'rooms', roomId, 'games', newGameRef.id);
-            await updateDoc(gameRef, { status: 'finished', finishedAt: serverTimestamp() });
-             await addSystemMessage(roomId, "Hata nedeniyle oyun başlatılamadı.");
-        }
-    }, 60 * 1000); 
 
     revalidatePath(`/rooms/${roomId}`);
     return { success: true };
 }
+
+
+export async function generateQuestionsForGame(roomId: string, gameId: string) {
+    const gameRef = doc(db, 'rooms', roomId, 'games', gameId);
+    
+    try {
+        const questions = await generateQuizQuestions();
+        
+        await updateDoc(gameRef, {
+            questions: questions,
+            status: 'active',
+            startTime: serverTimestamp(),
+        });
+        
+        await addSystemMessage(roomId, "Oyun başladı! İlk soru geliyor...");
+        revalidatePath(`/rooms/${roomId}`);
+    } catch (error) {
+        console.error(`[Game ID: ${roomId}] Failed to generate questions:`, error);
+        await updateDoc(gameRef, { status: 'finished', finishedAt: serverTimestamp() });
+        await addSystemMessage(roomId, "Hata nedeniyle oyun başlatılamadı.");
+        revalidatePath(`/rooms/${roomId}`);
+    }
+}
+
 
 export async function submitAnswer(roomId: string, gameId: string, userId: string, answerIndex: number) {
     const gameRef = doc(db, 'rooms', roomId, 'games', gameId);
@@ -106,7 +105,7 @@ export async function submitAnswer(roomId: string, gameId: string, userId: strin
         if (gameData.status !== 'active') throw new Error("Oyun aktif değil.");
         
         const questionIndex = gameData.currentQuestionIndex;
-        if ((gameData.answeredBy || {})[questionIndex]?.includes(userId)) {
+        if ((gameData.answeredBy || []).includes(userId)) {
             throw new Error("Bu soruya zaten cevap verdin.");
         }
 
@@ -114,8 +113,7 @@ export async function submitAnswer(roomId: string, gameId: string, userId: strin
         const isCorrect = currentQuestion.correctOptionIndex === answerIndex;
 
         const updates: { [key: string]: any } = {};
-        const answeredByPath = `answeredBy.${questionIndex}`;
-        updates[answeredByPath] = arrayUnion(userId);
+        updates.answeredBy = arrayUnion(userId);
 
         if (isCorrect) {
             const scorePath = `scores.${userId}`;
@@ -126,101 +124,100 @@ export async function submitAnswer(roomId: string, gameId: string, userId: strin
     });
 }
 
-export async function endGame(roomId: string, gameId: string) {
-    const roomRef = doc(db, 'rooms', roomId);
+export async function advanceToNextQuestion(roomId: string, gameId: string) {
     const gameRef = doc(db, 'rooms', roomId, 'games', gameId);
-    
+
     await runTransaction(db, async (transaction) => {
         const gameDoc = await transaction.get(gameRef);
         if (!gameDoc.exists() || gameDoc.data().status !== 'active') return;
-        
+
         const gameData = gameDoc.data() as ActiveGame;
-        const scores = gameData.scores || {};
-        const answeredBy = gameData.answeredBy || {};
-        
-        const allParticipants = new Set<string>();
-        Object.values(answeredBy).forEach(uids => {
-            uids.forEach(uid => allParticipants.add(uid));
-        });
+        const nextQuestionIndex = gameData.currentQuestionIndex + 1;
 
-        const maxScore = Math.max(0, ...Object.values(scores));
-        const winnersData: ActiveGame['winners'] = [];
-        const winnerUids = new Set<string>();
-        
-        const rewards = [5, 10, 15]; // 1, 2, 3 correct answers
-        let winnerMessage = "Kimse doğru cevap veremedi!";
-
-        if (maxScore > 0) {
-            const winnerIdList = Object.keys(scores).filter(uid => scores[uid] === maxScore);
-            const userDocsPromises = winnerIdList.map(uid => transaction.get(doc(db, 'users', uid)));
-            const userDocs = await Promise.all(userDocsPromises);
-            
-            const reward = rewards[maxScore - 1] || 15; 
-
-            userDocs.forEach((userDoc, index) => {
-                if (userDoc.exists()) {
-                    const userData = userDoc.data() as UserProfile;
-                    const winnerUid = winnerIdList[index];
-                    winnerUids.add(winnerUid);
-                    winnersData.push({
-                        uid: winnerUid,
-                        username: userData.username,
-                        photoURL: userData.photoURL || null,
-                        score: maxScore,
-                        reward: reward,
-                    });
-                    transaction.update(userDoc.ref, { diamonds: increment(reward) });
-                }
+        if (nextQuestionIndex >= gameData.questions.length) {
+            // End of the game
+            await endGame(transaction, gameRef, roomRef, gameData);
+        } else {
+            // Advance to the next question
+            transaction.update(gameRef, {
+                currentQuestionIndex: nextQuestionIndex,
+                answeredBy: [], // Reset for the new question
+                startTime: serverTimestamp()
             });
-
-            if (winnersData.length > 0) {
-                 winnerMessage = `Kazanan(lar): ${winnersData.map(w => `@${w.username}`).join(', ')} - ${reward} elmas kazandılar! 🏆`;
-            }
+            await addSystemMessage(roomId, `Sıradaki soru geliyor...`);
         }
-        
-        const consolationPrize = 3;
-        const participantUpdatePromises: Promise<void>[] = [];
-        allParticipants.forEach(participantId => {
-            if (!winnerUids.has(participantId)) { 
-                const userRef = doc(db, 'users', participantId);
-                participantUpdatePromises.push(Promise.resolve(transaction.update(userRef, { diamonds: increment(consolationPrize) })));
-            }
-        });
-        await Promise.all(participantUpdatePromises);
-
-
-        transaction.update(gameRef, { status: 'finished', finishedAt: serverTimestamp(), winners: winnersData });
-        
-        await addSystemMessage(roomId, `Oyun bitti! ${winnerMessage}`);
     });
 }
 
+async function endGame(transaction: any, gameRef: any, roomRef: any, gameData: ActiveGame) {
+    const scores = gameData.scores || {};
+    const answeredBy = gameData.answeredBy || {};
+    
+    const allParticipants = new Set<string>();
+    Object.values(answeredBy).forEach(uids => {
+        uids.forEach((uid: string) => allParticipants.add(uid));
+    });
+
+    const maxScore = Math.max(0, ...Object.values(scores));
+    const winnersData: ActiveGame['winners'] = [];
+    const winnerUids = new Set<string>();
+    
+    const rewards = [5, 10, 15]; // 1, 2, 3 correct answers
+    let winnerMessage = "Kimse doğru cevap veremedi!";
+
+    if (maxScore > 0) {
+        const winnerIdList = Object.keys(scores).filter(uid => scores[uid] === maxScore);
+        const userDocsPromises = winnerIdList.map(uid => transaction.get(doc(db, 'users', uid)));
+        const userDocs = await Promise.all(userDocsPromises);
+        
+        const reward = rewards[maxScore - 1] || 15; 
+
+        for (let i=0; i < userDocs.length; i++) {
+            const userDoc = userDocs[i];
+            if (userDoc.exists()) {
+                const userData = userDoc.data() as UserProfile;
+                const winnerUid = winnerIdList[i];
+                winnerUids.add(winnerUid);
+                winnersData.push({
+                    uid: winnerUid,
+                    username: userData.username,
+                    photoURL: userData.photoURL || null,
+                    score: maxScore,
+                    reward: reward,
+                });
+                transaction.update(userDoc.ref, { diamonds: increment(reward) });
+            }
+        }
+        if (winnersData.length > 0) {
+             winnerMessage = `Kazanan(lar): ${winnersData.map(w => `@${w.username}`).join(', ')} - ${reward} elmas kazandılar! 🏆`;
+        }
+    }
+    
+    // Give consolation prize
+    const consolationPrize = 3;
+    for (const participantId of allParticipants) {
+        if (!winnerUids.has(participantId)) { 
+            const userRef = doc(db, 'users', participantId);
+            transaction.update(userRef, { diamonds: increment(consolationPrize) });
+        }
+    }
+
+    transaction.update(gameRef, { status: 'finished', finishedAt: serverTimestamp(), winners: winnersData });
+    
+    await addSystemMessage(roomRef.id, `Oyun bitti! ${winnerMessage}`);
+    revalidatePath(`/rooms/${roomRef.id}`);
+}
+
 export async function endGameWithoutWinner(roomId: string, gameId: string) {
-     const roomRef = doc(db, 'rooms', roomId);
+    const roomRef = doc(db, 'rooms', roomId);
     const gameRef = doc(roomRef, 'games', gameId);
     
     await runTransaction(db, async (transaction) => {
         const gameDoc = await transaction.get(gameRef);
         if (!gameDoc.exists() || gameDoc.data().status !== 'active') return;
-        const gameData = gameDoc.data();
         
-        const answeredBy = gameData.answeredBy || {};
-        const allParticipants = new Set<string>();
-        Object.values(answeredBy).forEach((uids: any) => {
-            uids.forEach((uid: string) => allParticipants.add(uid));
-        });
-
-        const consolationPrize = 3;
-        for (const participantId of allParticipants) {
-             const userRef = doc(db, 'users', participantId);
-             transaction.update(userRef, { diamonds: increment(consolationPrize) });
-        }
-        
-        const message = allParticipants.size > 0 
-            ? 'Süre doldu! Katılan herkes teselli ödülü olarak 3 elmas kazandı! 🥳'
-            : 'Süre doldu! Kimse katılmadı.';
-
         transaction.update(gameRef, { status: 'finished', finishedAt: serverTimestamp() });
-        await addSystemMessage(roomId, message);
+        await addSystemMessage(roomId, 'Süre doldu! Kimse katılmadı veya cevap vermedi.');
     });
+    revalidatePath(`/rooms/${roomId}`);
 }

@@ -14,7 +14,6 @@ interface RoomGameCardProps {
     game: ActiveGame;
     settings: GameSettings;
     onAnswerSubmit: (answerIndex: number) => void;
-    onTimerEnd: () => void;
     currentUserId: string;
 }
 
@@ -22,56 +21,55 @@ interface RoomGameCardProps {
  * Oda içindeki aktif quiz oyununu gösteren kart bileşeni.
  * Soru, tıklanabilir seçenekler ve geri sayım sayacını içerir.
  */
-export default function RoomGameCard({ game, settings, onAnswerSubmit, onTimerEnd, currentUserId }: RoomGameCardProps) {
-    const [timeLeft, setTimeLeft] = useState(settings.questionTimerSeconds);
+export default function RoomGameCard({ game, settings, onAnswerSubmit, currentUserId }: RoomGameCardProps) {
+    const questionDuration = settings.questionTimerSeconds || 20;
+    const [timeLeft, setTimeLeft] = useState(questionDuration);
     const [progress, setProgress] = useState(100);
     const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-
+    
+    const currentQuestion = game.questions[game.currentQuestionIndex];
     const hasAnswered = (game.answeredBy || []).includes(currentUserId);
     const isDisabled = hasAnswered || isSubmitting;
 
-    // Geri sayım sayacını ve ilerleme çubuğunu yöneten useEffect'ler
     useEffect(() => {
         if (!game.startTime) return;
 
         const startTimeMs = (game.startTime as Timestamp).toMillis();
-        const questionDuration = settings.questionTimerSeconds * 1000;
         
         const updateTimer = () => {
             const timeElapsed = Date.now() - startTimeMs;
-            const newTimeLeft = Math.max(0, Math.ceil((questionDuration - timeElapsed) / 1000));
+            const newTimeLeft = Math.max(0, Math.ceil((questionDuration * 1000 - timeElapsed) / 1000));
             setTimeLeft(newTimeLeft);
 
-            if (newTimeLeft <= 0) {
-                if (!hasAnswered) {
-                    onTimerEnd();
-                }
-            }
+            const newProgress = Math.max(0, (newTimeLeft / questionDuration) * 100);
+            setProgress(newProgress);
         };
 
         updateTimer();
         const intervalId = setInterval(updateTimer, 1000);
 
         return () => clearInterval(intervalId);
-    }, [game.id, game.startTime, settings.questionTimerSeconds, hasAnswered, onTimerEnd]);
+    }, [game.id, game.startTime, questionDuration, game.currentQuestionIndex]);
 
 
-    useEffect(() => {
-        // İlerleme çubuğunu güncelle.
-        const newProgress = (timeLeft / settings.questionTimerSeconds) * 100;
-        setProgress(newProgress);
-    }, [timeLeft, settings.questionTimerSeconds]);
-
-
-    // Cevap verme fonksiyonu
     const handleAnswerClick = async (index: number) => {
         if (isDisabled) return;
         setSelectedAnswer(index);
         setIsSubmitting(true);
         await onAnswerSubmit(index);
-        // No need to set isSubmitting back to false, as `hasAnswered` will disable the buttons
     };
+
+    if (!currentQuestion) {
+        return (
+            <Card className="w-full bg-card border-primary/20 shadow-lg">
+                <CardContent className="p-4 text-center">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto"/>
+                    <p className="text-muted-foreground mt-2">Soru yükleniyor...</p>
+                </CardContent>
+            </Card>
+        )
+    }
 
     return (
         <Card className="w-full bg-card border-primary/20 shadow-lg animate-in fade-in duration-500 rounded-2xl">
@@ -81,7 +79,7 @@ export default function RoomGameCard({ game, settings, onAnswerSubmit, onTimerEn
                         <Puzzle className="h-6 w-6 text-primary" />
                     </div>
                     <div className="flex-1">
-                        <p className="font-bold text-foreground leading-tight">{game.question}</p>
+                        <p className="font-bold text-foreground leading-tight">{`Soru ${game.currentQuestionIndex + 1}/${game.questions.length}: ${currentQuestion.question}`}</p>
                         <p className="text-xs text-muted-foreground mt-1">Doğru cevabı bulmak için {timeLeft} saniyen var!</p>
                     </div>
                 </div>
@@ -89,7 +87,7 @@ export default function RoomGameCard({ game, settings, onAnswerSubmit, onTimerEn
                 <Progress value={progress} className="h-1.5" />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {game.options.map((option, index) => (
+                    {currentQuestion.options.map((option, index) => (
                         <Button
                             key={index}
                             variant={selectedAnswer === index ? "default" : "outline"}
@@ -103,7 +101,7 @@ export default function RoomGameCard({ game, settings, onAnswerSubmit, onTimerEn
                             {isSubmitting && selectedAnswer === index && (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             )}
-                            <span className="font-semibold text-primary mr-2">{index + 1}.</span>
+                            <span className="font-semibold text-primary mr-2">{String.fromCharCode(65 + index)}.</span>
                             <span className="text-left flex-1">{option}</span>
                         </Button>
                     ))}
