@@ -10,7 +10,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, Pin, Trash2 } from 'lucide-react';
+import { Loader2, Pin, Trash2, Bot } from 'lucide-react';
 import type { Message, Room } from '@/lib/types';
 import PortalMessageCard from './PortalMessageCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
@@ -108,7 +108,7 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
 
             <div className={cn("flex flex-col gap-1 max-w-[70%]", isCurrentUser && "items-end")}>
                 <div className={cn("flex items-center gap-2", isCurrentUser && "flex-row-reverse")}>
-                   <p className={cn("font-bold text-sm", isPrivileged && !isCurrentUser ? "text-amber-500" : "text-foreground")}>{isCurrentUser ? "Siz" : msg.username}</p>
+                   <p className={cn("font-bold text-sm", isPrivileged && !isCurrentUser ? "text-amber-500" : "text-foreground", isBot && "text-blue-400")}>{isCurrentUser ? "Siz" : msg.username}</p>
                    <p className="text-xs text-muted-foreground">
                      {msg.createdAt ? format((msg.createdAt as Timestamp).toDate(), 'p', { locale: tr }) : ''}
                    </p>
@@ -125,9 +125,12 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
                         isCurrentUser 
                             ? "bg-primary text-primary-foreground rounded-br-none" 
                             : (isPrivileged
-                                ? "bg-card border-2 border-amber-400/50 rounded-bl-none text-foreground" 
-                                : "bg-card rounded-bl-none text-foreground")
+                                ? "bg-card border-2 border-amber-400/50 rounded-bl-none text-foreground"
+                                : isBot
+                                    ? "bg-blue-500/10 border border-blue-500/30 rounded-bl-none text-foreground"
+                                    : "bg-card rounded-bl-none text-foreground")
                     )}>
+                        {isBot && <Bot className="absolute -top-2 -left-2 h-5 w-5 text-blue-400 p-1 bg-background rounded-full" />}
                         {msg.imageUrl && (
                             <Image 
                                 src={msg.imageUrl} 
@@ -141,7 +144,7 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
                             <p className="text-sm break-words whitespace-pre-wrap mt-1 px-1">{msg.text}</p>
                         )}
                     </div>
-                     {isHost && (
+                     {isHost && !isBot && (
                         <div className={cn("absolute top-0 opacity-0 group-hover/message:opacity-100 transition-opacity", isCurrentUser ? "-left-8" : "-right-8")}>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>

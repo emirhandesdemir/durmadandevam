@@ -27,11 +27,13 @@ import { v4 as uuidv4 } from 'uuid';
 import { getChatId } from '../utils';
 import { deleteChatWithSubcollections } from '../firestoreUtils';
 import { createNotification } from './notificationActions';
+import { triggerBotResponse } from './roomActions';
 
 interface UserInfo {
   uid: string;
   username: string;
   photoURL: string | null;
+  selectedAvatarFrame?: string;
 }
 
 export async function addCallSystemMessageToDm(chatId: string, status: 'ended' | 'declined' | 'missed', duration?: string) {

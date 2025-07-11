@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,7 +11,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Send, Loader2, ImagePlus, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { Room } from '@/lib/types';
+import type { Room, Message } from '@/lib/types';
+import { triggerBotResponse } from '@/lib/actions/roomActions';
+
 
 interface ChatMessageInputProps {
   room: Room;
@@ -80,6 +82,11 @@ export default function ChatMessageInput({ room }: ChatMessageInputProps) {
         }
         
         await addDoc(messagePath, messageData);
+
+        // Don't await this, let it run in the background
+        if (message.trim()) {
+            triggerBotResponse(room.id, currentUser.uid, message.trim());
+        }
         
         setMessage('');
         setFile(null);

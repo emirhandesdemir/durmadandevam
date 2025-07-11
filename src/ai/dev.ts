@@ -6,3 +6,4 @@ import '@/ai/flows/imageStyleFlow';
 import '@/ai/flows/moderateImageFlow';
 import '@/ai/flows/studioChatFlow';
 import '@/ai/flows/generateQuizQuestionFlow';
+import '@/ai/flows/roomChatFlow';

@@ -9,6 +9,7 @@ import { createNotification } from './notificationActions';
 import type { Room, Message, PlaylistTrack } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { revalidatePath } from 'next/cache';
+import { generateRoomResponse } from '@/ai/flows/roomChatFlow';
 
 const voiceStatsRef = doc(db, 'config', 'voiceStats');
 
@@ -16,8 +17,59 @@ const BOT_USER_INFO = {
     uid: 'ai-bot-walk',
     username: 'Walk',
     photoURL: `data:image/svg+xml;base64,${btoa(`<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="50" fill="url(#bot-grad)"/><rect x="25" y="45" width="50" height="20" rx="10" fill="white" fill-opacity="0.8"/><circle cx="50" cy="40" r="15" fill="white"/><circle cx="50" cy="40" r="10" fill="url(#eye-grad)"/><path d="M35 70 Q 50 80, 65 70" stroke="white" stroke-width="4" stroke-linecap="round" fill="none"/><defs><linearGradient id="bot-grad" x1="0" y1="0" x2="100" y2="100"><stop stop-color="#8b5cf6"/><stop offset="1" stop-color="#3b82f6"/></linearGradient><radialGradient id="eye-grad"><stop offset="20%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#2563eb"/></radialGradient></defs></svg>`)}`,
-    role: 'user',
+    role: 'user' as 'user' | 'admin',
+    selectedAvatarFrame: 'avatar-frame-tech'
 };
+
+
+// This function is not awaited in the main flow to avoid blocking UI.
+async function triggerBotResponse(roomId: string, messageAuthorId: string) {
+    // The bot should not respond to itself
+    if (messageAuthorId === BOT_USER_INFO.uid) return;
+
+    // Define a probability for the bot to respond to a generic message.
+    const shouldRespond = Math.random() < 0.25; // 25% chance
+    if (!shouldRespond) return;
+
+    const messagesRef = collection(db, 'rooms', roomId, 'messages');
+    const q = query(messagesRef, orderBy('createdAt', 'desc'), limit(10));
+    const snapshot = await getDocs(q);
+    const lastMessages = snapshot.docs.map(doc => doc.data() as Message).reverse();
+
+    if (lastMessages.length === 0) return;
+
+    const chatHistory = lastMessages.map(msg => ({
+        role: msg.uid === BOT_USER_INFO.uid ? 'model' : 'user',
+        content: `${msg.username}: ${msg.text || '(resim veya video gönderdi)'}`
+    }));
+
+    try {
+        const aiResponse = await generateRoomResponse({ chatHistory });
+        if (aiResponse.response) {
+            await addBotMessage(roomId, aiResponse.response);
+        }
+    } catch (error) {
+        console.error("AI bot response error:", error);
+    }
+}
+
+async function addBotMessage(roomId: string, text: string) {
+    if (!roomId || !text.trim()) return;
+    const messagesRef = collection(db, 'rooms', roomId, 'messages');
+    const botMessage = {
+        type: 'user', // Appear as a user
+        uid: BOT_USER_INFO.uid,
+        username: BOT_USER_INFO.username,
+        photoURL: BOT_USER_INFO.photoURL,
+        text,
+        createdAt: serverTimestamp(),
+        selectedBubble: '',
+        selectedAvatarFrame: BOT_USER_INFO.selectedAvatarFrame,
+        role: BOT_USER_INFO.role,
+    };
+    await addDoc(messagesRef, botMessage);
+}
+
 
 export async function createEventRoom(
     creatorId: string,
@@ -239,6 +291,7 @@ export async function joinRoom(roomId: string, userInfo: UserInfo) {
         uid: BOT_USER_INFO.uid,
         username: BOT_USER_INFO.username,
         photoURL: BOT_USER_INFO.photoURL,
+        selectedAvatarFrame: BOT_USER_INFO.selectedAvatarFrame,
         text: `Hoş geldin, ${userInfo.username}!`,
         createdAt: serverTimestamp()
     });
