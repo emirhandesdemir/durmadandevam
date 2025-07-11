@@ -27,7 +27,9 @@ export default function MatchmakingPage() {
       await findMatch(user.uid, {
         gender: userData.gender || 'male', // default for safety
         username: userData.username,
-        photoURL: userData.photoURL
+        photoURL: userData.photoURL,
+        age: userData.age,
+        city: userData.city,
       });
     } catch (error: any) {
       toast({ variant: 'destructive', description: error.message });
@@ -64,15 +66,15 @@ export default function MatchmakingPage() {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-10 w-10 animate-spin" /></div>;
   }
   
-  if (!userData?.gender) {
+  if (!userData?.gender || !userData.age || !userData.city) {
     return (
         <div className="flex h-full flex-col items-center justify-center text-center p-4">
              <Card className="w-full max-w-md">
                 <CardHeader>
                      <UserX className="mx-auto h-12 w-12 text-destructive" />
-                    <CardTitle>Cinsiyet Bilgisi Eksik</CardTitle>
+                    <CardTitle>Profil Bilgileri Eksik</CardTitle>
                     <CardDescription>
-                        Eşleşme sistemini kullanabilmek için profilinizde cinsiyet bilginizin kayıtlı olması gerekmektedir.
+                        Otomatik eşleşme sistemini kullanabilmek için profilinizde **cinsiyet, yaş ve şehir** bilgilerinizin kayıtlı olması gerekmektedir.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>

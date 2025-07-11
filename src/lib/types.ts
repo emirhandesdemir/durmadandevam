@@ -52,6 +52,7 @@ export interface MindWarSession {
   winner?: string | null; // Kazanan oyuncu veya takım
   endSummary?: { // Oyun sonu özeti
     narrative: string;
+    winner: string | null;
     scores: {
       [uid: string]: {
         intelligence: number;
@@ -60,7 +61,6 @@ export interface MindWarSession {
         reward: number;
       };
     };
-    winner?: string | null;
   };
   createdAt: Timestamp; // Başlangıç zamanı
 }
@@ -123,11 +123,15 @@ export interface UserProfile {
     postCount?: number;
     role: 'admin' | 'user';
     gender?: 'male' | 'female';
+    age?: number;
+    city?: string;
+    country?: string;
     createdAt: Timestamp;
     lastActionTimestamp?: Timestamp; // For rate limiting
     lastAdWatchedAt?: Timestamp; // For ad reward cooldown
     privateProfile: boolean;
     acceptsFollowRequests: boolean;
+    showOnlineStatus?: boolean;
     followers: string[];
     following: string[];
     followRequests: FollowRequest[];
@@ -215,6 +219,7 @@ export interface Post {
     text: string;
     imageUrl?: string;
     videoUrl?: string;
+    musicUrl?: string; // New field for music
     editedWithAI?: boolean;
     createdAt: Timestamp | { seconds: number; nanoseconds: number };
     likes: string[]; // Beğenen kullanıcıların UID'lerini tutan dizi
@@ -254,14 +259,6 @@ export interface Comment {
         username: string;
     } | null;
 }
-
-export interface Like {
-    id: string;
-    userId: string;
-    postId: string;
-    createdAt: Timestamp;
-}
-
 
 export interface Giveaway {
     status: 'idle' | 'active' | 'finished';
@@ -367,6 +364,7 @@ export interface GameSettings {
 
 export interface FeatureFlags {
     quizGameEnabled: boolean;
+    postFeedEnabled: boolean;
     contentModerationEnabled: boolean;
 }
 

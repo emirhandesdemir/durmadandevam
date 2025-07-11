@@ -56,6 +56,10 @@ export default function ProfilePageClient() {
     
     const [username, setUsername] = useState("");
     const [bio, setBio] = useState("");
+    const [age, setAge] = useState<number | undefined>(undefined);
+    const [city, setCity] = useState("");
+    const [country, setCountry] = useState("");
+    const [gender, setGender] = useState<'male' | 'female' | undefined>(undefined);
     const [privateProfile, setPrivateProfile] = useState(false);
     const [acceptsFollowRequests, setAcceptsFollowRequests] = useState(true);
     const [newAvatar, setNewAvatar] = useState<string | null>(null);
@@ -75,6 +79,10 @@ export default function ProfilePageClient() {
         if (userData) {
             setUsername(userData.username || "");
             setBio(userData.bio || "");
+            setAge(userData.age);
+            setCity(userData.city || "");
+            setCountry(userData.country || "");
+            setGender(userData.gender);
             setPrivateProfile(userData.privateProfile || false);
             setAcceptsFollowRequests(userData.acceptsFollowRequests ?? true);
             setSelectedBubble(userData.selectedBubble || "");
@@ -91,13 +99,17 @@ export default function ProfilePageClient() {
         return (
             username !== (userData.username || "") || 
             bio !== (userData.bio || "") ||
+            (age || undefined) !== (userData.age || undefined) ||
+            city !== (userData.city || "") ||
+            country !== (userData.country || "") ||
+            gender !== (userData.gender || undefined) ||
             privateProfile !== (userData.privateProfile || false) || 
             acceptsFollowRequests !== (userData.acceptsFollowRequests ?? true) ||
             newAvatar !== null || 
             selectedBubble !== (userData?.selectedBubble || "") || 
             selectedAvatarFrame !== (userData?.selectedAvatarFrame || "")
         );
-    }, [username, bio, privateProfile, acceptsFollowRequests, newAvatar, selectedBubble, selectedAvatarFrame, userData]);
+    }, [username, bio, age, city, country, gender, privateProfile, acceptsFollowRequests, newAvatar, selectedBubble, selectedAvatarFrame, userData]);
     
     const handleAvatarClick = () => { fileInputRef.current?.click(); };
 
@@ -124,47 +136,62 @@ export default function ProfilePageClient() {
     
         setIsSaving(true);
         try {
-            const userDocRef = doc(db, 'users', user.uid);
-            const updates: { [key: string]: any } = {};
+            const userDocUpdates: { [key: string]: any } = {};
             const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
-    
-            if (username !== userData?.username) {
-                if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
-                    toast({ variant: "destructive", title: "Geçersiz Kullanıcı Adı", description: "Kullanıcı adı 3-20 karakter uzunluğunda olmalı ve sadece harf, rakam veya alt çizgi içermelidir." });
-                    setIsSaving(false);
-                    return;
-                }
-                const existingUser = await findUserByUsername(username);
-                if (existingUser && existingUser.uid !== user.uid) {
-                    toast({ variant: "destructive", title: "Kullanıcı Adı Alınmış", description: "Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor." });
-                    setIsSaving(false);
-                    return;
-                }
-                updates.username = username;
-                authProfileUpdates.displayName = username;
-            }
-    
-            if (bio !== userData?.bio) updates.bio = bio;
+            const postAndCommentUpdates: { username?: string; userAvatar?: string; userAvatarFrame?: string; } = {};
     
             if (newAvatar) {
                 const newAvatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.jpg`);
                 await uploadString(newAvatarRef, newAvatar, 'data_url');
                 const finalPhotoURL = await getDownloadURL(newAvatarRef);
-                updates.photoURL = finalPhotoURL;
+                userDocUpdates.photoURL = finalPhotoURL;
                 authProfileUpdates.photoURL = finalPhotoURL;
+                postAndCommentUpdates.userAvatar = finalPhotoURL;
+            }
+    
+            if (username !== userData?.username) {
+                if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+                    toast({ variant: "destructive", title: "Geçersiz Kullanıcı Adı", description: "Kullanıcı adı 3-20 karakter uzunluğunda olmalı ve sadece harf, rakam veya alt çizgi içermelidir." });
+                    setIsSaving(false); return;
+                }
+                const existingUser = await findUserByUsername(username);
+                if (existingUser && existingUser.uid !== user.uid) {
+                    toast({ variant: "destructive", title: "Kullanıcı Adı Alınmış", description: "Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor." });
+                    setIsSaving(false); return;
+                }
+                userDocUpdates.username = username;
+                authProfileUpdates.displayName = username;
+                postAndCommentUpdates.username = username;
             }
             
-            if(privateProfile !== userData?.privateProfile) updates.privateProfile = privateProfile;
-            if(acceptsFollowRequests !== userData?.acceptsFollowRequests) updates.acceptsFollowRequests = acceptsFollowRequests;
-            if(selectedBubble !== userData?.selectedBubble) updates.selectedBubble = selectedBubble;
-            if(selectedAvatarFrame !== userData?.selectedAvatarFrame) updates.selectedAvatarFrame = selectedAvatarFrame;
-    
-            if (Object.keys(updates).length > 0) {
-                await updateDoc(userDocRef, updates);
+            if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || "")) {
+                userDocUpdates.selectedAvatarFrame = selectedAvatarFrame;
+                postAndCommentUpdates.userAvatarFrame = selectedAvatarFrame;
+            }
+
+            if (bio !== userData?.bio) userDocUpdates.bio = bio;
+            if (age !== userData?.age) userDocUpdates.age = Number(age);
+            if (city !== userData?.city) userDocUpdates.city = city;
+            if (country !== userData?.country) userDocUpdates.country = country;
+            if (gender !== userData?.gender) userDocUpdates.gender = gender;
+            if(privateProfile !== userData?.privateProfile) userDocUpdates.privateProfile = privateProfile;
+            if(acceptsFollowRequests !== userData?.acceptsFollowRequests) userDocUpdates.acceptsFollowRequests = acceptsFollowRequests;
+            if(selectedBubble !== userData?.selectedBubble) userDocUpdates.selectedBubble = selectedBubble;
+
+            const userDocRef = doc(db, 'users', user.uid);
+            if (Object.keys(userDocUpdates).length > 0) {
+                await updateDoc(userDocRef, userDocUpdates);
             }
     
             if (Object.keys(authProfileUpdates).length > 0) {
                  await updateProfile(auth.currentUser, authProfileUpdates);
+            }
+
+            if (Object.keys(postAndCommentUpdates).length > 0) {
+                await Promise.all([
+                    updateUserPosts(user.uid, postAndCommentUpdates),
+                    updateUserComments(user.uid, postAndCommentUpdates)
+                ]);
             }
 
             toast({
@@ -222,6 +249,39 @@ export default function ProfilePageClient() {
                             <Label htmlFor="bio">Biyografi</Label>
                             <Textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Kendini anlat..." className="rounded-xl" maxLength={150} />
                         </div>
+                         <div className="grid grid-cols-2 gap-4">
+                             <div className="space-y-2">
+                                <Label htmlFor="age">Yaş</Label>
+                                <Input id="age" type="number" value={age || ''} onChange={(e) => setAge(Number(e.target.value))} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Cinsiyet</Label>
+                                <RadioGroup
+                                    value={gender}
+                                    onValueChange={(value: 'male' | 'female') => setGender(value)}
+                                    className="flex space-x-4 pt-2"
+                                >
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="male" id="male" />
+                                        <Label htmlFor="male" className="font-normal cursor-pointer">Erkek</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="female" id="female" />
+                                        <Label htmlFor="female" className="font-normal cursor-pointer">Kadın</Label>
+                                    </div>
+                                </RadioGroup>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="city">Şehir</Label>
+                                <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="country">Ülke</Label>
+                                <Input id="country" value={country} onChange={(e) => setCountry(e.target.value)} />
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
 
@@ -241,7 +301,7 @@ export default function ProfilePageClient() {
                                 <div className="space-y-6">
                                     <div>
                                         <Label className="text-base font-medium">Tema</Label>
-                                        <RadioGroup value={theme} onValueChange={setTheme} className="grid grid-cols-2 md:grid-cols-3 gap-2 pt-2">
+                                        <RadioGroup value={theme} onValueChange={setTheme} className="grid grid-cols-3 gap-2 pt-2">
                                             <Label htmlFor="light-theme" className={cn("flex flex-col items-center justify-center rounded-lg border-2 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer", theme === 'light' && "border-primary")}>
                                                 <RadioGroupItem value="light" id="light-theme" className="sr-only" />
                                                 <Sun className="mb-2 h-6 w-6" />
