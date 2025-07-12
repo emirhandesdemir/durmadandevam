@@ -3,43 +3,29 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
   
-    // Genel kural: Varsayılan olarak tüm okuma ve yazma işlemlerini reddet.
-    match /{allPaths=**} {
-      allow read, write: if false;
+    // Allow anyone to read public files, like avatars and post images
+    match /upload/{path=**} {
+      allow read;
     }
 
-    // Profil fotoğrafları için kurallar
+    // Allow an authenticated user to write ONLY to their own avatar directory
     match /upload/avatars/{userId}/{fileName} {
-      // Herkes profil fotoğraflarını okuyabilir.
-      allow read: if true;
-      // Sadece giriş yapmış ve kendi klasörüne yazan kullanıcılar yazabilir.
-      // Bu, bir kullanıcının sadece kendi profil fotoğrafını değiştirmesini sağlar.
       allow write: if request.auth != null && request.auth.uid == userId;
     }
-
-    // Gönderi resimleri için kurallar
+    
+    // Allow an authenticated user to write ONLY to their own posts directory
     match /upload/posts/{userId}/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Gönderi videoları için kurallar
-    match /upload/videos/{userId}/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
+       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Özel mesaj (DM) medyaları için kurallar
-    match /dms/{chatId}/{allPaths=**} {
-      // Sadece sohbete dahil olan kullanıcılar medyayı okuyabilir/yazabilir.
-      // Bu kural, sohbetin katılımcı listesini Firestore'dan kontrol eder.
-      allow read, write: if request.auth != null && request.auth.uid in get(/databases/(default)/documents/directMessagesMetadata/$(chatId)).data.participantUids;
+    // Allow an authenticated user to write ONLY to their own videos directory
+    match /upload/videos/{userId}/{allPaths=**} {
+       allow write: if request.auth != null && request.auth.uid == userId;
     }
-    
-    // Oda içi müzik dosyaları için kurallar
-    match /music/{roomId}/{allPaths=**} {
-       // Sadece odaya dahil olan kullanıcılar medyayı okuyabilir/yazabilir.
-       allow read, write: if request.auth != null && request.auth.uid in get(/databases/(default)/documents/rooms/$(roomId)).data.participantUids;
+
+    // Allow an authenticated user to write ONLY to their own DM media directory
+    match /dms/{chatId}/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
