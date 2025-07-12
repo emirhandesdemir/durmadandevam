@@ -11,14 +11,6 @@ import type { FeatureFlags, UserProfile, ThemeSettings } from '@/lib/types';
 import { triggerProfileCompletionNotification } from '@/lib/actions/notificationActions';
 import i18n from '@/lib/i18n';
 
-// localStorage'da saklanacak kullanıcı verisinin hafif versiyonu.
-interface PersistedUser {
-    uid: string;
-    username: string;
-    photoURL: string | null;
-    email: string | null;
-}
-
 interface AuthContextType {
   user: User | null;
   userData: UserProfile | null;
@@ -26,10 +18,7 @@ interface AuthContextType {
   themeSettings: ThemeSettings | null;
   totalUnreadDms: number;
   loading: boolean;
-  persistedUsers: PersistedUser[];
-  handleLogout: (options?: { removeAllAccounts?: boolean }) => Promise<void>;
-  switchAccount: (targetUser: PersistedUser) => void;
-  addPersistedUser: (user: User) => void;
+  handleLogout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -39,10 +28,7 @@ const AuthContext = createContext<AuthContextType>({
   themeSettings: null,
   totalUnreadDms: 0,
   loading: true,
-  persistedUsers: [],
   handleLogout: async () => {},
-  switchAccount: () => {},
-  addPersistedUser: () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -53,48 +39,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [totalUnreadDms, setTotalUnreadDms] = useState(0);
   const [authLoading, setAuthLoading] = useState(true);
   const [firestoreLoading, setFirestoreLoading] = useState(true);
-  const [persistedUsers, setPersistedUsers] = useState<PersistedUser[]>([]);
-  const router = useRouter();
   const { toast } = useToast();
 
-  const getPersistedUsers = (): PersistedUser[] => {
-    try {
-        const users = localStorage.getItem('HiweWalkAccounts');
-        return users ? JSON.parse(users) : [];
-    } catch {
-        return [];
-    }
-  };
-
-  const addPersistedUser = useCallback((userToAdd: User) => {
-    const existingUsers = getPersistedUsers();
-    if (!existingUsers.some(u => u.uid === userToAdd.uid)) {
-        const newUser: PersistedUser = {
-            uid: userToAdd.uid,
-            username: userToAdd.displayName || 'Kullanıcı',
-            photoURL: userToAdd.photoURL,
-            email: userToAdd.email
-        };
-        const newUsers = [...existingUsers, newUser];
-        localStorage.setItem('HiweWalkAccounts', JSON.stringify(newUsers));
-        setPersistedUsers(newUsers);
-    }
-  }, []);
-
-  useEffect(() => {
-    setPersistedUsers(getPersistedUsers());
-  }, []);
-
-  const switchAccount = useCallback((targetUser: PersistedUser) => {
-    toast({ description: `${targetUser.username} hesabına geçiş yapılıyor...`, duration: 2000 });
-    signOut(auth).then(() => {
-      // Yönlendirme ile e-postayı login sayfasına gönder.
-      // Bu, Firebase'in oturumu şifresiz olarak yeniden kurmasını tetikler (eğer tarayıcıda kayıtlıysa).
-      router.push(`/login?email=${encodeURIComponent(targetUser.email || '')}`);
-    });
-  }, [router, toast]);
-
-  const handleLogout = useCallback(async (options?: { removeAllAccounts?: boolean }) => {
+  const handleLogout = useCallback(async () => {
     try {
         if (user) { 
             const userStatusRef = doc(db, 'users', user.uid);
@@ -104,19 +51,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }, { merge: true });
         }
         await signOut(auth);
-
-        const currentUsers = getPersistedUsers();
-        const updatedUsers = options?.removeAllAccounts 
-          ? [] 
-          : currentUsers.filter(u => u.uid !== user?.uid);
-          
-        localStorage.setItem('HiweWalkAccounts', JSON.stringify(updatedUsers));
-        setPersistedUsers(updatedUsers);
-
         toast({
             title: "Oturum Kapatıldı",
             description: "Başarıyla çıkış yaptınız.",
         });
+        // Redirect to login page after state is cleared
         window.location.href = '/login'; 
     } catch (error) {
         console.error("Logout error", error);
@@ -131,13 +70,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
-          addPersistedUser(currentUser);
-      }
       setAuthLoading(false);
     });
     return () => unsubscribe();
-  }, [addPersistedUser]);
+  }, []);
 
   useEffect(() => {
     setFirestoreLoading(true);
@@ -209,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loading = authLoading || firestoreLoading;
 
-  const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms, persistedUsers, switchAccount, addPersistedUser };
+  const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
