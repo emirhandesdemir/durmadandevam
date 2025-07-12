@@ -9,6 +9,9 @@ import { useToast } from '@/hooks/use-toast';
 import type { FeatureFlags, UserProfile, ThemeSettings } from '@/lib/types';
 import { triggerProfileCompletionNotification } from '@/lib/actions/notificationActions';
 import i18n from '@/lib/i18n';
+import AnimatedLogoLoader from '@/components/common/AnimatedLogoLoader';
+import { useRouter } from 'next/navigation';
+
 
 interface AuthContextType {
   user: User | null;
@@ -40,14 +43,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   const handleLogout = useCallback(async () => {
+    // Capture the current user *before* starting the sign-out process
+    const userToLogout = auth.currentUser; 
+
     try {
-        if (user) { 
-            const userStatusRef = doc(db, 'users', user.uid);
+        if (userToLogout) {
+            const userStatusRef = doc(db, 'users', userToLogout.uid);
+            // First, update the database with the user's offline status.
             await setDoc(userStatusRef, { isOnline: false, lastSeen: serverTimestamp() }, { merge: true });
         }
+        
+        // THEN, sign out from Firebase Authentication.
         await signOut(auth);
-        setUserData(null);
-        setUser(null);
+
+        // Finally, clear local state and notify the user.
         toast({
             title: "Oturum Kapatıldı",
             description: "Başarıyla çıkış yaptınız.",
@@ -61,15 +70,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             variant: "destructive",
         });
     }
-  }, [user, toast]);
+  }, [toast]);
   
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
-        setUser(currentUser);
-        if (!currentUser) {
-            setUserData(null);
-            setLoading(false);
-        }
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      setLoading(true);
+      setUser(currentUser);
+      if (!currentUser) {
+        setUserData(null);
+        setLoading(false);
+      }
     });
 
     const unsubscribeFeatures = onSnapshot(doc(db, 'config', 'featureFlags'), (docSnap) => {
@@ -119,7 +129,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setTotalUnreadDms(total);
         });
 
-        // Online status update
         const userStatusRef = doc(db, 'users', user.uid);
         setDoc(userStatusRef, { isOnline: true }, { merge: true });
         const onbeforeunload = () => setDoc(userStatusRef, { isOnline: false, lastSeen: serverTimestamp() }, { merge: true });
