@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Send, Bell, Search, Compass, Map } from "lucide-react";
+import { Send, Bell, Search, Compass, Map, LogOut, Settings, Store, Crown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
 import UserSearchDialog from "../search/UserSearchDialog";
@@ -13,21 +13,30 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import MainNavSheet from "./MainNavSheet";
 import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
+import { useTranslation } from "react-i18next";
+import { useRouter } from "next/navigation";
 
 
 interface HeaderProps {}
 
 export default function Header({}: HeaderProps) {
-    const { themeSettings, userData, totalUnreadDms } = useAuth();
+    const { themeSettings, userData, totalUnreadDms, handleLogout } = useAuth();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
-    const [isSheetOpen, setIsSheetOpen] = useState(false);
-    
+    const { t } = useTranslation();
+    const router = useRouter();
+
     const appName = themeSettings?.appName || 'HiweWalk';
     const hasUnreadNotifications = userData?.hasUnreadNotifications;
-    
+    const isPremium = userData?.premiumUntil && userData.premiumUntil.toDate() > new Date();
+
+    const handleNavigate = (path: string) => {
+      router.push(path);
+    };
+
     return (
         <>
             <header className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -46,8 +55,8 @@ export default function Header({}: HeaderProps) {
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                <DropdownMenuItem asChild>
-                                    <Link href="/nearby"><Map className="mr-2 h-4 w-4"/>Yakınımdakiler</Link>
+                                <DropdownMenuItem onSelect={() => handleNavigate('/nearby')}>
+                                    <Map className="mr-2 h-4 w-4"/>Yakınımdakiler
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
@@ -72,18 +81,45 @@ export default function Header({}: HeaderProps) {
                                 </div>
                             </Link>
                         </Button>
-                        <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setIsSheetOpen(true)}>
-                            <Avatar className="h-7 w-7">
-                                <AvatarImage src={userData?.photoURL || undefined} />
-                                <AvatarFallback>{userData?.username?.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <span className="sr-only">Ana Menü</span>
-                        </Button>
+
+                         <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="rounded-full">
+                                    <Avatar className="h-7 w-7">
+                                        <AvatarImage src={userData?.photoURL || undefined} />
+                                        <AvatarFallback>{userData?.username?.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <span className="sr-only">Ana Menü</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                             <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>{userData?.username}</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {isPremium && (
+                                     <DropdownMenuItem onSelect={() => handleNavigate('/premium')}>
+                                        <Crown className="mr-2 h-4 w-4 text-yellow-500" />
+                                        <span>{t('premium_status')}</span>
+                                    </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem onSelect={() => handleNavigate('/store')}>
+                                    <Store className="mr-2 h-4 w-4" />
+                                    <span>{t('store')}</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => handleNavigate('/profile')}>
+                                    <Settings className="mr-2 h-4 w-4" />
+                                    <span>{t('settings')}</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+                                    <LogOut className="mr-2 h-4 w-4" />
+                                    <span>{t('logout')}</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </div>
             </header>
             <UserSearchDialog isOpen={isSearchOpen} onOpenChange={setIsSearchOpen} />
-            <MainNavSheet isOpen={isSheetOpen} onOpenChange={setIsSheetOpen} />
         </>
     );
 }
