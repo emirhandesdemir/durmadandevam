@@ -8,13 +8,10 @@ import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
 
-
-// Helper function to process queries in batches to avoid Firestore limits
 async function processQueryInBatches(query: any, updateData: any) {
     const snapshot = await getDocs(query);
     if (snapshot.empty) return;
 
-    // Firestore allows up to 500 operations in a single batch.
     const batchSize = 499;
     const batches = [];
     let currentBatch = writeBatch(db);
@@ -45,11 +42,9 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
     const postsRef = collection(db, 'posts');
     const writePromises = [];
 
-    // Update user's own posts (original posts and retweets by them)
     const userPostsQuery = query(postsRef, where('uid', '==', uid));
     writePromises.push(processQueryInBatches(userPostsQuery, updates));
 
-    // Update user's appearance in others' retweets of their posts
     const retweetUpdates: { [key: string]: any } = {};
     if (updates.username) retweetUpdates['retweetOf.username'] = updates.username;
     if (updates.photoURL) retweetUpdates['retweetOf.userPhotoURL'] = updates.photoURL;
@@ -76,15 +71,21 @@ export async function updateUserComments(uid: string, updates: { photoURL?: stri
     }
     
     const commentUpdates: { [key: string]: any } = {};
-    if(updates.photoURL) commentUpdates.photoURL = updates.photoURL;
-    if(updates.userAvatarFrame) commentUpdates.userAvatarFrame = updates.userAvatarFrame;
-    if(updates.username) commentUpdates.username = updates.username;
+    if (updates.photoURL) commentUpdates.photoURL = updates.photoURL;
+    if (updates.userAvatarFrame) commentUpdates.userAvatarFrame = updates.userAvatarFrame;
+    if (updates.username) commentUpdates.username = updates.username;
 
+    const postsQuery = query(collection(db, 'posts'), where('uid', '==', uid));
+    const userPostsSnapshot = await getDocs(postsQuery);
 
-    const commentsQuery = query(collectionGroup(db, 'comments'), where('uid', '==', uid));
+    const updatePromises = userPostsSnapshot.docs.map(async (postDoc) => {
+        const commentsRef = collection(db, 'posts', postDoc.id, 'comments');
+        const userCommentsQuery = query(commentsRef, where('uid', '==', uid));
+        return processQueryInBatches(userCommentsQuery, commentUpdates);
+    });
 
     try {
-        await processQueryInBatches(commentsQuery, commentUpdates);
+        await Promise.all(updatePromises);
     } catch (error) {
         console.error("Kullanıcı yorumları güncellenirken hata:", error);
         throw error;
@@ -120,7 +121,6 @@ export async function searchUsers(searchTerm: string, currentUserId: string): Pr
     if (!searchTerm.trim()) return [];
 
     const usersRef = collection(db, 'users');
-    // Query for usernames that start with the search term.
     const q = query(
         usersRef,
         orderBy('username'),
@@ -133,9 +133,9 @@ export async function searchUsers(searchTerm: string, currentUserId: string): Pr
     
     const users = snapshot.docs
         .map(doc => ({ ...doc.data(), uid: doc.id } as UserProfile))
-        .filter(user => user.uid !== currentUserId); // Filter out the current user from results
+        .filter(user => user.uid !== currentUserId);
 
-    return deepSerialize(users); // Ensure data is client-safe
+    return deepSerialize(users);
 }
 
 
@@ -178,7 +178,6 @@ export async function updateOnboardingData({ userId, avatarDataUrl, bio, followi
     
     batch.update(userRef, updates);
 
-    // Takip etme işlemleri
     if (followingUids.length > 0) {
         batch.update(userRef, { following: arrayUnion(...followingUids) });
         for (const targetId of followingUids) {
@@ -222,7 +221,6 @@ export async function getFollowingForSuggestions(userId: string): Promise<Pick<U
     }
 
     const suggestions: Pick<UserProfile, 'uid' | 'username' | 'photoURL'>[] = [];
-    // Firestore 'in' query can take up to 30 elements
     for (let i = 0; i < followingIds.length; i += 30) {
         const batchIds = followingIds.slice(i, i + 30);
         if(batchIds.length === 0) continue;
@@ -237,7 +235,6 @@ export async function getFollowingForSuggestions(userId: string): Promise<Pick<U
     return deepSerialize(suggestions);
 }
 
-// Block and Report Actions
 export async function blockUser(blockerId: string, targetId: string) {
     if (!blockerId || !targetId) throw new Error("Gerekli kullanıcı bilgileri eksik.");
     if (blockerId === targetId) throw new Error("Kendinizi engelleyemezsiniz.");
@@ -248,13 +245,11 @@ export async function blockUser(blockerId: string, targetId: string) {
     try {
         const batch = writeBatch(db);
         
-        // Add target to blocker's list
         batch.update(blockerRef, { 
             blockedUsers: arrayUnion(targetId),
             lastActionTimestamp: serverTimestamp()
         });
         
-        // Force unfollow both ways
         batch.update(blockerRef, { following: arrayRemove(targetId) });
         batch.update(targetRef, { followers: arrayRemove(blockerId) });
         batch.update(targetRef, { following: arrayRemove(blockerId) });
@@ -300,14 +295,11 @@ export async function submitReport(reportData: Omit<Report, 'id' | 'timestamp'>)
     try {
         const batch = writeBatch(db);
         
-        // Add new report document
         const newReportRef = doc(reportsRef);
         batch.set(newReportRef, { ...reportData, timestamp: serverTimestamp() });
         
-        // Increment report count on user's profile
         batch.update(reportedUserRef, { reportCount: increment(1) });
         
-        // Update reporter's last action timestamp for rate limiting
         batch.update(reporterUserRef, { lastActionTimestamp: serverTimestamp() });
         
         await batch.commit();
@@ -352,7 +344,6 @@ export async function getSavedPosts(userId: string): Promise<Post[]> {
     }
 
     const savedPosts: Post[] = [];
-    // Firestore 'in' query has a limit of 30 items
     for (let i = 0; i < savedPostIds.length; i += 30) {
         const batchIds = savedPostIds.slice(i, i + 30);
         const postsQuery = query(collection(db, 'posts'), where('__name__', 'in', batchIds));
@@ -362,7 +353,6 @@ export async function getSavedPosts(userId: string): Promise<Post[]> {
         });
     }
 
-    // Sort posts by original saved order (most recent first)
     const sortedPosts = savedPosts.sort((a, b) => {
         return savedPostIds.indexOf(b.id) - savedPostIds.indexOf(a.id);
     });
@@ -370,7 +360,6 @@ export async function getSavedPosts(userId: string): Promise<Post[]> {
     return deepSerialize(sortedPosts);
 }
 
-// NEARBY FEATURE
 export async function updateUserLocation(uid: string, latitude: number, longitude: number) {
     const userRef = doc(db, 'users', uid);
     await updateDoc(userRef, {
@@ -382,12 +371,8 @@ export async function updateUserLocation(uid: string, latitude: number, longitud
     });
 }
 
-// NOTE: This requires Geo-queries which are not directly supported by default Firestore.
-// For a production app, you would use a service like Geofire or implement your own
-// geohashing logic. For this demo, we will perform a less efficient but functional query.
 export async function getNearbyUsers(currentUid: string, latitude: number, longitude: number, radiusKm: number = 20): Promise<any[]> {
-    // This is a simplified implementation. Production apps should use geohashing.
-    const latDegrees = radiusKm / 111.32; // Approx km per degree latitude
+    const latDegrees = radiusKm / 111.32; 
     const lonDegrees = radiusKm / (111.32 * Math.cos(latitude * (Math.PI / 180)));
     
     const lowerLat = latitude - latDegrees;
@@ -400,8 +385,6 @@ export async function getNearbyUsers(currentUid: string, latitude: number, longi
         usersRef,
         where('location.latitude', '>=', lowerLat),
         where('location.latitude', '<=', upperLat),
-        // Firestore cannot have inequality filters on multiple fields.
-        // We will filter by longitude on the client side for this demo.
     );
     const snapshot = await getDocs(q);
 
