@@ -3,14 +3,27 @@
 
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/Header";
-import { useState, useEffect } from 'react';
+import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
+import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
+import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
+import { useState, useRef, useEffect } from 'react';
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
-import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
 import ActiveCallBar from "@/components/voice/ActiveCallBar";
-import { motion, AnimatePresence } from 'framer-motion';
+import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
+import UserSearchDialog from "@/components/search/UserSearchDialog";
+import { Compass, Map } from "lucide-react";
+import Link from 'next/link';
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -118,7 +131,7 @@ export default function MainAppLayout({
   };
 
   return (
-    <>
+    <VoiceChatProvider>
       <PremiumWelcomeManager />
       <div className="relative flex h-screen w-full flex-col bg-background overflow-hidden">
         <PwaInstallBar />
@@ -155,8 +168,9 @@ export default function MainAppLayout({
         </main>
         
         <BottomNav />
+        <VoiceAudioPlayer />
         <ActiveCallBar />
       </div>
-    </>
+    </VoiceChatProvider>
   );
 }

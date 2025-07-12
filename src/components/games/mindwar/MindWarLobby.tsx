@@ -1,8 +1,9 @@
 // src/components/games/mindwar/MindWarLobby.tsx
 'use client';
 
-// Bu bileşen, oda sahibinin "Zihin Savaşları" oyununu başlatması için
-// lobi arayüzünü sağlar. Oyuncu seçimi ve oyun teması buradan ayarlanır.
+// This component is currently not used directly as the lobby logic has been
+// integrated into the more general GameLobbyDialog.
+// It can be safely removed in a future cleanup.
 
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,8 +23,8 @@ interface MindWarLobbyProps {
   room: Room;
 }
 
-const MIN_PLAYERS = 2; // Oyuncu sayısı alt limiti
-const MAX_PLAYERS = 5; // Oyuncu sayısı üst limiti
+const MIN_PLAYERS = 2;
+const MAX_PLAYERS = 5;
 
 export default function MindWarLobby({ room }: MindWarLobbyProps) {
   const { user } = useAuth();
@@ -33,7 +34,6 @@ export default function MindWarLobby({ room }: MindWarLobbyProps) {
   const [isLoading, setIsLoading] = useState(false);
   const isHost = user?.uid === room.createdBy.uid;
 
-  // Oyuncu seçimi yapıldığında çalışır
   const handlePlayerSelect = (playerId: string) => {
     setSelectedPlayers(prev => {
       const isSelected = prev.includes(playerId);
@@ -53,7 +53,6 @@ export default function MindWarLobby({ room }: MindWarLobbyProps) {
     });
   };
 
-  // Oyunu başlatma fonksiyonu
   const handleStartGame = async () => {
     if (!user) return;
     const finalPlayerCount = [...selectedPlayers, user.uid].length;
@@ -75,15 +74,12 @@ export default function MindWarLobby({ room }: MindWarLobbyProps) {
 
     setIsLoading(true);
     try {
-      // Sunucu eylemini çağırarak oyunu başlat
       await startMindWar({
         roomId: room.id,
         hostId: room.createdBy.uid,
         playerUids: [user.uid, ...selectedPlayers],
         theme: theme,
       });
-      // Başarılı olduğunda, Firestore listener'ı arayüzü otomatik olarak güncelleyecektir.
-      // Bu yüzden burada ek bir toast göstermeye gerek yok.
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -95,7 +91,6 @@ export default function MindWarLobby({ room }: MindWarLobbyProps) {
     }
   };
 
-  // Eğer kullanıcı oda sahibi değilse, bu bileşeni gösterme
   if (!isHost) {
     return (
         <Card className="bg-muted/50 border-dashed">
@@ -120,7 +115,6 @@ export default function MindWarLobby({ room }: MindWarLobbyProps) {
           <p className="text-xs text-muted-foreground mb-2">Bu oyun için {MIN_PLAYERS}-{MAX_PLAYERS} arası oyuncu gereklidir.</p>
           <ScrollArea className="h-48 rounded-md border p-2">
             <div className="space-y-2">
-              {/* Host (oda sahibi) her zaman seçili ve değiştirilemez */}
               <div className="flex items-center space-x-3 rounded-md p-2 bg-primary/10">
                   <Checkbox checked={true} disabled />
                   <Avatar className="h-8 w-8">
@@ -129,7 +123,6 @@ export default function MindWarLobby({ room }: MindWarLobbyProps) {
                   </Avatar>
                   <label className="font-medium text-sm text-primary">(Siz) {user?.displayName}</label>
               </div>
-              {/* Diğer katılımcılar */}
               {room.participants.filter(p => p.uid !== user?.uid).map(p => (
                 <div
                   key={p.uid}

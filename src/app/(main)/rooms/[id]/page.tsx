@@ -13,7 +13,7 @@ import TextChat from '@/components/chat/text-chat';
 import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
 import RoomHeader from '@/components/rooms/RoomHeader';
 
-import type { Room, Message, Giveaway, ActiveGame, GameSettings } from '@/lib/types';
+import type { Room, Message, Giveaway, ActiveGame, GameSettings, ActiveGameSession, MindWarSession } from '@/lib/types';
 import RoomFooter from '@/components/rooms/RoomFooter';
 import SpeakerLayout from '@/components/rooms/SpeakerLayout';
 import RoomInfoCards from '@/components/rooms/RoomInfoCards';
@@ -22,11 +22,14 @@ import GiveawayCard from '@/components/rooms/GiveawayCard';
 import { cn } from '@/lib/utils';
 import GiveawayDialog from '@/components/rooms/GiveawayDialog';
 
-// Quiz Game Components & Actions
+// Import new game components and actions
 import RoomGameCard from '@/components/game/RoomGameCard';
 import GameCountdownCard from '@/components/game/GameCountdownCard';
 import { startGameInRoom, submitAnswer, endGameWithoutWinner, generateQuestionsForGame, advanceToNextQuestion } from '@/lib/actions/gameActions';
 import GameLobbyDialog from '@/components/game/GameLobbyDialog';
+import ActiveGameArea from '@/components/game/ActiveGameArea';
+import MindWarLobby from '@/components/games/mindwar/MindWarLobby';
+import MindWarMainUI from '@/components/games/mindwar/MindWarMainUI';
 
 
 export default function RoomPage() {
@@ -53,6 +56,7 @@ export default function RoomPage() {
     const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
     const [activeQuiz, setActiveQuiz] = useState<ActiveGame | null>(null);
     const [finishedGame, setFinishedGame] = useState<any>(null);
+    const [activeMindWarSession, setActiveMindWarSession] = useState<MindWarSession | null>(null);
 
     const isHost = user?.uid === room?.createdBy.uid;
 
@@ -100,7 +104,17 @@ export default function RoomPage() {
             setFinishedGame(null);
         });
         
-        return () => { roomUnsub(); messagesUnsub(); settingsUnsub(); finishedGameUnsub(); };
+        // Listener for Mind Wars sessions
+        const mindWarSessionUnsub = onSnapshot(query(collection(db, 'rooms', roomId, 'mindWarSessions'), where('status', '!=', 'finished'), limit(1)), (snapshot) => {
+            if (snapshot.empty) {
+                setActiveMindWarSession(null);
+            } else {
+                const sessionData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as MindWarSession;
+                setActiveMindWarSession(sessionData);
+            }
+        });
+        
+        return () => { roomUnsub(); messagesUnsub(); settingsUnsub(); finishedGameUnsub(); mindWarSessionUnsub(); };
     }, [roomId, router, toast]);
     
     // Auto-scroll chat
@@ -176,6 +190,9 @@ export default function RoomPage() {
     if (isLoading) return <div className="flex h-full items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
 
     const renderGameContent = () => {
+        if (activeMindWarSession && user && userData) {
+            return <MindWarMainUI session={activeMindWarSession} currentUser={{uid: user.uid, username: userData.username, photoURL: userData.photoURL || null}} roomId={roomId} />;
+        }
         if (finishedGame) {
            return <GameResultCard game={finishedGame} />;
         }
@@ -215,13 +232,21 @@ export default function RoomPage() {
                 </>
 
                 <main ref={chatScrollRef} className="flex-1 flex flex-col overflow-y-auto">
-                    {gameContent && (
-                        <div className="p-4">
-                            {gameContent}
+                    {activeMindWarSession && user && userData ? (
+                        <div className="p-2 md:p-4">
+                            <MindWarMainUI session={activeMindWarSession} currentUser={{uid: user.uid, username: userData.username, photoURL: userData.photoURL || null}} roomId={roomId} />
                         </div>
+                    ) : (
+                        <>
+                            {gameContent && (
+                                <div className="p-4">
+                                    {gameContent}
+                                </div>
+                            )}
+                            <RoomInfoCards room={room} isOwner={isHost} />
+                            <TextChat messages={messages} loading={messagesLoading} room={room} />
+                        </>
                     )}
-                    <RoomInfoCards room={room} isOwner={isHost} />
-                    <TextChat messages={messages} loading={messagesLoading} room={room} />
                 </main>
 
                 <RoomFooter room={room} onGameLobbyOpen={() => setIsGameLobbyOpen(true)} onGiveawayOpen={() => setIsGiveawayDialogOpen(true)} />
@@ -243,3 +268,4 @@ export default function RoomPage() {
         </>
     );
 }
+
