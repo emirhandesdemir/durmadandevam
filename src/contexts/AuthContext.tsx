@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const featuresRef = doc(db, 'config', 'featureFlags');
     const unsubscribeFeatures = onSnapshot(featuresRef, (docSnap) => {
-      setFeatureFlags(docSnap.exists() ? docSnap.data() as FeatureFlags : { quizGameEnabled: true, postFeedEnabled: true, contentModerationEnabled: true });
+      setFeatureFlags(docSnap.exists() ? docSnap.data() as FeatureFlags : { quizGameEnabled: true, postFeedEnabled: true, contentModerationEnabled: true, botNewUserOnboardEnabled: true, botAutoPostEnabled: true, botAutoInteractEnabled: true, botAutoRoomInteractEnabled: true });
     });
 
     const themeRef = doc(db, 'config', 'theme');
@@ -166,6 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       updateStatus(true);
       const handleVisibilityChange = () => document.visibilityState === 'hidden' ? updateStatus(false) : updateStatus(true);
+      const handleBeforeUnload = () => updateStatus(false);
       window.addEventListener('beforeunload', handleBeforeUnload);
       
       unsubscribePresence = () => {
