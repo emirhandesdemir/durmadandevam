@@ -5,8 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth"; 
 import { auth } from "@/lib/firebase";
 import Image from "next/image";
@@ -37,10 +36,12 @@ const formSchema = z.object({
   password: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır." }),
 });
 
+interface LoginFormProps {
+    prefilledEmail?: string;
+}
 
-export default function LoginForm() {
+export default function LoginForm({ prefilledEmail }: LoginFormProps) {
     const { toast } = useToast();
-    const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
     const [isResetting, setIsResetting] = useState(false); 
     const [showPassword, setShowPassword] = useState(false);
@@ -49,10 +50,17 @@ export default function LoginForm() {
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            email: "",
+            email: prefilledEmail || "",
             password: "",
         },
     });
+
+    // Eğer prefilledEmail varsa, formu doldur. Bu, hesap değiştirme akışı için kullanılır.
+    useEffect(() => {
+        if (prefilledEmail) {
+            form.setValue('email', prefilledEmail);
+        }
+    }, [prefilledEmail, form]);
 
     // Form gönderildiğinde çalışacak fonksiyon.
     async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -63,7 +71,7 @@ export default function LoginForm() {
         } catch (error: any) {
             console.error("Giriş hatası", error);
             let errorMessage = "Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.";
-            // The 'auth/invalid-credential' code covers both user-not-found and wrong-password since Firebase v9.
+            // Firebase v9'dan beri hem kullanıcı bulunamadı hem de yanlış şifre 'auth/invalid-credential' kodunu döndürür.
             if (error.code === 'auth/invalid-credential') {
                 errorMessage = "E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edip tekrar deneyin.";
             } else if (error.code === 'auth/too-many-requests') {

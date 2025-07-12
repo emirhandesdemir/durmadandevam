@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Send, Bell, Search, Compass, Map, LogOut, Settings, Store, Crown, LogOutIcon, User, Users } from "lucide-react";
+import { Send, Bell, Search, Compass, Map, LogOut, Settings, Store, Crown, User, Users, PlusCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
 import UserSearchDialog from "../search/UserSearchDialog";
@@ -19,6 +19,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
+import AccountSwitcher from "./AccountSwitcher";
 
 
 interface HeaderProps {}
@@ -26,6 +27,7 @@ interface HeaderProps {}
 export default function Header({}: HeaderProps) {
     const { themeSettings, user, userData, totalUnreadDms, handleLogout } = useAuth();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [isAccountSwitcherOpen, setIsAccountSwitcherOpen] = useState(false);
     const { t } = useTranslation();
     const router = useRouter();
 
@@ -36,11 +38,6 @@ export default function Header({}: HeaderProps) {
     const handleNavigate = (path: string) => {
       router.push(path);
     };
-
-    const handleAccountSwitch = async () => {
-        await handleLogout();
-        router.push('/login');
-    }
 
     return (
         <>
@@ -119,12 +116,12 @@ export default function Header({}: HeaderProps) {
                                     <span>{t('settings')}</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={handleAccountSwitch}>
+                                <DropdownMenuItem onSelect={() => setIsAccountSwitcherOpen(true)}>
                                     <Users className="mr-2 h-4 w-4" />
                                     <span>Hesap Değiştir</span>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
-                                    <LogOutIcon className="mr-2 h-4 w-4" />
+                                <DropdownMenuItem onClick={() => handleLogout()} className="text-destructive focus:text-destructive">
+                                    <LogOut className="mr-2 h-4 w-4" />
                                     <span>{t('logout')}</span>
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -133,6 +130,7 @@ export default function Header({}: HeaderProps) {
                 </div>
             </header>
             <UserSearchDialog isOpen={isSearchOpen} onOpenChange={setIsSearchOpen} />
+            <AccountSwitcher isOpen={isAccountSwitcherOpen} onOpenChange={setIsAccountSwitcherOpen} />
         </>
     );
 }
