@@ -139,6 +139,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                     uid: currentUser.uid,
                     displayName: currentUserData.username || 'Biri',
                     photoURL: currentUserData.photoURL || null,
+                    userAvatarFrame: currentUserData.selectedAvatarFrame || '',
                 }
             );
         } catch (error) {
@@ -304,6 +305,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                                     alt="Retweeted post" 
                                     fill
                                     className="object-cover"
+                                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                                     onContextMenu={(e) => e.preventDefault()}
                                 />
                             </div>
@@ -367,7 +369,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                                 <p className="font-bold text-sm hover:underline">{post.username}</p>
                             </Link>
                             {post.userRole === 'admin' && (
-                                <TooltipProvider delayDuration={0}>
+                                <TooltipProvider>
                                     <Tooltip>
                                         <TooltipTrigger><BadgeCheck className="h-4 w-4 text-primary fill-primary/20" /></TooltipTrigger>
                                         <TooltipContent><p>Yönetici</p></TooltipContent>
@@ -448,6 +450,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                             alt="Gönderi resmi"
                             width={800}
                             height={800}
+                            sizes="(max-width: 768px) 100vw, 50vw"
                             className="h-auto w-full max-h-[70vh] object-cover"
                             onContextMenu={(e) => e.preventDefault()}
                         />

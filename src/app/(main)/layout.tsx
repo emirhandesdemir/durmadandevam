@@ -139,7 +139,7 @@ export default function MainAppLayout({
             className={cn(
             "flex-1 flex flex-col hide-scrollbar",
             isFullPageLayout ? "pb-0" : "pb-16",
-            isFullPageLayout ? "overflow-hidden" : "overflow-y-auto"
+            isFullPageLayout ? "overflow-y-hidden" : "overflow-y-auto"
             )}
         >
             {!isFullPageLayout && (
@@ -157,7 +157,7 @@ export default function MainAppLayout({
                     exit="exit"
                     className={cn(
                         "flex-1 flex flex-col",
-                        isFullPageLayout ? "overflow-hidden h-full" : "",
+                        isFullPageLayout ? "h-full" : "",
                         !isHomePage && !isFullPageLayout && "p-4"
                     )}
                 >

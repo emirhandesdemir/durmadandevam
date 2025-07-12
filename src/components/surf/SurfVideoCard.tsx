@@ -21,7 +21,7 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
   const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false); // Changed initial state to false for audio on
+  const [isMuted, setIsMuted] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [showLikeAnimation, setShowLikeAnimation] = useState(false);
 
