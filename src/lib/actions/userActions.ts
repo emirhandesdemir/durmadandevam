@@ -8,93 +8,6 @@ import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
 
-async function processQueryInBatches(query: any, updateData: any) {
-    const snapshot = await getDocs(query);
-    if (snapshot.empty) return;
-
-    const batchSize = 499;
-    const batches = [];
-    let currentBatch = writeBatch(db);
-    let operationCount = 0;
-
-    snapshot.docs.forEach((doc) => {
-        currentBatch.update(doc.ref, updateData);
-        operationCount++;
-        if (operationCount === batchSize) {
-            batches.push(currentBatch.commit());
-            currentBatch = writeBatch(db);
-            operationCount = 0;
-        }
-    });
-
-    if (operationCount > 0) {
-        batches.push(currentBatch.commit());
-    }
-
-    await Promise.all(batches);
-}
-
-export async function updateUserPosts(uid: string, updates: { [key: string]: any }) {
-    if (!uid || !updates || Object.keys(updates).length === 0) {
-        return;
-    }
-
-    const postsRef = collection(db, 'posts');
-    const writePromises = [];
-    
-    // Create a new object for post updates to ensure correct field names
-    const postUpdates: { [key: string]: any } = {};
-    if (updates.username) postUpdates.username = updates.username;
-    if (updates.userPhotoURL) postUpdates.userPhotoURL = updates.userPhotoURL;
-    if (updates.userAvatarFrame) postUpdates.userAvatarFrame = updates.userAvatarFrame;
-    
-    if (Object.keys(postUpdates).length > 0) {
-        const userPostsQuery = query(postsRef, where('uid', '==', uid));
-        writePromises.push(processQueryInBatches(userPostsQuery, postUpdates));
-    }
-
-    // Create a new object for retweet updates
-    const retweetUpdates: { [key: string]: any } = {};
-    if (updates.username) retweetUpdates['retweetOf.username'] = updates.username;
-    if (updates.userPhotoURL) retweetUpdates['retweetOf.userPhotoURL'] = updates.userPhotoURL;
-    if (updates.userAvatarFrame) retweetUpdates['retweetOf.userAvatarFrame'] = updates.userAvatarFrame;
-    
-    if (Object.keys(retweetUpdates).length > 0) {
-        const retweetsQuery = query(postsRef, where('retweetOf.uid', '==', uid));
-        writePromises.push(processQueryInBatches(retweetsQuery, retweetUpdates));
-    }
-
-    try {
-        await Promise.all(writePromises);
-        revalidatePath('/home');
-        revalidatePath(`/profile/${uid}`);
-    } catch (error) {
-        console.error("Kullanıcı gönderileri güncellenirken hata:", error);
-        throw error;
-    }
-}
-
-export async function updateUserComments(uid: string, updates: { userPhotoURL?: string; userAvatarFrame?: string; username?: string }) {
-    if (!uid || !updates || Object.keys(updates).length === 0) {
-        return;
-    }
-    
-    const commentUpdates: { [key: string]: any } = {};
-    if (updates.userPhotoURL) commentUpdates.photoURL = updates.userPhotoURL;
-    if (updates.userAvatarFrame) commentUpdates.userAvatarFrame = updates.userAvatarFrame;
-    if (updates.username) commentUpdates.username = updates.username;
-
-    if (Object.keys(commentUpdates).length > 0) {
-        const commentsQuery = query(collectionGroup(db, 'comments'), where('uid', '==', uid));
-        try {
-            await processQueryInBatches(commentsQuery, commentUpdates);
-        } catch (error) {
-            console.error("Kullanıcı yorumları güncellenirken hata:", error);
-            throw error;
-        }
-    }
-}
-
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     if (!uid) return null;
@@ -157,41 +70,6 @@ export async function saveFCMToken(userId: string, token: string) {
     return { success: false, error: error.message };
   }
 }
-
-export async function updateOnboardingData({ userId, avatarDataUrl, bio, followingUids }: {
-    userId: string,
-    avatarDataUrl: string | null,
-    bio: string,
-    followingUids: string[]
-}) {
-    const userRef = doc(db, 'users', userId);
-    const batch = writeBatch(db);
-
-    let photoURL = null;
-    if (avatarDataUrl) {
-        const avatarRef = ref(storage, `upload/avatars/${userId}/avatar.jpg`);
-        await uploadString(avatarRef, avatarDataUrl, 'data_url');
-        photoURL = await getDownloadURL(avatarRef);
-    }
-
-    const updates: any = { bio };
-    if (photoURL) {
-        updates.photoURL = photoURL;
-    }
-    
-    batch.update(userRef, updates);
-
-    if (followingUids.length > 0) {
-        batch.update(userRef, { following: arrayUnion(...followingUids) });
-        for (const targetId of followingUids) {
-            const targetRef = doc(db, 'users', targetId);
-            batch.update(targetRef, { followers: arrayUnion(userId) });
-        }
-    }
-
-    await batch.commit();
-}
-
 
 export async function getSuggestedUsers(currentUserId: string): Promise<UserProfile[]> {
     const usersRef = collection(db, 'users');

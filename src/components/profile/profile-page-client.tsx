@@ -21,7 +21,7 @@ import { doc, updateDoc, deleteField } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { Textarea } from "../ui/textarea";
 import { useRouter } from 'next/navigation';
-import { findUserByUsername, updateUserPosts, updateUserComments } from "@/lib/actions/userActions";
+import { findUserByUsername } from "@/lib/actions/userActions";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../common/LanguageSwitcher";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
@@ -111,7 +111,7 @@ export default function ProfilePageClient() {
         if (!userData) return false;
         
         const interestsChanged = JSON.stringify(interests.sort()) !== JSON.stringify((userData.interests || []).sort());
-        const ageChanged = (age === '' ? undefined : Number(age)) !== (userData.age || undefined);
+        const ageChanged = (age === '' || age === 0 ? undefined : Number(age)) !== (userData.age || undefined);
         
         return (
             newAvatar !== null ||
@@ -162,7 +162,6 @@ export default function ProfilePageClient() {
         try {
             const userDocUpdates: { [key: string]: any } = {};
             const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
-            const postAndCommentUpdates: { photoURL?: string; userPhotoURL?: string; username?: string; userAvatarFrame?: string; } = {};
     
             if (newAvatar) {
                 const newAvatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.jpg`);
@@ -170,8 +169,6 @@ export default function ProfilePageClient() {
                 const finalPhotoURL = await getDownloadURL(newAvatarRef);
                 userDocUpdates.photoURL = finalPhotoURL;
                 authProfileUpdates.photoURL = finalPhotoURL;
-                postAndCommentUpdates.photoURL = finalPhotoURL;
-                postAndCommentUpdates.userPhotoURL = finalPhotoURL;
             }
     
             if (username !== userData?.username) {
@@ -186,20 +183,12 @@ export default function ProfilePageClient() {
                 }
                 userDocUpdates.username = username;
                 authProfileUpdates.displayName = username;
-                postAndCommentUpdates.username = username;
             }
             
-            if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || "")) {
-                userDocUpdates.selectedAvatarFrame = selectedAvatarFrame;
-                postAndCommentUpdates.userAvatarFrame = selectedAvatarFrame;
-            }
-            
+            if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || "")) userDocUpdates.selectedAvatarFrame = selectedAvatarFrame;
             if (bio !== userData?.bio) userDocUpdates.bio = bio;
             const newAge = age === '' || age === 0 ? deleteField() : Number(age);
-            if ((newAge === undefined && userData?.age !== undefined) || (newAge !== userData?.age)) {
-                userDocUpdates.age = newAge;
-            }
-
+            if ((newAge === undefined && userData?.age !== undefined) || (newAge !== userData?.age)) userDocUpdates.age = newAge;
             if (city !== userData?.city) userDocUpdates.city = city;
             if (country !== userData?.country) userDocUpdates.country = country;
             if (gender !== userData?.gender) userDocUpdates.gender = gender;
@@ -207,9 +196,7 @@ export default function ProfilePageClient() {
             if(acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) userDocUpdates.acceptsFollowRequests = acceptsFollowRequests;
             if(showOnlineStatus !== (userData?.showOnlineStatus ?? true)) userDocUpdates.showOnlineStatus = showOnlineStatus;
             if(selectedBubble !== userData?.selectedBubble) userDocUpdates.selectedBubble = selectedBubble;
-            if (JSON.stringify(interests.sort()) !== JSON.stringify((userData?.interests || []).sort())) {
-                userDocUpdates.interests = interests;
-            }
+            if (JSON.stringify(interests.sort()) !== JSON.stringify((userData?.interests || []).sort())) userDocUpdates.interests = interests;
     
             const userDocRef = doc(db, 'users', user.uid);
             if (Object.keys(userDocUpdates).length > 0) {
@@ -218,13 +205,6 @@ export default function ProfilePageClient() {
     
             if (Object.keys(authProfileUpdates).length > 0) {
                  await updateProfile(auth.currentUser, authProfileUpdates);
-            }
-
-            if (Object.keys(postAndCommentUpdates).length > 0) {
-                 await Promise.all([
-                    updateUserPosts(user.uid, postAndCommentUpdates),
-                    updateUserComments(user.uid, postAndCommentUpdates)
-                ]);
             }
 
             toast({
@@ -299,7 +279,7 @@ export default function ProfilePageClient() {
                          <div className="grid grid-cols-2 gap-4">
                              <div className="space-y-2">
                                 <Label htmlFor="age">Yaş</Label>
-                                <Input id="age" type="number" value={age} onChange={(e) => setAge(e.target.value)} />
+                                <Input id="age" type="number" value={age || ''} onChange={(e) => setAge(e.target.value)} />
                             </div>
                             <div className="space-y-2">
                                 <Label>Cinsiyet</Label>
