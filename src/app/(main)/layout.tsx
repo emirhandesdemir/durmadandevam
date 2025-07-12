@@ -7,23 +7,14 @@ import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
 import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useRef, useEffect } from 'react';
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
 import ActiveCallBar from "@/components/voice/ActiveCallBar";
 import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
-import UserSearchDialog from "@/components/search/UserSearchDialog";
-import { Compass, Map } from "lucide-react";
-import Link from 'next/link';
-
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
+import { useAuth } from "@/contexts/AuthContext";
+import AnimatedLogoLoader from "@/components/common/AnimatedLogoLoader";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -118,7 +109,19 @@ export default function MainAppLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { user, loading } = useAuth();
+  const router = useRouter();
   const pathname = usePathname();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace(`/login?redirect=${pathname}`);
+    }
+  }, [user, loading, router, pathname]);
+
+  if (loading || !user) {
+    return <AnimatedLogoLoader fullscreen />;
+  }
 
   const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/') || pathname.startsWith('/matchmaking/') || pathname.startsWith('/surf');
   const isHomePage = pathname === '/home';
