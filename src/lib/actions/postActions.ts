@@ -15,7 +15,7 @@ import {
     addDoc,
     collection
 } from "firebase/firestore";
-import { ref, deleteObject, getDownloadURL, uploadBytesResumable } from "firebase/storage";
+import { ref, deleteObject } from "firebase/storage";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
 import { findUserByUsername } from "./userActions";
@@ -55,7 +55,7 @@ async function handlePostMentions(postId: string, text: string, sender: { uid: s
 export async function createPost(postData: {
     uid: string;
     username: string;
-    photoURL: string | null;
+    userPhotoURL: string | null;
     userAvatarFrame: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
@@ -105,7 +105,7 @@ export async function createPost(postData: {
     await handlePostMentions(finalPostId, postData.text, {
         uid: postData.uid,
         displayName: postData.username,
-        photoURL: postData.photoURL,
+        photoURL: postData.userPhotoURL,
         userAvatarFrame: postData.userAvatarFrame
     });
 
@@ -299,7 +299,7 @@ export async function retweetPost(
             postId: originalPostId,
             uid: originalPostData.uid,
             username: originalPostData.username,
-            photoURL: originalPostData.photoURL,
+            userPhotoURL: originalPostData.userPhotoURL,
             userAvatarFrame: originalPostData.userAvatarFrame,
             text: originalPostData.text,
             imageUrl: originalPostData.imageUrl,
@@ -310,7 +310,7 @@ export async function retweetPost(
         const newPostData = {
             uid: retweeter.uid,
             username: retweeter.username,
-            photoURL: retweeter.photoURL,
+            userPhotoURL: retweeter.photoURL,
             userAvatarFrame: retweeter.userAvatarFrame,
             userRole: retweeter.userRole,
             userGender: retweeter.userGender,

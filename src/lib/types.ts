@@ -214,7 +214,7 @@ export interface Post {
     id: string;
     uid: string;
     username: string;
-    photoURL: string | null;
+    userPhotoURL: string | null; // Standardized field
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
@@ -224,7 +224,7 @@ export interface Post {
     backgroundStyle?: string;
     editedWithAI?: boolean;
     createdAt: Timestamp | { seconds: number; nanoseconds: number };
-    likes: string[]; // Beğenen kullanıcıların UID'lerini tutan dizi
+    likes: string[]; // Array of user UIDs who liked the post
     likeCount: number;
     commentCount: number;
     saveCount?: number;
@@ -236,7 +236,7 @@ export interface Post {
         postId: string;
         uid: string;
         username: string;
-        photoURL?: string | null;
+        userPhotoURL?: string | null; // Standardized field
         userAvatarFrame?: string;
         text: string;
         imageUrl?: string;
@@ -249,7 +249,7 @@ export interface Comment {
     id: string;
     uid: string;
     username: string;
-    photoURL: string | null;
+    photoURL: string | null; // Standardized field
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     text: string;
@@ -277,8 +277,8 @@ export interface Room {
     createdBy: {
         uid: string;
         username: string;
-        photoURL?: string | null;
-        role?: 'admin' | 'user';
+        photoURL: string | null;
+        role: 'admin' | 'user';
         selectedAvatarFrame?: string;
     };
     moderators: string[]; // List of moderator UIDs

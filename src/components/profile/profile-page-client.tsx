@@ -111,7 +111,7 @@ export default function ProfilePageClient() {
         if (!userData) return false;
         
         const interestsChanged = JSON.stringify(interests.sort()) !== JSON.stringify((userData.interests || []).sort());
-        const ageChanged = (Number(age) || 0) !== (userData.age || 0);
+        const ageChanged = (age === '' ? undefined : Number(age)) !== (userData.age || undefined);
         
         return (
             newAvatar !== null ||
@@ -170,7 +170,7 @@ export default function ProfilePageClient() {
                 const finalPhotoURL = await getDownloadURL(newAvatarRef);
                 userDocUpdates.photoURL = finalPhotoURL;
                 authProfileUpdates.photoURL = finalPhotoURL;
-                postAndCommentUpdates.photoURL = finalPhotoURL;
+                postAndCommentUpdates.userPhotoURL = finalPhotoURL;
             }
     
             if (username !== userData?.username) {
@@ -194,7 +194,8 @@ export default function ProfilePageClient() {
             }
             
             if (bio !== userData?.bio) userDocUpdates.bio = bio;
-            if (Number(age) !== (userData?.age || 0)) userDocUpdates.age = Number(age) || 0;
+            const newAge = age === '' ? deleteField() : Number(age);
+            if (newAge !== (userData?.age || undefined)) userDocUpdates.age = newAge;
             if (city !== userData?.city) userDocUpdates.city = city;
             if (country !== userData?.country) userDocUpdates.country = country;
             if (gender !== userData?.gender) userDocUpdates.gender = gender;
@@ -216,7 +217,7 @@ export default function ProfilePageClient() {
             }
 
             if (Object.keys(postAndCommentUpdates).length > 0) {
-                await Promise.all([
+                 await Promise.all([
                     updateUserPosts(user.uid, postAndCommentUpdates),
                     updateUserComments(user.uid, postAndCommentUpdates)
                 ]);
@@ -350,7 +351,7 @@ export default function ProfilePageClient() {
                     </CardContent>
                 </Card>
 
-                <Accordion type="multiple" className="w-full space-y-4">
+                 <Accordion type="multiple" className="w-full space-y-4">
                     <AccordionItem value="item-1" asChild>
                         <Card>
                              <AccordionTrigger className="p-6">
@@ -537,20 +538,23 @@ export default function ProfilePageClient() {
             </div>
 
             <AnimatePresence>
-                <motion.div
-                    initial={{ y: "100%", opacity: 0 }}
-                    animate={{ y: hasChanges ? 0 : "100%", opacity: hasChanges ? 1 : 0 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    className="fixed bottom-16 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t"
-                >
-                    <div className="container mx-auto flex justify-between items-center max-w-4xl">
-                        <p className="text-sm font-semibold">Kaydedilmemiş değişiklikleriniz var.</p>
-                        <Button onClick={handleSaveChanges} disabled={isSaving || !hasChanges}>
-                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {t('save_changes')}
-                        </Button>
-                    </div>
-                </motion.div>
+                {hasChanges && (
+                    <motion.div
+                        initial={{ y: "100%", opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: "100%", opacity: 0 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        className="fixed bottom-16 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t"
+                    >
+                        <div className="container mx-auto flex justify-between items-center max-w-4xl">
+                            <p className="text-sm font-semibold">Kaydedilmemiş değişiklikleriniz var.</p>
+                            <Button onClick={handleSaveChanges} disabled={isSaving}>
+                                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {t('save_changes')}
+                            </Button>
+                        </div>
+                    </motion.div>
+                )}
             </AnimatePresence>
             
             <ImageCropperDialog 

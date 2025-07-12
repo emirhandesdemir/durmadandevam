@@ -3,7 +3,7 @@
 
 import { db, storage } from '@/lib/firebase';
 import type { Report, UserProfile, Post } from '../types';
-import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, orderBy, setDoc, collectionGroup } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, orderBy, setDoc, collectionGroup, deleteField } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
@@ -45,7 +45,7 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
     // Create a new object for post updates to ensure correct field names
     const postUpdates: { [key: string]: any } = {};
     if (updates.username) postUpdates.username = updates.username;
-    if (updates.photoURL) postUpdates.photoURL = updates.photoURL; // Correctly map to photoURL
+    if (updates.userPhotoURL) postUpdates.userPhotoURL = updates.userPhotoURL;
     if (updates.userAvatarFrame) postUpdates.userAvatarFrame = updates.userAvatarFrame;
     
     if (Object.keys(postUpdates).length > 0) {
@@ -56,7 +56,7 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
     // Create a new object for retweet updates
     const retweetUpdates: { [key: string]: any } = {};
     if (updates.username) retweetUpdates['retweetOf.username'] = updates.username;
-    if (updates.photoURL) retweetUpdates['retweetOf.photoURL'] = updates.photoURL; // Correctly map
+    if (updates.userPhotoURL) retweetUpdates['retweetOf.userPhotoURL'] = updates.userPhotoURL;
     if (updates.userAvatarFrame) retweetUpdates['retweetOf.userAvatarFrame'] = updates.userAvatarFrame;
     
     if (Object.keys(retweetUpdates).length > 0) {
@@ -74,23 +74,24 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
     }
 }
 
-export async function updateUserComments(uid: string, updates: { photoURL?: string; userAvatarFrame?: string; username?: string }) {
+export async function updateUserComments(uid: string, updates: { userPhotoURL?: string; userAvatarFrame?: string; username?: string }) {
     if (!uid || !updates || Object.keys(updates).length === 0) {
         return;
     }
     
     const commentUpdates: { [key: string]: any } = {};
-    if (updates.photoURL) commentUpdates.photoURL = updates.photoURL;
+    if (updates.userPhotoURL) commentUpdates.photoURL = updates.userPhotoURL;
     if (updates.userAvatarFrame) commentUpdates.userAvatarFrame = updates.userAvatarFrame;
     if (updates.username) commentUpdates.username = updates.username;
 
-    const commentsQuery = query(collectionGroup(db, 'comments'), where('uid', '==', uid));
-
-    try {
-        await processQueryInBatches(commentsQuery, commentUpdates);
-    } catch (error) {
-        console.error("Kullanıcı yorumları güncellenirken hata:", error);
-        throw error;
+    if (Object.keys(commentUpdates).length > 0) {
+        const commentsQuery = query(collectionGroup(db, 'comments'), where('uid', '==', uid));
+        try {
+            await processQueryInBatches(commentsQuery, commentUpdates);
+        } catch (error) {
+            console.error("Kullanıcı yorumları güncellenirken hata:", error);
+            throw error;
+        }
     }
 }
 

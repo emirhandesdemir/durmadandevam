@@ -235,7 +235,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                      <Link href={`/profile/${post.uid}`}>
                         <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
                             <Avatar className="relative z-[1] h-10 w-10">
-                                <AvatarImage src={post.photoURL || undefined} />
+                                <AvatarImage src={post.userPhotoURL || undefined} />
                                 <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
                             </Avatar>
                         </div>

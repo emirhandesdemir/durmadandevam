@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { storage } from "@/lib/firebase";
-import { ref, getDownloadURL, uploadBytesResumable } from "firebase/storage";
+import { ref, getDownloadURL, uploadBytes } from "firebase/storage";
 import { applyImageFilter } from "@/lib/actions/imageActions";
 import { createPost } from "@/lib/actions/postActions";
 import { getFollowingForSuggestions } from "@/lib/actions/userActions";
