@@ -17,7 +17,7 @@ import { auth, db, storage } from "@/lib/firebase";
 import { updateProfile } from "firebase/auth";
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { cn } from "@/lib/utils";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, deleteField } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { Textarea } from "../ui/textarea";
 import { useRouter } from 'next/navigation';
@@ -107,7 +107,7 @@ export default function ProfilePageClient() {
         }
     }, [userData, user]);
     
-     const hasChanges = useMemo(() => {
+    const hasChanges = useMemo(() => {
         if (!userData) return false;
         
         const interestsChanged = JSON.stringify(interests.sort()) !== JSON.stringify((userData.interests || []).sort());
@@ -162,7 +162,7 @@ export default function ProfilePageClient() {
         try {
             const userDocUpdates: { [key: string]: any } = {};
             const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
-            const postAndCommentUpdates: { [key: string]: any } = {};
+            const postAndCommentUpdates: { photoURL?: string; userPhotoURL?: string; username?: string; userAvatarFrame?: string; } = {};
     
             if (newAvatar) {
                 const newAvatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.jpg`);
@@ -170,6 +170,7 @@ export default function ProfilePageClient() {
                 const finalPhotoURL = await getDownloadURL(newAvatarRef);
                 userDocUpdates.photoURL = finalPhotoURL;
                 authProfileUpdates.photoURL = finalPhotoURL;
+                postAndCommentUpdates.photoURL = finalPhotoURL;
                 postAndCommentUpdates.userPhotoURL = finalPhotoURL;
             }
     
@@ -194,8 +195,11 @@ export default function ProfilePageClient() {
             }
             
             if (bio !== userData?.bio) userDocUpdates.bio = bio;
-            const newAge = age === '' ? deleteField() : Number(age);
-            if (newAge !== (userData?.age || undefined)) userDocUpdates.age = newAge;
+            const newAge = age === '' || age === 0 ? deleteField() : Number(age);
+            if ((newAge === undefined && userData?.age !== undefined) || (newAge !== userData?.age)) {
+                userDocUpdates.age = newAge;
+            }
+
             if (city !== userData?.city) userDocUpdates.city = city;
             if (country !== userData?.country) userDocUpdates.country = country;
             if (gender !== userData?.gender) userDocUpdates.gender = gender;
@@ -569,3 +573,5 @@ export default function ProfilePageClient() {
         </>
     );
 }
+
+    
