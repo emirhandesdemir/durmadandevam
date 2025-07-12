@@ -1,3 +1,4 @@
+
 // src/components/profile/profile-page-client.tsx
 "use client";
 
@@ -8,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Palette, Loader2, Sparkles, Lock, Camera, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff } from "lucide-react";
+import { LogOut, Palette, Loader2, Sparkles, Lock, Camera, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
@@ -69,6 +70,7 @@ export default function ProfilePageClient() {
     const [gender, setGender] = useState<'male' | 'female' | undefined>(undefined);
     const [privateProfile, setPrivateProfile] = useState(false);
     const [acceptsFollowRequests, setAcceptsFollowRequests] = useState(true);
+    const [showOnlineStatus, setShowOnlineStatus] = useState(true);
     const [newAvatar, setNewAvatar] = useState<string | null>(null);
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
     const [selectedBubble, setSelectedBubble] = useState("");
@@ -94,6 +96,7 @@ export default function ProfilePageClient() {
             setGender(userData.gender);
             setPrivateProfile(userData.privateProfile || false);
             setAcceptsFollowRequests(userData.acceptsFollowRequests ?? true);
+            setShowOnlineStatus(userData.showOnlineStatus ?? true);
             setSelectedBubble(userData.selectedBubble || "");
             setSelectedAvatarFrame(userData.selectedAvatarFrame || "");
             setInterests(userData.interests || []);
@@ -116,12 +119,13 @@ export default function ProfilePageClient() {
             gender !== (userData.gender || undefined) ||
             privateProfile !== (userData.privateProfile || false) || 
             acceptsFollowRequests !== (userData.acceptsFollowRequests ?? true) ||
+            showOnlineStatus !== (userData.showOnlineStatus ?? true) ||
             newAvatar !== null || 
             selectedBubble !== (userData?.selectedBubble || "") || 
             selectedAvatarFrame !== (userData?.selectedAvatarFrame || "") ||
             interestsChanged
         );
-    }, [username, bio, age, city, country, gender, privateProfile, acceptsFollowRequests, newAvatar, selectedBubble, selectedAvatarFrame, interests, userData]);
+    }, [username, bio, age, city, country, gender, privateProfile, acceptsFollowRequests, showOnlineStatus, newAvatar, selectedBubble, selectedAvatarFrame, interests, userData]);
     
     const handleAvatarClick = () => { fileInputRef.current?.click(); };
 
@@ -189,6 +193,7 @@ export default function ProfilePageClient() {
             if (gender !== userData?.gender) userDocUpdates.gender = gender;
             if(privateProfile !== userData?.privateProfile) userDocUpdates.privateProfile = privateProfile;
             if(acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) userDocUpdates.acceptsFollowRequests = acceptsFollowRequests;
+            if(showOnlineStatus !== (userData?.showOnlineStatus ?? true)) userDocUpdates.showOnlineStatus = showOnlineStatus;
             if(selectedBubble !== userData?.selectedBubble) userDocUpdates.selectedBubble = selectedBubble;
             if (JSON.stringify(interests.sort()) !== JSON.stringify((userData?.interests || []).sort())) {
                 userDocUpdates.interests = interests;
@@ -514,7 +519,7 @@ export default function ProfilePageClient() {
             </div>
 
             {hasChanges && (
-                <div className="fixed bottom-16 sm:bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
+                <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
                     <div className="container mx-auto flex justify-between items-center max-w-4xl">
                         <p className="text-sm font-semibold">Kaydedilmemiş değişiklikleriniz var.</p>
                         <Button onClick={handleSaveChanges} disabled={isSaving}>
