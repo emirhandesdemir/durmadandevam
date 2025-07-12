@@ -214,7 +214,7 @@ export interface Post {
     id: string;
     uid: string;
     username: string;
-    userPhotoURL: string | null; // Standardized field
+    photoURL: string | null; // STANDARDIZED
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
@@ -236,7 +236,7 @@ export interface Post {
         postId: string;
         uid: string;
         username: string;
-        userPhotoURL?: string | null; // Standardized field
+        photoURL?: string | null; // STANDARDIZED
         userAvatarFrame?: string;
         text: string;
         imageUrl?: string;
@@ -249,7 +249,7 @@ export interface Comment {
     id: string;
     uid: string;
     username: string;
-    photoURL: string | null; // Standardized field
+    photoURL: string | null; // STANDARDIZED
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     text: string;

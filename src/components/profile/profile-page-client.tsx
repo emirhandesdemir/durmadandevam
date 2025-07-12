@@ -21,7 +21,7 @@ import { doc, updateDoc, deleteField } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { Textarea } from "../ui/textarea";
 import { useRouter } from 'next/navigation';
-import { findUserByUsername, updateUserPosts, updateUserComments } from "@/lib/actions/userActions";
+import { findUserByUsername } from "@/lib/actions/userActions";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../common/LanguageSwitcher";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
@@ -162,7 +162,6 @@ export default function ProfilePageClient() {
         try {
             const userDocUpdates: { [key: string]: any } = {};
             const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
-            const propagationUpdates: { username?: string; userPhotoURL?: string; userAvatarFrame?: string; } = {};
     
             if (newAvatar) {
                 const newAvatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.jpg`);
@@ -170,7 +169,6 @@ export default function ProfilePageClient() {
                 const finalPhotoURL = await getDownloadURL(newAvatarRef);
                 userDocUpdates.photoURL = finalPhotoURL;
                 authProfileUpdates.photoURL = finalPhotoURL;
-                propagationUpdates.userPhotoURL = finalPhotoURL;
             }
     
             if (username !== userData?.username) {
@@ -185,12 +183,10 @@ export default function ProfilePageClient() {
                 }
                 userDocUpdates.username = username;
                 authProfileUpdates.displayName = username;
-                propagationUpdates.username = username;
             }
             
             if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || "")) {
                 userDocUpdates.selectedAvatarFrame = selectedAvatarFrame;
-                propagationUpdates.userAvatarFrame = selectedAvatarFrame;
             }
 
             if (bio !== userData?.bio) userDocUpdates.bio = bio;
@@ -212,22 +208,6 @@ export default function ProfilePageClient() {
     
             if (Object.keys(authProfileUpdates).length > 0) {
                  await updateProfile(auth.currentUser, authProfileUpdates);
-            }
-
-            if (Object.keys(propagationUpdates).length > 0) {
-                try {
-                    await Promise.all([
-                        updateUserPosts(user.uid, propagationUpdates),
-                        updateUserComments(user.uid, propagationUpdates)
-                    ]);
-                } catch(e) {
-                    console.error("Error propagating profile updates", e);
-                    toast({
-                        variant: "destructive",
-                        title: "Yansıtma Hatası",
-                        description: "Profiliniz güncellendi ancak eski gönderi ve yorumlarınıza yansıtılamadı. Bu bir indeksleme sorunu olabilir, lütfen konsolu kontrol edin."
-                    })
-                }
             }
 
             toast({
@@ -576,5 +556,3 @@ export default function ProfilePageClient() {
         </>
     );
 }
-
-    
