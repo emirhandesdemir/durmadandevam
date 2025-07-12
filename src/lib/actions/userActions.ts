@@ -36,6 +36,40 @@ async function processQueryInBatches(query: any, updateData: any) {
     await Promise.all(batches);
 }
 
+export async function updateUserPosts(uid: string, updates: { username?: string; photoURL?: string; userAvatarFrame?: string; }) {
+    if (!uid || !updates || Object.keys(updates).length === 0) {
+        return;
+    }
+
+    const postsRef = collection(db, 'posts');
+    const writePromises = [];
+
+    // Update user's own posts (original posts and retweets by them)
+    const userPostsQuery = query(postsRef, where('uid', '==', uid));
+    writePromises.push(processQueryInBatches(userPostsQuery, updates));
+
+    // Update user's appearance in others' retweets of their posts
+    const retweetUpdates: { [key: string]: any } = {};
+    if (updates.username) retweetUpdates['retweetOf.username'] = updates.username;
+    if (updates.photoURL) retweetUpdates['retweetOf.photoURL'] = updates.photoURL;
+    if (updates.userAvatarFrame) retweetUpdates['retweetOf.userAvatarFrame'] = updates.userAvatarFrame;
+    
+    if (Object.keys(retweetUpdates).length > 0) {
+        const retweetsQuery = query(postsRef, where('retweetOf.uid', '==', uid));
+        writePromises.push(processQueryInBatches(retweetsQuery, retweetUpdates));
+    }
+
+    try {
+        await Promise.all(writePromises);
+        revalidatePath('/home');
+        revalidatePath(`/profile/${uid}`);
+    } catch (error) {
+        console.error("Kullanıcı gönderileri güncellenirken hata:", error);
+        throw error;
+    }
+}
+
+
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     if (!uid) return null;
     const userRef = doc(db, 'users', uid);

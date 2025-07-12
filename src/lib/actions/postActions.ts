@@ -82,7 +82,7 @@ export async function createPost(postData: {
         const newPostData = {
             uid: postData.uid,
             username: postData.username,
-            userPhotoURL: postData.photoURL,
+            photoURL: postData.photoURL,
             userAvatarFrame: postData.userAvatarFrame,
             userRole: postData.userRole,
             userGender: postData.userGender,
@@ -312,7 +312,7 @@ export async function retweetPost(
             postId: originalPostId,
             uid: originalPostData.uid,
             username: originalPostData.username,
-            photoURL: originalPostData.userPhotoURL,
+            photoURL: originalPostData.photoURL,
             userAvatarFrame: originalPostData.userAvatarFrame,
             text: originalPostData.text,
             imageUrl: originalPostData.imageUrl,

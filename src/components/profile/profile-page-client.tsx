@@ -100,21 +100,22 @@ export default function ProfilePageClient() {
     const hasChanges = useMemo(() => {
         if (!userData) return false;
         
-        const ageAsNumber = age === '' ? undefined : Number(age);
-        
+        const ageAsNumber = age === '' || age === undefined ? undefined : Number(age);
+        const userDataAge = userData.age === undefined ? undefined : Number(userData.age);
+
         if (newAvatar !== null) return true;
-        if (username !== (userData.username || '')) return true;
-        if (bio !== (userData.bio || '')) return true;
-        if (ageAsNumber !== (userData.age || undefined)) return true;
-        if (city !== (userData.city || '')) return true;
-        if (country !== (userData.country || '')) return true;
+        if (username.trim() !== (userData.username || '').trim()) return true;
+        if (bio.trim() !== (userData.bio || '').trim()) return true;
+        if (ageAsNumber !== userDataAge) return true;
+        if (city.trim() !== (userData.city || '').trim()) return true;
+        if (country.trim() !== (userData.country || '').trim()) return true;
         if (gender !== (userData.gender || undefined)) return true;
         if (privateProfile !== (userData.privateProfile || false)) return true;
         if (acceptsFollowRequests !== (userData.acceptsFollowRequests ?? true)) return true;
         if (showOnlineStatus !== (userData.showOnlineStatus ?? true)) return true;
         if (selectedBubble !== (userData.selectedBubble || '')) return true;
         if (selectedAvatarFrame !== (userData.selectedAvatarFrame || '')) return true;
-        if (JSON.stringify(interests.sort()) !== JSON.stringify((userData.interests || []).sort())) return true;
+        if (JSON.stringify(interests.map(i => i.trim()).sort()) !== JSON.stringify((userData.interests || []).map(i => i.trim()).sort())) return true;
     
         return false;
     }, [
@@ -154,7 +155,7 @@ export default function ProfilePageClient() {
             const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
     
             if (newAvatar) {
-                const newAvatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.jpg`);
+                const newAvatarRef = ref(storage, `avatars/${user.uid}/avatar.jpg`);
                 await uploadString(newAvatarRef, newAvatar, 'data_url');
                 const finalPhotoURL = await getDownloadURL(newAvatarRef);
                 userDocUpdates.photoURL = finalPhotoURL;
@@ -162,10 +163,6 @@ export default function ProfilePageClient() {
             }
     
             if (username !== userData?.username) {
-                if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
-                    toast({ variant: "destructive", title: "Geçersiz Kullanıcı Adı", description: "Kullanıcı adı 3-20 karakter uzunluğunda olmalı ve sadece harf, rakam veya alt çizgi içermelidir." });
-                    setIsSaving(false); return;
-                }
                 userDocUpdates.username = username;
                 authProfileUpdates.displayName = username;
             }
@@ -195,7 +192,7 @@ export default function ProfilePageClient() {
             if (Object.keys(authProfileUpdates).length > 0) {
                  await updateProfile(auth.currentUser, authProfileUpdates);
             }
-            
+
             toast({
                 title: "Başarılı!",
                 description: "Profiliniz başarıyla güncellendi.",
@@ -510,8 +507,8 @@ export default function ProfilePageClient() {
                 </footer>
             </div>
             
-            <div className="fixed bottom-16 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
-                <div className="container mx-auto flex justify-between items-center max-w-4xl">
+             <div className="fixed bottom-16 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
+                <div className="container mx-auto flex justify-between items-center max-w-2xl">
                     <p className="text-sm font-semibold">Değişiklikleri Kaydet</p>
                     <Button onClick={handleSaveChanges} disabled={isSaving || !hasChanges}>
                         {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
