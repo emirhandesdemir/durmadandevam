@@ -155,7 +155,7 @@ export default function ProfilePageClient() {
             const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
     
             if (newAvatar) {
-                const newAvatarRef = ref(storage, `avatars/${user.uid}/avatar.jpg`);
+                const newAvatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.jpg`);
                 await uploadString(newAvatarRef, newAvatar, 'data_url');
                 const finalPhotoURL = await getDownloadURL(newAvatarRef);
                 userDocUpdates.photoURL = finalPhotoURL;
