@@ -18,7 +18,7 @@ import { updateProfile } from "firebase/auth";
 import ImageCropperDialog from "../common/ImageCropperDialog";
 import { cn } from "@/lib/utils";
 import { doc, updateDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { Textarea } from "../ui/textarea";
 import { useRouter } from 'next/navigation';
 import { findUserByUsername, updateUserPosts, updateUserComments } from "@/lib/actions/userActions";
@@ -112,7 +112,6 @@ export default function ProfilePageClient() {
         
         const interestsChanged = JSON.stringify(interests.sort()) !== JSON.stringify((userData.interests || []).sort());
     
-        // Handle potential undefined or null values correctly for comparison
         const ageValue = age === undefined ? null : Number(age);
         const userDataAgeValue = userData.age === undefined ? null : Number(userData.age);
     
@@ -126,7 +125,7 @@ export default function ProfilePageClient() {
             privateProfile !== (userData.privateProfile || false) ||
             acceptsFollowRequests !== (userData.acceptsFollowRequests ?? true) ||
             showOnlineStatus !== (userData.showOnlineStatus ?? true) ||
-            newAvatar !== null || // Check if a new avatar has been set
+            newAvatar !== null ||
             selectedBubble !== (userData?.selectedBubble || "") ||
             selectedAvatarFrame !== (userData?.selectedAvatarFrame || "") ||
             interestsChanged
@@ -160,12 +159,13 @@ export default function ProfilePageClient() {
         try {
             const userDocUpdates: { [key: string]: any } = {};
             const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
-            const postAndCommentUpdates: { username?: string; photoURL?: string; userAvatarFrame?: string; } = {};
+            const postAndCommentUpdates: { [key: string]: any } = {};
     
+            // Process Avatar
             if (newAvatar) {
                 const imageBlob = await dataUriToBlob(newAvatar);
                 const newAvatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.jpg`);
-                await uploadBytes(newAvatarRef, imageBlob);
+                await uploadString(newAvatarRef, newAvatar, 'data_url');
                 const finalPhotoURL = await getDownloadURL(newAvatarRef);
                 userDocUpdates.photoURL = finalPhotoURL;
                 authProfileUpdates.photoURL = finalPhotoURL;
@@ -532,11 +532,11 @@ export default function ProfilePageClient() {
             </div>
 
             <div
-                className="fixed bottom-16 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t"
+                className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t"
             >
                 <div className="container mx-auto flex justify-between items-center max-w-4xl">
-                     <p className={cn("text-sm font-semibold text-muted-foreground transition-opacity", hasChanges ? "opacity-100" : "opacity-0")}>
-                        Değişiklikleriniz var.
+                     <p className={cn("text-sm font-semibold transition-opacity duration-300", hasChanges ? "opacity-100" : "opacity-0")}>
+                        Kaydedilmemiş değişiklikler var.
                      </p>
                     <Button onClick={handleSaveChanges} disabled={isSaving || !hasChanges} size="lg">
                         {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

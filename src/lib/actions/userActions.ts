@@ -41,11 +41,11 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
 
     const postsRef = collection(db, 'posts');
     const writePromises = [];
-
-    // Rename keys to match the Post type
+    
+    // Create a new object for post updates to ensure correct field names
     const postUpdates: { [key: string]: any } = {};
     if (updates.username) postUpdates.username = updates.username;
-    if (updates.photoURL) postUpdates.photoURL = updates.photoURL;
+    if (updates.photoURL) postUpdates.userPhotoURL = updates.photoURL; // Correctly map to userPhotoURL
     if (updates.userAvatarFrame) postUpdates.userAvatarFrame = updates.userAvatarFrame;
     
     if (Object.keys(postUpdates).length > 0) {
@@ -53,10 +53,10 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
         writePromises.push(processQueryInBatches(userPostsQuery, postUpdates));
     }
 
-
+    // Create a new object for retweet updates
     const retweetUpdates: { [key: string]: any } = {};
     if (updates.username) retweetUpdates['retweetOf.username'] = updates.username;
-    if (updates.photoURL) retweetUpdates['retweetOf.photoURL'] = updates.photoURL;
+    if (updates.photoURL) retweetUpdates['retweetOf.userPhotoURL'] = updates.photoURL; // Correctly map to retweetOf.userPhotoURL
     if (updates.userAvatarFrame) retweetUpdates['retweetOf.userAvatarFrame'] = updates.userAvatarFrame;
     
     if (Object.keys(retweetUpdates).length > 0) {
