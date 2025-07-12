@@ -5,7 +5,7 @@ import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/Header";
 import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
 import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
-import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useRef, useEffect } from 'react';
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -120,8 +120,7 @@ export default function MainAppLayout({
 }) {
   const pathname = usePathname();
 
-  const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/') || pathname.startsWith('/matchmaking/');
-  const isHeaderlessPage = isFullPageLayout || pathname.startsWith('/surf');
+  const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/') || pathname.startsWith('/matchmaking/') || pathname.startsWith('/surf');
   const isHomePage = pathname === '/home';
   
   const pageVariants = {
@@ -139,11 +138,11 @@ export default function MainAppLayout({
         <main 
             className={cn(
             "flex-1 flex flex-col hide-scrollbar",
-            isHeaderlessPage ? "pb-0" : "pb-16",
+            isFullPageLayout ? "pb-0" : "pb-16",
             isFullPageLayout ? "overflow-hidden" : "overflow-y-auto"
             )}
         >
-            {!isHeaderlessPage && (
+            {!isFullPageLayout && (
                 <header className="sticky top-0 z-40">
                     <Header />
                 </header>
@@ -158,8 +157,8 @@ export default function MainAppLayout({
                     exit="exit"
                     className={cn(
                         "flex-1 flex flex-col",
-                        isFullPageLayout ? "overflow-hidden" : "",
-                        !isHomePage && !isFullPageLayout && !pathname.startsWith('/surf') && "p-4"
+                        isFullPageLayout ? "overflow-hidden h-full" : "",
+                        !isHomePage && !isFullPageLayout && "p-4"
                     )}
                 >
                     {children}

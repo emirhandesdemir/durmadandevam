@@ -50,6 +50,8 @@ export default function SurfFeed() {
   }, []);
 
   useEffect(() => {
+    if (videoPosts.length === 0) return;
+
     observerRef.current = new IntersectionObserver(handleIntersection, {
       root: containerRef.current,
       rootMargin: '0px',
@@ -60,7 +62,7 @@ export default function SurfFeed() {
     const videos = containerRef.current?.children;
     if (videos) {
       Array.from(videos).forEach(video => {
-          currentObserver.observe(video);
+          if (video) currentObserver.observe(video as Element);
       });
     }
 
@@ -106,8 +108,8 @@ export default function SurfFeed() {
         </Button>
         <div ref={containerRef} className="h-full w-full overflow-y-auto snap-y snap-mandatory overscroll-contain scroll-smooth hide-scrollbar">
             {videoPosts.map((post, index) => (
-                <div key={post.id} data-index={index} className="h-full w-full snap-start relative flex items-center justify-center bg-black">
-                <SurfVideoCard post={post} isActive={index === activeIndex} />
+                <div key={post.id} data-index={index} className="h-full w-full snap-start relative flex items-center justify-center bg-black shrink-0">
+                  <SurfVideoCard post={post} isActive={index === activeIndex} />
                 </div>
             ))}
         </div>

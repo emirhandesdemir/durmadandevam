@@ -27,7 +27,7 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
 
   const [optimisticLiked, setOptimisticLiked] = useState(post.likes?.includes(user?.uid || ''));
   const [optimisticLikeCount, setOptimisticLikeCount] = useState(post.likeCount || 0);
-  const [optimisticSaved, setOptimisticSaved] = useState(false); // This needs to be fetched from user data if available
+  const [optimisticSaved, setOptimisticSaved] = useState(false);
   const [optimisticSaveCount, setOptimisticSaveCount] = useState(post.saveCount || 0);
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
     }
     setOptimisticLiked(post.likes?.includes(user?.uid || ''));
     setOptimisticLikeCount(post.likeCount || 0);
-    setOptimisticSaveCount(post.saveCount || 0);
+    // setOptimisticSaveCount(post.saveCount || 0); // This should be fetched if you want to display save count
   }, [post, user, userData]);
 
   useEffect(() => {
@@ -107,13 +107,11 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
     }
     const wasSaved = optimisticSaved;
     setOptimisticSaved(!wasSaved);
-    setOptimisticSaveCount(p => wasSaved ? p - 1 : p + 1);
 
     try {
         await toggleSavePost(post.id, user.uid);
     } catch (error) {
         setOptimisticSaved(wasSaved);
-        setOptimisticSaveCount(p => wasSaved ? p + 1 : p - 1);
         toast({ variant: "destructive", description: "Kaydedilirken bir hata oluştu." });
     }
 }, [user, post.id, optimisticSaved, toast]);
@@ -121,7 +119,7 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
 
   return (
     <>
-      <div className="h-full w-full relative bg-black rounded-lg" onDoubleClick={handleDoubleClick}>
+      <div className="h-full w-full relative bg-black flex items-center justify-center" onDoubleClick={handleDoubleClick}>
         {showLikeAnimation && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                 <Heart className="text-white h-24 w-24 drop-shadow-lg animate-like-pop" fill="currentColor" />
@@ -134,7 +132,7 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
           muted={isMuted}
           playsInline
           preload="auto"
-          className="h-full w-full object-cover"
+          className="h-full w-full object-contain"
           onContextMenu={(e) => e.preventDefault()}
           onClick={togglePlay}
         />
@@ -169,7 +167,7 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
               </Button>
               <Button variant="ghost" className="flex-col h-auto p-0 text-white" onClick={(e) => { e.stopPropagation(); handleSave(); }}>
                 <Bookmark className={cn("h-8 w-8", optimisticSaved && "fill-white text-white")} />
-                <span className="text-xs font-semibold">{optimisticSaveCount}</span>
+                 {/* <span className="text-xs font-semibold">{optimisticSaveCount}</span> */}
               </Button>
                <Button variant="ghost" className="h-auto p-0 text-white" size="icon" onClick={(e) => { e.stopPropagation(); setIsMuted(p => !p); }}>
                 {isMuted ? <VolumeX className="h-7 w-7" /> : <Volume2 className="h-7 w-7" />}
