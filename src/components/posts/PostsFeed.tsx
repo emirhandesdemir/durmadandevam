@@ -37,10 +37,6 @@ export default function PostsFeed() {
 
     useEffect(() => {
         if (authLoading) return;
-        if (!user) {
-            setLoading(false);
-            return;
-        }
 
         const postsRef = collection(db, 'posts');
         const q = query(postsRef, orderBy('createdAt', 'desc'), limit(50));
@@ -63,8 +59,8 @@ export default function PostsFeed() {
     if (loading) {
         return (
             <div className="space-y-4 w-full">
-                <Skeleton className="h-48 w-full rounded-2xl" />
-                <Skeleton className="h-48 w-full rounded-2xl" />
+                <Skeleton className="h-96 w-full" />
+                <Skeleton className="h-96 w-full" />
             </div>
         );
     }

@@ -249,7 +249,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
 
         return (
             <>
-                <div className={cn("relative flex flex-col pt-3 bg-background", !isStandalone && "border-b")}>
+                <div className={cn("relative flex flex-col pt-3 bg-background", !isStandalone && "pb-2")}>
                     <div className="flex items-start gap-3 px-4 pb-2">
                          <Link href={`/profile/${post.uid}`}>
                             <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
@@ -299,7 +299,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                             {originalPost.text && <p className="whitespace-pre-wrap text-sm mt-2 line-clamp-4">{originalPost.text}</p>}
                         </div>
                         {originalPost.imageUrl && (
-                             <div className="relative w-full aspect-video bg-muted">
+                             <div className="relative w-full aspect-[4/5] bg-muted">
                                 <Image 
                                     src={originalPost.imageUrl} 
                                     alt="Retweeted post" 
@@ -352,9 +352,8 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     
     return (
         <>
-            <div className={cn("relative flex flex-col bg-background", !isStandalone && "border-b")}>
-                
-                <div className="flex items-start gap-3 p-4">
+            <div className={cn("relative flex flex-col bg-background py-3", !isStandalone && "")}>
+                <div className="flex items-center gap-3 px-4">
                      <Link href={`/profile/${post.uid}`}>
                         <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
                             <Avatar className="relative z-[1] h-10 w-10">
@@ -377,119 +376,106 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                                 </TooltipProvider>
                             )}
                         </div>
-                        <span className="text-xs text-muted-foreground">{timeAgo}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        {post.editedWithAI && (
-                            <TooltipProvider delayDuration={0}>
-                                <Tooltip>
-                                    <TooltipTrigger className="flex items-center gap-1 text-primary font-semibold">
-                                        <Sparkles className="h-3 w-3" />
-                                        <span>AI ile düzenlendi</span>
-                                    </TooltipTrigger>
-                                    <TooltipContent><p>Bu gönderideki resim HiweWalkAI ile düzenlenmiştir.</p></TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        )}
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full -mr-2">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                {isOwner && (
-                                    <DropdownMenuItem onClick={() => setIsEditing(true)}><Edit className="mr-2 h-4 w-4" /><span>Düzenle</span></DropdownMenuItem>
-                                )}
-                                 {isOwner || isAdmin ? (
-                                    <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Sil</span></DropdownMenuItem>
-                                 ) : (
-                                    <>
-                                        <DropdownMenuItem onClick={handleHide}><EyeOff className="mr-2 h-4 w-4" /><span>İlgilenmiyorum</span></DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => setIsReportOpen(true)}><ShieldAlert className="mr-2 h-4 w-4" /><span>Şikayet Et</span></DropdownMenuItem>
-                                    </>
-                                 )}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full -mr-2">
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            {isOwner && (
+                                <DropdownMenuItem onClick={() => setIsEditing(true)}><Edit className="mr-2 h-4 w-4" /><span>Düzenle</span></DropdownMenuItem>
+                            )}
+                             {isOwner || isAdmin ? (
+                                <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Sil</span></DropdownMenuItem>
+                             ) : (
+                                <>
+                                    <DropdownMenuItem onClick={handleHide}><EyeOff className="mr-2 h-4 w-4" /><span>İlgilenmiyorum</span></DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setIsReportOpen(true)}><ShieldAlert className="mr-2 h-4 w-4" /><span>Şikayet Et</span></DropdownMenuItem>
+                                </>
+                             )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
-
-                 {(post.text || isEditing) && (
-                    <div className="px-4 pb-3 text-sm text-foreground/90">
-                        {isEditing ? (
-                            <div className="space-y-4">
-                                <Textarea ref={textareaRef} value={editedText} onChange={(e) => setEditedText(e.target.value)} className="w-full resize-none bg-muted p-2 rounded-lg" onInput={(e) => { const target = e.currentTarget; target.style.height = 'inherit'; target.style.height = `${target.scrollHeight}px`; }} />
-                                <div className="space-y-3 rounded-lg border p-3">
-                                    <div className="flex items-center justify-between">
-                                        <Label htmlFor="edit-disable-comments" className="font-semibold flex items-center gap-2"><MessageCircleOff className="h-4 w-4"/> Yorumları Kapat</Label>
-                                        <Switch id="edit-disable-comments" checked={editingCommentsDisabled} onCheckedChange={setEditingCommentsDisabled} />
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <Label htmlFor="edit-hide-likes" className="font-semibold flex items-center gap-2"><HeartOff className="h-4 w-4"/> Beğeni Sayısını Gizle</Label>
-                                        <Switch id="edit-hide-likes" checked={editingLikesHidden} onCheckedChange={setEditingLikesHidden} />
-                                    </div>
-                                </div>
-                                <div className="flex justify-end gap-2">
-                                    <Button variant="ghost" size="sm" onClick={handleCancelEdit}>İptal</Button>
-                                    <Button size="sm" onClick={handleSaveEdit} disabled={isSaving}>
-                                        {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                        Kaydet
-                                    </Button>
-                                </div>
-                            </div>
-                        ) : (
-                            post.text && <p className="whitespace-pre-wrap">{post.text}</p>
-                        )}
-                    </div>
-                 )}
                 
                 {post.imageUrl && !isEditing && (
-                    <div className="relative w-full bg-muted cursor-pointer">
+                    <div className="relative w-full bg-muted mt-3">
                         <Image
                             src={post.imageUrl}
                             alt="Gönderi resmi"
                             width={800}
-                            height={800}
+                            height={1000}
                             sizes="(max-width: 768px) 100vw, 50vw"
-                            className="h-auto w-full max-h-[70vh] object-cover"
+                            className="h-auto w-full max-h-[80vh] object-cover"
                             onContextMenu={(e) => e.preventDefault()}
                         />
                     </div>
                 )}
                 
-                <div className="px-2 pt-1 pb-2">
+                <div className="px-2 pt-1">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1">
                             <Button variant="ghost" size="icon" className={cn("rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive", optimisticLiked && "text-destructive")} onClick={handleLike} disabled={!currentUser}>
-                               <Heart className={cn("h-5 w-5", optimisticLiked && "fill-current")} />
+                               <Heart className={cn("h-6 w-6", optimisticLiked && "fill-current")} />
                             </Button>
                             {!post.commentsDisabled && (
                                 <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary" onClick={() => setShowComments(true)}>
-                                    <MessageCircle className="h-5 w-5" />
+                                    <MessageCircle className="h-6 w-6" />
                                 </Button>
                             )}
                             <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-green-500/10 hover:text-green-500" onClick={handleRetweet} disabled={!currentUser || isOwner}>
-                               <Repeat className="h-5 w-5" />
+                               <Repeat className="h-6 w-6" />
                             </Button>
                         </div>
                          <Button variant="ghost" size="icon" className={cn("rounded-full text-muted-foreground hover:bg-sky-500/10 hover:text-sky-500", optimisticSaved && "text-sky-500")} onClick={handleSave} disabled={!currentUser}>
-                            <Bookmark className={cn("h-5 w-5", optimisticSaved && "fill-current")} />
+                            <Bookmark className={cn("h-6 w-6", optimisticSaved && "fill-current")} />
                         </Button>
                     </div>
 
-                    {(optimisticLikeCount > 0 || (post.commentCount > 0 && !post.commentsDisabled)) && (
-                         <div className="mt-1 px-2 text-xs text-muted-foreground">
-                            {!post.likesHidden && optimisticLikeCount > 0 && (
-                                <span>{optimisticLikeCount || 0} beğeni</span>
-                            )}
-                             {(!post.likesHidden && optimisticLikeCount > 0) && (!post.commentsDisabled && post.commentCount > 0) && (
-                                <span className="mx-1">·</span>
-                            )}
-                            {!post.commentsDisabled && post.commentCount > 0 && (
-                                <span>{post.commentCount || 0} yanıt</span>
-                            )}
-                        </div>
-                    )}
+                    <div className="px-2 text-sm">
+                        {!post.likesHidden && optimisticLikeCount > 0 && (
+                            <p className="font-semibold">{optimisticLikeCount || 0} beğeni</p>
+                        )}
+                        {(post.text || isEditing) && (
+                             <div className="text-sm text-foreground/90">
+                                {isEditing ? (
+                                    <div className="space-y-4">
+                                        <Textarea ref={textareaRef} value={editedText} onChange={(e) => setEditedText(e.target.value)} className="w-full resize-none bg-muted p-2 rounded-lg" onInput={(e) => { const target = e.currentTarget; target.style.height = 'inherit'; target.style.height = `${target.scrollHeight}px`; }} />
+                                        <div className="space-y-3 rounded-lg border p-3">
+                                            <div className="flex items-center justify-between">
+                                                <Label htmlFor="edit-disable-comments" className="font-semibold flex items-center gap-2"><MessageCircleOff className="h-4 w-4"/> Yorumları Kapat</Label>
+                                                <Switch id="edit-disable-comments" checked={editingCommentsDisabled} onCheckedChange={setEditingCommentsDisabled} />
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <Label htmlFor="edit-hide-likes" className="font-semibold flex items-center gap-2"><HeartOff className="h-4 w-4"/> Beğeni Sayısını Gizle</Label>
+                                                <Switch id="edit-hide-likes" checked={editingLikesHidden} onCheckedChange={setEditingLikesHidden} />
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-end gap-2">
+                                            <Button variant="ghost" size="sm" onClick={handleCancelEdit}>İptal</Button>
+                                            <Button size="sm" onClick={handleSaveEdit} disabled={isSaving}>
+                                                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                Kaydet
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    post.text && 
+                                    <p className="whitespace-pre-wrap mt-1">
+                                        <Link href={`/profile/${post.uid}`} className="font-bold hover:underline">{post.username}</Link>
+                                        <span className="ml-1">{post.text}</span>
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                         {!post.commentsDisabled && post.commentCount > 0 && (
+                            <button onClick={() => setShowComments(true)} className="text-muted-foreground mt-1 text-sm">
+                                {post.commentCount} yanıtın tümünü gör
+                            </button>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">{timeAgo}</p>
+                    </div>
                 </div>
             </div>
             
