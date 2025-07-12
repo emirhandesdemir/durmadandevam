@@ -12,10 +12,10 @@ import { LogOut, Palette, Loader2, Sparkles, Lock, Camera, Gift, Copy, Users, Gl
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { auth, db, storage } from "@/lib/firebase";
 import { updateProfile } from "firebase/auth";
-import ImageCropperDialog from "../common/ImageCropperDialog";
+import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { cn } from "@/lib/utils";
 import { doc, updateDoc } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
@@ -64,7 +64,7 @@ export default function ProfilePageClient() {
     
     const [username, setUsername] = useState("");
     const [bio, setBio] = useState("");
-    const [age, setAge] = useState<number | undefined>(undefined);
+    const [age, setAge] = useState<number | string>("");
     const [city, setCity] = useState("");
     const [country, setCountry] = useState("");
     const [gender, setGender] = useState<'male' | 'female' | undefined>(undefined);
@@ -90,7 +90,7 @@ export default function ProfilePageClient() {
         if (userData) {
             setUsername(userData.username || "");
             setBio(userData.bio || "");
-            setAge(userData.age);
+            setAge(userData.age || "");
             setCity(userData.city || "");
             setCountry(userData.country || "");
             setGender(userData.gender);
@@ -112,25 +112,27 @@ export default function ProfilePageClient() {
         
         const interestsChanged = JSON.stringify(interests.sort()) !== JSON.stringify((userData.interests || []).sort());
     
-        const ageValue = age === undefined ? null : Number(age);
-        const userDataAgeValue = userData.age === undefined ? null : Number(userData.age);
+        const ageChanged = (Number(age) || 0) !== (userData.age || 0);
+        
+        const genderChanged = gender !== (userData.gender || undefined);
     
         return (
             username !== (userData.username || "") ||
             bio !== (userData.bio || "") ||
-            ageValue !== userDataAgeValue ||
+            ageChanged ||
             city !== (userData.city || "") ||
             country !== (userData.country || "") ||
-            gender !== (userData.gender || undefined) ||
+            genderChanged ||
             privateProfile !== (userData.privateProfile || false) ||
             acceptsFollowRequests !== (userData.acceptsFollowRequests ?? true) ||
             showOnlineStatus !== (userData.showOnlineStatus ?? true) ||
             newAvatar !== null ||
-            selectedBubble !== (userData?.selectedBubble || "") ||
-            selectedAvatarFrame !== (userData?.selectedAvatarFrame || "") ||
+            selectedBubble !== (userData.selectedBubble || "") ||
+            selectedAvatarFrame !== (userData.selectedAvatarFrame || "") ||
             interestsChanged
         );
     }, [username, bio, age, city, country, gender, privateProfile, acceptsFollowRequests, showOnlineStatus, newAvatar, selectedBubble, selectedAvatarFrame, interests, userData]);
+    
     
     const handleAvatarClick = () => { fileInputRef.current?.click(); };
 
@@ -161,7 +163,6 @@ export default function ProfilePageClient() {
             const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
             const postAndCommentUpdates: { [key: string]: any } = {};
     
-            // Process Avatar
             if (newAvatar) {
                 const imageBlob = await dataUriToBlob(newAvatar);
                 const newAvatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.jpg`);
@@ -193,7 +194,7 @@ export default function ProfilePageClient() {
             }
             
             if (bio !== userData?.bio) userDocUpdates.bio = bio;
-            if (Number(age) !== Number(userData?.age)) userDocUpdates.age = Number(age) || 0;
+            if (Number(age) !== (userData?.age || 0)) userDocUpdates.age = Number(age) || 0;
             if (city !== userData?.city) userDocUpdates.city = city;
             if (country !== userData?.country) userDocUpdates.country = country;
             if (gender !== userData?.gender) userDocUpdates.gender = gender;
@@ -291,7 +292,7 @@ export default function ProfilePageClient() {
                          <div className="grid grid-cols-2 gap-4">
                              <div className="space-y-2">
                                 <Label htmlFor="age">Yaş</Label>
-                                <Input id="age" type="number" value={age || ''} onChange={(e) => setAge(Number(e.target.value))} />
+                                <Input id="age" type="number" value={age} onChange={(e) => setAge(e.target.value)} />
                             </div>
                             <div className="space-y-2">
                                 <Label>Cinsiyet</Label>
@@ -531,12 +532,10 @@ export default function ProfilePageClient() {
 
             </div>
 
-            <div
-                className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t"
-            >
+            <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
                 <div className="container mx-auto flex justify-between items-center max-w-4xl">
                      <p className={cn("text-sm font-semibold transition-opacity duration-300", hasChanges ? "opacity-100" : "opacity-0")}>
-                        Kaydedilmemiş değişiklikler var.
+                        Değişiklikler var.
                      </p>
                     <Button onClick={handleSaveChanges} disabled={isSaving || !hasChanges} size="lg">
                         {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
