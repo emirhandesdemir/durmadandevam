@@ -17,7 +17,7 @@ import { auth, db, storage } from "@/lib/firebase";
 import { updateProfile } from "firebase/auth";
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { cn } from "@/lib/utils";
-import { doc, updateDoc, deleteField, serverTimestamp } from "firebase/firestore";
+import { doc, updateDoc, deleteField, serverTimestamp, arrayUnion, arrayRemove } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { Textarea } from "../ui/textarea";
 import { useRouter } from 'next/navigation';
@@ -26,7 +26,7 @@ import LanguageSwitcher from "../common/LanguageSwitcher";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import Link from "next/link";
 import BlockedUsersDialog from "./BlockedUsersDialog";
-import { motion, AnimatePresence } from 'framer-motion';
+import { updateUserPosts, updateUserComments } from "@/lib/actions/userActions";
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -46,13 +46,6 @@ const avatarFrameOptions = [
     { id: "avatar-frame-tech", name: "Tekno Aura" },
     { id: "avatar-frame-premium", name: "Premium", isPremium: true },
 ];
-
-async function dataUriToBlob(dataUri: string): Promise<Blob> {
-    const response = await fetch(dataUri);
-    const blob = await response.blob();
-    return blob;
-}
-
 
 export default function ProfilePageClient() {
     const { user, userData, loading, handleLogout } = useAuth();
@@ -83,7 +76,6 @@ export default function ProfilePageClient() {
 
     const isPremium = userData?.premiumUntil && userData.premiumUntil.toDate() > new Date();
 
-    // Populate state from userData
     useEffect(() => {
         if (userData) {
             setUsername(userData.username || "");
@@ -107,20 +99,17 @@ export default function ProfilePageClient() {
     
     const hasChanges = useMemo(() => {
         if (!userData) return false;
-    
-        const normalize = (value: any) => value === undefined || value === null || value === '' ? null : value;
-    
-        const normalizedAge = normalize(age);
-        const normalizedUserDataAge = normalize(userData.age);
-    
+        
+        const ageAsNumber = age === '' ? undefined : Number(age);
+        
         if (newAvatar !== null) return true;
-        if (username !== userData.username) return true;
+        if (username !== (userData.username || '')) return true;
         if (bio !== (userData.bio || '')) return true;
-        if (normalizedAge !== normalizedUserDataAge) return true;
+        if (ageAsNumber !== (userData.age || undefined)) return true;
         if (city !== (userData.city || '')) return true;
         if (country !== (userData.country || '')) return true;
-        if (gender !== userData.gender) return true;
-        if (privateProfile !== userData.privateProfile) return true;
+        if (gender !== (userData.gender || undefined)) return true;
+        if (privateProfile !== (userData.privateProfile || false)) return true;
         if (acceptsFollowRequests !== (userData.acceptsFollowRequests ?? true)) return true;
         if (showOnlineStatus !== (userData.showOnlineStatus ?? true)) return true;
         if (selectedBubble !== (userData.selectedBubble || '')) return true;
@@ -196,7 +185,6 @@ export default function ProfilePageClient() {
 
             userDocUpdates.lastActionTimestamp = serverTimestamp();
     
-            // Execute database and auth updates
             if (Object.keys(userDocUpdates).length > 0) {
                 await updateDoc(userDocRef, userDocUpdates);
             }
