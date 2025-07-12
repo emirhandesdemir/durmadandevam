@@ -1,4 +1,3 @@
-
 // src/components/profile/profile-page-client.tsx
 "use client";
 
@@ -154,7 +153,7 @@ export default function ProfilePageClient() {
         try {
             const userDocUpdates: { [key: string]: any } = {};
             const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
-            const postAndCommentUpdates: { username?: string; userAvatar?: string; userAvatarFrame?: string; } = {};
+            const postAndCommentUpdates: { username?: string; userPhotoURL?: string; userAvatarFrame?: string; } = {};
     
             if (newAvatar) {
                 const imageBlob = await dataUriToBlob(newAvatar);
@@ -163,7 +162,7 @@ export default function ProfilePageClient() {
                 const finalPhotoURL = await getDownloadURL(newAvatarRef);
                 userDocUpdates.photoURL = finalPhotoURL;
                 authProfileUpdates.photoURL = finalPhotoURL;
-                postAndCommentUpdates.userAvatar = finalPhotoURL;
+                postAndCommentUpdates.userPhotoURL = finalPhotoURL;
             }
     
             if (username !== userData?.username) {
@@ -242,10 +241,6 @@ export default function ProfilePageClient() {
     
     const handleRemoveInterest = (interestToRemove: string) => {
         setInterests(interests.filter(i => i !== interestToRemove));
-    };
-
-    const handleSwitchAccount = async () => {
-        await handleLogout();
     };
     
     if (loading || !user || !userData) {
@@ -432,6 +427,20 @@ export default function ProfilePageClient() {
                                     <Switch id="privacy-mode" checked={privateProfile} onCheckedChange={setPrivateProfile} />
                                 </div>
                                 <div className="flex items-center justify-between">
+                                    <div>
+                                        <Label htmlFor="requests-mode" className={cn("font-semibold transition-colors", !privateProfile && "text-muted-foreground/50")}>Takip İsteklerine İzin Ver</Label>
+                                        <p className={cn("text-xs text-muted-foreground transition-colors", !privateProfile && "text-muted-foreground/50")}>Kapalıysa, kimse size takip isteği gönderemez.</p>
+                                    </div>
+                                    <Switch id="requests-mode" checked={acceptsFollowRequests} onCheckedChange={setAcceptsFollowRequests} disabled={!privateProfile}/>
+                                </div>
+                                <div className="flex items-center justify-between rounded-lg border p-3">
+                                    <div>
+                                        <Label htmlFor="online-status" className="font-semibold">Çevrimiçi Durumumu Göster</Label>
+                                        <p className="text-xs text-muted-foreground">Aktif olduğunda, diğer kullanıcılar çevrimiçi olduğunu görebilir.</p>
+                                    </div>
+                                    <Switch id="online-status" checked={showOnlineStatus} onCheckedChange={setShowOnlineStatus} />
+                                </div>
+                                 <div className="flex items-center justify-between">
                                     <Button variant="outline" className="w-full" onClick={() => setIsBlockedUsersOpen(true)}>
                                         <ShieldOff className="mr-2 h-4 w-4"/>Engellenen Hesapları Yönet
                                     </Button>
@@ -507,9 +516,6 @@ export default function ProfilePageClient() {
                         <CardTitle>Hesap İşlemleri</CardTitle>
                     </CardHeader>
                     <CardContent className="flex flex-wrap gap-2">
-                        <Button variant="secondary" onClick={handleSwitchAccount}>
-                           <Users className="mr-2 h-4 w-4" />Hesap Değiştir
-                        </Button>
                         <Button variant="destructive" onClick={handleLogout}>
                             <LogOut className="mr-2 h-4 w-4" />Çıkış Yap
                         </Button>
@@ -518,19 +524,15 @@ export default function ProfilePageClient() {
 
             </div>
 
-            {hasChanges && (
-                <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
-                    <div className="container mx-auto flex justify-between items-center max-w-4xl">
-                        <p className="text-sm font-semibold">Kaydedilmemiş değişiklikleriniz var.</p>
-                        <Button onClick={handleSaveChanges} disabled={isSaving}>
-                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {t('save_changes')}
-                        </Button>
-                    </div>
+            <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
+                <div className="container mx-auto flex justify-end items-center max-w-4xl">
+                    <Button onClick={handleSaveChanges} disabled={isSaving || !hasChanges} size="lg">
+                        {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {t('save_changes')}
+                    </Button>
                 </div>
-            )}
+            </div>
             
-
             <ImageCropperDialog 
               isOpen={!!imageToCrop} 
               setIsOpen={(isOpen) => !isOpen && setImageToCrop(null)} 
