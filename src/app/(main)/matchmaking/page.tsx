@@ -27,7 +27,7 @@ export default function MatchmakingPage() {
       const result = await findMatch(user.uid, {
         gender: userData.gender || 'male',
         username: userData.username,
-        photoURL: userData.photoURL,
+        photoURL: userData.photoURL || null,
         age: userData.age,
         city: userData.city,
         interests: userData.interests,
@@ -84,7 +84,7 @@ export default function MatchmakingPage() {
   }
   
   // Eşleştirme için gerekli profil bilgileri eksikse uyarı göster
-  if (!userData?.gender || !userData.age || !userData.city || !userData.interests || userData.interests.length === 0) {
+  if (!userData || !userData.gender || !userData.age || userData.age <= 0 || !userData.city?.trim() || !userData.interests || userData.interests.length === 0) {
     return (
         <div className="flex h-full flex-col items-center justify-center text-center p-4">
              <Card className="w-full max-w-md">
@@ -92,7 +92,7 @@ export default function MatchmakingPage() {
                      <UserX className="mx-auto h-12 w-12 text-destructive" />
                     <CardTitle>Profil Bilgileri Eksik</CardTitle>
                     <CardDescription>
-                        Otomatik eşleşme sistemini kullanabilmek için profilinizde **cinsiyet, yaş, şehir ve ilgi alanları** bilgilerinizin eksiksiz olması gerekmektedir.
+                        Otomatik eşleşme sistemini kullanabilmek için profilinizde **cinsiyet, yaş, şehir ve en az bir ilgi alanı** bilgilerinizin eksiksiz olması gerekmektedir.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -142,5 +142,3 @@ export default function MatchmakingPage() {
     </div>
   );
 }
-
-    
