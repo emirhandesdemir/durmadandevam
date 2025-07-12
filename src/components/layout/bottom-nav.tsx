@@ -6,14 +6,12 @@ import { usePathname } from 'next/navigation';
 import { Home, MessageCircle, Plus, Swords, Clapperboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
-import { useMemo, useState } from 'react';
-import MainNavSheet from './MainNavSheet';
+import { useMemo } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 
 export default function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
   
   const navItems = useMemo(() => {
     if (!user) return [];
@@ -22,7 +20,7 @@ export default function BottomNav() {
         { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
         { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
         { id: 'surf', href: '/surf', icon: Clapperboard, label: 'Surf' },
-        { id: 'profile', href: `/profile/${user.uid}`, icon: Avatar, label: 'Profil' },
+        { id: 'matchmaking', href: `/matchmaking`, icon: Swords, label: 'Maç' },
       ]
   }, [user]);
 
@@ -44,7 +42,7 @@ export default function BottomNav() {
           <nav className="mx-auto grid h-16 max-w-lg grid-cols-5 items-center">
               {navItems.map((item) => {
                   const Icon = item.icon;
-                  const isActive = (item.id === 'rooms' && pathname.startsWith('/rooms')) || (item.id === 'profile' && pathname.startsWith('/profile')) || pathname === item.href;
+                  const isActive = (item.id === 'rooms' && pathname.startsWith('/rooms')) || pathname === item.href;
                   
                   const isCreateButton = item.id === 'create';
 
@@ -59,16 +57,9 @@ export default function BottomNav() {
                     >
                         <div className={cn(
                             "flex items-center justify-center h-10 w-10 rounded-full transition-all duration-300", 
-                            isCreateButton ? 'bg-primary text-primary-foreground rounded-2xl h-10 w-10' : ''
+                            isCreateButton ? 'bg-primary text-primary-foreground rounded-xl h-9 w-9' : ''
                         )}>
-                            {item.id === 'profile' ? (
-                               <Avatar className={cn("h-7 w-7 transition-all", isActive && "ring-2 ring-primary ring-offset-2 ring-offset-background")}>
-                                    <AvatarImage src={user.photoURL || undefined} />
-                                    <AvatarFallback className="text-xs bg-muted">{user.displayName?.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                            ) : (
-                                <Icon className={cn("h-6 w-6 transition-transform")} />
-                            )}
+                            <Icon className={cn("h-6 w-6 transition-transform")} />
                         </div>
                         {!isCreateButton && <span className="text-[10px] font-medium">{item.label}</span>}
                     </Link>
@@ -76,7 +67,6 @@ export default function BottomNav() {
               })}
           </nav>
       </div>
-      <MainNavSheet isOpen={isSheetOpen} onOpenChange={setIsSheetOpen} />
     </>
   );
 }

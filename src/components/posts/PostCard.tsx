@@ -271,7 +271,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                        {isOwner ? (
+                                        {(isOwner || isAdmin) ? (
                                             <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Sil</span></DropdownMenuItem>
                                         ) : (
                                             <DropdownMenuItem onClick={handleHide}><EyeOff className="mr-2 h-4 w-4" /><span>İlgilenmiyorum</span></DropdownMenuItem>
@@ -304,16 +304,6 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                                     alt="Retweeted post" 
                                     fill
                                     className="object-cover"
-                                    onContextMenu={(e) => e.preventDefault()}
-                                />
-                            </div>
-                        )}
-                        {originalPost.videoUrl && (
-                             <div className="relative w-full aspect-video bg-black mt-1">
-                                <video
-                                    src={originalPost.videoUrl}
-                                    controls
-                                    className="w-full h-full object-contain"
                                     onContextMenu={(e) => e.preventDefault()}
                                 />
                             </div>
@@ -361,6 +351,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     return (
         <>
             <div className={cn("relative flex flex-col bg-background", !isStandalone && "border-b")}>
+                
                 <div className="flex items-start gap-3 p-4">
                      <Link href={`/profile/${post.uid}`}>
                         <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
@@ -458,16 +449,6 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                             width={800}
                             height={800}
                             className="h-auto w-full max-h-[70vh] object-cover"
-                            onContextMenu={(e) => e.preventDefault()}
-                        />
-                    </div>
-                )}
-                 {post.videoUrl && !isEditing && (
-                    <div className="relative w-full aspect-video bg-black mt-2">
-                        <video
-                            src={post.videoUrl}
-                            controls
-                            className="h-full w-full object-contain"
                             onContextMenu={(e) => e.preventDefault()}
                         />
                     </div>

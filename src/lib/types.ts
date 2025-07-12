@@ -3,12 +3,11 @@ import { Timestamp } from "firebase/firestore";
 
 export interface MatchmakingChat {
     id: string;
-    participants: { [uid: string]: { username: string, photoURL: string | null, age?: number } };
+    participants: { [uid: string]: { username: string, photoURL: string | null } };
     participantUids: string[];
     status: 'active' | 'revealing' | 'ended' | 'abandoned';
     createdAt: Timestamp;
-    reactions?: { [uid: string]: 'like' };
-    permanentChatId?: string;
+    reactions?: { [uid: string]: 'like' | 'pass' };
 }
 
 // Zihin Savaşları Oyunu Veri Yapıları
@@ -124,16 +123,11 @@ export interface UserProfile {
     postCount?: number;
     role: 'admin' | 'user';
     gender?: 'male' | 'female';
-    age?: number;
-    city?: string;
-    country?: string;
-    interests?: string[];
     createdAt: Timestamp;
-    lastActionTimestamp?: Timestamp;
-    lastAdWatchedAt?: Timestamp;
+    lastActionTimestamp?: Timestamp; // For rate limiting
+    lastAdWatchedAt?: Timestamp; // For ad reward cooldown
     privateProfile: boolean;
     acceptsFollowRequests: boolean;
-    showOnlineStatus?: boolean;
     followers: string[];
     following: string[];
     followRequests: FollowRequest[];
@@ -155,8 +149,8 @@ export interface UserProfile {
     profileCompletionNotificationSent?: boolean;
     selectedBubble?: string;
     selectedAvatarFrame?: string;
-    activeMatchmakingChatId?: string | null;
-    defaultMode?: 'light' | 'dark' | 'system';
+    activeMatchmakingChatId?: string | null; // Aktif eşleşme sohbet ID'si
+    location?: { latitude: number, longitude: number };
 }
 
 export interface ProfileViewer {
@@ -222,9 +216,10 @@ export interface Post {
     text: string;
     imageUrl?: string;
     videoUrl?: string;
+    musicUrl?: string; // New field for music
     editedWithAI?: boolean;
     createdAt: Timestamp | { seconds: number; nanoseconds: number };
-    likes: string[];
+    likes: string[]; // Beğenen kullanıcıların UID'lerini tutan dizi
     likeCount: number;
     commentCount: number;
     saveCount?: number;
@@ -232,6 +227,7 @@ export interface Post {
     language?: string;
     commentsDisabled?: boolean;
     likesHidden?: boolean;
+    tags?: string[];
     retweetOf?: {
         postId: string;
         uid: string;
@@ -365,6 +361,10 @@ export interface FeatureFlags {
     quizGameEnabled: boolean;
     postFeedEnabled: boolean;
     contentModerationEnabled: boolean;
+    botNewUserOnboardEnabled: boolean;
+    botAutoPostEnabled: boolean;
+    botAutoInteractEnabled: boolean;
+    botAutoRoomInteractEnabled: boolean;
 }
 
 export interface VoiceStats {

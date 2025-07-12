@@ -53,6 +53,7 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
     const retweetUpdates: { [key: string]: any } = {};
     if (updates.username) retweetUpdates['retweetOf.username'] = updates.username;
     if (updates.userAvatar) retweetUpdates['retweetOf.userAvatar'] = updates.userAvatar;
+    if (updates.userAvatarFrame) retweetUpdates['retweetOf.userAvatarFrame'] = updates.userAvatarFrame;
     
     if (Object.keys(retweetUpdates).length > 0) {
         const retweetsQuery = query(postsRef, where('retweetOf.uid', '==', uid));
@@ -69,7 +70,7 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
     }
 }
 
-export async function updateUserComments(uid: string, updates: { userAvatar?: string; username?: string }) {
+export async function updateUserComments(uid: string, updates: { userAvatar?: string; userAvatarFrame?: string; username?: string }) {
     if (!uid || !updates || Object.keys(updates).length === 0) {
         return;
     }
@@ -361,4 +362,59 @@ export async function getSavedPosts(userId: string): Promise<Post[]> {
     });
 
     return deepSerialize(sortedPosts);
+}
+
+// NEARBY FEATURE
+export async function updateUserLocation(uid: string, latitude: number, longitude: number) {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, {
+        location: {
+            latitude,
+            longitude
+        },
+        lastSeen: serverTimestamp()
+    });
+}
+
+// NOTE: This requires Geo-queries which are not directly supported by default Firestore.
+// For a production app, you would use a service like Geofire or implement your own
+// geohashing logic. For this demo, we will perform a less efficient but functional query.
+export async function getNearbyUsers(currentUid: string, latitude: number, longitude: number, radiusKm: number = 20): Promise<any[]> {
+    // This is a simplified implementation. Production apps should use geohashing.
+    const latDegrees = radiusKm / 111.32; // Approx km per degree latitude
+    const lonDegrees = radiusKm / (111.32 * Math.cos(latitude * (Math.PI / 180)));
+    
+    const lowerLat = latitude - latDegrees;
+    const upperLat = latitude + latDegrees;
+    const lowerLon = longitude - lonDegrees;
+    const upperLon = longitude + lonDegrees;
+
+    const usersRef = collection(db, 'users');
+    const q = query(
+        usersRef,
+        where('location.latitude', '>=', lowerLat),
+        where('location.latitude', '<=', upperLat),
+        // Firestore cannot have inequality filters on multiple fields.
+        // We will filter by longitude on the client side for this demo.
+    );
+    const snapshot = await getDocs(q);
+
+    const nearbyUsers: any[] = [];
+    snapshot.forEach(doc => {
+        const user = doc.data() as UserProfile & { location: { latitude: number; longitude: number } };
+        if (
+            user.uid !== currentUid &&
+            user.location.longitude >= lowerLon &&
+            user.location.longitude <= upperLon
+        ) {
+            nearbyUsers.push({
+                uid: user.uid,
+                username: user.username,
+                photoURL: user.photoURL,
+                position: [user.location.latitude, user.location.longitude],
+            });
+        }
+    });
+
+    return deepSerialize(nearbyUsers);
 }

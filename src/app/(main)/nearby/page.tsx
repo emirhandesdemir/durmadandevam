@@ -1,7 +1,7 @@
 // src/app/(main)/nearby/page.tsx
 'use client';
 
-import { useState, useEffect } from 'use-client';
+import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
