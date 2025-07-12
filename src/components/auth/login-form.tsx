@@ -6,8 +6,8 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
-import { signInWithEmailAndPassword, sendPasswordResetEmail, User } from "firebase/auth"; 
+import { useState } from "react";
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth"; 
 import { auth } from "@/lib/firebase";
 import Image from "next/image";
 
@@ -29,8 +29,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Eye, EyeOff, ArrowLeft } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 
 // Form alanlarının validasyonunu (doğrulamasını) yöneten Zod şeması.
 const formSchema = z.object({
@@ -38,12 +37,8 @@ const formSchema = z.object({
   password: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır." }),
 });
 
-interface LoginFormProps {
-    prefilledUser?: User | null;
-    onBackToSwitcher?: () => void;
-}
 
-export default function LoginForm({ prefilledUser, onBackToSwitcher }: LoginFormProps) {
+export default function LoginForm() {
     const { toast } = useToast();
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
@@ -54,16 +49,10 @@ export default function LoginForm({ prefilledUser, onBackToSwitcher }: LoginForm
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            email: prefilledUser?.email || "",
+            email: "",
             password: "",
         },
     });
-
-    useEffect(() => {
-        if(prefilledUser?.email) {
-            form.setValue('email', prefilledUser.email);
-        }
-    }, [prefilledUser, form]);
 
     // Form gönderildiğinde çalışacak fonksiyon.
     async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -127,45 +116,29 @@ export default function LoginForm({ prefilledUser, onBackToSwitcher }: LoginForm
 
     return (
         <Card className="w-full max-w-sm mx-auto shadow-2xl rounded-2xl bg-card/80 backdrop-blur-lg border-white/20">
-             {prefilledUser && onBackToSwitcher && (
-                <Button variant="ghost" size="sm" className="absolute top-2 left-2" onClick={onBackToSwitcher}>
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Hesap Değiştir
-                </Button>
-            )}
             <CardHeader className="text-center space-y-4 pt-10">
-                {prefilledUser ? (
-                     <Avatar className="h-20 w-20 mx-auto">
-                        <AvatarImage src={prefilledUser.photoURL || undefined} />
-                        <AvatarFallback>{prefilledUser.displayName?.charAt(0) || prefilledUser.email?.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                ) : (
-                    <Image src="/icons/icon.svg" alt="HiweWalk Logo" width={64} height={64} className="h-16 w-16 mx-auto" />
-                )}
-                
-                <CardTitle className="text-3xl font-bold">{prefilledUser?.displayName || 'Tekrar Hoş Geldin!'}</CardTitle>
+                <Image src="/icons/icon.svg" alt="HiweWalk Logo" width={64} height={64} className="h-16 w-16 mx-auto" />
+                <CardTitle className="text-3xl font-bold">Tekrar Hoş Geldin!</CardTitle>
                 <CardDescription>
-                    {prefilledUser ? 'Devam etmek için şifrenizi girin.' : 'Hesabınıza erişmek için bilgilerinizi girin.'}
+                    Hesabınıza erişmek için bilgilerinizi girin.
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        {!prefilledUser && (
-                            <FormField
-                                control={form.control}
-                                name="email"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>E-posta</FormLabel>
-                                        <FormControl>
-                                            <Input type="email" placeholder="ornek@eposta.com" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        )}
+                        <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>E-posta</FormLabel>
+                                    <FormControl>
+                                        <Input type="email" placeholder="ornek@eposta.com" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                         <FormField
                             control={form.control}
                             name="password"
@@ -186,7 +159,7 @@ export default function LoginForm({ prefilledUser, onBackToSwitcher }: LoginForm
                                     </div>
                                     <div className="relative">
                                         <FormControl>
-                                            <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...field} autoFocus={!!prefilledUser} />
+                                            <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...field} />
                                         </FormControl>
                                         <Button
                                             type="button"
@@ -208,14 +181,12 @@ export default function LoginForm({ prefilledUser, onBackToSwitcher }: LoginForm
                         </Button>
                     </form>
                 </Form>
-                 {!prefilledUser && (
-                    <div className="mt-6 text-center text-sm">
-                        Hesabınız yok mu?{" "}
-                        <Link href="/signup" className="font-semibold text-primary hover:underline">
-                            Hemen Kayıt Ol
-                        </Link>
-                    </div>
-                 )}
+                <div className="mt-6 text-center text-sm">
+                    Hesabınız yok mu?{" "}
+                    <Link href="/signup" className="font-semibold text-primary hover:underline">
+                        Hemen Kayıt Ol
+                    </Link>
+                </div>
             </CardContent>
         </Card>
     );
