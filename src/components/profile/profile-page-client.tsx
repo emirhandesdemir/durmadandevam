@@ -111,27 +111,28 @@ export default function ProfilePageClient() {
         if (!userData) return false;
         
         const interestsChanged = JSON.stringify(interests.sort()) !== JSON.stringify((userData.interests || []).sort());
-    
         const ageChanged = (Number(age) || 0) !== (userData.age || 0);
         
-        const genderChanged = gender !== (userData.gender || undefined);
-    
         return (
+            newAvatar !== null ||
             username !== (userData.username || "") ||
             bio !== (userData.bio || "") ||
             ageChanged ||
             city !== (userData.city || "") ||
             country !== (userData.country || "") ||
-            genderChanged ||
-            privateProfile !== (userData.privateProfile || false) ||
+            gender !== userData.gender ||
+            privateProfile !== userData.privateProfile ||
             acceptsFollowRequests !== (userData.acceptsFollowRequests ?? true) ||
             showOnlineStatus !== (userData.showOnlineStatus ?? true) ||
-            newAvatar !== null ||
             selectedBubble !== (userData.selectedBubble || "") ||
             selectedAvatarFrame !== (userData.selectedAvatarFrame || "") ||
             interestsChanged
         );
-    }, [username, bio, age, city, country, gender, privateProfile, acceptsFollowRequests, showOnlineStatus, newAvatar, selectedBubble, selectedAvatarFrame, interests, userData]);
+    }, [
+        newAvatar, username, bio, age, city, country, gender, privateProfile, 
+        acceptsFollowRequests, showOnlineStatus, selectedBubble, 
+        selectedAvatarFrame, interests, userData
+    ]);
     
     
     const handleAvatarClick = () => { fileInputRef.current?.click(); };
@@ -271,13 +272,15 @@ export default function ProfilePageClient() {
                     <CardContent className="space-y-4">
                         <div className="flex items-center gap-4">
                             <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-                            <button type="button" onClick={handleAvatarClick} className="relative group">
-                                <Avatar className="h-20 w-20">
-                                    <AvatarImage src={newAvatar || userData.photoURL || undefined} />
-                                    <AvatarFallback className="text-2xl">{username?.charAt(0).toUpperCase()}</AvatarFallback>
-                                </Avatar>
-                                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Camera className="h-6 w-6" />
+                            <button type="button" onClick={handleAvatarClick} className="relative group rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background" aria-label="Profil fotoğrafını değiştir">
+                                <div className={cn("avatar-frame-wrapper", selectedAvatarFrame)}>
+                                    <Avatar className="relative z-[1] h-20 w-20 border-4 border-background shadow-lg transition-all group-hover:brightness-90">
+                                        <AvatarImage src={newAvatar || userData.photoURL || undefined} />
+                                        <AvatarFallback className="text-2xl bg-primary/20">{username?.charAt(0).toUpperCase()}</AvatarFallback>
+                                    </Avatar>
+                                </div>
+                                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200">
+                                    <Camera className="h-8 w-8" />
                                 </div>
                             </button>
                             <div className="space-y-2 flex-1">
@@ -532,11 +535,8 @@ export default function ProfilePageClient() {
 
             </div>
 
-            <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
-                <div className="container mx-auto flex justify-between items-center max-w-4xl">
-                     <p className={cn("text-sm font-semibold transition-opacity duration-300", hasChanges ? "opacity-100" : "opacity-0")}>
-                        Değişiklikler var.
-                     </p>
+            <div className="fixed bottom-16 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
+                <div className="container mx-auto flex justify-end items-center max-w-4xl">
                     <Button onClick={handleSaveChanges} disabled={isSaving || !hasChanges} size="lg">
                         {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         {t('save_changes')}
