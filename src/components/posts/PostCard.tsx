@@ -45,7 +45,7 @@ interface PostCardProps {
     onHide?: (postId: string) => void;
 }
 
-const ReadMore = ({ text, maxLength = 100 }: { text: string; maxLength?: number }) => {
+const ReadMore = ({ text, maxLength = 150 }: { text: string; maxLength?: number }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   
   if (text.length <= maxLength) {
@@ -94,6 +94,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     const [showComments, setShowComments] = useState(false);
     const [postToRetweet, setPostToRetweet] = useState<Post | null>(null);
     const [isReportOpen, setIsReportOpen] = useState(false);
+    const [showLikeAnimation, setShowLikeAnimation] = useState(false);
 
     const [editingCommentsDisabled, setEditingCommentsDisabled] = useState(post.commentsDisabled ?? false);
     const [editingLikesHidden, setEditingLikesHidden] = useState(post.likesHidden ?? false);
@@ -148,6 +149,14 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
             console.error("Error liking post:", error);
             toast({ variant: "destructive", description: "Beğenirken bir hata oluştu." });
         }
+    };
+    
+    const handleDoubleClick = () => {
+        if (!currentUser) { toast({ variant: 'destructive', description: 'Beğenmek için giriş yapmalısınız.' }); return; }
+        if (!optimisticLiked) handleLike();
+        
+        setShowLikeAnimation(true);
+        setTimeout(() => setShowLikeAnimation(false), 600);
     };
 
     const handleSave = async () => {
@@ -216,12 +225,17 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
 
     return (
         <>
-            <article className={cn("relative flex flex-col bg-background")}>
+            <article className={cn("relative flex flex-col bg-background", !isStandalone && "border-b")}>
+                 {showLikeAnimation && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                        <Heart className="text-white h-24 w-24 drop-shadow-lg animate-like-pop" fill="currentColor" />
+                    </div>
+                )}
                 <div className="flex items-center gap-3 p-4">
                      <Link href={`/profile/${post.uid}`}>
                         <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
                             <Avatar className="relative z-[1] h-10 w-10">
-                                <AvatarImage src={post.userAvatar || undefined} />
+                                <AvatarImage src={post.userPhotoURL || undefined} />
                                 <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
                             </Avatar>
                         </div>
@@ -252,14 +266,19 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                 </div>
                 
                 {post.imageUrl && !isEditing && (
-                    <div className="relative w-full bg-muted">
+                    <div className="relative w-full bg-muted" onDoubleClick={handleDoubleClick}>
                         <Image
-                            src={post.imageUrl} alt="Gönderi resmi" width={800} height={1000}
+                            src={post.imageUrl} alt={post.text || "Gönderi resmi"} width={800} height={1000}
                             sizes="(max-width: 768px) 100vw, 50vw" placeholder="blur" blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
                             className="h-auto w-full max-h-[80vh] object-cover" onContextMenu={(e) => e.preventDefault()}
                         />
                     </div>
                 )}
+                 {(post.backgroundStyle && !post.imageUrl) && (
+                     <div onDoubleClick={handleDoubleClick} className={cn("h-80 flex items-center justify-center p-4", post.backgroundStyle)}>
+                        <p className="text-2xl font-bold text-center text-primary-foreground drop-shadow-md">{post.text}</p>
+                     </div>
+                 )}
                 
                 <div className="px-2 pt-1 pb-2">
                     <div className="flex items-center justify-between">
@@ -273,7 +292,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
 
                     <div className="px-2 text-sm space-y-1">
                         {!post.likesHidden && optimisticLikeCount > 0 && (<p className="font-semibold">{optimisticLikeCount || 0} beğeni</p>)}
-                        {(post.text || isEditing) && (
+                        {(post.text && !post.backgroundStyle) && (
                              <div className="text-sm text-foreground/90">
                                 {isEditing ? (
                                     <div className="space-y-4">

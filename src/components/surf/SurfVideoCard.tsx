@@ -147,7 +147,7 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
             <div className="text-white max-w-[calc(100%-60px)]">
               <Link href={`/profile/${post.uid}`} className="flex items-center gap-2 font-bold group pointer-events-auto" onClick={(e) => e.stopPropagation()}>
                 <Avatar className="h-10 w-10 border-2 border-white">
-                  <AvatarImage src={post.userAvatar || undefined} />
+                  <AvatarImage src={post.userPhotoURL || undefined} />
                   <AvatarFallback>{post.username.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <span className="group-hover:underline">{post.username}</span>
