@@ -28,7 +28,7 @@ interface AddCommentArgs {
     replyTo?: {
         commentId: string;
         username: string;
-    }
+    } | null;
 }
 
 async function handleMentions(text: string, postId: string, sender: { uid: string, displayName: string | null, photoURL: string | null, userAvatarFrame?: string }) {
@@ -105,7 +105,6 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
         });
     }
     
-    // Yorumdaki bahsetmeleri işle
     await handleMentions(text, postId, {
         uid: user.uid,
         displayName: user.displayName,

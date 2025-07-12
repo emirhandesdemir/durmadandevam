@@ -15,7 +15,6 @@ import Link from 'next/link';
 import type { Comment } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -74,7 +73,7 @@ export default function CommentItem({ comment, postId, onReply }: CommentItemPro
     return (
         <div className="flex items-start gap-3">
              <Link href={`/profile/${comment.uid}`}>
-                <div>
+                <div className={cn("avatar-frame-wrapper", comment.userAvatarFrame)}>
                     <Avatar className="relative z-[1] h-9 w-9">
                         <AvatarImage src={comment.userAvatar} />
                         <AvatarFallback>{comment.username?.charAt(0)}</AvatarFallback>

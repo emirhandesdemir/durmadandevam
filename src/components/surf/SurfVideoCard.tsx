@@ -1,3 +1,4 @@
+// src/components/surf/SurfVideoCard.tsx
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { Post } from '@/lib/types';

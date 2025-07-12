@@ -8,7 +8,6 @@ export interface MatchmakingChat {
     status: 'active' | 'revealing' | 'ended' | 'abandoned';
     createdAt: Timestamp;
     reactions?: { [uid: string]: 'like' | 'pass' };
-    permanentChatId?: string;
 }
 
 // Zihin Savaşları Oyunu Veri Yapıları
@@ -36,7 +35,7 @@ export interface MindWarTurn {
     choiceKey: string; // 'A' veya 'B' gibi
     choiceText: string;
   };
-  outcome?: string; // Seçim sonucunda ne olduğu
+  outcome: string; // Seçim sonucunda ne olduğu
   timestamp: Timestamp; // Turun zamanı
 }
 
@@ -127,8 +126,6 @@ export interface UserProfile {
     age?: number;
     city?: string;
     country?: string;
-    language?: 'tr' | 'en';
-    interests?: string[];
     createdAt: Timestamp;
     lastActionTimestamp?: Timestamp; // For rate limiting
     lastAdWatchedAt?: Timestamp; // For ad reward cooldown
@@ -157,7 +154,6 @@ export interface UserProfile {
     selectedBubble?: string;
     selectedAvatarFrame?: string;
     activeMatchmakingChatId?: string | null; // Aktif eşleşme sohbet ID'si
-    location?: { latitude: number, longitude: number };
 }
 
 export interface ProfileViewer {
@@ -222,19 +218,14 @@ export interface Post {
     userGender?: 'male' | 'female';
     text: string;
     imageUrl?: string;
-    videoUrl?: string;
-    musicUrl?: string; // New field for music
     editedWithAI?: boolean;
     createdAt: Timestamp | { seconds: number; nanoseconds: number };
     likes: string[]; // Beğenen kullanıcıların UID'lerini tutan dizi
     likeCount: number;
     commentCount: number;
-    saveCount?: number;
-    savedBy?: string[];
     language?: string;
     commentsDisabled?: boolean;
     likesHidden?: boolean;
-    tags?: string[];
     retweetOf?: {
         postId: string;
         uid: string;
@@ -243,10 +234,8 @@ export interface Post {
         userAvatarFrame?: string;
         text: string;
         imageUrl?: string;
-        videoUrl?: string;
         createdAt: Timestamp | { seconds: number; nanoseconds: number };
-    };
-    retweetCount?: number;
+    }
 }
 
 export interface Comment {
@@ -341,22 +330,22 @@ export interface QuizQuestion {
 
 export interface ActiveGame {
     id: string;
-    questions: QuizQuestion[];
-    currentQuestionIndex: number;
-    scores: { [key: string]: number }; // uid -> score
-    answeredBy: string[]; // uids who answered the current question
-    status: 'countdown' | 'active' | 'finished';
-    countdownStartTime?: Timestamp;
-    startTime?: Timestamp;
+    questionId: string;
+    question: string;
+    options: string[];
+    correctOptionIndex: number;
+    startTime: Timestamp;
+    status: 'active' | 'finished';
+    answeredBy: string[];
+    winner?: string;
     finishedAt?: Timestamp;
-    winners?: { uid: string, username: string, photoURL: string | null, score: number, reward: number }[];
 }
 
 
 export interface GameSettings {
     gameIntervalMinutes: number;
     questionTimerSeconds: number;
-    rewardAmount: number; // This can now be a base amount
+    rewardAmount: number;
     cooldownSeconds: number;
     afkTimeoutMinutes: number;
     imageUploadQuality: number;
@@ -368,6 +357,10 @@ export interface GameSettings {
 export interface FeatureFlags {
     quizGameEnabled: boolean;
     contentModerationEnabled: boolean;
+    botNewUserOnboardEnabled: boolean;
+    botAutoPostEnabled: boolean;
+    botAutoInteractEnabled: boolean;
+    botAutoRoomInteractEnabled: boolean;
 }
 
 export interface VoiceStats {

@@ -21,7 +21,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Send } from "lucide-react";
+import { Loader2, Send, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
 import type { Post } from "@/lib/types";
 import CommentItem from "./CommentItem";
@@ -47,6 +47,9 @@ export default function CommentSheet({ open, onOpenChange, post }: CommentSheetP
     const [newCommentText, setNewCommentText] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     
+    // Reply State
+    const [replyTo, setReplyTo] = useState<{ commentId: string; username: string } | null>(null);
+
     // Mention States
     const [mentionQuery, setMentionQuery] = useState<string | null>(null);
     const [suggestions, setSuggestions] = useState<Pick<UserProfile, 'uid' | 'username' | 'photoURL'>[]>([]);
@@ -168,9 +171,11 @@ export default function CommentSheet({ open, onOpenChange, post }: CommentSheetP
                     photoURL: userData.photoURL || null,
                     userAvatarFrame: userData.selectedAvatarFrame || '',
                     role: userData.role,
-                }
+                },
+                replyTo: replyTo,
             });
             setNewCommentText("");
+            setReplyTo(null);
             toast({ description: "Yorumunuz eklendi." });
         } catch (error) {
             console.error("Yorum eklenirken hata:", error);
@@ -182,7 +187,7 @@ export default function CommentSheet({ open, onOpenChange, post }: CommentSheetP
     
     // Cevaplama modunu başlatan fonksiyon
     const handleReply = (commentId: string, username: string) => {
-        setNewCommentText(prev => `${prev} @${username} `);
+        setReplyTo({ commentId, username });
         textareaRef.current?.focus();
     };
 
@@ -196,32 +201,23 @@ export default function CommentSheet({ open, onOpenChange, post }: CommentSheetP
                     </SheetDescription>
                 </SheetHeader>
 
-                {/* Yorum listesi */}
                 <ScrollArea className="flex-1 -mx-6 px-6">
                     {loading ? (
-                        <div className="flex justify-center items-center h-full">
-                            <Loader2 className="h-8 w-8 animate-spin" />
-                        </div>
+                        <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>
                     ) : comments.length === 0 ? (
-                        <div className="flex justify-center items-center h-full text-muted-foreground">
-                            <p>Henüz hiç yorum yok. İlk yorumu sen yap!</p>
-                        </div>
+                        <div className="flex justify-center items-center h-full text-muted-foreground"><p>Henüz hiç yorum yok. İlk yorumu sen yap!</p></div>
                     ) : (
-                        <div className="space-y-4 py-4">
-                            {comments.map(comment => (
-                                <CommentItem 
-                                    key={comment.id} 
-                                    comment={comment} 
-                                    postId={post.id}
-                                    onReply={handleReply}
-                                />
-                            ))}
-                        </div>
+                        <div className="space-y-4 py-4">{comments.map(comment => (<CommentItem key={comment.id} comment={comment} postId={post.id} onReply={handleReply} />))}</div>
                     )}
                 </ScrollArea>
                 
-                {/* Yeni yorum giriş alanı */}
-                <SheetFooter className="mt-auto pt-4 border-t bg-background -mx-6 px-6 pb-2">
+                <SheetFooter className="mt-auto pt-2 border-t bg-background -mx-6 px-6 pb-2 space-y-2">
+                    {replyTo && (
+                        <div className="flex items-center justify-between bg-muted rounded-md p-2 text-xs">
+                            <p className="text-muted-foreground">Yanıt olarak: <span className="font-bold text-primary">@{replyTo.username}</span></p>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setReplyTo(null)}><X className="h-4 w-4" /></Button>
+                        </div>
+                    )}
                     <Popover open={mentionQuery !== null}>
                         <PopoverAnchor asChild>
                             <div className="flex items-start gap-2">
@@ -241,12 +237,7 @@ export default function CommentSheet({ open, onOpenChange, post }: CommentSheetP
                                         className="pr-12 min-h-[40px] max-h-32"
                                         disabled={isSubmitting}
                                     />
-                                    <Button
-                                        size="icon"
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full"
-                                        onClick={handleAddComment}
-                                        disabled={isSubmitting || !newCommentText.trim()}
-                                    >
+                                    <Button size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full" onClick={handleAddComment} disabled={isSubmitting || !newCommentText.trim()}>
                                         {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                                     </Button>
                                 </div>
@@ -259,15 +250,7 @@ export default function CommentSheet({ open, onOpenChange, post }: CommentSheetP
                                 <ScrollArea className="max-h-48">
                                     <div className="p-1">
                                     {filteredSuggestions.map((user, index) => (
-                                        <button
-                                            key={user.uid}
-                                            onClick={() => handleMentionSelect(user.username)}
-                                            onMouseMove={() => setActiveSuggestionIndex(index)}
-                                            className={cn(
-                                                "w-full text-left flex items-center gap-2 p-2 rounded-md hover:bg-accent",
-                                                index === activeSuggestionIndex && "bg-accent"
-                                            )}
-                                        >
+                                        <button key={user.uid} onClick={() => handleMentionSelect(user.username)} onMouseMove={() => setActiveSuggestionIndex(index)} className={cn("w-full text-left flex items-center gap-2 p-2 rounded-md hover:bg-accent", index === activeSuggestionIndex && "bg-accent")}>
                                             <Avatar className="h-7 w-7"><AvatarImage src={user.photoURL || undefined} /><AvatarFallback>{user.username.charAt(0)}</AvatarFallback></Avatar>
                                             <span className="font-medium text-sm">{user.username}</span>
                                         </button>
