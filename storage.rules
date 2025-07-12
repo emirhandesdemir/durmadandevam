@@ -2,50 +2,31 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // --- GENEL KURALLAR ---
-    // Varsayılan olarak tüm okuma ve yazma işlemlerini reddet.
-    match /{allPaths=**} {
-      allow read, write: if false;
-    }
-
-    // --- PROFİL FOTOĞRAFLARI (AVATARS) ---
+    
+    // Profil Fotoğrafları
+    // Sadece kimliği doğrulanmış kullanıcılar kendi avatarlarını veya adminler herhangi bir avatarı güncelleyebilir.
     // Herkes profil fotoğraflarını okuyabilir.
-    // Bir kullanıcı sadece kendi avatarını yazabilir/güncelleyebilir.
     match /upload/avatars/{userId}/{fileName} {
+      allow read;
+      allow write: if request.auth != null && (request.auth.uid == userId || get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin');
+    }
+    
+    // Gönderi Resimleri ve Videoları
+    // Sadece kimliği doğrulanmış kullanıcılar medya yükleyebilir. Herkes okuyabilir.
+    match /upload/{postsOrVideos}/{userId}/{allPaths=**} {
       allow read;
       allow write: if request.auth != null && request.auth.uid == userId;
     }
-
-    // --- GÖNDERİ MEDYALARI (POSTS & VIDEOS) ---
-    // Herkes gönderi resimlerini ve videolarını okuyabilir.
-    // Giriş yapmış bir kullanıcı medya yükleyebilir.
-    match /upload/posts/{userId}/{allPaths=**} {
-      allow read;
-      allow write: if request.auth != null;
-    }
-     match /upload/videos/{userId}/{allPaths=**} {
-      allow read;
-      allow write: if request.auth != null;
-    }
-
-    // --- ODA MEDYALARI (ROOMS) ---
-    // Herkes oda resimlerini ve videolarını okuyabilir.
-    // Giriş yapmış bir kullanıcı medya yükleyebilir.
-    match /upload/rooms/{roomId}/{allPaths=**} {
-      allow read;
-      allow write: if request.auth != null;
-    }
-
-     // --- DM MEDYALARI (DMS) ---
-    // DM'deki medyaları (resim, ses vb.) sadece sohbetteki katılımcılar okuyabilir ve yazabilir.
+    
+    // DM Medyaları (Resimler, Sesli Mesajlar)
+    // Sadece sohbete dahil olan kullanıcılar medya yükleyebilir ve görebilir.
     match /dms/{chatId}/{allPaths=**} {
-      allow read, write: if request.auth != null && resource.metadata.chatId == chatId && request.auth.uid in get(/databases/$(database)/documents/directMessagesMetadata/$(chatId)).data.participantUids;
+      allow read, write: if request.auth != null && get(/databases/(default)/documents/directMessagesMetadata/$(chatId)).data.participantUids.hasAny([request.auth.uid]);
     }
     
-    // --- ODA MÜZİKLERİ (MUSIC) ---
-    // Herkes oda müziklerini okuyabilir.
-    // Sadece giriş yapmış kullanıcılar müzik yükleyebilir.
-    match /music/{roomId}/{allPaths=**} {
+    // Oda Medyaları (Resimler, Müzik)
+    // Sadece kimliği doğrulanmış kullanıcılar yükleyebilir. Herkes okuyabilir (genel odalar).
+    match /{musicOrUploads}/{roomId}/{allPaths=**} {
         allow read;
         allow write: if request.auth != null;
     }
