@@ -27,7 +27,7 @@ import LanguageSwitcher from "../common/LanguageSwitcher";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import Link from "next/link";
 import BlockedUsersDialog from "./BlockedUsersDialog";
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -109,19 +109,24 @@ export default function ProfilePageClient() {
     
     const hasChanges = useMemo(() => {
         if (!userData) return false;
+        
         const interestsChanged = JSON.stringify(interests.sort()) !== JSON.stringify((userData.interests || []).sort());
+    
+        const ageValue = age === undefined ? null : Number(age);
+        const userDataAgeValue = userData.age === undefined ? null : Number(userData.age);
+    
         return (
-            username !== (userData.username || "") || 
+            username !== (userData.username || "") ||
             bio !== (userData.bio || "") ||
-            (age || undefined) !== (userData.age || undefined) ||
+            ageValue !== userDataAgeValue ||
             city !== (userData.city || "") ||
             country !== (userData.country || "") ||
             gender !== (userData.gender || undefined) ||
-            privateProfile !== (userData.privateProfile || false) || 
+            privateProfile !== (userData.privateProfile || false) ||
             acceptsFollowRequests !== (userData.acceptsFollowRequests ?? true) ||
             showOnlineStatus !== (userData.showOnlineStatus ?? true) ||
-            newAvatar !== null || 
-            selectedBubble !== (userData?.selectedBubble || "") || 
+            newAvatar !== null ||
+            selectedBubble !== (userData?.selectedBubble || "") ||
             selectedAvatarFrame !== (userData?.selectedAvatarFrame || "") ||
             interestsChanged
         );
@@ -187,7 +192,7 @@ export default function ProfilePageClient() {
             }
             
             if (bio !== userData?.bio) userDocUpdates.bio = bio;
-            if (age !== userData?.age) userDocUpdates.age = Number(age);
+            if (Number(age) !== Number(userData?.age)) userDocUpdates.age = Number(age) || 0;
             if (city !== userData?.city) userDocUpdates.city = city;
             if (country !== userData?.country) userDocUpdates.country = country;
             if (gender !== userData?.gender) userDocUpdates.gender = gender;
@@ -525,7 +530,9 @@ export default function ProfilePageClient() {
 
             </div>
 
-            <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
+            <div
+                className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t"
+            >
                 <div className="container mx-auto flex justify-between items-center max-w-4xl">
                      <p className={cn("text-sm font-semibold text-muted-foreground transition-opacity", hasChanges ? "opacity-100" : "opacity-0")}>
                         Kaydedilmemiş değişiklikleriniz var.
