@@ -19,7 +19,6 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
-import AccountSwitcher from "./AccountSwitcher";
 
 
 interface HeaderProps {}
@@ -27,7 +26,6 @@ interface HeaderProps {}
 export default function Header({}: HeaderProps) {
     const { themeSettings, user, userData, totalUnreadDms, handleLogout } = useAuth();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
-    const [isAccountSwitcherOpen, setIsAccountSwitcherOpen] = useState(false);
     const { t } = useTranslation();
     const router = useRouter();
 
@@ -116,10 +114,6 @@ export default function Header({}: HeaderProps) {
                                     <span>{t('settings')}</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onSelect={() => setIsAccountSwitcherOpen(true)}>
-                                    <Users className="mr-2 h-4 w-4" />
-                                    <span>Hesap Değiştir</span>
-                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleLogout()} className="text-destructive focus:text-destructive">
                                     <LogOut className="mr-2 h-4 w-4" />
                                     <span>{t('logout')}</span>
@@ -130,7 +124,6 @@ export default function Header({}: HeaderProps) {
                 </div>
             </header>
             <UserSearchDialog isOpen={isSearchOpen} onOpenChange={setIsSearchOpen} />
-            <AccountSwitcher isOpen={isAccountSwitcherOpen} onOpenChange={setIsAccountSwitcherOpen} />
         </>
     );
 }

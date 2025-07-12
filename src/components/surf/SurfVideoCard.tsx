@@ -22,7 +22,7 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
   const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(false); // Start unmuted
   const [showComments, setShowComments] = useState(false);
   const [showLikeAnimation, setShowLikeAnimation] = useState(false);
 
@@ -131,7 +131,7 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
           muted={isMuted}
           playsInline
           preload="auto"
-          className="h-full w-full object-cover"
+          className="h-full w-full object-cover" // Changed to object-cover
           onContextMenu={(e) => e.preventDefault()}
           onClick={togglePlay}
         />

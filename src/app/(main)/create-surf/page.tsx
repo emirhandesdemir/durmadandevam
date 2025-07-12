@@ -56,7 +56,7 @@ function CreateSurfPage() {
     try {
       setUploadProgress(0);
 
-      const storagePath = `upload/posts/videos/${user.uid}/${Date.now()}_${videoFile.name}`;
+      const storagePath = `upload/videos/${user.uid}/${Date.now()}_${videoFile.name}`;
       const videoRef = ref(storage, storagePath);
       const uploadTask = uploadBytesResumable(videoRef, videoFile);
 
@@ -70,7 +70,7 @@ function CreateSurfPage() {
           try {
               const videoUrl = await getDownloadURL(uploadTask.snapshot.ref);
               await createPost({
-                  uid: user.uid, username: userData.username, userAvatar: userData.photoURL || null,
+                  uid: user.uid, username: userData.username, userPhotoURL: userData.photoURL || null,
                   userAvatarFrame: userData.selectedAvatarFrame || '', userRole: userData.role || 'user',
                   userGender: userData.gender, text: text, videoUrl: videoUrl, imageUrl: '',
                   language: i18n.language,

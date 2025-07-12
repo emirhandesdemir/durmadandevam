@@ -15,7 +15,7 @@ import {
     addDoc,
     collection
 } from "firebase/firestore";
-import { ref, deleteObject, getDownloadURL, uploadBytesResumable } from "firebase/storage";
+import { ref, deleteObject, getDownloadURL, uploadBytes } from "firebase/storage";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
 import { findUserByUsername } from "./userActions";
@@ -140,8 +140,8 @@ export async function deletePost(postId: string) {
 
             if (postData.imageUrl) {
                 try {
-                    const imageRef = ref(storage, postData.imageUrl);
-                    await deleteObject(imageRef);
+                    const imageStorageRef = ref(storage, postData.imageUrl);
+                    await deleteObject(imageStorageRef);
                 } catch(error: any) {
                     if (error.code !== 'storage/object-not-found') {
                         console.error("Storage resmi silinirken hata oluştu:", error);
@@ -299,7 +299,7 @@ export async function retweetPost(
             postId: originalPostId,
             uid: originalPostData.uid,
             username: originalPostData.username,
-            userAvatar: originalPostData.userPhotoURL,
+            userPhotoURL: originalPostData.userPhotoURL,
             userAvatarFrame: originalPostData.userAvatarFrame,
             text: originalPostData.text,
             imageUrl: originalPostData.imageUrl,

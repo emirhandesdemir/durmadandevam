@@ -1,11 +1,12 @@
-// Bu bileşen, kullanıcı giriş formunu ve ilgili tüm mantığı içerir.
+// src/components/auth/login-form.tsx
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth"; 
 import { auth } from "@/lib/firebase";
 import Image from "next/image";
@@ -30,44 +31,30 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 
-// Form alanlarının validasyonunu (doğrulamasını) yöneten Zod şeması.
 const formSchema = z.object({
   email: z.string().email({ message: "Geçersiz e-posta adresi." }),
   password: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır." }),
 });
 
-interface LoginFormProps {
-    prefilledEmail?: string;
-}
-
-export default function LoginForm({ prefilledEmail }: LoginFormProps) {
+export default function LoginForm() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
     const [isResetting, setIsResetting] = useState(false); 
     const [showPassword, setShowPassword] = useState(false);
 
-    // react-hook-form ile form yönetimi.
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            email: prefilledEmail || "",
+            email: "",
             password: "",
         },
     });
 
-    // Eğer prefilledEmail varsa, formu doldur. Bu, hesap değiştirme akışı için kullanılır.
-    useEffect(() => {
-        if (prefilledEmail) {
-            form.setValue('email', prefilledEmail);
-        }
-    }, [prefilledEmail, form]);
-
-    // Form gönderildiğinde çalışacak fonksiyon.
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsLoading(true);
         try {
             await signInWithEmailAndPassword(auth, values.email, values.password);
-            // Başarılı girişte AuthContext yönlendirmeyi halledecek.
+            // Successful sign-in is handled by the AuthContext, which will redirect to /home.
         } catch (error: any) {
             console.error("Giriş hatası", error);
             let errorMessage = "Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.";
@@ -87,7 +74,6 @@ export default function LoginForm({ prefilledEmail }: LoginFormProps) {
         }
     }
 
-    // Şifre sıfırlama e-postası gönderme fonksiyonu.
     async function handlePasswordReset() {
         const email = form.getValues("email"); 
         if (!email) {
