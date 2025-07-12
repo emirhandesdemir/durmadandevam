@@ -70,6 +70,22 @@ export async function updateUserPosts(uid: string, updates: { username?: string;
 }
 
 
+export async function updateUserComments(uid: string, updates: { photoURL?: string; userAvatarFrame?: string; username?: string }) {
+    if (!uid || !updates || Object.keys(updates).length === 0) {
+        return;
+    }
+
+    const commentsQuery = query(collectionGroup(db, 'comments'), where('uid', '==', uid));
+
+    try {
+        await processQueryInBatches(commentsQuery, updates);
+    } catch (error) {
+        console.error("Kullanıcı yorumları güncellenirken hata:", error);
+        throw error;
+    }
+}
+
+
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     if (!uid) return null;
     const userRef = doc(db, 'users', uid);
@@ -130,19 +146,6 @@ export async function saveFCMToken(userId: string, token: string) {
     console.error('FCM jetonu kaydedilirken hata:', error);
     return { success: false, error: error.message };
   }
-}
-
-export async function getSuggestedUsers(currentUserId: string): Promise<UserProfile[]> {
-    const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('uid', '!=', currentUserId), limit(10));
-    const snapshot = await getDocs(q);
-    
-    if (snapshot.empty) {
-        return [];
-    }
-    
-    const users = snapshot.docs.map(doc => doc.data() as UserProfile);
-    return deepSerialize(users);
 }
 
 export async function getFollowingForSuggestions(userId: string): Promise<Pick<UserProfile, 'uid' | 'username' | 'photoURL'>[]> {

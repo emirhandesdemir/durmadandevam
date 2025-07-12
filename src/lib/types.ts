@@ -162,7 +162,7 @@ export interface ProfileViewer {
     uid: string;
     viewedAt: Timestamp;
     username?: string;
-    photoURL?: string | null;
+    photoURL: string | null;
     selectedAvatarFrame?: string;
 }
 
