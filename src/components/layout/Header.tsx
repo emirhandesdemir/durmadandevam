@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Send, Bell, Search, Compass, Map, LogOut, Settings, Store, Crown } from "lucide-react";
+import { Send, Bell, Search, Compass, Map, LogOut, Settings, Store, Crown, UserPlus, LogOutIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
 import UserSearchDialog from "../search/UserSearchDialog";
@@ -110,8 +110,12 @@ export default function Header({}: HeaderProps) {
                                     <span>{t('settings')}</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
+                                 <DropdownMenuItem onSelect={() => router.push('/login?addNew=true')}>
+                                    <UserPlus className="mr-2 h-4 w-4" />
+                                    <span>Başka Hesap Ekle</span>
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
-                                    <LogOut className="mr-2 h-4 w-4" />
+                                    <LogOutIcon className="mr-2 h-4 w-4" />
                                     <span>{t('logout')}</span>
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
