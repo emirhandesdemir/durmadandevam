@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Send, Bell, Search, Compass, Map, LogOut, Settings, Store, Crown, LogOutIcon, User } from "lucide-react";
+import { Send, Bell, Search, Compass, Map, LogOut, Settings, Store, Crown, LogOutIcon, User, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
 import UserSearchDialog from "../search/UserSearchDialog";
@@ -36,6 +36,11 @@ export default function Header({}: HeaderProps) {
     const handleNavigate = (path: string) => {
       router.push(path);
     };
+
+    const handleAccountSwitch = async () => {
+        await handleLogout();
+        router.push('/login');
+    }
 
     return (
         <>
@@ -114,6 +119,10 @@ export default function Header({}: HeaderProps) {
                                     <span>{t('settings')}</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={handleAccountSwitch}>
+                                    <Users className="mr-2 h-4 w-4" />
+                                    <span>Hesap Değiştir</span>
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
                                     <LogOutIcon className="mr-2 h-4 w-4" />
                                     <span>{t('logout')}</span>
