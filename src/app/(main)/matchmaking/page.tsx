@@ -19,29 +19,31 @@ export default function MatchmakingPage() {
   const { toast } = useToast();
   const [status, setStatus] = useState<'idle' | 'searching' | 'found'>('idle');
 
-  // Eşleştirme aramasını başlatan fonksiyon
   const handleStartSearch = async () => {
     if (!user || !userData) return;
     setStatus('searching');
     try {
       const result = await findMatch(user.uid, {
-        gender: userData.gender || 'male',
+        gender: userData.gender!, // We know gender exists from the check below
         username: userData.username,
         photoURL: userData.photoURL || null,
         age: userData.age,
         city: userData.city,
         interests: userData.interests,
       });
-      
+
       if (result.status === 'matched' && result.chatId) {
-        // Anında bir eşleşme bulundu, sohbet odasına yönlendir.
         router.push(`/matchmaking/chat/${result.chatId}`);
       } else if (result.status === 'searching') {
-        // Hemen bir eşleşme bulunamadı, kullanıcıya bilgi ver ve arka planda beklemeye devam et.
-        toast({ description: "Eşleşme aranıyor, lütfen bekleyin..." });
+        toast({ description: "Eşleşme aranıyor, arkaplanda sana uygun birini bulmaya devam edeceğiz." });
       } else if (result.status === 'already_in_chat' && result.chatId) {
-        // Kullanıcı zaten bir odada, oraya yönlendir.
         router.push(`/matchmaking/chat/${result.chatId}`);
+      } else {
+         toast({
+            variant: 'destructive',
+            description: result.error || 'Eşleşme ararken bir hata oluştu. Lütfen tekrar deneyin.',
+        });
+        setStatus('idle');
       }
 
     } catch (error: any) {
@@ -50,7 +52,6 @@ export default function MatchmakingPage() {
     }
   };
   
-  // Eşleşme aramasını iptal etme
   const handleCancelSearch = async () => {
     if (!user) return;
     setStatus('idle');
@@ -62,7 +63,6 @@ export default function MatchmakingPage() {
     }
   };
 
-  // Arka planda eşleşme bulunduğunda yönlendirme yapmak için dinleyici
   useEffect(() => {
     if (status !== 'searching' || !user) return;
 
@@ -78,12 +78,10 @@ export default function MatchmakingPage() {
   }, [status, user, router]);
 
 
-  // Auth verisi yüklenirken yükleme ekranı
   if (authLoading) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-10 w-10 animate-spin" /></div>;
   }
   
-  // Eşleştirme için gerekli profil bilgileri eksikse uyarı göster
   if (!userData || !userData.gender || !userData.age || userData.age <= 0 || !userData.city?.trim() || !userData.interests || userData.interests.length === 0) {
     return (
         <div className="flex h-full flex-col items-center justify-center text-center p-4">

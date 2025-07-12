@@ -8,7 +8,6 @@ export interface MatchmakingChat {
     status: 'active' | 'revealing' | 'ended' | 'abandoned';
     createdAt: Timestamp;
     reactions?: { [uid: string]: 'like' };
-    // Add a field for the permanent chat ID once created
     permanentChatId?: string;
 }
 
