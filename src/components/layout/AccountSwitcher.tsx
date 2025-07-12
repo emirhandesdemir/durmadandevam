@@ -1,5 +1,4 @@
-// This file is no longer used due to the simplified login flow.
-// It can be safely deleted.
+// This file is obsolete and has been removed to clean up the project.
 export default function AccountSwitcher() {
   return null;
 }
