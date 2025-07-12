@@ -107,7 +107,7 @@ export default function ProfilePageClient() {
         }
     }, [userData, user]);
     
-    const hasChanges = useMemo(() => {
+     const hasChanges = useMemo(() => {
         if (!userData) return false;
         
         const interestsChanged = JSON.stringify(interests.sort()) !== JSON.stringify((userData.interests || []).sort());
@@ -120,11 +120,11 @@ export default function ProfilePageClient() {
             ageChanged ||
             city !== (userData.city || "") ||
             country !== (userData.country || "") ||
-            gender !== userData.gender ||
-            privateProfile !== userData.privateProfile ||
+            gender !== (userData.gender || undefined) ||
+            privateProfile !== (userData.privateProfile || false) || 
             acceptsFollowRequests !== (userData.acceptsFollowRequests ?? true) ||
             showOnlineStatus !== (userData.showOnlineStatus ?? true) ||
-            selectedBubble !== (userData.selectedBubble || "") ||
+            selectedBubble !== (userData.selectedBubble || "") || 
             selectedAvatarFrame !== (userData.selectedAvatarFrame || "") ||
             interestsChanged
         );
@@ -263,7 +263,7 @@ export default function ProfilePageClient() {
 
     return (
         <>
-            <div className="space-y-6 pb-24">
+            <div className="space-y-6 pb-32">
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-3"><UserIcon className="h-6 w-6" />Profil Bilgileri</CardTitle>
@@ -533,6 +533,9 @@ export default function ProfilePageClient() {
                     </CardContent>
                 </Card>
 
+                 <footer className="text-center py-6 text-muted-foreground text-sm">
+                    <p>© 2025 BeWalk. All rights reserved.</p>
+                </footer>
             </div>
 
             <div className="fixed bottom-16 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">

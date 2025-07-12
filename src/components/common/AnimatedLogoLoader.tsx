@@ -57,8 +57,13 @@ export default function AnimatedLogoLoader({ fullscreen = false, className, isAu
 
   if (fullscreen) {
     return (
-      <div className={cn("flex min-h-screen items-center justify-center", isAuthPage ? 'auth-bg' : 'bg-background')}>
-        {loader}
+      <div className={cn("flex min-h-screen flex-col items-center justify-center", isAuthPage ? 'auth-bg' : 'bg-background')}>
+        <div className="flex-1 flex items-center justify-center">
+             {loader}
+        </div>
+        <p className={cn("pb-4 text-xs", isAuthPage ? 'text-white/70' : 'text-muted-foreground')}>
+            © 2025 BeWalk. All rights reserved.
+        </p>
       </div>
     );
   }

@@ -32,9 +32,16 @@ export default function SignUpPage() {
     <Suspense fallback={<AnimatedLogoLoader fullscreen isAuthPage />}>
       {/* Asıl sayfa içeriği */}
       <main className="relative flex min-h-screen flex-col items-center justify-center p-4 auth-bg">
-        <div className="w-full animate-in zoom-in-95 duration-500">
-          <SignUpForm />
+        <div className="flex-1 flex flex-col items-center justify-center w-full">
+            <div className="w-full max-w-sm animate-in zoom-in-95 duration-500">
+                <SignUpForm />
+            </div>
         </div>
+         <footer className="py-4">
+            <p className="text-xs text-white/70">
+                © 2025 BeWalk. All rights reserved.
+            </p>
+        </footer>
       </main>
     </Suspense>
   );
