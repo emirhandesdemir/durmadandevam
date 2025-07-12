@@ -26,7 +26,7 @@ import LanguageSwitcher from "../common/LanguageSwitcher";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import Link from "next/link";
 import BlockedUsersDialog from "./BlockedUsersDialog";
-import { updateUserPosts, updateUserComments } from "@/lib/actions/userActions";
+import { updateUserProfile } from "@/lib/actions/userActions";
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -150,47 +150,16 @@ export default function ProfilePageClient() {
     
         setIsSaving(true);
         try {
-            const userDocRef = doc(db, 'users', user.uid);
-            const userDocUpdates: { [key: string]: any } = {};
-            const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
-    
-            if (newAvatar) {
-                const newAvatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.jpg`);
-                await uploadString(newAvatarRef, newAvatar, 'data_url');
-                const finalPhotoURL = await getDownloadURL(newAvatarRef);
-                userDocUpdates.photoURL = finalPhotoURL;
-                authProfileUpdates.photoURL = finalPhotoURL;
-            }
-    
-            if (username !== userData?.username) {
-                userDocUpdates.username = username;
-                authProfileUpdates.displayName = username;
-            }
-            
-            if (bio !== (userData?.bio || '')) userDocUpdates.bio = bio;
-            const numAge = Number(age);
-            if (numAge !== (userData?.age || undefined)) {
-                userDocUpdates.age = isNaN(numAge) || numAge <= 0 ? deleteField() : numAge;
-            }
+            await updateUserProfile({
+                userId: user.uid,
+                avatarDataUrl: newAvatar,
+                username, bio, age, city, country, gender, privateProfile,
+                acceptsFollowRequests, showOnlineStatus, selectedBubble,
+                selectedAvatarFrame, interests
+            });
 
-            if (city !== (userData?.city || '')) userDocUpdates.city = city;
-            if (country !== (userData?.country || '')) userDocUpdates.country = country;
-            if (gender !== userData?.gender) userDocUpdates.gender = gender;
-            if (privateProfile !== (userData?.privateProfile || false)) userDocUpdates.privateProfile = privateProfile;
-            if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) userDocUpdates.acceptsFollowRequests = acceptsFollowRequests;
-            if (showOnlineStatus !== (userData?.showOnlineStatus ?? true)) userDocUpdates.showOnlineStatus = showOnlineStatus;
-            if (selectedBubble !== (userData?.selectedBubble || '')) userDocUpdates.selectedBubble = selectedBubble;
-            if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || '')) userDocUpdates.selectedAvatarFrame = selectedAvatarFrame;
-            if (JSON.stringify(interests.sort()) !== JSON.stringify((userData?.interests || []).sort())) userDocUpdates.interests = interests;
-
-            userDocUpdates.lastActionTimestamp = serverTimestamp();
-    
-            if (Object.keys(userDocUpdates).length > 0) {
-                await updateDoc(userDocRef, userDocUpdates);
-            }
-    
-            if (Object.keys(authProfileUpdates).length > 0) {
-                 await updateProfile(auth.currentUser, authProfileUpdates);
+            if (newAvatar && auth.currentUser) {
+                 await updateProfile(auth.currentUser, { photoURL: newAvatar });
             }
 
             toast({
@@ -502,9 +471,6 @@ export default function ProfilePageClient() {
                         </Button>
                     </CardContent>
                 </Card>
-                <footer className="text-center py-6 text-muted-foreground text-sm">
-                    <p>© 2025 BeWalk. All rights reserved.</p>
-                </footer>
             </div>
             
              <div className="fixed bottom-16 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
@@ -529,3 +495,4 @@ export default function ProfilePageClient() {
         </>
     );
 }
+

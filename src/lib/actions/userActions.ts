@@ -4,16 +4,17 @@
 import { db, storage } from '@/lib/firebase';
 import type { Report, UserProfile, Post, Comment } from '../types';
 import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, orderBy, setDoc, collectionGroup, deleteField } from 'firebase/firestore';
-import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
+import { auth } from '@/lib/firebase'; // Import auth
+import { updateProfile } from 'firebase/auth'; // Import updateProfile
 
 // Helper function to process queries in batches to avoid Firestore limits
 async function processQueryInBatches(query: any, updateData: any) {
     const snapshot = await getDocs(query);
     if (snapshot.empty) return;
 
-    // Firestore allows up to 500 operations in a single batch.
     const batchSize = 499;
     const batches = [];
     let currentBatch = writeBatch(db);
@@ -43,10 +44,19 @@ export async function updateUserPosts(uid: string, updates: { username?: string;
 
     const postsRef = collection(db, 'posts');
     const writePromises = [];
+    
+    const postUpdates: { [key: string]: any } = {};
+    if (updates.username) postUpdates.username = updates.username;
+    if (updates.photoURL) postUpdates.photoURL = updates.photoURL;
+    if (updates.userAvatarFrame) postUpdates.userAvatarFrame = updates.userAvatarFrame;
+
 
     // Update user's own posts (original posts and retweets by them)
-    const userPostsQuery = query(postsRef, where('uid', '==', uid));
-    writePromises.push(processQueryInBatches(userPostsQuery, updates));
+    if(Object.keys(postUpdates).length > 0) {
+        const userPostsQuery = query(postsRef, where('uid', '==', uid));
+        writePromises.push(processQueryInBatches(userPostsQuery, postUpdates));
+    }
+
 
     // Update user's appearance in others' retweets of their posts
     const retweetUpdates: { [key: string]: any } = {};
@@ -74,11 +84,18 @@ export async function updateUserComments(uid: string, updates: { photoURL?: stri
     if (!uid || !updates || Object.keys(updates).length === 0) {
         return;
     }
+    
+    const commentUpdates: { [key: string]: any } = {};
+    if (updates.username) commentUpdates.username = updates.username;
+    if (updates.photoURL) commentUpdates.photoURL = updates.photoURL;
+    if (updates.userAvatarFrame) commentUpdates.userAvatarFrame = updates.userAvatarFrame;
+
+    if (Object.keys(commentUpdates).length === 0) return;
 
     const commentsQuery = query(collectionGroup(db, 'comments'), where('uid', '==', uid));
 
     try {
-        await processQueryInBatches(commentsQuery, updates);
+        await processQueryInBatches(commentsQuery, commentUpdates);
     } catch (error) {
         console.error("Kullanıcı yorumları güncellenirken hata:", error);
         throw error;
@@ -146,6 +163,85 @@ export async function saveFCMToken(userId: string, token: string) {
     console.error('FCM jetonu kaydedilirken hata:', error);
     return { success: false, error: error.message };
   }
+}
+
+export async function updateUserProfile({
+    userId,
+    avatarDataUrl,
+    bio,
+    username,
+    age,
+    city,
+    country,
+    gender,
+    privateProfile,
+    acceptsFollowRequests,
+    showOnlineStatus,
+    selectedBubble,
+    selectedAvatarFrame,
+    interests
+}: {
+    userId: string,
+    avatarDataUrl: string | null,
+    bio: string,
+    username: string,
+    age: number | string,
+    city: string,
+    country: string,
+    gender?: 'male' | 'female',
+    privateProfile: boolean,
+    acceptsFollowRequests: boolean,
+    showOnlineStatus: boolean,
+    selectedBubble: string,
+    selectedAvatarFrame: string,
+    interests: string[],
+}) {
+    const userRef = doc(db, 'users', userId);
+    
+    let photoURL = null;
+    if (avatarDataUrl) {
+        const avatarRef = storageRef(storage, `upload/avatars/${userId}/avatar.jpg`);
+        await uploadString(avatarRef, avatarDataUrl, 'data_url');
+        photoURL = await getDownloadURL(avatarRef);
+    }
+
+    const updates: { [key: string]: any } = {
+        bio,
+        username,
+        age: Number(age) || deleteField(),
+        city,
+        country,
+        gender,
+        privateProfile,
+        acceptsFollowRequests,
+        showOnlineStatus,
+        selectedBubble,
+        selectedAvatarFrame,
+        interests,
+    };
+    if (photoURL) {
+        updates.photoURL = photoURL;
+    }
+    
+    const batch = writeBatch(db);
+    batch.update(userRef, updates);
+    await batch.commit();
+
+    return { success: true };
+}
+
+
+export async function getSuggestedUsers(currentUserId: string): Promise<UserProfile[]> {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('uid', '!=', currentUserId), limit(10));
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) {
+        return [];
+    }
+    
+    const users = snapshot.docs.map(doc => doc.data() as UserProfile);
+    return deepSerialize(users);
 }
 
 export async function getFollowingForSuggestions(userId: string): Promise<Pick<UserProfile, 'uid' | 'username' | 'photoURL'>[]> {
