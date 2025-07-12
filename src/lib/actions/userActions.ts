@@ -42,12 +42,21 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
     const postsRef = collection(db, 'posts');
     const writePromises = [];
 
-    const userPostsQuery = query(postsRef, where('uid', '==', uid));
-    writePromises.push(processQueryInBatches(userPostsQuery, updates));
+    // Rename keys to match the Post type
+    const postUpdates: { [key: string]: any } = {};
+    if (updates.username) postUpdates.username = updates.username;
+    if (updates.photoURL) postUpdates.photoURL = updates.photoURL;
+    if (updates.userAvatarFrame) postUpdates.userAvatarFrame = updates.userAvatarFrame;
+    
+    if (Object.keys(postUpdates).length > 0) {
+        const userPostsQuery = query(postsRef, where('uid', '==', uid));
+        writePromises.push(processQueryInBatches(userPostsQuery, postUpdates));
+    }
+
 
     const retweetUpdates: { [key: string]: any } = {};
     if (updates.username) retweetUpdates['retweetOf.username'] = updates.username;
-    if (updates.photoURL) retweetUpdates['retweetOf.userPhotoURL'] = updates.photoURL;
+    if (updates.photoURL) retweetUpdates['retweetOf.photoURL'] = updates.photoURL;
     if (updates.userAvatarFrame) retweetUpdates['retweetOf.userAvatarFrame'] = updates.userAvatarFrame;
     
     if (Object.keys(retweetUpdates).length > 0) {
@@ -75,17 +84,10 @@ export async function updateUserComments(uid: string, updates: { photoURL?: stri
     if (updates.userAvatarFrame) commentUpdates.userAvatarFrame = updates.userAvatarFrame;
     if (updates.username) commentUpdates.username = updates.username;
 
-    const postsQuery = query(collection(db, 'posts'), where('uid', '==', uid));
-    const userPostsSnapshot = await getDocs(postsQuery);
-
-    const updatePromises = userPostsSnapshot.docs.map(async (postDoc) => {
-        const commentsRef = collection(db, 'posts', postDoc.id, 'comments');
-        const userCommentsQuery = query(commentsRef, where('uid', '==', uid));
-        return processQueryInBatches(userCommentsQuery, commentUpdates);
-    });
+    const commentsQuery = query(collectionGroup(db, 'comments'), where('uid', '==', uid));
 
     try {
-        await Promise.all(updatePromises);
+        await processQueryInBatches(commentsQuery, commentUpdates);
     } catch (error) {
         console.error("Kullanıcı yorumları güncellenirken hata:", error);
         throw error;

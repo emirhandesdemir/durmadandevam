@@ -73,7 +73,7 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
     batch.set(newCommentRef, {
         uid: user.uid,
         username: user.displayName || "Anonim Kullanıcı",
-        userAvatar: user.photoURL,
+        photoURL: user.photoURL,
         userAvatarFrame: user.userAvatarFrame || '',
         userRole: user.role || 'user',
         text: text,

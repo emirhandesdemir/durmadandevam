@@ -214,7 +214,7 @@ export interface Post {
     id: string;
     uid: string;
     username: string;
-    userPhotoURL?: string | null;
+    photoURL?: string | null;
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
@@ -236,7 +236,7 @@ export interface Post {
         postId: string;
         uid: string;
         username: string;
-        userPhotoURL?: string | null;
+        photoURL?: string | null;
         userAvatarFrame?: string;
         text: string;
         imageUrl?: string;

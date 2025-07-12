@@ -11,7 +11,6 @@ import {
   getDoc,
   deleteDoc,
 } from 'firebase/firestore';
-import type { UserProfile } from '../types';
 import { revalidatePath } from 'next/cache';
 
 interface CreateNotificationArgs {

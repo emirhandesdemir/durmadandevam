@@ -49,7 +49,7 @@ export default function QuoteRetweetDialog({ isOpen, onOpenChange, post }: Quote
         {
           uid: user.uid,
           username: userData.username,
-          userAvatar: userData.photoURL,
+          photoURL: userData.photoURL,
           userAvatarFrame: userData.selectedAvatarFrame,
           userRole: userData.role,
           userGender: userData.gender,
@@ -94,7 +94,7 @@ export default function QuoteRetweetDialog({ isOpen, onOpenChange, post }: Quote
             <div className="border rounded-lg p-3 space-y-2 ml-12">
                 <div className="flex items-center gap-2">
                     <Avatar className="h-6 w-6">
-                        <AvatarImage src={post.userAvatar || undefined} />
+                        <AvatarImage src={post.photoURL || undefined} />
                         <AvatarFallback>{post.username?.charAt(0) || '?'}</AvatarFallback>
                     </Avatar>
                     <span className="font-bold text-sm">{post.username}</span>

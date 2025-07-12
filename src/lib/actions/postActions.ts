@@ -55,7 +55,7 @@ async function handlePostMentions(postId: string, text: string, sender: { uid: s
 export async function createPost(postData: {
     uid: string;
     username: string;
-    userPhotoURL: string | null;
+    photoURL: string | null;
     userAvatarFrame: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
@@ -105,7 +105,7 @@ export async function createPost(postData: {
     await handlePostMentions(finalPostId, postData.text, {
         uid: postData.uid,
         displayName: postData.username,
-        photoURL: postData.userPhotoURL,
+        photoURL: postData.photoURL,
         userAvatarFrame: postData.userAvatarFrame
     });
 
@@ -274,7 +274,7 @@ export async function retweetPost(
     retweeter: { 
         uid: string; 
         username: string; 
-        userPhotoURL: string | null;
+        photoURL: string | null;
         userAvatarFrame?: string;
         userRole?: 'admin' | 'user';
         userGender?: 'male' | 'female';
@@ -299,7 +299,7 @@ export async function retweetPost(
             postId: originalPostId,
             uid: originalPostData.uid,
             username: originalPostData.username,
-            userPhotoURL: originalPostData.userPhotoURL,
+            photoURL: originalPostData.photoURL,
             userAvatarFrame: originalPostData.userAvatarFrame,
             text: originalPostData.text,
             imageUrl: originalPostData.imageUrl,
@@ -310,7 +310,7 @@ export async function retweetPost(
         const newPostData = {
             uid: retweeter.uid,
             username: retweeter.username,
-            userPhotoURL: retweeter.userPhotoURL,
+            photoURL: retweeter.photoURL,
             userAvatarFrame: retweeter.userAvatarFrame,
             userRole: retweeter.userRole,
             userGender: retweeter.userGender,
@@ -337,7 +337,7 @@ export async function retweetPost(
             recipientId: originalPostData.uid,
             senderId: retweeter.uid,
             senderUsername: retweeter.username,
-            senderAvatar: retweeter.userPhotoURL,
+            senderAvatar: retweeter.photoURL,
             senderAvatarFrame: retweeter.userAvatarFrame,
             type: 'retweet',
             postId: newPostRef.id,
