@@ -14,15 +14,19 @@ export async function getFeatureFlags(): Promise<FeatureFlags> {
     const flagsRef = doc(db, 'config', 'featureFlags');
     const docSnap = await getDoc(flagsRef);
 
-    if (docSnap.exists()) {
-        return docSnap.data() as FeatureFlags;
-    }
-
-    // Varsayılan bayraklar (eğer doküman yoksa)
-    return {
+    // Varsayılan değerler. postFeedEnabled her zaman true olacak.
+    const defaultFlags: FeatureFlags = {
+        postFeedEnabled: true,
         quizGameEnabled: true,
         contentModerationEnabled: true,
     };
+
+    if (docSnap.exists()) {
+        // Firestore'dan gelen verilerle varsayılanları birleştir, postFeedEnabled'ı zorla.
+        return { ...defaultFlags, ...docSnap.data(), postFeedEnabled: true };
+    }
+
+    return defaultFlags;
 }
 
 /**
