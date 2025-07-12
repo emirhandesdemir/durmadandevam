@@ -55,13 +55,14 @@ async function handlePostMentions(postId: string, text: string, sender: { uid: s
 export async function createPost(postData: {
     uid: string;
     username: string;
-    userAvatar: string | null;
+    userPhotoURL: string | null;
     userAvatarFrame: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
     text: string;
     imageUrl?: string;
     videoUrl?: string;
+    backgroundStyle?: string;
     editedWithAI?: boolean;
     language: string;
     commentsDisabled?: boolean;
@@ -104,7 +105,7 @@ export async function createPost(postData: {
     await handlePostMentions(finalPostId, postData.text, {
         uid: postData.uid,
         displayName: postData.username,
-        photoURL: postData.userAvatar,
+        photoURL: postData.userPhotoURL,
         userAvatarFrame: postData.userAvatarFrame
     });
 
@@ -273,7 +274,7 @@ export async function retweetPost(
     retweeter: { 
         uid: string; 
         username: string; 
-        userAvatar: string | null;
+        userPhotoURL: string | null;
         userAvatarFrame?: string;
         userRole?: 'admin' | 'user';
         userGender?: 'male' | 'female';
@@ -298,7 +299,7 @@ export async function retweetPost(
             postId: originalPostId,
             uid: originalPostData.uid,
             username: originalPostData.username,
-            userAvatar: originalPostData.userAvatar,
+            userAvatar: originalPostData.userPhotoURL,
             userAvatarFrame: originalPostData.userAvatarFrame,
             text: originalPostData.text,
             imageUrl: originalPostData.imageUrl,
@@ -309,7 +310,7 @@ export async function retweetPost(
         const newPostData = {
             uid: retweeter.uid,
             username: retweeter.username,
-            userAvatar: retweeter.userAvatar,
+            userPhotoURL: retweeter.userPhotoURL,
             userAvatarFrame: retweeter.userAvatarFrame,
             userRole: retweeter.userRole,
             userGender: retweeter.userGender,
@@ -336,7 +337,7 @@ export async function retweetPost(
             recipientId: originalPostData.uid,
             senderId: retweeter.uid,
             senderUsername: retweeter.username,
-            senderAvatar: retweeter.userAvatar,
+            senderAvatar: retweeter.userPhotoURL,
             senderAvatarFrame: retweeter.userAvatarFrame,
             type: 'retweet',
             postId: newPostRef.id,
@@ -346,13 +347,4 @@ export async function retweetPost(
 
     revalidatePath('/home');
     revalidatePath(`/profile/${retweeter.uid}`);
-}
-
-export async function updatePostMusic(postId: string, musicUrl: string | null) {
-  if (!postId) throw new Error("Post ID is required.");
-  const postRef = doc(db, "posts", postId);
-  await updateDoc(postRef, {
-    musicUrl: musicUrl,
-  });
-  revalidatePath('/surf');
 }

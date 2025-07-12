@@ -123,11 +123,16 @@ export interface UserProfile {
     postCount?: number;
     role: 'admin' | 'user';
     gender?: 'male' | 'female';
+    age?: number;
+    city?: string;
+    country?: string;
+    interests?: string[];
     createdAt: Timestamp;
     lastActionTimestamp?: Timestamp; // For rate limiting
     lastAdWatchedAt?: Timestamp; // For ad reward cooldown
     privateProfile: boolean;
     acceptsFollowRequests: boolean;
+    showOnlineStatus?: boolean;
     followers: string[];
     following: string[];
     followRequests: FollowRequest[];
@@ -188,6 +193,7 @@ export interface Notification {
     senderId: string;
     senderUsername: string;
     senderAvatar: string | null;
+    senderAvatarFrame?: string;
     type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile';
     postId?: string | null;
     postImage?: string | null;
@@ -201,21 +207,20 @@ export interface Notification {
     read: boolean;
     callId?: string;
     callType?: 'video' | 'audio';
-    senderAvatarFrame?: string;
 }
 
 export interface Post {
     id: string;
     uid: string;
     username: string;
-    userAvatar?: string | null;
+    userPhotoURL?: string | null;
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
     text: string;
     imageUrl?: string;
     videoUrl?: string;
-    musicUrl?: string; // New field for music
+    backgroundStyle?: string;
     editedWithAI?: boolean;
     createdAt: Timestamp | { seconds: number; nanoseconds: number };
     likes: string[]; // Beğenen kullanıcıların UID'lerini tutan dizi
@@ -226,7 +231,6 @@ export interface Post {
     language?: string;
     commentsDisabled?: boolean;
     likesHidden?: boolean;
-    tags?: string[];
     retweetOf?: {
         postId: string;
         uid: string;
@@ -237,8 +241,7 @@ export interface Post {
         imageUrl?: string;
         videoUrl?: string;
         createdAt: Timestamp | { seconds: number; nanoseconds: number };
-    };
-    retweetCount?: number;
+    }
 }
 
 export interface Comment {
@@ -255,14 +258,6 @@ export interface Comment {
         username: string;
     } | null;
 }
-
-export interface Like {
-    id: string;
-    userId: string;
-    postId: string;
-    createdAt: Timestamp;
-}
-
 
 export interface Giveaway {
     status: 'idle' | 'active' | 'finished';
@@ -304,7 +299,6 @@ export interface Room {
     currentTrackName?: string;
     giveaway?: Giveaway;
     activeMindWarSessionId?: string | null; // Zihin Savaşları oturum ID'si
-    nextGameTimestamp?: Timestamp;
 }
 
 export interface PlaylistTrack {
@@ -334,18 +328,12 @@ export interface VoiceParticipant {
     selectedAvatarFrame?: string;
 }
 
-export interface QuizQuestion {
-    question: string;
-    options: string[];
-    correctOptionIndex: number;
-}
-
 export interface ActiveGame {
     id: string;
     questions: QuizQuestion[];
     currentQuestionIndex: number;
     scores: { [key: string]: number }; // uid -> score
-    answeredBy: string[];
+    answeredBy: string[]; // This has been changed to a simple array of UIDs
     status: 'countdown' | 'active' | 'finished';
     countdownStartTime?: Timestamp;
     startTime?: Timestamp;
@@ -353,11 +341,17 @@ export interface ActiveGame {
     winners?: { uid: string, username: string, photoURL: string | null, score: number, reward: number }[];
 }
 
+export interface QuizQuestion {
+    question: string;
+    options: string[];
+    correctOptionIndex: number;
+}
+
 
 export interface GameSettings {
     gameIntervalMinutes: number;
     questionTimerSeconds: number;
-    rewardAmount: number; // This can now be a base amount
+    rewardAmount: number;
     cooldownSeconds: number;
     afkTimeoutMinutes: number;
     imageUploadQuality: number;
@@ -368,7 +362,6 @@ export interface GameSettings {
 
 export interface FeatureFlags {
     quizGameEnabled: boolean;
-    postFeedEnabled: boolean;
     contentModerationEnabled: boolean;
 }
 
@@ -377,28 +370,28 @@ export interface VoiceStats {
 }
 
 export interface DirectMessage {
-    id: string;
-    senderId: string;
-    receiverId: string;
-    type?: 'user' | 'call';
-    text?: string;
-    imageUrl?: string;
-    imageType?: 'permanent' | 'timed';
-    imageOpened?: boolean;
-    audioUrl?: string;
-    audioDuration?: number;
-    createdAt: Timestamp;
-    read: boolean;
-    edited: boolean;
-    editedAt?: Timestamp;
-    deleted?: boolean;
-    reactions?: {
-        [emoji: string]: string[]; // key: emoji, value: array of user UIDs
-    };
-    callData?: {
-        status: 'started' | 'ended' | 'missed' | 'declined';
-        duration?: string; // e.g., "5 dakika 32 saniye"
-    };
+  id: string;
+  senderId: string;
+  receiverId: string;
+  type?: 'user' | 'call';
+  text?: string;
+  imageUrl?: string;
+  imageType?: 'permanent' | 'timed';
+  imageOpened?: boolean;
+  audioUrl?: string;
+  audioDuration?: number;
+  createdAt: Timestamp;
+  read: boolean;
+  edited: boolean;
+  editedAt?: Timestamp;
+  deleted?: boolean;
+  reactions?: {
+      [emoji: string]: string[]; // key: emoji, value: array of user UIDs
+  };
+  callData?: {
+      status: 'started' | 'ended' | 'missed' | 'declined';
+      duration?: string; // e.g., "5 dakika 32 saniye"
+  };
 }
 
 export interface DirectMessageMetadata {

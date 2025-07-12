@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
-import { Image as ImageIcon, Send, Loader2, X, Sparkles, RefreshCcw, MessageCircleOff, HeartOff, File } from "lucide-react";
+import { Image as ImageIcon, Send, Loader2, X, Sparkles, RefreshCcw, MessageCircleOff, HeartOff } from "lucide-react";
 import { ScrollArea } from "../ui/scroll-area";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
 import { Input } from "../ui/input";
@@ -27,6 +27,7 @@ import { useTranslation } from "react-i18next";
 import { Progress } from "../ui/progress";
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
+import TextPostBackgroundSelector from "./TextPostBackgroundSelector";
 
 
 async function dataUriToBlob(dataUri: string): Promise<Blob> {
@@ -60,6 +61,7 @@ export default function NewPostForm() {
   // Post Settings
   const [commentsDisabled, setCommentsDisabled] = useState(false);
   const [likesHidden, setLikesHidden] = useState(false);
+  const [backgroundStyle, setBackgroundStyle] = useState<string>('');
 
   // AI Edit States
   const [isAiEditing, setIsAiEditing] = useState(false);
@@ -237,8 +239,8 @@ export default function NewPostForm() {
       toast({ variant: 'destructive', description: 'Bu işlemi yapmak için giriş yapmalısınız veya verilerinizin yüklenmesini beklemelisiniz.' });
       return;
     }
-    if (!text.trim() && !croppedImage) {
-      toast({ variant: 'destructive', description: 'Paylaşmak için bir metin yazın veya resim seçin.' });
+    if (!text.trim() && !croppedImage && !backgroundStyle) {
+      toast({ variant: 'destructive', description: 'Paylaşmak için bir metin yazın, resim seçin veya arka plan stili belirleyin.' });
       return;
     }
 
@@ -259,12 +261,13 @@ export default function NewPostForm() {
         await createPost({
             uid: user.uid,
             username: userData.username,
-            userAvatar: userData.photoURL || null,
+            userPhotoURL: userData.photoURL || null,
             userAvatarFrame: userData.selectedAvatarFrame || '',
             userRole: userData.role || 'user',
             userGender: userData.gender,
             text: text,
-            imageUrl: imageUrl || "",
+            imageUrl: imageUrl,
+            backgroundStyle: imageUrl ? '' : backgroundStyle,
             editedWithAI: wasEditedByAI,
             language: i18n.language,
             commentsDisabled: commentsDisabled,
@@ -385,6 +388,15 @@ export default function NewPostForm() {
                 </div>
             </div>
           )}
+          
+          {!croppedImage && (
+            <div className="ml-0 sm:ml-16">
+                <TextPostBackgroundSelector 
+                    selectedStyle={backgroundStyle}
+                    onSelectStyle={setBackgroundStyle}
+                />
+            </div>
+          )}
            <div className="ml-0 sm:ml-16 space-y-3 pt-2">
                 <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
                     <div className="space-y-0.5">
@@ -419,7 +431,7 @@ export default function NewPostForm() {
           <Button 
             className="rounded-full font-semibold px-4"
             onClick={handleShare}
-            disabled={isLoading || (!text.trim() && !croppedImage)}
+            disabled={isLoading || (!text.trim() && !croppedImage && !backgroundStyle)}
           >
             {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
             <span className="ml-2 hidden sm:inline">{isSubmitting ? 'Paylaşılıyor...' : 'Paylaş'}</span>
