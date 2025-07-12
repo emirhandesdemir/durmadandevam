@@ -112,6 +112,7 @@ export default function ProfilePageClient() {
         
         const interestsChanged = JSON.stringify(interests.sort()) !== JSON.stringify((userData.interests || []).sort());
     
+        // Handle potential undefined or null values correctly for comparison
         const ageValue = age === undefined ? null : Number(age);
         const userDataAgeValue = userData.age === undefined ? null : Number(userData.age);
     
@@ -125,7 +126,7 @@ export default function ProfilePageClient() {
             privateProfile !== (userData.privateProfile || false) ||
             acceptsFollowRequests !== (userData.acceptsFollowRequests ?? true) ||
             showOnlineStatus !== (userData.showOnlineStatus ?? true) ||
-            newAvatar !== null ||
+            newAvatar !== null || // Check if a new avatar has been set
             selectedBubble !== (userData?.selectedBubble || "") ||
             selectedAvatarFrame !== (userData?.selectedAvatarFrame || "") ||
             interestsChanged
@@ -159,7 +160,7 @@ export default function ProfilePageClient() {
         try {
             const userDocUpdates: { [key: string]: any } = {};
             const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
-            const postAndCommentUpdates: { username?: string; userPhotoURL?: string; userAvatarFrame?: string; } = {};
+            const postAndCommentUpdates: { username?: string; photoURL?: string; userAvatarFrame?: string; } = {};
     
             if (newAvatar) {
                 const imageBlob = await dataUriToBlob(newAvatar);
@@ -168,7 +169,7 @@ export default function ProfilePageClient() {
                 const finalPhotoURL = await getDownloadURL(newAvatarRef);
                 userDocUpdates.photoURL = finalPhotoURL;
                 authProfileUpdates.photoURL = finalPhotoURL;
-                postAndCommentUpdates.userPhotoURL = finalPhotoURL;
+                postAndCommentUpdates.photoURL = finalPhotoURL;
             }
     
             if (username !== userData?.username) {
@@ -531,11 +532,11 @@ export default function ProfilePageClient() {
             </div>
 
             <div
-                className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t"
+                className="fixed bottom-16 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t"
             >
                 <div className="container mx-auto flex justify-between items-center max-w-4xl">
                      <p className={cn("text-sm font-semibold text-muted-foreground transition-opacity", hasChanges ? "opacity-100" : "opacity-0")}>
-                        Kaydedilmemiş değişiklikleriniz var.
+                        Değişiklikleriniz var.
                      </p>
                     <Button onClick={handleSaveChanges} disabled={isSaving || !hasChanges} size="lg">
                         {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
