@@ -3,12 +3,14 @@ import { Timestamp } from "firebase/firestore";
 
 export interface MatchmakingChat {
     id: string;
-    participants: { [uid: string]: { username: string, photoURL: string | null } };
+    participants: { [uid: string]: { username: string, photoURL: string | null, age?: number } };
     participantUids: string[];
-    status: 'active' | 'revealing' | 'ended' | 'abandoned';
+    status: 'active' | 'ended' | 'abandoned';
     createdAt: Timestamp;
     reactions?: { [uid: string]: 'like' | 'pass' };
+    permanentChatId?: string;
 }
+
 
 // Zihin Savaşları Oyunu Veri Yapıları
 // ===================================
@@ -49,9 +51,9 @@ export interface MindWarSession {
   spectators: { uid: string, username: string }[]; // İzleyiciler
   gameHistory: MindWarTurn[]; // Geçmiş tüm turların kaydı
   currentTurn: MindWarTurn; // Mevcut aktif tur
-  winner?: string | null; // Kazanan oyuncu veya takım
   endSummary?: { // Oyun sonu özeti
     narrative: string;
+    winner: string | null;
     scores: {
       [uid: string]: {
         intelligence: number;
@@ -60,7 +62,6 @@ export interface MindWarSession {
         reward: number;
       };
     };
-    winner?: string | null;
   };
   createdAt: Timestamp; // Başlangıç zamanı
 }
@@ -235,7 +236,7 @@ export interface Post {
         postId: string;
         uid: string;
         username: string;
-        userAvatar?: string | null;
+        userPhotoURL?: string | null;
         userAvatarFrame?: string;
         text: string;
         imageUrl?: string;
@@ -248,7 +249,7 @@ export interface Comment {
     id: string;
     uid: string;
     username: string;
-    userAvatar?: string;
+    photoURL?: string;
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     text: string;
@@ -424,7 +425,7 @@ export interface Message {
   username: string;
   photoURL?: string | null;
   text?: string;
-  imageUrl?: string; // Changed from imageUrls
+  imageUrl?: string;
   videoUrl?: string;
   type?: 'system' | 'game' | 'portal' | 'user' | 'gameInvite';
   createdAt: Timestamp;

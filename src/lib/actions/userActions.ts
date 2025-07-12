@@ -52,7 +52,7 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
     // Update user's appearance in others' retweets of their posts
     const retweetUpdates: { [key: string]: any } = {};
     if (updates.username) retweetUpdates['retweetOf.username'] = updates.username;
-    if (updates.userAvatar) retweetUpdates['retweetOf.userAvatar'] = updates.userAvatar;
+    if (updates.photoURL) retweetUpdates['retweetOf.userPhotoURL'] = updates.photoURL;
     if (updates.userAvatarFrame) retweetUpdates['retweetOf.userAvatarFrame'] = updates.userAvatarFrame;
     
     if (Object.keys(retweetUpdates).length > 0) {
@@ -70,15 +70,21 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
     }
 }
 
-export async function updateUserComments(uid: string, updates: { userAvatar?: string; userAvatarFrame?: string; username?: string }) {
+export async function updateUserComments(uid: string, updates: { photoURL?: string; userAvatarFrame?: string; username?: string }) {
     if (!uid || !updates || Object.keys(updates).length === 0) {
         return;
     }
+    
+    const commentUpdates: { [key: string]: any } = {};
+    if(updates.photoURL) commentUpdates.photoURL = updates.photoURL;
+    if(updates.userAvatarFrame) commentUpdates.userAvatarFrame = updates.userAvatarFrame;
+    if(updates.username) commentUpdates.username = updates.username;
+
 
     const commentsQuery = query(collectionGroup(db, 'comments'), where('uid', '==', uid));
 
     try {
-        await processQueryInBatches(commentsQuery, updates);
+        await processQueryInBatches(commentsQuery, commentUpdates);
     } catch (error) {
         console.error("Kullanıcı yorumları güncellenirken hata:", error);
         throw error;
