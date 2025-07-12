@@ -9,11 +9,8 @@ import { cn } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
 import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
-import UserSearchDialog from "@/components/search/UserSearchDialog";
-import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
 import ActiveCallBar from "@/components/voice/ActiveCallBar";
-import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
-
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -109,14 +106,19 @@ export default function MainAppLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/') || pathname.startsWith('/matchmaking/');
   const isHeaderlessPage = isFullPageLayout || pathname.startsWith('/surf');
   const isHomePage = pathname === '/home';
+  
+  const pageVariants = {
+    initial: { opacity: 0, y: 10 },
+    animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeInOut' } },
+    exit: { opacity: 0, y: -10, transition: { duration: 0.2, ease: 'easeOut' } },
+  };
 
   return (
-    <VoiceChatProvider>
+    <>
       <PremiumWelcomeManager />
       <div className="relative flex h-screen w-full flex-col bg-background overflow-hidden">
         <PwaInstallBar />
@@ -130,26 +132,31 @@ export default function MainAppLayout({
         >
             {!isHeaderlessPage && (
                 <header className="sticky top-0 z-40">
-                    <Header onSearchClick={() => setIsSearchOpen(true)} />
+                    <Header />
                 </header>
             )}
             
-            <div
-                className={cn(
-                    "flex-1 flex flex-col",
-                    isFullPageLayout ? "overflow-hidden" : "",
-                    !isHomePage && !isFullPageLayout && !pathname.startsWith('/surf') && "p-4"
-                )}
-            >
-                {children}
-            </div>
+             <AnimatePresence mode="wait">
+                <motion.div
+                    key={pathname}
+                    variants={pageVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    className={cn(
+                        "flex-1 flex flex-col",
+                        isFullPageLayout ? "overflow-hidden" : "",
+                        !isHomePage && !isFullPageLayout && !pathname.startsWith('/surf') && "p-4"
+                    )}
+                >
+                    {children}
+                </motion.div>
+            </AnimatePresence>
         </main>
         
-        <BottomNav onSearchClick={() => setIsSearchOpen(true)} />
-        <UserSearchDialog isOpen={isSearchOpen} onOpenChange={setIsSearchOpen} />
-        <VoiceAudioPlayer />
+        <BottomNav />
         <ActiveCallBar />
       </div>
-    </VoiceChatProvider>
+    </>
   );
 }

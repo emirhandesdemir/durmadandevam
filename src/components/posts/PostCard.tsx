@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Post } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck, Sparkles, Repeat, EyeOff, MessageCircleOff, HeartOff, Bookmark } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck, Sparkles, Repeat, EyeOff, MessageCircleOff, HeartOff, Bookmark, ShieldAlert, User as UserIcon } from "lucide-react";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -39,6 +39,7 @@ import CommentSheet from "../comments/CommentSheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import Link from "next/link";
 import QuoteRetweetDialog from "./QuoteRetweetDialog";
+import ReportDialog from '../common/ReportDialog';
 
 
 interface PostCardProps {
@@ -76,7 +77,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
 
     const [optimisticLiked, setOptimisticLiked] = useState(post.likes?.includes(currentUser?.uid || ''));
     const [optimisticLikeCount, setOptimisticLikeCount] = useState(post.likeCount);
-    const [optimisticSaved, setOptimisticSaved] = useState(post.savedBy?.includes(currentUser?.uid || ''));
+    const [optimisticSaved, setOptimisticSaved] = useState(currentUserData?.savedPosts?.includes(post.id));
 
     const [isDeleting, setIsDeleting] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -85,6 +86,8 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showComments, setShowComments] = useState(false);
     const [postToRetweet, setPostToRetweet] = useState<Post | null>(null);
+    const [isReportOpen, setIsReportOpen] = useState(false);
+
 
     // New state for editing mode
     const [editingCommentsDisabled, setEditingCommentsDisabled] = useState(post.commentsDisabled ?? false);
@@ -93,13 +96,14 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     useEffect(() => {
         setOptimisticLiked(post.likes?.includes(currentUser?.uid || ''));
         setOptimisticLikeCount(post.likeCount);
-        setOptimisticSaved(post.savedBy?.includes(currentUser?.uid || ''));
+        setOptimisticSaved(currentUserData?.savedPosts?.includes(post.id));
         setEditingCommentsDisabled(post.commentsDisabled ?? false);
         setEditingLikesHidden(post.likesHidden ?? false);
-    }, [post, currentUser]);
+    }, [post, currentUser, currentUserData]);
 
 
     const isOwner = currentUser?.uid === post.uid;
+    const isAdmin = currentUserData?.role === 'admin';
     
     const createdAtDate = safeParseTimestamp(post.createdAt);
 
@@ -162,7 +166,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     };
 
     const handleDelete = async () => {
-        if (!isOwner) return;
+        if (!isOwner && !isAdmin) return;
         setIsDeleting(true);
         try {
             await deletePost(post.id);
@@ -234,7 +238,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
             onHide(post.id);
         }
     };
-
+    
     if (post.retweetOf) {
         const originalPost = post.retweetOf;
         const originalCreatedAtDate = safeParseTimestamp(originalPost.createdAt);
@@ -401,17 +405,17 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                {isOwner ? (
-                                    <>
-                                        <DropdownMenuItem onClick={() => setIsEditing(true)}><Edit className="mr-2 h-4 w-4" /><span>Düzenle</span></DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Sil</span></DropdownMenuItem>
-                                    </>
-                                ) : (
-                                    <DropdownMenuItem onClick={handleHide}>
-                                        <EyeOff className="mr-2 h-4 w-4" />
-                                        <span>İlgilenmiyorum</span>
-                                    </DropdownMenuItem>
+                                {isOwner && (
+                                    <DropdownMenuItem onClick={() => setIsEditing(true)}><Edit className="mr-2 h-4 w-4" /><span>Düzenle</span></DropdownMenuItem>
                                 )}
+                                 {isOwner || isAdmin ? (
+                                    <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Sil</span></DropdownMenuItem>
+                                 ) : (
+                                    <>
+                                        <DropdownMenuItem onClick={handleHide}><EyeOff className="mr-2 h-4 w-4" /><span>İlgilenmiyorum</span></DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setIsReportOpen(true)}><ShieldAlert className="mr-2 h-4 w-4" /><span>Şikayet Et</span></DropdownMenuItem>
+                                    </>
+                                 )}
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
@@ -514,6 +518,11 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
             
             <CommentSheet open={showComments} onOpenChange={setShowComments} post={post} />
             <QuoteRetweetDialog isOpen={!!postToRetweet} onOpenChange={() => setPostToRetweet(null)} post={postToRetweet!} />
+            <ReportDialog 
+                isOpen={isReportOpen}
+                onOpenChange={setIsReportOpen}
+                target={{ type: 'post', id: post.id, user: { id: post.uid, name: post.username } }}
+            />
         </>
     );
 }

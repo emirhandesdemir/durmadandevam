@@ -127,10 +127,10 @@ export interface UserProfile {
     age?: number;
     city?: string;
     country?: string;
-    interests?: string[]; // İlgi alanları için yeni alan
+    interests?: string[];
     createdAt: Timestamp;
-    lastActionTimestamp?: Timestamp; // For rate limiting
-    lastAdWatchedAt?: Timestamp; // For ad reward cooldown
+    lastActionTimestamp?: Timestamp;
+    lastAdWatchedAt?: Timestamp;
     privateProfile: boolean;
     acceptsFollowRequests: boolean;
     showOnlineStatus?: boolean;
@@ -155,7 +155,8 @@ export interface UserProfile {
     profileCompletionNotificationSent?: boolean;
     selectedBubble?: string;
     selectedAvatarFrame?: string;
-    activeMatchmakingChatId?: string | null; // Aktif eşleşme sohbet ID'si
+    activeMatchmakingChatId?: string | null;
+    defaultMode?: 'light' | 'dark' | 'system';
 }
 
 export interface ProfileViewer {
@@ -194,6 +195,7 @@ export interface Notification {
     senderId: string;
     senderUsername: string;
     senderAvatar: string | null;
+    senderAvatarFrame?: string;
     type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile';
     postId?: string | null;
     postImage?: string | null;
@@ -207,7 +209,6 @@ export interface Notification {
     read: boolean;
     callId?: string;
     callType?: 'video' | 'audio';
-    senderAvatarFrame?: string;
 }
 
 export interface Post {
@@ -221,10 +222,9 @@ export interface Post {
     text: string;
     imageUrl?: string;
     videoUrl?: string;
-    musicUrl?: string; // New field for music
     editedWithAI?: boolean;
     createdAt: Timestamp | { seconds: number; nanoseconds: number };
-    likes: string[]; // Beğenen kullanıcıların UID'lerini tutan dizi
+    likes: string[];
     likeCount: number;
     commentCount: number;
     saveCount?: number;
@@ -232,7 +232,6 @@ export interface Post {
     language?: string;
     commentsDisabled?: boolean;
     likesHidden?: boolean;
-    tags?: string[];
     retweetOf?: {
         postId: string;
         uid: string;
@@ -241,7 +240,6 @@ export interface Post {
         userAvatarFrame?: string;
         text: string;
         imageUrl?: string;
-        videoUrl?: string;
         createdAt: Timestamp | { seconds: number; nanoseconds: number };
     };
     retweetCount?: number;
@@ -339,22 +337,22 @@ export interface QuizQuestion {
 
 export interface ActiveGame {
     id: string;
-    questions: QuizQuestion[];
-    currentQuestionIndex: number;
-    scores: { [key: string]: number }; // uid -> score
+    questionId: string;
+    question: string;
+    options: string[];
+    correctOptionIndex: number;
+    startTime: Timestamp;
+    status: 'active' | 'finished';
     answeredBy: string[];
-    status: 'countdown' | 'active' | 'finished';
-    countdownStartTime?: Timestamp;
-    startTime?: Timestamp;
+    winner?: string;
     finishedAt?: Timestamp;
-    winners?: { uid: string, username: string, photoURL: string | null, score: number, reward: number }[];
 }
 
 
 export interface GameSettings {
     gameIntervalMinutes: number;
     questionTimerSeconds: number;
-    rewardAmount: number; // This can now be a base amount
+    rewardAmount: number;
     cooldownSeconds: number;
     afkTimeoutMinutes: number;
     imageUploadQuality: number;
@@ -374,28 +372,28 @@ export interface VoiceStats {
 }
 
 export interface DirectMessage {
-    id: string;
-    senderId: string;
-    receiverId: string;
-    type?: 'user' | 'call';
-    text?: string;
-    imageUrl?: string;
-    imageType?: 'permanent' | 'timed';
-    imageOpened?: boolean;
-    audioUrl?: string;
-    audioDuration?: number;
-    createdAt: Timestamp;
-    read: boolean;
-    edited: boolean;
-    editedAt?: Timestamp;
-    deleted?: boolean;
-    reactions?: {
-        [emoji: string]: string[]; // key: emoji, value: array of user UIDs
-    };
-    callData?: {
-        status: 'started' | 'ended' | 'missed' | 'declined';
-        duration?: string; // e.g., "5 dakika 32 saniye"
-    };
+  id: string;
+  senderId: string;
+  receiverId: string;
+  type?: 'user' | 'call';
+  text?: string;
+  imageUrl?: string;
+  imageType?: 'permanent' | 'timed';
+  imageOpened?: boolean;
+  audioUrl?: string;
+  audioDuration?: number;
+  createdAt: Timestamp;
+  read: boolean;
+  edited: boolean;
+  editedAt?: Timestamp;
+  deleted?: boolean;
+  reactions?: {
+      [emoji: string]: string[]; // key: emoji, value: array of user UIDs
+  };
+  callData?: {
+      status: 'started' | 'ended' | 'missed' | 'declined';
+      duration?: string; // e.g., "5 dakika 32 saniye"
+  };
 }
 
 export interface DirectMessageMetadata {
@@ -525,5 +523,3 @@ export interface BotActivityLog {
     details: string;
     timestamp: Timestamp;
 }
-
-    

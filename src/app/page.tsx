@@ -2,11 +2,10 @@
 // Kullanıcı giriş yapmamışsa veya ilk kez ziyaret ediyorsa bu sayfa gösterilir.
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Users, Download } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import AnimatedLogoLoader from "@/components/common/AnimatedLogoLoader";

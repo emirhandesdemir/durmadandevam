@@ -34,6 +34,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
+import { Checkbox } from "../ui/checkbox";
 
 const formSchema = z.object({
   username: z.string()
@@ -43,6 +44,9 @@ const formSchema = z.object({
   email: z.string().email({ message: "Geçersiz e-posta adresi." }),
   password: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır." }),
   gender: z.enum(['male', 'female'], { required_error: "Cinsiyet seçimi zorunludur." }),
+  terms: z.literal<boolean>(true, {
+    errorMap: () => ({ message: "Devam etmek için sözleşmeleri kabul etmelisiniz." }),
+  }),
 });
 
 const generateDefaultAvatar = (username: string) => {
@@ -91,6 +95,7 @@ export default function SignUpForm() {
             username: "",
             email: "",
             password: "",
+            terms: false,
         },
     });
 
@@ -298,6 +303,27 @@ export default function SignUpForm() {
                                 </RadioGroup>
                               </FormControl>
                               <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="terms"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none">
+                                <FormLabel>
+                                   <a href="/terms" target="_blank" className="text-primary hover:underline">Kullanıcı Sözleşmesi</a> ve <a href="/privacy" target="_blank" className="text-primary hover:underline">Gizlilik Politikasını</a> okudum ve kabul ediyorum.
+                                </FormLabel>
+                                <FormMessage />
+                              </div>
                             </FormItem>
                           )}
                         />

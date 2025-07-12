@@ -10,7 +10,6 @@ import { cn } from '@/lib/utils';
 import { likePost, toggleSavePost } from '@/lib/actions/postActions';
 import CommentSheet from '@/components/comments/CommentSheet';
 import { useToast } from '@/hooks/use-toast';
-import EditMusicDialog from './EditMusicDialog';
 
 interface SurfVideoCardProps {
   post: Post;
@@ -22,29 +21,30 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
   const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true); // Default to muted
+  const [isMuted, setIsMuted] = useState(true);
   const [showComments, setShowComments] = useState(false);
   const [showLikeAnimation, setShowLikeAnimation] = useState(false);
-  const [isEditMusicOpen, setIsEditMusicOpen] = useState(false);
 
   const [optimisticLiked, setOptimisticLiked] = useState(post.likes?.includes(user?.uid || ''));
-  const [optimisticLikeCount, setOptimisticLikeCount] = useState(post.likeCount);
-  const [optimisticSaved, setOptimisticSaved] = useState(post.savedBy?.includes(user?.uid || ''));
+  const [optimisticLikeCount, setOptimisticLikeCount] = useState(post.likeCount || 0);
+  const [optimisticSaved, setOptimisticSaved] = useState(false); // This needs to be fetched from user data if available
   const [optimisticSaveCount, setOptimisticSaveCount] = useState(post.saveCount || 0);
 
   useEffect(() => {
+    if (userData) {
+      setOptimisticSaved(userData.savedPosts?.includes(post.id) ?? false);
+    }
     setOptimisticLiked(post.likes?.includes(user?.uid || ''));
     setOptimisticLikeCount(post.likeCount || 0);
-    setOptimisticSaved(post.savedBy?.includes(user?.uid || ''));
     setOptimisticSaveCount(post.saveCount || 0);
-  }, [post, user]);
+  }, [post, user, userData]);
 
   useEffect(() => {
     if (isActive && videoRef.current) {
         videoRef.current.play().then(() => setIsPlaying(true)).catch(e => console.error("Video play failed", e));
     } else if (videoRef.current) {
         videoRef.current.pause();
-        videoRef.current.currentTime = 0; // Rewind on becoming inactive
+        videoRef.current.currentTime = 0;
         setIsPlaying(false);
     }
   }, [isActive]);
@@ -74,6 +74,7 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
         uid: user.uid,
         displayName: userData.username,
         photoURL: userData.photoURL || null,
+        userAvatarFrame: userData.selectedAvatarFrame
       });
     } catch (error) {
       setOptimisticLiked(wasLiked);
@@ -120,7 +121,7 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
 
   return (
     <>
-      <div className="h-full w-full relative bg-black rounded-lg" onClick={togglePlay} onDoubleClick={handleDoubleClick}>
+      <div className="h-full w-full relative bg-black rounded-lg" onDoubleClick={handleDoubleClick}>
         {showLikeAnimation && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                 <Heart className="text-white h-24 w-24 drop-shadow-lg animate-like-pop" fill="currentColor" />
@@ -135,6 +136,7 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
           preload="auto"
           className="h-full w-full object-cover"
           onContextMenu={(e) => e.preventDefault()}
+          onClick={togglePlay}
         />
 
         {!isPlaying && (
@@ -169,12 +171,6 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
                 <Bookmark className={cn("h-8 w-8", optimisticSaved && "fill-white text-white")} />
                 <span className="text-xs font-semibold">{optimisticSaveCount}</span>
               </Button>
-              {user?.uid === post.uid && (
-                <Button variant="ghost" className="flex-col h-auto p-0 text-white" onClick={(e) => { e.stopPropagation(); setIsEditMusicOpen(true); }}>
-                    <Music className="h-8 w-8" />
-                    <span className="text-xs font-semibold">Müzik</span>
-                </Button>
-              )}
                <Button variant="ghost" className="h-auto p-0 text-white" size="icon" onClick={(e) => { e.stopPropagation(); setIsMuted(p => !p); }}>
                 {isMuted ? <VolumeX className="h-7 w-7" /> : <Volume2 className="h-7 w-7" />}
               </Button>
@@ -183,7 +179,6 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
         </div>
       </div>
       <CommentSheet open={showComments} onOpenChange={setShowComments} post={post} />
-      <EditMusicDialog isOpen={isEditMusicOpen} onOpenChange={setIsEditMusicOpen} post={post} />
     </>
   );
 }

@@ -59,7 +59,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="tr" suppressHydrationWarning>
-      <head />
+      <head>
+          {/* OneSignal SDK script is now handled through next-pwa for better PWA compatibility */}
+      </head>
       <body
         className={cn(
           'min-h-screen bg-background font-sans antialiased font-medium',
@@ -68,8 +70,8 @@ export default function RootLayout({
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="dark"
+          enableSystem={false}
           disableTransitionOnChange
         >
           {/* Kimlik Doğrulama Sağlayıcısı: Tüm alt bileşenlerin kullanıcı verisine erişmesini sağlar. */}

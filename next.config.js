@@ -5,7 +5,9 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
-  importScripts: ['/firebase-messaging-sw.js'],
+  // The service worker needs to be at the root of the `public` folder
+  // and named `firebase-messaging-sw.js` for FCM to find it.
+  sw: 'firebase-messaging-sw.js',
 });
 
 const nextConfig = {

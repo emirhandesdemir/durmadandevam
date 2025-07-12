@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Palette, Loader2, Sparkles, Lock, Camera, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush } from "lucide-react";
+import { LogOut, Palette, Loader2, Sparkles, Lock, Camera, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff } from "lucide-react";
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
@@ -18,7 +18,7 @@ import { updateProfile } from "firebase/auth";
 import ImageCropperDialog from "../common/ImageCropperDialog";
 import { cn } from "@/lib/utils";
 import { doc, updateDoc } from "firebase/firestore";
-import { ref, uploadString, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Textarea } from "../ui/textarea";
 import { useRouter } from 'next/navigation';
 import { findUserByUsername, updateUserPosts, updateUserComments } from "@/lib/actions/userActions";
@@ -47,6 +47,13 @@ const avatarFrameOptions = [
     { id: "avatar-frame-premium", name: "Premium", isPremium: true },
 ];
 
+async function dataUriToBlob(dataUri: string): Promise<Blob> {
+    const response = await fetch(dataUri);
+    const blob = await response.blob();
+    return blob;
+}
+
+
 export default function ProfilePageClient() {
     const { user, userData, loading, handleLogout } = useAuth();
     const router = useRouter();
@@ -70,6 +77,8 @@ export default function ProfilePageClient() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [inviteLink, setInviteLink] = useState("");
     const [isBlockedUsersOpen, setIsBlockedUsersOpen] = useState(false);
+    const [interests, setInterests] = useState<string[]>([]);
+    const [currentInterest, setCurrentInterest] = useState("");
 
     const isPremium = userData?.premiumUntil && userData.premiumUntil.toDate() > new Date();
 
@@ -87,6 +96,7 @@ export default function ProfilePageClient() {
             setAcceptsFollowRequests(userData.acceptsFollowRequests ?? true);
             setSelectedBubble(userData.selectedBubble || "");
             setSelectedAvatarFrame(userData.selectedAvatarFrame || "");
+            setInterests(userData.interests || []);
         }
         if (user) {
             const encodedRef = btoa(user.uid);
@@ -96,6 +106,7 @@ export default function ProfilePageClient() {
     
     const hasChanges = useMemo(() => {
         if (!userData) return false;
+        const interestsChanged = JSON.stringify(interests.sort()) !== JSON.stringify((userData.interests || []).sort());
         return (
             username !== (userData.username || "") || 
             bio !== (userData.bio || "") ||
@@ -107,16 +118,17 @@ export default function ProfilePageClient() {
             acceptsFollowRequests !== (userData.acceptsFollowRequests ?? true) ||
             newAvatar !== null || 
             selectedBubble !== (userData?.selectedBubble || "") || 
-            selectedAvatarFrame !== (userData?.selectedAvatarFrame || "")
+            selectedAvatarFrame !== (userData?.selectedAvatarFrame || "") ||
+            interestsChanged
         );
-    }, [username, bio, age, city, country, gender, privateProfile, acceptsFollowRequests, newAvatar, selectedBubble, selectedAvatarFrame, userData]);
+    }, [username, bio, age, city, country, gender, privateProfile, acceptsFollowRequests, newAvatar, selectedBubble, selectedAvatarFrame, interests, userData]);
     
     const handleAvatarClick = () => { fileInputRef.current?.click(); };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            if (file.size > 5 * 1024 * 1024) { // 5MB limit
+            if (file.size > 5 * 1024 * 1024) {
                 toast({ variant: "destructive", description: "Resim boyutu 5MB'dan büyük olamaz." });
                 return;
             }
@@ -141,8 +153,9 @@ export default function ProfilePageClient() {
             const postAndCommentUpdates: { username?: string; userAvatar?: string; userAvatarFrame?: string; } = {};
     
             if (newAvatar) {
+                const imageBlob = await dataUriToBlob(newAvatar);
                 const newAvatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.jpg`);
-                await uploadString(newAvatarRef, newAvatar, 'data_url');
+                await uploadBytes(newAvatarRef, imageBlob);
                 const finalPhotoURL = await getDownloadURL(newAvatarRef);
                 userDocUpdates.photoURL = finalPhotoURL;
                 authProfileUpdates.photoURL = finalPhotoURL;
@@ -168,16 +181,19 @@ export default function ProfilePageClient() {
                 userDocUpdates.selectedAvatarFrame = selectedAvatarFrame;
                 postAndCommentUpdates.userAvatarFrame = selectedAvatarFrame;
             }
-
+            
             if (bio !== userData?.bio) userDocUpdates.bio = bio;
             if (age !== userData?.age) userDocUpdates.age = Number(age);
             if (city !== userData?.city) userDocUpdates.city = city;
             if (country !== userData?.country) userDocUpdates.country = country;
             if (gender !== userData?.gender) userDocUpdates.gender = gender;
             if(privateProfile !== userData?.privateProfile) userDocUpdates.privateProfile = privateProfile;
-            if(acceptsFollowRequests !== userData?.acceptsFollowRequests) userDocUpdates.acceptsFollowRequests = acceptsFollowRequests;
+            if(acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) userDocUpdates.acceptsFollowRequests = acceptsFollowRequests;
             if(selectedBubble !== userData?.selectedBubble) userDocUpdates.selectedBubble = selectedBubble;
-
+            if (JSON.stringify(interests.sort()) !== JSON.stringify((userData?.interests || []).sort())) {
+                userDocUpdates.interests = interests;
+            }
+    
             const userDocRef = doc(db, 'users', user.uid);
             if (Object.keys(userDocUpdates).length > 0) {
                 await updateDoc(userDocRef, userDocUpdates);
@@ -209,6 +225,22 @@ export default function ProfilePageClient() {
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const handleAddInterest = () => {
+        const newInterest = currentInterest.trim();
+        if (newInterest && !interests.includes(newInterest) && interests.length < 10) {
+            setInterests([...interests, newInterest]);
+            setCurrentInterest('');
+        }
+    };
+    
+    const handleRemoveInterest = (interestToRemove: string) => {
+        setInterests(interests.filter(i => i !== interestToRemove));
+    };
+
+    const handleSwitchAccount = async () => {
+        await handleLogout();
     };
     
     if (loading || !user || !userData) {
@@ -282,6 +314,29 @@ export default function ProfilePageClient() {
                                 <Input id="country" value={country} onChange={(e) => setCountry(e.target.value)} />
                             </div>
                         </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="interests">İlgi Alanlarım (Maks. 10)</Label>
+                             <div className="flex gap-2">
+                                <Input 
+                                    id="interests" 
+                                    value={currentInterest} 
+                                    onChange={(e) => setCurrentInterest(e.target.value)} 
+                                    onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleAddInterest(); } }}
+                                    placeholder="örn: Kitap Okumak, Oyun"
+                                />
+                                <Button type="button" onClick={handleAddInterest}>Ekle</Button>
+                            </div>
+                             <div className="flex flex-wrap gap-2 pt-2">
+                                {interests.map(interest => (
+                                    <div key={interest} className="flex items-center gap-1 bg-secondary text-secondary-foreground rounded-full px-3 py-1 text-sm">
+                                        {interest}
+                                        <button onClick={() => handleRemoveInterest(interest)} className="ml-1 text-muted-foreground hover:text-destructive">
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
 
@@ -335,7 +390,7 @@ export default function ProfilePageClient() {
                                     </div>
                                     <div>
                                         <Label className="text-base font-medium">Avatar Çerçevesi</Label>
-                                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-2">
+                                         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-2">
                                             {avatarFrameOptions.map(option => (
                                                 <button key={option.id} onClick={() => setSelectedAvatarFrame(option.id)} disabled={option.isPremium && !isPremium} className={cn("flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer p-2 aspect-square hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50", selectedAvatarFrame === option.id ? "border-primary" : "")}>
                                                     <div className={cn("avatar-frame-wrapper h-12 w-12", option.id)}>
@@ -358,7 +413,7 @@ export default function ProfilePageClient() {
                                 <CardHeader className="p-0 text-left">
                                     <div className="flex items-center gap-3">
                                         <Lock className="h-6 w-6 text-primary" />
-                                        <CardTitle>Gizlilik Ayarları</CardTitle>
+                                        <CardTitle>Gizlilik ve Güvenlik</CardTitle>
                                     </div>
                                     <CardDescription>Hesabınızın gizliliğini ve kimlerin sizinle etkileşim kurabileceğini yönetin.</CardDescription>
                                 </CardHeader>
@@ -366,19 +421,16 @@ export default function ProfilePageClient() {
                              <AccordionContent className="p-6 pt-0 space-y-4">
                                  <div className="flex items-center justify-between">
                                     <div>
-                                        <Label htmlFor="privacy-mode">Gizli Hesap</Label>
+                                        <Label htmlFor="privacy-mode" className="font-semibold">Gizli Hesap</Label>
                                         <p className="text-xs text-muted-foreground">Aktif olduğunda, sadece onayladığın kişiler seni takip edebilir.</p>
                                     </div>
                                     <Switch id="privacy-mode" checked={privateProfile} onCheckedChange={setPrivateProfile} />
                                 </div>
-                                 <div className="flex items-center justify-between">
-                                    <div>
-                                        <Label htmlFor="requests-mode" className={cn("transition-colors", !privateProfile && "text-muted-foreground/50")}>Takip İsteklerine İzin Ver</Label>
-                                        <p className={cn("text-xs text-muted-foreground transition-colors", !privateProfile && "text-muted-foreground/50")}>Kapalıysa, kimse size takip isteği gönderemez.</p>
-                                    </div>
-                                    <Switch id="requests-mode" checked={acceptsFollowRequests} onCheckedChange={setAcceptsFollowRequests} disabled={!privateProfile}/>
+                                <div className="flex items-center justify-between">
+                                    <Button variant="outline" className="w-full" onClick={() => setIsBlockedUsersOpen(true)}>
+                                        <ShieldOff className="mr-2 h-4 w-4"/>Engellenen Hesapları Yönet
+                                    </Button>
                                 </div>
-                                <Button variant="outline" onClick={() => setIsBlockedUsersOpen(true)}>Engellenenler</Button>
                             </AccordionContent>
                         </Card>
                     </AccordionItem>
@@ -418,7 +470,7 @@ export default function ProfilePageClient() {
                                             <Globe className="h-5 w-5 text-muted-foreground" />
                                             <Label className="text-base font-semibold">{t('language_settings')}</Label>
                                         </div>
-                                        <LanguageSwitcher />
+                                         <LanguageSwitcher />
                                     </div>
                                 </div>
                             </AccordionContent>
@@ -449,7 +501,10 @@ export default function ProfilePageClient() {
                     <CardHeader>
                         <CardTitle>Hesap İşlemleri</CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="flex flex-wrap gap-2">
+                        <Button variant="secondary" onClick={handleSwitchAccount}>
+                           <Users className="mr-2 h-4 w-4" />Hesap Değiştir
+                        </Button>
                         <Button variant="destructive" onClick={handleLogout}>
                             <LogOut className="mr-2 h-4 w-4" />Çıkış Yap
                         </Button>
@@ -459,7 +514,7 @@ export default function ProfilePageClient() {
             </div>
 
             {hasChanges && (
-                <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
+                <div className="fixed bottom-16 sm:bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
                     <div className="container mx-auto flex justify-between items-center max-w-4xl">
                         <p className="text-sm font-semibold">Kaydedilmemiş değişiklikleriniz var.</p>
                         <Button onClick={handleSaveChanges} disabled={isSaving}>
@@ -479,7 +534,7 @@ export default function ProfilePageClient() {
               onCropComplete={handleCropComplete} 
               circularCrop={true}
             />
-            <BlockedUsersDialog isOpen={isBlockedUsersOpen} onOpenChange={setIsBlockedUsersOpen} blockedUserIds={userData.blockedUsers || []}/>
+             <BlockedUsersDialog isOpen={isBlockedUsersOpen} onOpenChange={setIsBlockedUsersOpen} blockedUserIds={userData.blockedUsers || []}/>
         </>
     );
 }
