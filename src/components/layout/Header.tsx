@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Send, Bell, Search, Compass, Map, LogOut, Settings, Store, Crown, LogOutIcon } from "lucide-react";
+import { Send, Bell, Search, Compass, Map, LogOut, Settings, Store, Crown, LogOutIcon, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
 import UserSearchDialog from "../search/UserSearchDialog";
@@ -24,7 +24,7 @@ import { useRouter } from "next/navigation";
 interface HeaderProps {}
 
 export default function Header({}: HeaderProps) {
-    const { themeSettings, userData, totalUnreadDms, handleLogout } = useAuth();
+    const { themeSettings, user, userData, totalUnreadDms, handleLogout } = useAuth();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const { t } = useTranslation();
     const router = useRouter();
@@ -95,6 +95,10 @@ export default function Header({}: HeaderProps) {
                              <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>{userData?.username}</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
+                                <DropdownMenuItem onSelect={() => handleNavigate(`/profile/${user?.uid}`)}>
+                                    <User className="mr-2 h-4 w-4" />
+                                    <span>Profil</span>
+                                </DropdownMenuItem>
                                 {isPremium && (
                                      <DropdownMenuItem onSelect={() => handleNavigate('/premium')}>
                                         <Crown className="mr-2 h-4 w-4 text-yellow-500" />
