@@ -27,6 +27,7 @@ import LanguageSwitcher from "../common/LanguageSwitcher";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import Link from "next/link";
 import BlockedUsersDialog from "./BlockedUsersDialog";
+import { motion } from 'framer-motion';
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -525,7 +526,10 @@ export default function ProfilePageClient() {
             </div>
 
             <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
-                <div className="container mx-auto flex justify-end items-center max-w-4xl">
+                <div className="container mx-auto flex justify-between items-center max-w-4xl">
+                     <p className={cn("text-sm font-semibold text-muted-foreground transition-opacity", hasChanges ? "opacity-100" : "opacity-0")}>
+                        Kaydedilmemiş değişiklikleriniz var.
+                     </p>
                     <Button onClick={handleSaveChanges} disabled={isSaving || !hasChanges} size="lg">
                         {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         {t('save_changes')}
