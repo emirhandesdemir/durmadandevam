@@ -15,7 +15,7 @@ import {
     addDoc,
     collection
 } from "firebase/firestore";
-import { ref, deleteObject, getDownloadURL, uploadBytes } from "firebase/storage";
+import { ref, deleteObject, getDownloadURL, uploadBytesResumable } from "firebase/storage";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
 import { findUserByUsername } from "./userActions";

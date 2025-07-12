@@ -165,7 +165,6 @@ export default function ProfilePageClient() {
             const postAndCommentUpdates: { [key: string]: any } = {};
     
             if (newAvatar) {
-                const imageBlob = await dataUriToBlob(newAvatar);
                 const newAvatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.jpg`);
                 await uploadString(newAvatarRef, newAvatar, 'data_url');
                 const finalPhotoURL = await getDownloadURL(newAvatarRef);
@@ -532,20 +531,27 @@ export default function ProfilePageClient() {
                         </Button>
                     </CardContent>
                 </Card>
-
-                 <footer className="text-center py-6 text-muted-foreground text-sm">
+                <footer className="text-center py-6 text-muted-foreground text-sm">
                     <p>© 2025 BeWalk. All rights reserved.</p>
                 </footer>
             </div>
 
-            <div className="fixed bottom-16 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
-                <div className="container mx-auto flex justify-end items-center max-w-4xl">
-                    <Button onClick={handleSaveChanges} disabled={isSaving || !hasChanges} size="lg">
-                        {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {t('save_changes')}
-                    </Button>
-                </div>
-            </div>
+            <AnimatePresence>
+                <motion.div
+                    initial={{ y: "100%", opacity: 0 }}
+                    animate={{ y: hasChanges ? 0 : "100%", opacity: hasChanges ? 1 : 0 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    className="fixed bottom-16 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t"
+                >
+                    <div className="container mx-auto flex justify-between items-center max-w-4xl">
+                        <p className="text-sm font-semibold">Kaydedilmemiş değişiklikleriniz var.</p>
+                        <Button onClick={handleSaveChanges} disabled={isSaving || !hasChanges}>
+                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {t('save_changes')}
+                        </Button>
+                    </div>
+                </motion.div>
+            </AnimatePresence>
             
             <ImageCropperDialog 
               isOpen={!!imageToCrop} 

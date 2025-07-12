@@ -201,7 +201,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
             toast({ description: "Gönderi güncellendi." });
             setIsEditing(false);
         } catch (error: any) {
-            console.error("Gönderi güncellenirken hata:", error);
+            console.error("Gönderi güncellenirken hata oluştu:", error);
             toast({ variant: "destructive", description: "Gönderi güncellenirken bir hata oluştu." });
         } finally {
             setIsSaving(false);
@@ -235,7 +235,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                      <Link href={`/profile/${post.uid}`}>
                         <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
                             <Avatar className="relative z-[1] h-10 w-10">
-                                <AvatarImage src={post.userPhotoURL || undefined} />
+                                <AvatarImage src={post.photoURL || undefined} />
                                 <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
                             </Avatar>
                         </div>
