@@ -1,31 +1,30 @@
+
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-  
-    // Allow anyone to read public files, like avatars and post images
-    match /upload/{path=**} {
-      allow read;
+    // Genel kural: Varsayılan olarak tüm yollara erişimi engelle
+    match /{allPaths=**} {
+      allow read, write: if false;
     }
 
-    // Allow an authenticated user to write ONLY to their own avatar directory
+    // Kullanıcıların kendi avatarlarını yüklemesine izin ver
     match /upload/avatars/{userId}/{fileName} {
+      allow read; // Allow anyone to read profile pictures
       allow write: if request.auth != null && request.auth.uid == userId;
     }
-    
-    // Allow an authenticated user to write ONLY to their own posts directory
-    match /upload/posts/{userId}/{allPaths=**} {
-       allow write: if request.auth != null && request.auth.uid == userId;
+
+    // Odalara yüklenen dosyalara izin ver (örneğin resimler)
+    // Sadece giriş yapmış kullanıcılar yazabilir.
+    match /upload/rooms/{roomId}/{allPaths=**} {
+        allow read;
+        allow write: if request.auth != null;
     }
 
-    // Allow an authenticated user to write ONLY to their own videos directory
-    match /upload/videos/{userId}/{allPaths=**} {
-       allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Allow an authenticated user to write ONLY to their own DM media directory
-    match /dms/{chatId}/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
+    // DM'lere yüklenen dosyalara izin ver
+    // Sadece ilgili sohbetin katılımcıları okuyabilir ve yazabilir.
+    match /dms/{chatId}/{allPaths=**} {
+        allow read, write: if request.auth != null && resource.metadata.chatId == chatId;
     }
   }
 }
