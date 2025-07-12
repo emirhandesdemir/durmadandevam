@@ -85,7 +85,7 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
   const isPartnerPremium = partner.premiumUntil && (partner.premiumUntil as Timestamp).toDate() > new Date();
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-background pb-16 md:pb-0">
       {/* Header */}
       <header className="flex items-center gap-4 p-3 border-b shrink-0">
         <Button asChild variant="ghost" size="icon" className="md:hidden rounded-full">
@@ -93,7 +93,7 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
         </Button>
         <Link href={`/profile/${partner.uid}`} className="flex items-center gap-3">
             <div className="relative">
-                <div>
+                <div className={cn("avatar-frame-wrapper", partner.selectedAvatarFrame)}>
                     <Avatar className="relative z-[1]">
                         <AvatarImage src={partner.photoURL || undefined} />
                         <AvatarFallback>{partner.username.charAt(0)}</AvatarFallback>
@@ -147,11 +147,11 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
                 <p className="text-sm font-medium text-muted-foreground">Bu kullanıcı tarafından engellendiniz. Mesaj gönderemezsiniz.</p>
             </div>
         ) : (
-             <div className="bg-muted rounded-full">
+             <div className="dm-input-glow rounded-full">
                 <NewMessageInput
                   chatId={chatId}
-                  sender={{ uid: user.uid, username: userData.username, photoURL: userData.photoURL }}
-                  receiver={{ uid: partner.uid, username: partner.username, photoURL: partner.photoURL }}
+                  sender={{ uid: user.uid, username: userData.username, photoURL: userData.photoURL, selectedAvatarFrame: userData.selectedAvatarFrame }}
+                  receiver={{ uid: partner.uid, username: partner.username, photoURL: partner.photoURL, selectedAvatarFrame: partner.selectedAvatarFrame }}
                 />
             </div>
         )}
