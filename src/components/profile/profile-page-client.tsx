@@ -17,7 +17,7 @@ import { auth, db, storage } from "@/lib/firebase";
 import { updateProfile } from "firebase/auth";
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { cn } from "@/lib/utils";
-import { doc, updateDoc, deleteField, serverTimestamp, arrayUnion, arrayRemove } from "firebase/firestore";
+import { doc, updateDoc, serverTimestamp, arrayUnion, arrayRemove, deleteField } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { Textarea } from "../ui/textarea";
 import { useRouter } from 'next/navigation';
@@ -172,7 +172,10 @@ export default function ProfilePageClient() {
             
             if (bio !== (userData?.bio || '')) userDocUpdates.bio = bio;
             const numAge = Number(age);
-            if (numAge !== (userData?.age || undefined)) userDocUpdates.age = isNaN(numAge) || numAge <= 0 ? deleteField() : numAge;
+            if (numAge !== (userData?.age || undefined)) {
+                userDocUpdates.age = isNaN(numAge) || numAge <= 0 ? deleteField() : numAge;
+            }
+
             if (city !== (userData?.city || '')) userDocUpdates.city = city;
             if (country !== (userData?.country || '')) userDocUpdates.country = country;
             if (gender !== userData?.gender) userDocUpdates.gender = gender;
@@ -192,7 +195,7 @@ export default function ProfilePageClient() {
             if (Object.keys(authProfileUpdates).length > 0) {
                  await updateProfile(auth.currentUser, authProfileUpdates);
             }
-
+            
             toast({
                 title: "Başarılı!",
                 description: "Profiliniz başarıyla güncellendi.",
@@ -507,7 +510,7 @@ export default function ProfilePageClient() {
                 </footer>
             </div>
             
-            <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
+            <div className="fixed bottom-16 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
                 <div className="container mx-auto flex justify-between items-center max-w-4xl">
                     <p className="text-sm font-semibold">Değişiklikleri Kaydet</p>
                     <Button onClick={handleSaveChanges} disabled={isSaving || !hasChanges}>
