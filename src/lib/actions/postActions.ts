@@ -15,7 +15,7 @@ import {
     addDoc,
     collection
 } from "firebase/firestore";
-import { ref, deleteObject } from "firebase/storage";
+import { ref, deleteObject, getDownloadURL, uploadBytesResumable } from "firebase/storage";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
 import { findUserByUsername } from "./userActions";
@@ -313,9 +313,9 @@ export async function retweetPost(
             userAvatarFrame: retweeter.userAvatarFrame,
             userRole: retweeter.userRole,
             userGender: retweeter.userGender,
-            text: quoteText || '', // Use the quote text here
-            imageUrl: '', // Retweet has no image of its own
-            videoUrl: '', // Retweet has no video of its own
+            text: quoteText || '',
+            imageUrl: '', 
+            videoUrl: '', 
             createdAt: serverTimestamp(),
             likes: [],
             likeCount: 0,

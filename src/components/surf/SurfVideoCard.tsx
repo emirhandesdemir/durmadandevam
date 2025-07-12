@@ -21,14 +21,13 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
   const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false); // Changed initial state to false for audio on
   const [showComments, setShowComments] = useState(false);
   const [showLikeAnimation, setShowLikeAnimation] = useState(false);
 
   const [optimisticLiked, setOptimisticLiked] = useState(post.likes?.includes(user?.uid || ''));
   const [optimisticLikeCount, setOptimisticLikeCount] = useState(post.likeCount || 0);
   const [optimisticSaved, setOptimisticSaved] = useState(false);
-  const [optimisticSaveCount, setOptimisticSaveCount] = useState(post.saveCount || 0);
 
   useEffect(() => {
     if (userData) {
@@ -36,7 +35,6 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
     }
     setOptimisticLiked(post.likes?.includes(user?.uid || ''));
     setOptimisticLikeCount(post.likeCount || 0);
-    // setOptimisticSaveCount(post.saveCount || 0); // This should be fetched if you want to display save count
   }, [post, user, userData]);
 
   useEffect(() => {
@@ -132,7 +130,7 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
           muted={isMuted}
           playsInline
           preload="auto"
-          className="h-full w-full object-contain"
+          className="h-full w-full object-cover"
           onContextMenu={(e) => e.preventDefault()}
           onClick={togglePlay}
         />
@@ -167,7 +165,6 @@ export default function SurfVideoCard({ post, isActive }: SurfVideoCardProps) {
               </Button>
               <Button variant="ghost" className="flex-col h-auto p-0 text-white" onClick={(e) => { e.stopPropagation(); handleSave(); }}>
                 <Bookmark className={cn("h-8 w-8", optimisticSaved && "fill-white text-white")} />
-                 {/* <span className="text-xs font-semibold">{optimisticSaveCount}</span> */}
               </Button>
                <Button variant="ghost" className="h-auto p-0 text-white" size="icon" onClick={(e) => { e.stopPropagation(); setIsMuted(p => !p); }}>
                 {isMuted ? <VolumeX className="h-7 w-7" /> : <Volume2 className="h-7 w-7" />}
