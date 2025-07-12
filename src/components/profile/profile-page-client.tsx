@@ -21,7 +21,6 @@ import { doc, updateDoc, deleteField, serverTimestamp } from "firebase/firestore
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { Textarea } from "../ui/textarea";
 import { useRouter } from 'next/navigation';
-import { findUserByUsername, updateUserPosts, updateUserComments } from "@/lib/actions/userActions";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../common/LanguageSwitcher";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
@@ -84,7 +83,6 @@ export default function ProfilePageClient() {
 
     const isPremium = userData?.premiumUntil && userData.premiumUntil.toDate() > new Date();
 
-
     // Populate state from userData
     useEffect(() => {
         if (userData) {
@@ -109,25 +107,27 @@ export default function ProfilePageClient() {
     
     const hasChanges = useMemo(() => {
         if (!userData) return false;
-        
-        const interestsChanged = JSON.stringify(interests.sort()) !== JSON.stringify((userData.interests || []).sort());
-        const ageChanged = (age === '' || age === 0 ? undefined : Number(age)) !== (userData.age || undefined);
-        
-        return (
-            newAvatar !== null ||
-            username !== (userData.username || "") ||
-            bio !== (userData.bio || "") ||
-            ageChanged ||
-            city !== (userData.city || "") ||
-            country !== (userData.country || "") ||
-            gender !== (userData.gender || undefined) ||
-            privateProfile !== (userData.privateProfile || false) || 
-            acceptsFollowRequests !== (userData.acceptsFollowRequests ?? true) ||
-            showOnlineStatus !== (userData.showOnlineStatus ?? true) ||
-            selectedBubble !== (userData.selectedBubble || "") || 
-            selectedAvatarFrame !== (userData.selectedAvatarFrame || "") ||
-            interestsChanged
-        );
+    
+        const normalize = (value: any) => value === undefined || value === null || value === '' ? null : value;
+    
+        const normalizedAge = normalize(age);
+        const normalizedUserDataAge = normalize(userData.age);
+    
+        if (newAvatar !== null) return true;
+        if (username !== userData.username) return true;
+        if (bio !== (userData.bio || '')) return true;
+        if (normalizedAge !== normalizedUserDataAge) return true;
+        if (city !== (userData.city || '')) return true;
+        if (country !== (userData.country || '')) return true;
+        if (gender !== userData.gender) return true;
+        if (privateProfile !== userData.privateProfile) return true;
+        if (acceptsFollowRequests !== (userData.acceptsFollowRequests ?? true)) return true;
+        if (showOnlineStatus !== (userData.showOnlineStatus ?? true)) return true;
+        if (selectedBubble !== (userData.selectedBubble || '')) return true;
+        if (selectedAvatarFrame !== (userData.selectedAvatarFrame || '')) return true;
+        if (JSON.stringify(interests.sort()) !== JSON.stringify((userData.interests || []).sort())) return true;
+    
+        return false;
     }, [
         newAvatar, username, bio, age, city, country, gender, privateProfile, 
         acceptsFollowRequests, showOnlineStatus, selectedBubble, 
@@ -166,7 +166,6 @@ export default function ProfilePageClient() {
     
             if (newAvatar) {
                 const newAvatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.jpg`);
-                const blob = await dataUriToBlob(newAvatar);
                 await uploadString(newAvatarRef, newAvatar, 'data_url');
                 const finalPhotoURL = await getDownloadURL(newAvatarRef);
                 userDocUpdates.photoURL = finalPhotoURL;
@@ -178,27 +177,21 @@ export default function ProfilePageClient() {
                     toast({ variant: "destructive", title: "Geçersiz Kullanıcı Adı", description: "Kullanıcı adı 3-20 karakter uzunluğunda olmalı ve sadece harf, rakam veya alt çizgi içermelidir." });
                     setIsSaving(false); return;
                 }
-                const existingUser = await findUserByUsername(username);
-                if (existingUser && existingUser.uid !== user.uid) {
-                    toast({ variant: "destructive", title: "Kullanıcı Adı Alınmış", description: "Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor." });
-                    setIsSaving(false); return;
-                }
                 userDocUpdates.username = username;
                 authProfileUpdates.displayName = username;
             }
             
-            // Other fields
-            if (bio !== userData?.bio) userDocUpdates.bio = bio;
-            const newAge = age === '' || age === 0 ? deleteField() : Number(age);
-            if ((newAge === undefined && userData?.age !== undefined) || (newAge !== userData?.age)) userDocUpdates.age = newAge;
-            if (city !== (userData?.city || "")) userDocUpdates.city = city;
-            if (country !== (userData?.country || "")) userDocUpdates.country = country;
+            if (bio !== (userData?.bio || '')) userDocUpdates.bio = bio;
+            const numAge = Number(age);
+            if (numAge !== (userData?.age || undefined)) userDocUpdates.age = isNaN(numAge) || numAge <= 0 ? deleteField() : numAge;
+            if (city !== (userData?.city || '')) userDocUpdates.city = city;
+            if (country !== (userData?.country || '')) userDocUpdates.country = country;
             if (gender !== userData?.gender) userDocUpdates.gender = gender;
             if (privateProfile !== (userData?.privateProfile || false)) userDocUpdates.privateProfile = privateProfile;
             if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) userDocUpdates.acceptsFollowRequests = acceptsFollowRequests;
             if (showOnlineStatus !== (userData?.showOnlineStatus ?? true)) userDocUpdates.showOnlineStatus = showOnlineStatus;
-            if (selectedBubble !== (userData?.selectedBubble || "")) userDocUpdates.selectedBubble = selectedBubble;
-            if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || "")) userDocUpdates.selectedAvatarFrame = selectedAvatarFrame;
+            if (selectedBubble !== (userData?.selectedBubble || '')) userDocUpdates.selectedBubble = selectedBubble;
+            if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || '')) userDocUpdates.selectedAvatarFrame = selectedAvatarFrame;
             if (JSON.stringify(interests.sort()) !== JSON.stringify((userData?.interests || []).sort())) userDocUpdates.interests = interests;
 
             userDocUpdates.lastActionTimestamp = serverTimestamp();
@@ -340,7 +333,7 @@ export default function ProfilePageClient() {
                     </CardContent>
                 </Card>
 
-                 <Accordion type="multiple" className="w-full space-y-4">
+                <Accordion type="multiple" className="w-full space-y-4">
                     <AccordionItem value="item-1" asChild>
                         <Card>
                              <AccordionTrigger className="p-6">
@@ -525,7 +518,7 @@ export default function ProfilePageClient() {
                     <p>© 2025 BeWalk. All rights reserved.</p>
                 </footer>
             </div>
-
+            
             <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
                 <div className="container mx-auto flex justify-between items-center max-w-4xl">
                     <p className="text-sm font-semibold">Değişiklikleri Kaydet</p>
