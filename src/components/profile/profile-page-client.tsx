@@ -21,7 +21,7 @@ import { doc, updateDoc, deleteField } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { Textarea } from "../ui/textarea";
 import { useRouter } from 'next/navigation';
-import { findUserByUsername } from "@/lib/actions/userActions";
+import { findUserByUsername, updateUserPosts, updateUserComments } from "@/lib/actions/userActions";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../common/LanguageSwitcher";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
@@ -162,6 +162,7 @@ export default function ProfilePageClient() {
         try {
             const userDocUpdates: { [key: string]: any } = {};
             const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
+            const propagationUpdates: { username?: string; userPhotoURL?: string; userAvatarFrame?: string; } = {};
     
             if (newAvatar) {
                 const newAvatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.jpg`);
@@ -169,6 +170,7 @@ export default function ProfilePageClient() {
                 const finalPhotoURL = await getDownloadURL(newAvatarRef);
                 userDocUpdates.photoURL = finalPhotoURL;
                 authProfileUpdates.photoURL = finalPhotoURL;
+                propagationUpdates.userPhotoURL = finalPhotoURL;
             }
     
             if (username !== userData?.username) {
@@ -183,9 +185,14 @@ export default function ProfilePageClient() {
                 }
                 userDocUpdates.username = username;
                 authProfileUpdates.displayName = username;
+                propagationUpdates.username = username;
             }
             
-            if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || "")) userDocUpdates.selectedAvatarFrame = selectedAvatarFrame;
+            if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || "")) {
+                userDocUpdates.selectedAvatarFrame = selectedAvatarFrame;
+                propagationUpdates.userAvatarFrame = selectedAvatarFrame;
+            }
+
             if (bio !== userData?.bio) userDocUpdates.bio = bio;
             const newAge = age === '' || age === 0 ? deleteField() : Number(age);
             if ((newAge === undefined && userData?.age !== undefined) || (newAge !== userData?.age)) userDocUpdates.age = newAge;
@@ -205,6 +212,22 @@ export default function ProfilePageClient() {
     
             if (Object.keys(authProfileUpdates).length > 0) {
                  await updateProfile(auth.currentUser, authProfileUpdates);
+            }
+
+            if (Object.keys(propagationUpdates).length > 0) {
+                try {
+                    await Promise.all([
+                        updateUserPosts(user.uid, propagationUpdates),
+                        updateUserComments(user.uid, propagationUpdates)
+                    ]);
+                } catch(e) {
+                    console.error("Error propagating profile updates", e);
+                    toast({
+                        variant: "destructive",
+                        title: "Yansıtma Hatası",
+                        description: "Profiliniz güncellendi ancak eski gönderi ve yorumlarınıza yansıtılamadı. Bu bir indeksleme sorunu olabilir, lütfen konsolu kontrol edin."
+                    })
+                }
             }
 
             toast({
@@ -522,23 +545,23 @@ export default function ProfilePageClient() {
             </div>
 
             <AnimatePresence>
-                {hasChanges && (
-                    <motion.div
-                        initial={{ y: "100%", opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: "100%", opacity: 0 }}
-                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className="fixed bottom-16 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t"
-                    >
-                        <div className="container mx-auto flex justify-between items-center max-w-4xl">
-                            <p className="text-sm font-semibold">Kaydedilmemiş değişiklikleriniz var.</p>
-                            <Button onClick={handleSaveChanges} disabled={isSaving}>
-                                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {t('save_changes')}
-                            </Button>
-                        </div>
-                    </motion.div>
-                )}
+            {hasChanges && (
+                <motion.div
+                    initial={{ y: "100%", opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: "100%", opacity: 0 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    className="fixed bottom-16 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t"
+                >
+                    <div className="container mx-auto flex justify-between items-center max-w-4xl">
+                        <p className="text-sm font-semibold">Kaydedilmemiş değişiklikleriniz var.</p>
+                        <Button onClick={handleSaveChanges} disabled={isSaving}>
+                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {t('save_changes')}
+                        </Button>
+                    </div>
+                </motion.div>
+            )}
             </AnimatePresence>
             
             <ImageCropperDialog 

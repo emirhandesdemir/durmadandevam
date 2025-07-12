@@ -8,6 +8,98 @@ import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
 
+// Helper function to process queries in batches to avoid Firestore limits
+async function processQueryInBatches(query: any, updateData: any) {
+    const snapshot = await getDocs(query);
+    if (snapshot.empty) return;
+
+    // Firestore allows up to 500 operations in a single batch.
+    const batchSize = 499;
+    const batches = [];
+    let currentBatch = writeBatch(db);
+    let operationCount = 0;
+
+    snapshot.docs.forEach((doc) => {
+        currentBatch.update(doc.ref, updateData);
+        operationCount++;
+        if (operationCount === batchSize) {
+            batches.push(currentBatch.commit());
+            currentBatch = writeBatch(db);
+            operationCount = 0;
+        }
+    });
+
+    if (operationCount > 0) {
+        batches.push(currentBatch.commit());
+    }
+
+    await Promise.all(batches);
+}
+
+export async function updateUserPosts(uid: string, updates: { [key: string]: any }) {
+    if (!uid || !updates || Object.keys(updates).length === 0) {
+        return;
+    }
+
+    // `photoURL`'ü `userPhotoURL` ile değiştirerek tutarlılık sağla
+    const updateData = { ...updates };
+    if (updateData.photoURL) {
+        updateData.userPhotoURL = updateData.photoURL;
+        delete updateData.photoURL;
+    }
+
+
+    const postsRef = collection(db, 'posts');
+    const writePromises = [];
+
+    // Update user's own posts (original posts and retweets by them)
+    const userPostsQuery = query(postsRef, where('uid', '==', uid));
+    writePromises.push(processQueryInBatches(userPostsQuery, updateData));
+
+    // Update user's appearance in others' retweets of their posts
+    const retweetUpdates: { [key: string]: any } = {};
+    if (updateData.username) retweetUpdates['retweetOf.username'] = updateData.username;
+    if (updateData.userPhotoURL) retweetUpdates['retweetOf.userPhotoURL'] = updateData.userPhotoURL;
+    if (updateData.userAvatarFrame) retweetUpdates['retweetOf.userAvatarFrame'] = updateData.userAvatarFrame;
+    
+    if (Object.keys(retweetUpdates).length > 0) {
+        const retweetsQuery = query(postsRef, where('retweetOf.uid', '==', uid));
+        writePromises.push(processQueryInBatches(retweetsQuery, retweetUpdates));
+    }
+
+    try {
+        await Promise.all(writePromises);
+        revalidatePath('/home');
+        revalidatePath(`/profile/${uid}`);
+    } catch (error) {
+        console.error("Kullanıcı gönderileri güncellenirken hata:", error);
+        throw error;
+    }
+}
+
+export async function updateUserComments(uid: string, updates: { userPhotoURL?: string; userAvatarFrame?: string; username?: string }) {
+    if (!uid || !updates || Object.keys(updates).length === 0) {
+        return;
+    }
+    
+    // `photoURL`'ü `userPhotoURL` ile değiştirerek tutarlılık sağla
+    const updateData = { ...updates };
+     if (updateData.photoURL) {
+        updateData.userPhotoURL = updateData.photoURL;
+        delete updateData.photoURL;
+    }
+
+    // Bu sorgu indeks gerektirir. firestore.indexes.json dosyasında tanımlı olmalıdır.
+    const commentsQuery = query(collectionGroup(db, 'comments'), where('uid', '==', uid));
+
+    try {
+        await processQueryInBatches(commentsQuery, updateData);
+    } catch (error) {
+        console.error("Kullanıcı yorumları güncellenirken hata:", error);
+        throw error;
+    }
+}
+
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     if (!uid) return null;
