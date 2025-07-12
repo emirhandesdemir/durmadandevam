@@ -55,7 +55,7 @@ async function handlePostMentions(postId: string, text: string, sender: { uid: s
 export async function createPost(postData: {
     uid: string;
     username: string;
-    userPhotoURL: string | null;
+    photoURL: string | null;
     userAvatarFrame: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
@@ -80,7 +80,20 @@ export async function createPost(postData: {
         const postCount = userData.postCount || 0;
         
         const newPostData = {
-            ...postData,
+            uid: postData.uid,
+            username: postData.username,
+            userPhotoURL: postData.photoURL,
+            userAvatarFrame: postData.userAvatarFrame,
+            userRole: postData.userRole,
+            userGender: postData.userGender,
+            text: postData.text,
+            imageUrl: postData.imageUrl,
+            videoUrl: postData.videoUrl,
+            backgroundStyle: postData.backgroundStyle,
+            editedWithAI: postData.editedWithAI,
+            language: postData.language,
+            commentsDisabled: postData.commentsDisabled,
+            likesHidden: postData.likesHidden,
             createdAt: serverTimestamp(),
             likes: [],
             likeCount: 0,
@@ -105,7 +118,7 @@ export async function createPost(postData: {
     await handlePostMentions(finalPostId, postData.text, {
         uid: postData.uid,
         displayName: postData.username,
-        photoURL: postData.userPhotoURL,
+        photoURL: postData.photoURL,
         userAvatarFrame: postData.userAvatarFrame
     });
 
@@ -299,7 +312,7 @@ export async function retweetPost(
             postId: originalPostId,
             uid: originalPostData.uid,
             username: originalPostData.username,
-            userPhotoURL: originalPostData.userPhotoURL,
+            photoURL: originalPostData.userPhotoURL,
             userAvatarFrame: originalPostData.userAvatarFrame,
             text: originalPostData.text,
             imageUrl: originalPostData.imageUrl,
@@ -310,7 +323,7 @@ export async function retweetPost(
         const newPostData = {
             uid: retweeter.uid,
             username: retweeter.username,
-            userPhotoURL: retweeter.photoURL,
+            photoURL: retweeter.photoURL,
             userAvatarFrame: retweeter.userAvatarFrame,
             userRole: retweeter.userRole,
             userGender: retweeter.userGender,

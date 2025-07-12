@@ -17,11 +17,11 @@ import { auth, db, storage } from "@/lib/firebase";
 import { updateProfile } from "firebase/auth";
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { cn } from "@/lib/utils";
-import { doc, updateDoc, deleteField } from "firebase/firestore";
+import { doc, updateDoc, deleteField, serverTimestamp } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { Textarea } from "../ui/textarea";
 import { useRouter } from 'next/navigation';
-import { findUserByUsername } from "@/lib/actions/userActions";
+import { findUserByUsername, updateUserPosts, updateUserComments } from "@/lib/actions/userActions";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../common/LanguageSwitcher";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
@@ -160,11 +160,13 @@ export default function ProfilePageClient() {
     
         setIsSaving(true);
         try {
+            const userDocRef = doc(db, 'users', user.uid);
             const userDocUpdates: { [key: string]: any } = {};
             const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
     
             if (newAvatar) {
                 const newAvatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.jpg`);
+                const blob = await dataUriToBlob(newAvatar);
                 await uploadString(newAvatarRef, newAvatar, 'data_url');
                 const finalPhotoURL = await getDownloadURL(newAvatarRef);
                 userDocUpdates.photoURL = finalPhotoURL;
@@ -185,23 +187,23 @@ export default function ProfilePageClient() {
                 authProfileUpdates.displayName = username;
             }
             
-            if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || "")) {
-                userDocUpdates.selectedAvatarFrame = selectedAvatarFrame;
-            }
-
+            // Other fields
             if (bio !== userData?.bio) userDocUpdates.bio = bio;
             const newAge = age === '' || age === 0 ? deleteField() : Number(age);
             if ((newAge === undefined && userData?.age !== undefined) || (newAge !== userData?.age)) userDocUpdates.age = newAge;
-            if (city !== userData?.city) userDocUpdates.city = city;
-            if (country !== userData?.country) userDocUpdates.country = country;
+            if (city !== (userData?.city || "")) userDocUpdates.city = city;
+            if (country !== (userData?.country || "")) userDocUpdates.country = country;
             if (gender !== userData?.gender) userDocUpdates.gender = gender;
-            if(privateProfile !== userData?.privateProfile) userDocUpdates.privateProfile = privateProfile;
-            if(acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) userDocUpdates.acceptsFollowRequests = acceptsFollowRequests;
-            if(showOnlineStatus !== (userData?.showOnlineStatus ?? true)) userDocUpdates.showOnlineStatus = showOnlineStatus;
-            if(selectedBubble !== userData?.selectedBubble) userDocUpdates.selectedBubble = selectedBubble;
+            if (privateProfile !== (userData?.privateProfile || false)) userDocUpdates.privateProfile = privateProfile;
+            if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) userDocUpdates.acceptsFollowRequests = acceptsFollowRequests;
+            if (showOnlineStatus !== (userData?.showOnlineStatus ?? true)) userDocUpdates.showOnlineStatus = showOnlineStatus;
+            if (selectedBubble !== (userData?.selectedBubble || "")) userDocUpdates.selectedBubble = selectedBubble;
+            if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || "")) userDocUpdates.selectedAvatarFrame = selectedAvatarFrame;
             if (JSON.stringify(interests.sort()) !== JSON.stringify((userData?.interests || []).sort())) userDocUpdates.interests = interests;
+
+            userDocUpdates.lastActionTimestamp = serverTimestamp();
     
-            const userDocRef = doc(db, 'users', user.uid);
+            // Execute database and auth updates
             if (Object.keys(userDocUpdates).length > 0) {
                 await updateDoc(userDocRef, userDocUpdates);
             }
@@ -524,25 +526,15 @@ export default function ProfilePageClient() {
                 </footer>
             </div>
 
-            <AnimatePresence>
-            {hasChanges && (
-                <motion.div
-                    initial={{ y: "100%", opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: "100%", opacity: 0 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    className="fixed bottom-16 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t"
-                >
-                    <div className="container mx-auto flex justify-between items-center max-w-4xl">
-                        <p className="text-sm font-semibold">Kaydedilmemiş değişiklikleriniz var.</p>
-                        <Button onClick={handleSaveChanges} disabled={isSaving}>
-                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {t('save_changes')}
-                        </Button>
-                    </div>
-                </motion.div>
-            )}
-            </AnimatePresence>
+            <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
+                <div className="container mx-auto flex justify-between items-center max-w-4xl">
+                    <p className="text-sm font-semibold">Değişiklikleri Kaydet</p>
+                    <Button onClick={handleSaveChanges} disabled={isSaving || !hasChanges}>
+                        {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {t('save_changes')}
+                    </Button>
+                </div>
+            </div>
             
             <ImageCropperDialog 
               isOpen={!!imageToCrop} 
