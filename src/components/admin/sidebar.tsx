@@ -2,8 +2,7 @@
 // Bu bileşen, admin panelinin sol tarafında yer alan dikey navigasyon menüsüdür.
 // Paneldeki farklı yönetim sayfalarına (Dashboard, Kullanıcılar, Odalar vb.)
 // hızlı erişim sağlar ve mobil cihazlarda gizlenip açılabilir.
-
-"use client";
+'use client';
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";

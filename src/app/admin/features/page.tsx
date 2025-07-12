@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 /**
  * Yönetim Paneli - Özellik Yönetimi Sayfası
  * 
- * Bu sayfa, yöneticinin uygulamadaki ana modülleri (gönderi akışı, quiz oyunu vb.)
+ * Bu sayfa, yöneticinin uygulamadaki ana modülleri (quiz oyunu vb.)
  * gerçek zamanlı olarak açıp kapatmasına olanak tanır.
  */
 export default function FeatureManagementPage() {

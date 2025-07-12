@@ -16,14 +16,13 @@ export async function getFeatureFlags(): Promise<FeatureFlags> {
 
     // Varsayılan değerler. postFeedEnabled her zaman true olacak.
     const defaultFlags: FeatureFlags = {
-        postFeedEnabled: true,
         quizGameEnabled: true,
         contentModerationEnabled: true,
     };
 
     if (docSnap.exists()) {
-        // Firestore'dan gelen verilerle varsayılanları birleştir, postFeedEnabled'ı zorla.
-        return { ...defaultFlags, ...docSnap.data(), postFeedEnabled: true };
+        // Firestore'dan gelen verilerle varsayılanları birleştir.
+        return { ...defaultFlags, ...docSnap.data() };
     }
 
     return defaultFlags;
