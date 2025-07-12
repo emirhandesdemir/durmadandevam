@@ -1,25 +1,28 @@
-
+// src/locales/tr.ts
 export const tr = {
   translation: {
-    // Uygulama Giriş Sayfası
+    // Uygulama & Kimlik Doğrulama
     welcome_to_hiwewalk: "{{appName}}'a Hoş Geldiniz",
     app_description: "Herkese açık odalar oluşturun ve katılın. Düşüncelerinizi paylaşın, fikirler üzerinde işbirliği yapın ve başkalarıyla gerçek zamanlı olarak bağlantı kurun.",
     login: "Giriş Yap",
     signup: "Kayıt Ol",
     install_app: "Uygulamayı Yükle",
-    
-    // Header & Nav
+    logout: "Çıkış Yap",
+    save_changes: "Değişiklikleri Kaydet",
+
+    // Navigasyon
+    home: "Anasayfa",
+    rooms: "Odalar",
+    create: "Oluştur",
+    surf: "Surf",
+    match: "Maç",
     messages: "Mesajlar",
     notifications: "Bildirimler",
     store: "Mağaza",
     settings: "Ayarlar",
-    search_user: "Kullanıcı Ara",
-    premium_status: "Premium Durumu",
 
-    // Profil Sayfası
+    // Profil & Ayarlar
     edit_profile: "Profili Düzenle",
-    save_changes: "Değişiklikleri Kaydet",
-    logout: "Çıkış Yap",
     admin_panel: "Yönetim Paneli",
     language_settings: "Dil Ayarları",
     appearance_settings: "Görünüm Ayarları",
@@ -39,6 +42,7 @@ export const tr = {
     premium_coming_soon_toast: "Premium üyelik ve getireceği harika özellikler için heyecanlıyız! Gelişmeler için takipte kalın.",
     
     // Premium Sayfası
+    premium_status: "Premium Durumu",
     premium_benefits: "Premium Avantajların",
     premium_badge_desc: "Profilinde ve sohbetlerde kullanıcı adının yanında özel bir kırmızı kral tacı rozeti görünür.",
     premium_visuals_desc: "Profil resmin için kırmızı parlayan bir çerçeve ve sohbetlerde kullanabileceğin özel kırmızı baloncuk efekti.",

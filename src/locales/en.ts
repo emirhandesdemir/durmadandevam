@@ -1,32 +1,35 @@
-
+// src/locales/en.ts
 export const en = {
   translation: {
-    // App Landing Page
+    // App & Auth
     welcome_to_hiwewalk: "Welcome to {{appName}}",
     app_description: "Create and join public rooms. Share your thoughts, collaborate on ideas, and connect with others in real-time.",
     login: "Log In",
     signup: "Sign Up",
     install_app: "Install App",
-    
-    // Header & Nav
+    logout: "Log Out",
+    save_changes: "Save Changes",
+
+    // Navigation
+    home: "Home",
+    rooms: "Rooms",
+    create: "Create",
+    surf: "Surf",
+    match: "Match",
     messages: "Messages",
     notifications: "Notifications",
     store: "Store",
     settings: "Settings",
-    search_user: "Search User",
-    premium_status: "Premium Status",
 
-    // Profile Page
+    // Profile & Settings
     edit_profile: "Edit Profile",
-    save_changes: "Save Changes",
-    logout: "Log Out",
     admin_panel: "Admin Panel",
     language_settings: "Language Settings",
     appearance_settings: "Appearance Settings",
     privacy_settings: "Privacy Settings",
     invitation_system: "Invitation System",
     profile_viewers: "Profile Viewers",
-
+    
     // Store Page
     watch_ad_for_diamonds: "Watch Ad & Earn Diamonds",
     watch_ad_desc: "Watch a short ad to instantly earn {{count}} diamonds.",
@@ -39,6 +42,7 @@ export const en = {
     premium_coming_soon_toast: "We are excited for the premium membership and the great features it will bring! Stay tuned for updates.",
     
     // Premium Page
+    premium_status: "Premium Status",
     premium_benefits: "Your Premium Benefits",
     premium_badge_desc: "A special red crown badge appears next to your username in your profile and chats.",
     premium_visuals_desc: "A red glowing frame for your profile picture and a special red bubble effect for your chats.",

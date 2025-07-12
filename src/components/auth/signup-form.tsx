@@ -35,6 +35,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Checkbox } from "../ui/checkbox";
+import { countries } from "@/lib/countries";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { useTranslation } from "react-i18next";
 
 const formSchema = z.object({
   username: z.string()
@@ -44,6 +47,7 @@ const formSchema = z.object({
   email: z.string().email({ message: "Geçersiz e-posta adresi." }),
   password: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır." }),
   gender: z.enum(['male', 'female'], { required_error: "Cinsiyet seçimi zorunludur." }),
+  country: z.string({ required_error: "Ülke seçimi zorunludur." }),
   terms: z.literal<boolean>(true, {
     errorMap: () => ({ message: "Devam etmek için sözleşmeleri kabul etmelisiniz." }),
   }),
@@ -87,6 +91,7 @@ export default function SignUpForm() {
     const searchParams = useSearchParams();
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const { i18n } = useTranslation();
 
 
     const form = useForm<z.infer<typeof formSchema>>({
@@ -142,6 +147,7 @@ export default function SignUpForm() {
                 }
             }
 
+            const preferredLanguage = values.country === "TR" ? 'tr' : 'en';
 
             await setDoc(doc(db, "users", user.uid), {
                 uid: user.uid,
@@ -151,6 +157,8 @@ export default function SignUpForm() {
                 bio: "",
                 role: userRole,
                 gender: values.gender,
+                country: values.country,
+                language: preferredLanguage,
                 createdAt: serverTimestamp(),
                 diamonds: 10, // Start with 10 diamonds
                 referredBy: ref || null,
@@ -173,6 +181,7 @@ export default function SignUpForm() {
                 }
             }
 
+            i18n.changeLanguage(preferredLanguage);
 
             toast({
                 title: "Hesap Oluşturuldu!",
@@ -272,6 +281,30 @@ export default function SignUpForm() {
                                 </FormItem>
                             )}
                         />
+
+                        <FormField
+                          control={form.control}
+                          name="country"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Ülke</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Bir ülke seçin" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {countries.map(country => (
+                                      <SelectItem key={country.code} value={country.code}>{country.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
                         <FormField
                           control={form.control}
                           name="gender"
@@ -320,7 +353,7 @@ export default function SignUpForm() {
                               </FormControl>
                               <div className="space-y-1 leading-none">
                                 <FormLabel>
-                                   <a href="/terms" target="_blank" className="text-primary hover:underline">Kullanıcı Sözleşmesi</a> ve <a href="/privacy" target="_blank" className="text-primary hover:underline">Gizlilik Politikasını</a> okudum ve kabul ediyorum.
+                                   <Link href="/terms" target="_blank" className="text-primary hover:underline">Kullanıcı Sözleşmesi</Link> ve <Link href="/privacy" target="_blank" className="text-primary hover:underline">Gizlilik Politikasını</Link> okudum ve kabul ediyorum.
                                 </FormLabel>
                                 <FormMessage />
                               </div>

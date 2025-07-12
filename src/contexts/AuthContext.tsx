@@ -9,6 +9,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import type { FeatureFlags, UserProfile, ThemeSettings } from '@/lib/types';
 import { triggerProfileCompletionNotification } from '@/lib/actions/notificationActions';
+import i18n from '@/lib/i18n';
 
 interface AuthContextType {
   user: User | null;
@@ -122,6 +123,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
             setUserData(data);
 
+            // Set language based on user preference
+            if (data.language && i18n.language !== data.language) {
+                i18n.changeLanguage(data.language);
+            }
+
             if (!data.bio && !data.profileCompletionNotificationSent) {
                 triggerProfileCompletionNotification(user.uid);
             }
@@ -160,11 +166,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       updateStatus(true);
       const handleVisibilityChange = () => document.visibilityState === 'hidden' ? updateStatus(false) : updateStatus(true);
-      const handleBeforeUnload = () => updateStatus(false);
-      
-      document.addEventListener("visibilitychange", handleVisibilityChange);
       window.addEventListener('beforeunload', handleBeforeUnload);
-
+      
       unsubscribePresence = () => {
           updateStatus(false);
           document.removeEventListener("visibilitychange", handleVisibilityChange);

@@ -8,6 +8,7 @@ export interface MatchmakingChat {
     status: 'active' | 'revealing' | 'ended' | 'abandoned';
     createdAt: Timestamp;
     reactions?: { [uid: string]: 'like' | 'pass' };
+    permanentChatId?: string;
 }
 
 // Zihin Savaşları Oyunu Veri Yapıları
@@ -123,11 +124,17 @@ export interface UserProfile {
     postCount?: number;
     role: 'admin' | 'user';
     gender?: 'male' | 'female';
+    age?: number;
+    city?: string;
+    country?: string;
+    language?: 'tr' | 'en';
+    interests?: string[];
     createdAt: Timestamp;
     lastActionTimestamp?: Timestamp; // For rate limiting
     lastAdWatchedAt?: Timestamp; // For ad reward cooldown
     privateProfile: boolean;
     acceptsFollowRequests: boolean;
+    showOnlineStatus?: boolean;
     followers: string[];
     following: string[];
     followRequests: FollowRequest[];
@@ -236,6 +243,7 @@ export interface Post {
         userAvatarFrame?: string;
         text: string;
         imageUrl?: string;
+        videoUrl?: string;
         createdAt: Timestamp | { seconds: number; nanoseconds: number };
     };
     retweetCount?: number;
@@ -333,22 +341,22 @@ export interface QuizQuestion {
 
 export interface ActiveGame {
     id: string;
-    questionId: string;
-    question: string;
-    options: string[];
-    correctOptionIndex: number;
-    startTime: Timestamp;
-    status: 'active' | 'finished';
-    answeredBy: string[];
-    winner?: string;
+    questions: QuizQuestion[];
+    currentQuestionIndex: number;
+    scores: { [key: string]: number }; // uid -> score
+    answeredBy: string[]; // uids who answered the current question
+    status: 'countdown' | 'active' | 'finished';
+    countdownStartTime?: Timestamp;
+    startTime?: Timestamp;
     finishedAt?: Timestamp;
+    winners?: { uid: string, username: string, photoURL: string | null, score: number, reward: number }[];
 }
 
 
 export interface GameSettings {
     gameIntervalMinutes: number;
     questionTimerSeconds: number;
-    rewardAmount: number;
+    rewardAmount: number; // This can now be a base amount
     cooldownSeconds: number;
     afkTimeoutMinutes: number;
     imageUploadQuality: number;
@@ -361,10 +369,6 @@ export interface FeatureFlags {
     quizGameEnabled: boolean;
     postFeedEnabled: boolean;
     contentModerationEnabled: boolean;
-    botNewUserOnboardEnabled: boolean;
-    botAutoPostEnabled: boolean;
-    botAutoInteractEnabled: boolean;
-    botAutoRoomInteractEnabled: boolean;
 }
 
 export interface VoiceStats {
@@ -510,16 +514,4 @@ export interface GameInviteMessageData {
     acceptedPlayers: { uid: string, username: string, photoURL: string | null }[];
     declinedPlayers: { uid: string, username: string, photoURL: string | null }[];
     status: 'pending' | 'accepted' | 'declined' | 'cancelled';
-}
-
-export interface BotActivityLog {
-    id: string;
-    botUserId: string;
-    botUsername: string;
-    actionType: 'post_text' | 'post_image' | 'post_video' | 'like' | 'comment' | 'follow' | 'dm_sent';
-    targetUserId?: string;
-    targetUsername?: string;
-    targetPostId?: string;
-    details: string;
-    timestamp: Timestamp;
 }
