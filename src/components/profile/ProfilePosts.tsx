@@ -3,7 +3,7 @@
 
 import { collection, query, where, orderBy, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Post, UserProfile } from '@/lib/types';
+import type { Post, UserProfile } from '../types';
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, CameraOff, ShieldOff, Lock, FileTextIcon, Video } from 'lucide-react';
@@ -71,7 +71,7 @@ export default function ProfilePosts({ userId }: ProfilePostsProps) {
         return () => unsubscribe();
     }, [userId, canViewContent, authLoading, amIBlockedByThisUser, profileUser]);
 
-    if (authLoading || loading) {
+    if (authLoading || loading || !profileUser) {
         return <div className="flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin" /></div>;
     }
 
@@ -114,7 +114,7 @@ export default function ProfilePosts({ userId }: ProfilePostsProps) {
                     >
                         {post.imageUrl ? (
                            <Image
-                                src={post.imageUrl!}
+                                src={post.imageUrl}
                                 alt="Kullanıcı gönderisi"
                                 fill
                                 className="object-cover"
@@ -124,6 +124,10 @@ export default function ProfilePosts({ userId }: ProfilePostsProps) {
                             <div className="w-full h-full flex items-center justify-center bg-black">
                                 <Video className="h-12 w-12 text-white/50"/>
                                 <video src={post.videoUrl} className="absolute inset-0 w-full h-full object-cover -z-10" muted/>
+                            </div>
+                        ) : post.backgroundStyle ? (
+                             <div className={`w-full h-full flex items-center justify-center p-2 text-primary-foreground ${post.backgroundStyle}`}>
+                                <p className="text-xs font-bold text-center line-clamp-4">{post.text}</p>
                             </div>
                         ) : (
                             <div className="w-full h-full flex items-center justify-center p-2">
