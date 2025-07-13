@@ -1,54 +1,93 @@
-// This service worker can be customized!
-// See https://developers.google.com/web/tools/workbox/modules
-// for more information.
-if (typeof self !== 'undefined') {
-    // eslint-disable-next-line no-undef
-    importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
-    // eslint-disable-next-line no-undef
-    importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js");
+/**
+ * Copyright 2018 Google Inc. All Rights Reserved.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyBHLuoO7KM9ai0dMeCcGhmSHSVYCDO1rEo",
-        authDomain: "yenidendeneme-ea9ed.firebaseapp.com",
-        projectId: "yenidendeneme-ea9ed",
-        storageBucket: "yenidendeneme-ea9ed",
-        messagingSenderId: "903324685291",
-        appId: "1:903324685291:web:2e82831fac65c682b3ffae",
-        measurementId: "G-J3EB02J0LN"
-    };
+// If the loader is already loaded, just stop.
+if (!self.define) {
+  let registry = {};
 
-    // Initialize the Firebase app in the service worker by passing in the
-    // messagingSenderId.
-    firebase.initializeApp(firebaseConfig);
+  // Used for `eval` and `importScripts` where we can't get script URL by other means.
+  // In both cases, it's safe to use a global var because those functions are synchronous.
+  let nextDefineUri;
 
-    // Retrieve an instance of Firebase Messaging so that it can handle background
-    // messages.
-    const messaging = firebase.messaging();
-
-    messaging.onBackgroundMessage((payload) => {
-        console.log('[firebase-messaging-sw.js] Received background message ', payload);
-        
-        const notificationTitle = payload.notification.title;
-        const notificationOptions = {
-            body: payload.notification.body,
-            icon: payload.notification.icon || '/icons/icon.svg',
-            data: {
-                link: payload.fcmOptions.link // Use the link provided by FCM
-            }
-        };
-
-        self.registration.showNotification(notificationTitle, notificationOptions);
-    });
-    
-    // This event listener is for clicking on the notification
-    self.addEventListener('notificationclick', (event) => {
-        console.log('On notification click: ', event.notification);
-        event.notification.close();
-        
-        const link = event.notification.data.link;
-        if (link) {
-            event.waitUntil(clients.openWindow(link));
+  const singleRequire = (uri, parentUri) => {
+    uri = new URL(uri + ".js", parentUri).href;
+    return registry[uri] || (
+      
+        new Promise(resolve => {
+          if ("document" in self) {
+            const script = document.createElement("script");
+            script.src = uri;
+            script.onload = resolve;
+            document.head.appendChild(script);
+          } else {
+            nextDefineUri = uri;
+            importScripts(uri);
+            resolve();
+          }
+        })
+      
+      .then(() => {
+        let promise = registry[uri];
+        if (!promise) {
+          throw new Error(`Module ${uri} didn’t register its module`);
         }
-    });
+        return promise;
+      })
+    );
+  };
 
+  self.define = (depsNames, factory) => {
+    const uri = nextDefineUri || ("document" in self ? document.currentScript.src : "") || location.href;
+    if (registry[uri]) {
+      // Module is already loading or loaded.
+      return;
+    }
+    let exports = {};
+    const require = depUri => singleRequire(depUri, uri);
+    const specialDeps = {
+      module: { uri },
+      exports,
+      require
+    };
+    registry[uri] = Promise.all(depsNames.map(
+      depName => specialDeps[depName] || require(depName)
+    )).then(deps => {
+      factory(...deps);
+      return exports;
+    });
+  };
 }
+define(['./workbox-7144475a'], (function (workbox) { 'use strict';
+
+  importScripts();
+  self.skipWaiting();
+  workbox.clientsClaim();
+  workbox.registerRoute("/", new workbox.NetworkFirst({
+    "cacheName": "start-url",
+    plugins: [{
+      cacheWillUpdate: async ({
+        response: e
+      }) => e && "opaqueredirect" === e.type ? new Response(e.body, {
+        status: 200,
+        statusText: "OK",
+        headers: e.headers
+      }) : e
+    }]
+  }), 'GET');
+  workbox.registerRoute(/.*/i, new workbox.NetworkOnly({
+    "cacheName": "dev",
+    plugins: []
+  }), 'GET');
+
+}));
+//# sourceMappingURL=firebase-messaging-sw.js.map
