@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Send, Bell, Search, Compass, Map, LogOut, Settings, Store, Crown, User, Users, PlusCircle } from "lucide-react";
+import { Send, Bell, Search, Compass, Map, LogOut, Settings, Store, Crown, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
 import UserSearchDialog from "../search/UserSearchDialog";
