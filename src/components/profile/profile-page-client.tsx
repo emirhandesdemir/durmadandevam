@@ -157,11 +157,7 @@ export default function ProfilePageClient() {
                 acceptsFollowRequests, showOnlineStatus, selectedBubble,
                 selectedAvatarFrame, interests
             });
-
-            if (newAvatar && auth.currentUser) {
-                 await updateProfile(auth.currentUser, { photoURL: newAvatar });
-            }
-
+            
             toast({
                 title: "Başarılı!",
                 description: "Profiliniz başarıyla güncellendi.",
@@ -473,7 +469,7 @@ export default function ProfilePageClient() {
                 </Card>
             </div>
             
-             <div className="fixed bottom-16 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
+            <div className="fixed bottom-16 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
                 <div className="container mx-auto flex justify-between items-center max-w-2xl">
                     <p className="text-sm font-semibold">Değişiklikleri Kaydet</p>
                     <Button onClick={handleSaveChanges} disabled={isSaving || !hasChanges}>
@@ -495,4 +491,3 @@ export default function ProfilePageClient() {
         </>
     );
 }
-

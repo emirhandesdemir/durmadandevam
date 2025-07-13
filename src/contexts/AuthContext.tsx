@@ -10,8 +10,6 @@ import type { FeatureFlags, UserProfile, ThemeSettings } from '@/lib/types';
 import { triggerProfileCompletionNotification } from '@/lib/actions/notificationActions';
 import i18n from '@/lib/i18n';
 import AnimatedLogoLoader from '@/components/common/AnimatedLogoLoader';
-import { useRouter } from 'next/navigation';
-
 
 interface AuthContextType {
   user: User | null;
@@ -49,14 +47,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
         if (userToLogout) {
             const userStatusRef = doc(db, 'users', userToLogout.uid);
-            // First, update the database with the user's offline status.
             await setDoc(userStatusRef, { isOnline: false, lastSeen: serverTimestamp() }, { merge: true });
         }
         
-        // THEN, sign out from Firebase Authentication.
         await signOut(auth);
 
-        // Finally, clear local state and notify the user.
         toast({
             title: "Oturum Kapatıldı",
             description: "Başarıyla çıkış yaptınız.",
@@ -119,6 +114,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     triggerProfileCompletionNotification(user.uid);
                 }
             } else { setUserData(null); }
+            setLoading(false);
+        }, (error) => {
+            console.error("Firestore user listener error:", error);
+            setUserData(null);
             setLoading(false);
         });
 
