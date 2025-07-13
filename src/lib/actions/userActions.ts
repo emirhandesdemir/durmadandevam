@@ -7,8 +7,8 @@ import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, 
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/lib/firebase';
-import { updateProfile } from 'firebase/auth';
+import { getAuth } from 'firebase/auth'; // Removed admin auth, client will handle it
+import { updateProfile } from "firebase/auth";
 
 // Helper function to process queries in batches to avoid Firestore limits
 async function processQueryInBatches(query: any, updateData: any) {
@@ -136,11 +136,6 @@ export async function updateUserProfile({
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
     
     const userRef = doc(db, 'users', userId);
-    const authUser = auth.currentUser;
-
-    if (!authUser || authUser.uid !== userId) {
-        throw new Error("Yetkilendirme hatası: Bu profili güncelleme izniniz yok.");
-    }
 
     const updates: { [key: string]: any } = {
         username, bio, age: Number(age) || deleteField(), city, country, gender,
@@ -148,14 +143,12 @@ export async function updateUserProfile({
         selectedAvatarFrame, interests,
     };
     const propagationUpdates: { [key: string]: any } = { username, userAvatarFrame: selectedAvatarFrame };
-    const authProfileUpdates: { displayName?: string; photoURL?: string } = { displayName: username };
-
+    
     if (avatarDataUrl) {
         const avatarRef = storageRef(storage, `upload/avatars/${userId}/avatar.jpg`);
         await uploadString(avatarRef, avatarDataUrl, 'data_url');
         const photoURL = await getDownloadURL(avatarRef);
         updates.photoURL = photoURL;
-        authProfileUpdates.photoURL = photoURL;
         propagationUpdates.photoURL = photoURL;
     }
 
@@ -163,8 +156,7 @@ export async function updateUserProfile({
     batch.update(userRef, updates);
     await batch.commit();
 
-    await updateProfile(authUser, authProfileUpdates);
-    
+    // Propagate visual changes after the main profile is updated
     await Promise.all([
         updateUserPosts(userId, propagationUpdates),
         updateUserComments(userId, propagationUpdates)

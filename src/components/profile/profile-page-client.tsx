@@ -13,13 +13,10 @@ import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { auth, db, storage } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { updateProfile } from "firebase/auth";
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { cn } from "@/lib/utils";
-import { doc, updateDoc, serverTimestamp, arrayUnion, arrayRemove, deleteField } from "firebase/firestore";
-import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { Textarea } from "../ui/textarea";
 import { useRouter } from 'next/navigation';
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../common/LanguageSwitcher";
@@ -27,6 +24,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "..
 import Link from "next/link";
 import BlockedUsersDialog from "./BlockedUsersDialog";
 import { updateUserProfile } from "@/lib/actions/userActions";
+import { Textarea } from "../ui/textarea";
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -146,8 +144,8 @@ export default function ProfilePageClient() {
     };
 
     const handleSaveChanges = async () => {
-        if (!user || !hasChanges || !auth.currentUser) return;
-    
+        if (!user || !hasChanges) return;
+
         setIsSaving(true);
         try {
             await updateUserProfile({
@@ -158,11 +156,22 @@ export default function ProfilePageClient() {
                 selectedAvatarFrame, interests
             });
             
+            // Update auth profile on client-side for immediate feedback
+            if (auth.currentUser) {
+                const authUpdates: {displayName?: string, photoURL?: string} = {};
+                if (username !== userData?.username) authUpdates.displayName = username;
+                if (newAvatar) authUpdates.photoURL = newAvatar; // Temporarily use data url
+                if(Object.keys(authUpdates).length > 0) {
+                    await updateProfile(auth.currentUser, authUpdates);
+                }
+            }
+            
             toast({
                 title: "Başarılı!",
                 description: "Profiliniz başarıyla güncellendi.",
             });
             setNewAvatar(null);
+            router.refresh();
             
         } catch (error: any) {
             toast({

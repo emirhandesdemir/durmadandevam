@@ -278,7 +278,7 @@ export interface Room {
         uid: string;
         username: string;
         photoURL: string | null;
-        role: 'admin' | 'user';
+        role: string;
         selectedAvatarFrame?: string;
     };
     moderators: string[]; // List of moderator UIDs
