@@ -214,7 +214,7 @@ export interface Post {
     id: string;
     uid: string;
     username: string;
-    photoURL: string | null; 
+    photoURL: string | null;
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';

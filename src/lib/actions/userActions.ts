@@ -196,9 +196,10 @@ export async function updateUserProfile({
     selectedAvatarFrame: string,
     interests: string[],
 }) {
+    if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
     const userRef = doc(db, 'users', userId);
     
-    let photoURL = null;
+    let photoURL: string | null = null;
     if (avatarDataUrl) {
         const avatarRef = storageRef(storage, `upload/avatars/${userId}/avatar.jpg`);
         await uploadString(avatarRef, avatarDataUrl, 'data_url');
@@ -223,10 +224,34 @@ export async function updateUserProfile({
         updates.photoURL = photoURL;
     }
     
+    const currentUser = auth.currentUser;
+    if (currentUser?.uid !== userId) {
+      // This is an admin editing a user. No need to update auth.currentUser
+    } else if (currentUser) {
+       await updateProfile(currentUser, {
+         displayName: username,
+         ...(photoURL && { photoURL: photoURL }),
+       });
+    }
+
     const batch = writeBatch(db);
     batch.update(userRef, updates);
     await batch.commit();
 
+    // Propagate changes
+    const propagationUpdates: { [key: string]: any } = {};
+    if (updates.username) propagationUpdates.username = updates.username;
+    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
+    if (updates.selectedAvatarFrame) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
+
+    if (Object.keys(propagationUpdates).length > 0) {
+        await Promise.all([
+            updateUserPosts(userId, propagationUpdates),
+            updateUserComments(userId, propagationUpdates)
+        ]);
+    }
+
+    revalidatePath(`/profile/${userId}`, 'page');
     return { success: true };
 }
 

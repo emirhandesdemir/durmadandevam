@@ -15,7 +15,7 @@ import {
     addDoc,
     collection
 } from "firebase/firestore";
-import { ref, deleteObject } from "firebase/storage";
+import { ref, deleteObject, uploadBytes } from "firebase/storage";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
 import { findUserByUsername } from "./userActions";
@@ -55,7 +55,7 @@ async function handlePostMentions(postId: string, text: string, sender: { uid: s
 export async function createPost(postData: {
     uid: string;
     username: string;
-    photoURL: string | null;
+    userPhotoURL: string | null;
     userAvatarFrame: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
@@ -82,7 +82,7 @@ export async function createPost(postData: {
         const newPostData = {
             uid: postData.uid,
             username: postData.username,
-            photoURL: postData.photoURL,
+            photoURL: postData.userPhotoURL,
             userAvatarFrame: postData.userAvatarFrame,
             userRole: postData.userRole,
             userGender: postData.userGender,
@@ -118,7 +118,7 @@ export async function createPost(postData: {
     await handlePostMentions(finalPostId, postData.text, {
         uid: postData.uid,
         displayName: postData.username,
-        photoURL: postData.photoURL,
+        photoURL: postData.userPhotoURL,
         userAvatarFrame: postData.userAvatarFrame
     });
 
