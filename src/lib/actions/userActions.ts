@@ -7,8 +7,8 @@ import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, 
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/lib/firebase'; // Import auth
-import { updateProfile } from 'firebase/auth'; // Import updateProfile
+import { auth } from '@/lib/firebase';
+import { updateProfile } from 'firebase/auth';
 
 // Helper function to process queries in batches to avoid Firestore limits
 async function processQueryInBatches(query: any, updateData: any) {
@@ -102,17 +102,80 @@ export async function updateUserComments(uid: string, updates: { photoURL?: stri
     }
 }
 
+export async function updateUserProfile({
+    userId,
+    avatarDataUrl,
+    username,
+    bio,
+    age,
+    city,
+    country,
+    gender,
+    privateProfile,
+    acceptsFollowRequests,
+    showOnlineStatus,
+    selectedBubble,
+    selectedAvatarFrame,
+    interests
+}: {
+    userId: string,
+    avatarDataUrl: string | null,
+    username: string,
+    bio: string,
+    age: number | string,
+    city: string,
+    country: string,
+    gender?: 'male' | 'female',
+    privateProfile: boolean,
+    acceptsFollowRequests: boolean,
+    showOnlineStatus: boolean,
+    selectedBubble: string,
+    selectedAvatarFrame: string,
+    interests: string[],
+}) {
+    if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
+    
+    const userRef = doc(db, 'users', userId);
+    const authUser = auth.currentUser;
 
-export async function getUserProfile(uid: string): Promise<UserProfile | null> {
-    if (!uid) return null;
-    const userRef = doc(db, 'users', uid);
-    const userSnap = await getDoc(userRef);
-    if (userSnap.exists()) {
-        const userData = userSnap.data();
-        return deepSerialize(userData) as UserProfile;
+    if (!authUser || authUser.uid !== userId) {
+        throw new Error("Yetkilendirme hatası: Bu profili güncelleme izniniz yok.");
     }
-    return null;
+
+    const updates: { [key: string]: any } = {
+        username, bio, age: Number(age) || deleteField(), city, country, gender,
+        privateProfile, acceptsFollowRequests, showOnlineStatus, selectedBubble,
+        selectedAvatarFrame, interests,
+    };
+    const propagationUpdates: { [key: string]: any } = { username, userAvatarFrame: selectedAvatarFrame };
+    const authProfileUpdates: { displayName?: string; photoURL?: string } = { displayName: username };
+
+    if (avatarDataUrl) {
+        const avatarRef = storageRef(storage, `upload/avatars/${userId}/avatar.jpg`);
+        await uploadString(avatarRef, avatarDataUrl, 'data_url');
+        const photoURL = await getDownloadURL(avatarRef);
+        updates.photoURL = photoURL;
+        authProfileUpdates.photoURL = photoURL;
+        propagationUpdates.photoURL = photoURL;
+    }
+
+    const batch = writeBatch(db);
+    batch.update(userRef, updates);
+    await batch.commit();
+
+    await updateProfile(authUser, authProfileUpdates);
+    
+    await Promise.all([
+        updateUserPosts(userId, propagationUpdates),
+        updateUserComments(userId, propagationUpdates)
+    ]);
+
+    revalidatePath(`/profile/${userId}`, 'page');
+    revalidatePath(`/home`);
+
+    return { success: true };
 }
+
 
 export async function findUserByUsername(username: string): Promise<UserProfile | null> {
     if (!username) return null;
@@ -163,96 +226,6 @@ export async function saveFCMToken(userId: string, token: string) {
     console.error('FCM jetonu kaydedilirken hata:', error);
     return { success: false, error: error.message };
   }
-}
-
-export async function updateUserProfile({
-    userId,
-    avatarDataUrl,
-    bio,
-    username,
-    age,
-    city,
-    country,
-    gender,
-    privateProfile,
-    acceptsFollowRequests,
-    showOnlineStatus,
-    selectedBubble,
-    selectedAvatarFrame,
-    interests
-}: {
-    userId: string,
-    avatarDataUrl: string | null,
-    bio: string,
-    username: string,
-    age: number | string,
-    city: string,
-    country: string,
-    gender?: 'male' | 'female',
-    privateProfile: boolean,
-    acceptsFollowRequests: boolean,
-    showOnlineStatus: boolean,
-    selectedBubble: string,
-    selectedAvatarFrame: string,
-    interests: string[],
-}) {
-    if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
-    const userRef = doc(db, 'users', userId);
-    
-    let photoURL: string | null = null;
-    if (avatarDataUrl) {
-        const avatarRef = storageRef(storage, `upload/avatars/${userId}/avatar.jpg`);
-        await uploadString(avatarRef, avatarDataUrl, 'data_url');
-        photoURL = await getDownloadURL(avatarRef);
-    }
-
-    const updates: { [key: string]: any } = {
-        bio,
-        username,
-        age: Number(age) || deleteField(),
-        city,
-        country,
-        gender,
-        privateProfile,
-        acceptsFollowRequests,
-        showOnlineStatus,
-        selectedBubble,
-        selectedAvatarFrame,
-        interests,
-    };
-    if (photoURL) {
-        updates.photoURL = photoURL;
-    }
-    
-    const currentUser = auth.currentUser;
-    if (currentUser?.uid !== userId) {
-      // This is an admin editing a user. No need to update auth.currentUser
-    } else if (currentUser) {
-       await updateProfile(currentUser, {
-         displayName: username,
-         ...(photoURL && { photoURL: photoURL }),
-       });
-    }
-
-    const batch = writeBatch(db);
-    batch.update(userRef, updates);
-    await batch.commit();
-
-    // Propagate changes
-    const propagationUpdates: { [key: string]: any } = {};
-    if (updates.username) propagationUpdates.username = updates.username;
-    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
-    if (updates.selectedAvatarFrame) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
-
-    if (Object.keys(propagationUpdates).length > 0) {
-        await Promise.all([
-            updateUserPosts(userId, propagationUpdates),
-            updateUserComments(userId, propagationUpdates)
-        ]);
-    }
-
-    revalidatePath(`/profile/${userId}`, 'page');
-    return { success: true };
 }
 
 
