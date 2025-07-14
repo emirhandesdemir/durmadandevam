@@ -1,4 +1,3 @@
-
 // src/lib/actions/analyticsActions.ts
 'use server';
 
@@ -168,9 +167,14 @@ export async function getTopDiamondHolders(): Promise<Partial<UserProfile>[]> {
             uid: data.uid,
             username: data.username,
             photoURL: data.photoURL,
+            profileEmoji: data.profileEmoji,
             diamonds: data.diamonds,
         };
     });
 
+    // ÖNEMLİ: İstemci Bileşenine Veri Aktarımı
+    // Firestore'dan gelen ve Timestamp gibi serileştirilemeyen nesneler içeren veriyi
+    // istemci bileşenlerine (client components) güvenle aktarılabilen düz JSON formatına çeviriyoruz.
+    // Bu işlem, "only plain objects can be passed to Client Components" hatasını önler.
     return deepSerialize(users);
 }

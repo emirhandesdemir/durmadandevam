@@ -57,7 +57,7 @@ export default function TopDiamondHoldersCard() {
                                <Crown className={cn("h-5 w-5", index < 3 ? medalColors[index] : 'text-muted-foreground')}/>
                                <Avatar className="h-9 w-9">
                                     <AvatarImage src={user.photoURL || ''} />
-                                    <AvatarFallback>{user.username?.charAt(0)}</AvatarFallback>
+                                    <AvatarFallback>{user.profileEmoji || user.username?.charAt(0)}</AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1">
                                     <Link href={`/profile/${user.uid}`} className="font-semibold hover:underline" target="_blank">

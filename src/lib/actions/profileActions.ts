@@ -1,4 +1,3 @@
-
 // src/lib/actions/profileActions.ts
 'use server';
 import { db } from '@/lib/firebase';
@@ -44,10 +43,14 @@ export async function getProfileViewers(userId: string): Promise<ProfileViewer[]
           ...viewer,
           username: userMap.get(viewer.uid)?.username || 'Bilinmeyen Kullanıcı',
           photoURL: userMap.get(viewer.uid)?.photoURL || null,
+          profileEmoji: userMap.get(viewer.uid)?.profileEmoji || null,
           selectedAvatarFrame: userMap.get(viewer.uid)?.selectedAvatarFrame || ''
       }));
 
-      // İstemciye göndermeden önce `viewedAt` Timestamp'lerini güvenli hale getir.
+      // ÖNEMLİ: İstemci Bileşenine Veri Aktarımı
+      // Firestore'dan gelen ve Timestamp gibi serileştirilemeyen nesneler içeren veriyi
+      // istemci bileşenlerine (client components) güvenle aktarılabilen düz JSON formatına çeviriyoruz.
+      // Bu işlem, "only plain objects can be passed to Client Components" hatasını önler.
       return deepSerialize(populatedViewers);
   }
 
