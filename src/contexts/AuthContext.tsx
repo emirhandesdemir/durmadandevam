@@ -41,9 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   const handleLogout = useCallback(async () => {
-    // Capture the current user *before* starting the sign-out process
-    const userToLogout = auth.currentUser; 
-
+    const userToLogout = user; 
     try {
         if (userToLogout) {
             const userStatusRef = doc(db, 'users', userToLogout.uid);
@@ -65,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             variant: "destructive",
         });
     }
-  }, [toast]);
+  }, [toast, user]);
   
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {

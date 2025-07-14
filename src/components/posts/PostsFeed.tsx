@@ -17,14 +17,12 @@ export default function PostsFeed() {
     const [clientHiddenIds, setClientHiddenIds] = useState<string[]>([]);
 
     const filteredAndSortedPosts = useMemo(() => {
-        if (!userData) return posts.filter(post => !post.videoUrl); // Filter for guest users too
-        const allHiddenIds = new Set([...(userData.hiddenPostIds || []), ...clientHiddenIds]);
-        // Also filter out posts from users the current user has blocked
-        const blockedByCurrentUser = userData.blockedUsers || [];
+        if (!posts) return [];
+        const allHiddenIds = new Set([...(userData?.hiddenPostIds || []), ...clientHiddenIds]);
         return posts.filter(post => 
-            !post.videoUrl && // Exclude videos
-            !allHiddenIds.has(post.id) && 
-            !blockedByCurrentUser.includes(post.uid)
+            !post.videoUrl && 
+            !allHiddenIds.has(post.id) &&
+            !userData?.blockedUsers?.includes(post.uid)
         );
     }, [posts, userData, clientHiddenIds]);
 
