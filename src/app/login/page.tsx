@@ -25,12 +25,8 @@ export default function LoginPage() {
   }, [user, loading, router]);
 
   // Yükleme veya yönlendirme sırasında bir yükleyici göster.
-  if (loading) {
+  if (loading || user) {
     return <AnimatedLogoLoader fullscreen isAuthPage />;
-  }
-  
-  if (user) {
-      return <AnimatedLogoLoader fullscreen isAuthPage />;
   }
   
   return (

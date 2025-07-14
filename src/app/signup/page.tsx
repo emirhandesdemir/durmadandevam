@@ -24,11 +24,7 @@ export default function SignUpPage() {
     }
   }, [user, loading, router]);
 
-  if (loading) {
-    return <AnimatedLogoLoader fullscreen isAuthPage />;
-  }
-
-  if (user) {
+  if (loading || user) {
     return <AnimatedLogoLoader fullscreen isAuthPage />;
   }
 

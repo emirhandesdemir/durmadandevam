@@ -148,7 +148,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms };
 
-  return <AuthContext.Provider value={value}>{loading ? <AnimatedLogoLoader fullscreen /> : children}</AuthContext.Provider>;
+  if (loading) {
+    return <AnimatedLogoLoader fullscreen />;
+  }
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export const useAuth = () => {
