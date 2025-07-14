@@ -311,7 +311,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                                         <div className="flex justify-end gap-2"><Button variant="ghost" size="sm" onClick={handleCancelEdit}>İptal</Button><Button size="sm" onClick={handleSaveEdit} disabled={isSaving}>{isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Kaydet</Button></div>
                                     </div>
                                 ) : (
-                                    post.text && <div><Link href={`/profile/${post.uid}`} className="font-bold hover:underline">{post.username}</Link><span className="ml-1"><ReadMore text={post.text} /></span></div>
+                                    post.text && <div className="flex items-start"><Link href={`/profile/${post.uid}`} className="font-bold hover:underline shrink-0">{post.username}</Link><span className="ml-1"><ReadMore text={post.text} /></span></div>
                                 )}
                             </div>
                         )}
