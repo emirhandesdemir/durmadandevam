@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   const handleLogout = useCallback(async () => {
-    const userToLogout = auth.currentUser; 
+    const userToLogout = auth.currentUser;
     try {
         if (userToLogout) {
             const userStatusRef = doc(db, 'users', userToLogout.uid);
@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     const unsubscribeFeatures = onSnapshot(doc(db, 'config', 'featureFlags'), (docSnap) => {
-      setFeatureFlags(docSnap.exists() ? docSnap.data() as FeatureFlags : { quizGameEnabled: true, postFeedEnabled: true, contentModerationEnabled: true });
+      setFeatureFlags(docSnap.exists() ? docSnap.data() as FeatureFlags : { quizGameEnabled: true, contentModerationEnabled: true });
     });
 
     const unsubscribeTheme = onSnapshot(doc(db, 'config', 'theme'), (docSnap) => {
@@ -145,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{loading ? <AnimatedLogoLoader fullscreen /> : children}</AuthContext.Provider>;
 }
 
 export const useAuth = () => {

@@ -7,6 +7,7 @@ import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, 
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
+import { emojiToDataUrl } from '../utils';
 
 // Helper function to process queries in batches to avoid Firestore limits
 async function processQueryInBatches(query: any, updateData: any) {
@@ -43,9 +44,17 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
     const postsRef = collection(db, 'posts');
     const writePromises = [];
 
+    const propagationUpdates: { [key: string]: any } = {};
+    if (updates.username) propagationUpdates.username = updates.username;
+    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
+    if (updates.profileEmoji) propagationUpdates.profileEmoji = updates.profileEmoji;
+    if (updates.userAvatarFrame) propagationUpdates.userAvatarFrame = updates.userAvatarFrame;
+    
+    if (Object.keys(propagationUpdates).length === 0) return;
+
     // Update user's own posts (original posts and retweets by them)
     const userPostsQuery = query(postsRef, where('uid', '==', uid));
-    writePromises.push(processQueryInBatches(userPostsQuery, updates));
+    writePromises.push(processQueryInBatches(userPostsQuery, propagationUpdates));
 
     // Update user's appearance in others' retweets of their posts
     const retweetUpdates: { [key: string]: any } = {};
@@ -74,10 +83,19 @@ export async function updateUserComments(uid: string, updates: { [key: string]: 
         return;
     }
 
+    const propagationUpdates: { [key: string]: any } = {};
+    if (updates.username) propagationUpdates.username = updates.username;
+    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
+    if (updates.profileEmoji) propagationUpdates.profileEmoji = updates.profileEmoji;
+    if (updates.userAvatarFrame) propagationUpdates.userAvatarFrame = updates.userAvatarFrame;
+    
+    if (Object.keys(propagationUpdates).length === 0) return;
+
+
     const commentsQuery = query(collectionGroup(db, 'comments'), where('uid', '==', uid));
 
     try {
-        await processQueryInBatches(commentsQuery, updates);
+        await processQueryInBatches(commentsQuery, propagationUpdates);
     } catch (error) {
         console.error("Kullanıcı yorumları güncellenirken hata:", error);
         throw error;
@@ -120,11 +138,18 @@ export async function updateUserProfile(updates: {
     const userRef = doc(db, 'users', userId);
     const updatesForDb: { [key: string]: any } = { ...otherUpdates };
     
+    // Convert age to number or remove if empty
     if (updates.age === '' || updates.age === undefined) {
         updatesForDb.age = deleteField();
     } else {
         updatesForDb.age = Number(updates.age);
     }
+    
+    // Generate new photoURL from emoji if changed
+    if (updates.profileEmoji) {
+        updatesForDb.photoURL = emojiToDataUrl(updates.profileEmoji);
+    }
+
 
     // Validate username if it's being changed
     if (updates.username) {
@@ -137,24 +162,22 @@ export async function updateUserProfile(updates: {
         }
     }
 
+    // Update the main user document
     await updateDoc(userRef, updatesForDb);
 
+    // Prepare updates to propagate to other collections
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
+    if (updatesForDb.photoURL) propagationUpdates.photoURL = updatesForDb.photoURL; // Use the newly generated URL
     if (updates.profileEmoji) propagationUpdates.profileEmoji = updates.profileEmoji;
-    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL; // Changed from userAvatar
     if (updates.selectedAvatarFrame) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
-
+    
+    // Propagate changes if necessary
     if (Object.keys(propagationUpdates).length > 0) {
-        try {
-            await Promise.all([
-                updateUserPosts(userId, propagationUpdates),
-                updateUserComments(userId, propagationUpdates)
-            ]);
-        } catch(e) {
-            console.error("Error propagating profile updates", e);
-            throw new Error("Profil güncellendi ama eski içeriklere yansıtılamadı.");
-        }
+        await Promise.all([
+            updateUserPosts(userId, propagationUpdates),
+            updateUserComments(userId, propagationUpdates)
+        ]);
     }
     
     revalidatePath(`/profile/${userId}`, 'page');
@@ -163,7 +186,6 @@ export async function updateUserProfile(updates: {
     return { success: true };
 }
 
-// ... rest of the file remains the same
 
 export async function searchUsers(searchTerm: string, currentUserId: string): Promise<UserProfile[]> {
     if (!searchTerm.trim()) return [];

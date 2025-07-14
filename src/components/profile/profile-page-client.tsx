@@ -27,6 +27,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { ScrollArea } from "../ui/scroll-area";
 import NewProfilePicturePostDialog from "./NewProfilePicturePostDialog";
 import { AnimatePresence, motion } from "framer-motion";
+import { emojiToDataUrl } from "@/lib/utils";
 
 
 const bubbleOptions = [
@@ -149,14 +150,20 @@ export default function ProfilePageClient() {
             if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || '')) updates.selectedAvatarFrame = selectedAvatarFrame;
             if (JSON.stringify(interests.sort()) !== JSON.stringify((userData?.interests || []).sort())) updates.interests = interests;
             
+            // Only call server action if there are changes
             if (Object.keys(updates).length > 0) {
                  await updateUserProfile({ userId: user.uid, ...updates });
             }
             
-            await updateProfile(auth.currentUser, { 
-                displayName: username,
-                photoURL: userData?.photoURL, // photoURL is not changed here anymore
-            });
+            // Authentication profile updates must happen on the client
+            const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
+            if (updates.username) authProfileUpdates.displayName = updates.username;
+            if (updates.profileEmoji) {
+                authProfileUpdates.photoURL = emojiToDataUrl(updates.profileEmoji);
+            }
+            if(Object.keys(authProfileUpdates).length > 0) {
+                await updateProfile(auth.currentUser, authProfileUpdates);
+            }
 
             toast({
                 title: "Başarılı!",
