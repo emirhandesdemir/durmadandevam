@@ -26,6 +26,8 @@ import { Textarea } from "../ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { ScrollArea } from "../ui/scroll-area";
 import NewProfilePicturePostDialog from "./NewProfilePicturePostDialog"; // Import the new dialog
+import { AnimatePresence, motion } from "framer-motion";
+
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -126,36 +128,29 @@ export default function ProfilePageClient() {
     
     
     const handleSaveChanges = async () => {
-        if (!user || !hasChanges || !auth.currentUser) return;
+        if (!user || !hasChanges) return;
         
         const emojiWasUpdated = (profileEmoji || '🙂') !== (userData?.profileEmoji || '🙂');
 
         setIsSaving(true);
         try {
-            const dbUpdates: { [key: string]: any } = {};
-            if (username !== userData?.username) dbUpdates.username = username;
-            if (bio !== userData?.bio) dbUpdates.bio = bio;
-            if ((Number(age) || null) !== (userData?.age || null)) dbUpdates.age = Number(age) || null;
-            if (city !== userData?.city) dbUpdates.city = city;
-            if (country !== userData?.country) dbUpdates.country = country;
-            if (gender !== userData?.gender) dbUpdates.gender = gender;
-            if (privateProfile !== userData?.privateProfile) dbUpdates.privateProfile = privateProfile;
-            if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) dbUpdates.acceptsFollowRequests = acceptsFollowRequests;
-            if (showOnlineStatus !== (userData?.showOnlineStatus ?? true)) dbUpdates.showOnlineStatus = showOnlineStatus;
-            if ((profileEmoji || '🙂') !== (userData?.profileEmoji || '🙂')) dbUpdates.profileEmoji = profileEmoji;
-            if (selectedBubble !== (userData?.selectedBubble || '')) dbUpdates.selectedBubble = selectedBubble;
-            if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || '')) dbUpdates.selectedAvatarFrame = selectedAvatarFrame;
-            if (JSON.stringify(interests.sort()) !== JSON.stringify((userData?.interests || []).sort())) dbUpdates.interests = interests;
+            const updates: { [key: string]: any } = {};
+            if (username !== userData?.username) updates.username = username;
+            if (bio !== userData?.bio) updates.bio = bio;
+            if ((Number(age) || null) !== (userData?.age || null)) updates.age = Number(age) || null;
+            if (city !== userData?.city) updates.city = city;
+            if (country !== userData?.country) updates.country = country;
+            if (gender !== userData?.gender) updates.gender = gender;
+            if (privateProfile !== userData?.privateProfile) updates.privateProfile = privateProfile;
+            if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) updates.acceptsFollowRequests = acceptsFollowRequests;
+            if (showOnlineStatus !== (userData?.showOnlineStatus ?? true)) updates.showOnlineStatus = showOnlineStatus;
+            if ((profileEmoji || '🙂') !== (userData?.profileEmoji || '🙂')) updates.profileEmoji = profileEmoji;
+            if (selectedBubble !== (userData?.selectedBubble || '')) updates.selectedBubble = selectedBubble;
+            if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || '')) updates.selectedAvatarFrame = selectedAvatarFrame;
+            if (JSON.stringify(interests.sort()) !== JSON.stringify((userData?.interests || []).sort())) updates.interests = interests;
 
-            if (Object.keys(dbUpdates).length > 0) {
-                 await updateUserProfile(user.uid, dbUpdates);
-            }
-
-            const authUpdates: { displayName?: string } = {};
-            if(username !== auth.currentUser.displayName) authUpdates.displayName = username;
-            
-            if(Object.keys(authUpdates).length > 0) {
-                 await updateProfile(auth.currentUser, authUpdates);
+            if (Object.keys(updates).length > 0) {
+                 await updateUserProfile(user.uid, updates);
             }
             
             toast({
@@ -201,7 +196,7 @@ export default function ProfilePageClient() {
 
     return (
         <>
-            <div className="space-y-6 pb-32">
+            <div className="space-y-6 pb-24">
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-3"><UserIcon className="h-6 w-6" />Profil Bilgileri</CardTitle>
@@ -218,19 +213,21 @@ export default function ProfilePageClient() {
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0">
-                                        <div className="grid grid-cols-6 gap-1 p-2">
-                                            {EMOJI_LIST.map(emoji => (
-                                                <Button
-                                                    key={emoji}
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="text-2xl rounded-lg"
-                                                    onClick={() => setProfileEmoji(emoji)}
-                                                >
-                                                    {emoji}
-                                                </Button>
-                                            ))}
-                                        </div>
+                                        <ScrollArea className="h-48">
+                                            <div className="grid grid-cols-6 gap-1 p-2">
+                                                {EMOJI_LIST.map(emoji => (
+                                                    <Button
+                                                        key={emoji}
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="text-2xl rounded-lg"
+                                                        onClick={() => setProfileEmoji(emoji)}
+                                                    >
+                                                        {emoji}
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                        </ScrollArea>
                                     </PopoverContent>
                                 </Popover>
                             </div>
