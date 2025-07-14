@@ -13,8 +13,6 @@ import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { auth } from "@/lib/firebase";
-import { updateProfile } from "firebase/auth";
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { cn } from "@/lib/utils";
 import { useRouter } from 'next/navigation';
@@ -158,16 +156,6 @@ export default function ProfilePageClient() {
 
             if (!result.success) {
                 throw new Error(result.error || "Bilinmeyen bir hata oluştu.");
-            }
-            
-            // Update auth profile on client-side for immediate feedback
-            if (auth.currentUser && (username !== userData?.username || newAvatar)) {
-                const authUpdates: {displayName?: string, photoURL?: string} = {};
-                if (username !== userData?.username) authUpdates.displayName = username;
-                if (result.photoURL) authUpdates.photoURL = result.photoURL;
-                if(Object.keys(authUpdates).length > 0) {
-                    await updateProfile(auth.currentUser, authUpdates);
-                }
             }
             
             toast({
@@ -482,15 +470,17 @@ export default function ProfilePageClient() {
                 </Card>
             </div>
             
-            <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
-                <div className="container mx-auto flex justify-between items-center max-w-2xl">
-                    <p className="text-sm font-semibold">Değişiklikleri Kaydet</p>
-                    <Button onClick={handleSaveChanges} disabled={isSaving || !hasChanges}>
-                        {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {t('save_changes')}
-                    </Button>
+            {hasChanges && (
+                <div className="fixed bottom-20 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
+                    <div className="container mx-auto flex justify-between items-center max-w-2xl">
+                        <p className="text-sm font-semibold">Kaydedilmemiş değişiklikleriniz var.</p>
+                        <Button onClick={handleSaveChanges} disabled={isSaving}>
+                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {t('save_changes')}
+                        </Button>
+                    </div>
                 </div>
-            </div>
+            )}
             
             <ImageCropperDialog 
               isOpen={!!imageToCrop} 
