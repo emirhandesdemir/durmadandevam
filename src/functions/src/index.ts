@@ -164,7 +164,7 @@ export const sendPushNotification = functions.region("us-central1").firestore
                     link: `https://hiwewalkbeta.netlify.app${link}`
                 },
                  notification: {
-                    icon: notificationData.senderAvatar || "/icons/icon.svg",
+                    icon: notificationData.photoURL || "/icons/icon.svg",
                 }
             }
         };

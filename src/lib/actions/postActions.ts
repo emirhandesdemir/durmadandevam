@@ -15,7 +15,7 @@ import {
     addDoc,
     collection
 } from "firebase/firestore";
-import { ref, deleteObject, uploadBytes } from "firebase/storage";
+import { ref, deleteObject } from "firebase/storage";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
 import { findUserByUsername } from "./userActions";
@@ -39,7 +39,7 @@ async function handlePostMentions(postId: string, text: string, sender: { uid: s
                         recipientId: mentionedUser.uid,
                         senderId: sender.uid,
                         senderUsername: sender.displayName || "Biri",
-                        senderAvatar: sender.photoURL,
+                        photoURL: sender.photoURL,
                         senderAvatarFrame: sender.userAvatarFrame,
                         type: 'mention',
                         postId: postId,
@@ -226,7 +226,7 @@ export async function likePost(
                     recipientId: postData.uid,
                     senderId: currentUser.uid,
                     senderUsername: currentUser.displayName || "Biri",
-                    senderAvatar: currentUser.photoURL,
+                    photoURL: currentUser.photoURL,
                     senderAvatarFrame: currentUser.userAvatarFrame,
                     type: 'like',
                     postId: postId,
@@ -350,7 +350,7 @@ export async function retweetPost(
             recipientId: originalPostData.uid,
             senderId: retweeter.uid,
             senderUsername: retweeter.username,
-            senderAvatar: retweeter.photoURL,
+            photoURL: retweeter.photoURL,
             senderAvatarFrame: retweeter.userAvatarFrame,
             type: 'retweet',
             postId: newPostRef.id,

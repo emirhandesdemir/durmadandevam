@@ -12,7 +12,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
-import { joinRoom } from '@/lib/actions/roomActions';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { deleteNotification } from '@/lib/actions/notificationActions';
@@ -25,7 +24,6 @@ export default function NotificationItem({ notification }: NotificationItemProps
   const router = useRouter();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [isJoining, setIsJoining] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
   const timeAgo = formatDistanceToNow(notification.createdAt.toDate(), {
@@ -115,14 +113,14 @@ export default function NotificationItem({ notification }: NotificationItemProps
             </div>
             {isSystemNotification ? (
                     <Avatar className="h-10 w-10">
-                        <AvatarImage src={notification.senderAvatar || undefined} />
+                        <AvatarImage src={notification.photoURL || undefined} />
                         <AvatarFallback>HW</AvatarFallback>
                     </Avatar>
             ) : (
                     <Link href={`/profile/${notification.senderId}`} onClick={(e) => e.stopPropagation()}>
                             <div className={cn("avatar-frame-wrapper", notification.senderAvatarFrame)}>
                                 <Avatar className="relative z-[1] h-10 w-10">
-                                    <AvatarImage src={notification.senderAvatar || undefined} />
+                                    <AvatarImage src={notification.photoURL || undefined} />
                                     <AvatarFallback>{notification.senderUsername?.charAt(0)}</AvatarFallback>
                                 </Avatar>
                             </div>

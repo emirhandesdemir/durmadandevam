@@ -6,12 +6,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { storage } from "@/lib/firebase";
-import { ref, getDownloadURL, uploadBytes } from "firebase/storage";
-import { applyImageFilter } from "@/lib/actions/imageActions";
 import { createPost } from "@/lib/actions/postActions";
 import { getFollowingForSuggestions } from "@/lib/actions/userActions";
 import type { UserProfile } from "@/lib/types";
+import { applyImageFilter } from "@/lib/actions/imageActions";
 
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,17 +22,10 @@ import { ScrollArea } from "../ui/scroll-area";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
 import { Input } from "../ui/input";
 import { useTranslation } from "react-i18next";
-import { Progress } from "../ui/progress";
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
 import TextPostBackgroundSelector from "./TextPostBackgroundSelector";
 
-
-async function dataUriToBlob(dataUri: string): Promise<Blob> {
-    const response = await fetch(dataUri);
-    const blob = await response.blob();
-    return blob;
-}
 
 export default function NewPostForm() {
   const router = useRouter();
@@ -247,17 +238,6 @@ export default function NewPostForm() {
     setIsSubmitting(true);
     
     try {
-        let imageUrl = "";
-        
-        if (croppedImage) {
-            const imageBlob = await dataUriToBlob(croppedImage);
-            const fileExtension = imageBlob.type.split('/')[1] || 'jpg';
-            const imageRef = ref(storage, `upload/posts/${user.uid}/${Date.now()}_post.${fileExtension}`);
-            
-            await uploadBytes(imageRef, imageBlob);
-            imageUrl = await getDownloadURL(imageRef);
-        }
-
         await createPost({
             uid: user.uid,
             username: userData.username,
@@ -266,8 +246,8 @@ export default function NewPostForm() {
             userRole: userData.role || 'user',
             userGender: userData.gender,
             text: text,
-            imageUrl: imageUrl,
-            backgroundStyle: imageUrl ? '' : backgroundStyle,
+            imageUrl: croppedImage || undefined,
+            backgroundStyle: croppedImage ? '' : backgroundStyle,
             editedWithAI: wasEditedByAI,
             language: i18n.language,
             commentsDisabled: commentsDisabled,
