@@ -132,16 +132,28 @@ export default function ProfilePageClient() {
 
         setIsSaving(true);
         try {
-            // First, update the database and auth profile
-            const dbUpdates = {
-                username, bio, age: Number(age) || null, city, country, gender, privateProfile,
-                acceptsFollowRequests, showOnlineStatus, profileEmoji,
-                selectedBubble, selectedAvatarFrame, interests
-            };
-            await updateUserProfile(user.uid, dbUpdates);
+            const dbUpdates: { [key: string]: any } = {};
+            if (username !== userData?.username) dbUpdates.username = username;
+            if (bio !== userData?.bio) dbUpdates.bio = bio;
+            if ((Number(age) || null) !== (userData?.age || null)) dbUpdates.age = Number(age) || null;
+            if (city !== userData?.city) dbUpdates.city = city;
+            if (country !== userData?.country) dbUpdates.country = country;
+            if (gender !== userData?.gender) dbUpdates.gender = gender;
+            if (privateProfile !== userData?.privateProfile) dbUpdates.privateProfile = privateProfile;
+            if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) dbUpdates.acceptsFollowRequests = acceptsFollowRequests;
+            if (showOnlineStatus !== (userData?.showOnlineStatus ?? true)) dbUpdates.showOnlineStatus = showOnlineStatus;
+            if ((profileEmoji || '🙂') !== (userData?.profileEmoji || '🙂')) dbUpdates.profileEmoji = profileEmoji;
+            if (selectedBubble !== (userData?.selectedBubble || '')) dbUpdates.selectedBubble = selectedBubble;
+            if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || '')) dbUpdates.selectedAvatarFrame = selectedAvatarFrame;
+            if (JSON.stringify(interests.sort()) !== JSON.stringify((userData?.interests || []).sort())) dbUpdates.interests = interests;
+
+            if (Object.keys(dbUpdates).length > 0) {
+                 await updateUserProfile(user.uid, dbUpdates);
+            }
 
             const authUpdates: { displayName?: string } = {};
             if(username !== auth.currentUser.displayName) authUpdates.displayName = username;
+            
             if(Object.keys(authUpdates).length > 0) {
                  await updateProfile(auth.currentUser, authUpdates);
             }
@@ -473,8 +485,15 @@ export default function ProfilePageClient() {
                 </Card>
             </div>
             
+            <AnimatePresence>
             {hasChanges && (
-                <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
+                <motion.div
+                    initial={{ y: "100%", opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: "100%", opacity: 0 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    className="fixed bottom-[68px] left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t"
+                >
                     <div className="container mx-auto flex justify-between items-center max-w-2xl">
                         <p className="text-sm font-semibold">Kaydedilmemiş değişiklikleriniz var.</p>
                         <Button onClick={handleSaveChanges} disabled={isSaving}>
@@ -482,8 +501,9 @@ export default function ProfilePageClient() {
                             {t('save_changes')}
                         </Button>
                     </div>
-                </div>
+                </motion.div>
             )}
+            </AnimatePresence>
             
             <BlockedUsersDialog isOpen={isBlockedUsersOpen} onOpenChange={setIsBlockedUsersOpen} blockedUserIds={userData.blockedUsers || []}/>
 
