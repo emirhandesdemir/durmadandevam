@@ -1,3 +1,4 @@
+
 // src/components/profile/profile-page-client.tsx
 "use client";
 
@@ -22,6 +23,8 @@ import Link from "next/link";
 import BlockedUsersDialog from "./BlockedUsersDialog";
 import { updateUserProfile } from "@/lib/actions/userActions";
 import { Textarea } from "../ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { ScrollArea } from "../ui/scroll-area";
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -41,6 +44,8 @@ const avatarFrameOptions = [
     { id: "avatar-frame-tech", name: "Tekno Aura" },
     { id: "avatar-frame-premium", name: "Premium", isPremium: true },
 ];
+
+const EMOJI_LIST = ['🙂', '😂', '😍', '🤔', '😎', '😢', '😡', '🤯', '🥳', '👍', '👎', '❤️', '🔥', '⭐', '🚀', '🌈', '💡', '🤖', '👻', '👽', '👾', '👑', '🎩', '💼'];
 
 export default function ProfilePageClient() {
     const { user, userData, loading, handleLogout } = useAuth();
@@ -105,7 +110,7 @@ export default function ProfilePageClient() {
         if (privateProfile !== (userData.privateProfile || false)) return true;
         if (acceptsFollowRequests !== (userData.acceptsFollowRequests ?? true)) return true;
         if (showOnlineStatus !== (userData.showOnlineStatus ?? true)) return true;
-        if (profileEmoji !== (userData.profileEmoji || '🙂')) return true;
+        if ((profileEmoji || '🙂') !== (userData.profileEmoji || '🙂')) return true;
         if (selectedBubble !== (userData.selectedBubble || '')) return true;
         if (selectedAvatarFrame !== (userData.selectedAvatarFrame || '')) return true;
         if (JSON.stringify(interests.map(i => i.trim()).sort()) !== JSON.stringify((userData.interests || []).map(i => i.trim()).sort())) return true;
@@ -183,13 +188,28 @@ export default function ProfilePageClient() {
                          <div className="flex items-center gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="emoji">Profil Emoji</Label>
-                                 <Input 
-                                    id="emoji" 
-                                    value={profileEmoji || ''} 
-                                    onChange={(e) => setProfileEmoji(e.target.value)} 
-                                    maxLength={2} // Allow for emojis with modifiers
-                                    className="w-20 h-20 text-4xl text-center rounded-2xl"
-                                />
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" className="w-20 h-20 text-4xl text-center rounded-2xl">
+                                            {profileEmoji}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0">
+                                        <div className="grid grid-cols-6 gap-1 p-2">
+                                            {EMOJI_LIST.map(emoji => (
+                                                <Button
+                                                    key={emoji}
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="text-2xl rounded-lg"
+                                                    onClick={() => setProfileEmoji(emoji)}
+                                                >
+                                                    {emoji}
+                                                </Button>
+                                            ))}
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                             <div className="space-y-2 flex-1">
                                 <Label htmlFor="username">Kullanıcı Adı</Label>

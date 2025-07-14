@@ -1,3 +1,4 @@
+
 // src/components/posts/NewPostForm.tsx
 "use client";
 
@@ -202,7 +203,7 @@ export default function NewPostForm() {
                     <div className="flex items-start gap-4">
                         <div className={cn("avatar-frame-wrapper", userData?.selectedAvatarFrame)}>
                         <Avatar className="relative z-[1] h-11 w-11 flex-shrink-0 border-2 border-white">
-                            <AvatarImage src={user?.photoURL || undefined} />
+                            <AvatarImage src={userData?.photoURL || undefined} />
                             <AvatarFallback>{userData?.profileEmoji || user?.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         </div>

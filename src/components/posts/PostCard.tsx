@@ -1,3 +1,4 @@
+
 // src/components/posts/PostCard.tsx
 "use client";
 
@@ -140,6 +141,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                     uid: currentUser.uid,
                     displayName: currentUserData.username || 'Biri',
                     photoURL: currentUserData.photoURL || null,
+                    profileEmoji: currentUserData.profileEmoji || null,
                     userAvatarFrame: currentUserData.selectedAvatarFrame || '',
                 }
             );
@@ -236,7 +238,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                         <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
                             <Avatar className="relative z-[1] h-10 w-10">
                                 <AvatarImage src={post.photoURL || undefined} />
-                                <AvatarFallback>{post.username?.charAt(0)}</AvatarFallback>
+                                <AvatarFallback>{post.profileEmoji || post.username?.charAt(0)}</AvatarFallback>
                             </Avatar>
                         </div>
                     </Link>
