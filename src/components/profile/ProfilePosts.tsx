@@ -1,3 +1,4 @@
+
 // src/components/profile/ProfilePosts.tsx
 "use client";
 
@@ -117,6 +118,7 @@ export default function ProfilePosts({ userId }: ProfilePostsProps) {
                                 src={post.imageUrl}
                                 alt="Kullanıcı gönderisi"
                                 fill
+                                sizes="(max-width: 768px) 33vw, 25vw"
                                 className="object-cover"
                                 onContextMenu={(e) => e.preventDefault()}
                             />

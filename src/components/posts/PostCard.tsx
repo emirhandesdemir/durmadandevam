@@ -1,3 +1,4 @@
+
 // src/components/posts/PostCard.tsx
 "use client";
 
