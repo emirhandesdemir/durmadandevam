@@ -15,12 +15,13 @@ import {
     addDoc,
     collection
 } from "firebase/firestore";
-import { ref, deleteObject, getDownloadURL, uploadBytes, uploadString } from "firebase/storage";
+import { ref, deleteObject, getDownloadURL, uploadString } from "firebase/storage";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
 import { findUserByUsername } from "./userActions";
+import { emojiToDataUrl } from "../utils";
 
-async function handlePostMentions(postId: string, text: string, sender: { uid: string; displayName: string | null; photoURL: string | null; userAvatarFrame?: string }) {
+async function handlePostMentions(postId: string, text: string, sender: { uid: string; displayName: string | null; photoURL: string | null; userAvatarFrame?: string, profileEmoji?: string | null }) {
     if (!text) return;
     const mentionRegex = /(?<!\S)@\w+/g;
     const mentions = text.match(mentionRegex);
@@ -40,6 +41,7 @@ async function handlePostMentions(postId: string, text: string, sender: { uid: s
                         senderId: sender.uid,
                         senderUsername: sender.displayName || "Biri",
                         photoURL: sender.photoURL,
+                        profileEmoji: sender.profileEmoji,
                         senderAvatarFrame: sender.userAvatarFrame,
                         type: 'mention',
                         postId: postId,
@@ -52,10 +54,38 @@ async function handlePostMentions(postId: string, text: string, sender: { uid: s
     }
 }
 
+export async function createProfileUpdatePost(data: {
+    userId: string;
+    username: string;
+    profileEmoji: string;
+    text: string;
+    userAvatarFrame?: string;
+    userRole?: 'admin' | 'user';
+}) {
+    // Generate an image from the emoji
+    const emojiImageUrl = await emojiToDataUrl(data.profileEmoji);
+
+    return createPost({
+        uid: data.userId,
+        username: data.username,
+        photoURL: null, // User's actual photoURL is not used for this special post
+        profileEmoji: data.profileEmoji,
+        userAvatarFrame: data.userAvatarFrame,
+        userRole: data.userRole,
+        text: data.text,
+        imageUrl: emojiImageUrl, // Use the generated emoji image
+        language: 'tr', // Default or detect user language
+        commentsDisabled: true, // Typically these posts don't need comments
+        likesHidden: false,
+    });
+}
+
+
 export async function createPost(postData: {
     uid: string;
     username: string;
-    userPhotoURL: string | null;
+    photoURL: string | null;
+    profileEmoji: string | null;
     userAvatarFrame: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
@@ -82,7 +112,8 @@ export async function createPost(postData: {
         const newPostData = {
             uid: postData.uid,
             username: postData.username,
-            photoURL: postData.userPhotoURL,
+            photoURL: postData.photoURL,
+            profileEmoji: postData.profileEmoji,
             userAvatarFrame: postData.userAvatarFrame,
             userRole: postData.userRole,
             userGender: postData.userGender,
@@ -118,7 +149,8 @@ export async function createPost(postData: {
     await handlePostMentions(finalPostId, postData.text, {
         uid: postData.uid,
         displayName: postData.username,
-        photoURL: postData.userPhotoURL,
+        photoURL: postData.photoURL,
+        profileEmoji: postData.profileEmoji,
         userAvatarFrame: postData.userAvatarFrame
     });
 
@@ -151,7 +183,8 @@ export async function deletePost(postId: string) {
             transaction.delete(postRef);
             transaction.update(userRef, { postCount: increment(-1) });
 
-            if (postData.imageUrl) {
+            // Do not delete from storage if it's an emoji data URL
+            if (postData.imageUrl && !postData.imageUrl.startsWith('data:image/svg+xml')) {
                 try {
                     const imageStorageRef = ref(storage, postData.imageUrl);
                     await deleteObject(imageStorageRef);
@@ -200,7 +233,7 @@ export async function updatePost(postId: string, updates: { text?: string; comme
 
 export async function likePost(
     postId: string,
-    currentUser: { uid: string, displayName: string | null, photoURL: string | null, userAvatarFrame?: string }
+    currentUser: { uid: string, displayName: string | null, photoURL: string | null, profileEmoji: string | null, userAvatarFrame?: string }
 ) {
     const postRef = doc(db, "posts", postId);
     
@@ -227,6 +260,7 @@ export async function likePost(
                     senderId: currentUser.uid,
                     senderUsername: currentUser.displayName || "Biri",
                     photoURL: currentUser.photoURL,
+                    profileEmoji: currentUser.profileEmoji,
                     senderAvatarFrame: currentUser.userAvatarFrame,
                     type: 'like',
                     postId: postId,
@@ -288,6 +322,7 @@ export async function retweetPost(
         uid: string; 
         username: string; 
         photoURL: string | null;
+        profileEmoji: string | null;
         userAvatarFrame?: string;
         userRole?: 'admin' | 'user';
         userGender?: 'male' | 'female';
@@ -313,6 +348,7 @@ export async function retweetPost(
             uid: originalPostData.uid,
             username: originalPostData.username,
             photoURL: originalPostData.photoURL,
+            profileEmoji: originalPostData.profileEmoji,
             userAvatarFrame: originalPostData.userAvatarFrame,
             text: originalPostData.text,
             imageUrl: originalPostData.imageUrl,
@@ -324,6 +360,7 @@ export async function retweetPost(
             uid: retweeter.uid,
             username: retweeter.username,
             photoURL: retweeter.photoURL,
+            profileEmoji: retweeter.profileEmoji,
             userAvatarFrame: retweeter.userAvatarFrame,
             userRole: retweeter.userRole,
             userGender: retweeter.userGender,
@@ -351,6 +388,7 @@ export async function retweetPost(
             senderId: retweeter.uid,
             senderUsername: retweeter.username,
             photoURL: retweeter.photoURL,
+            profileEmoji: retweeter.profileEmoji,
             senderAvatarFrame: retweeter.userAvatarFrame,
             type: 'retweet',
             postId: newPostRef.id,

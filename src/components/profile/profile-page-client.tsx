@@ -1,4 +1,3 @@
-
 // src/components/profile/profile-page-client.tsx
 "use client";
 
@@ -15,16 +14,18 @@ import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { useRouter } from 'next/navigation';
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../common/LanguageSwitcher";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import Link from "next/link";
 import BlockedUsersDialog from "./BlockedUsersDialog";
 import { updateUserProfile } from "@/lib/actions/userActions";
+import { updateProfile } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import { Textarea } from "../ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { ScrollArea } from "../ui/scroll-area";
+import NewProfilePicturePostDialog from "./NewProfilePicturePostDialog"; // Import the new dialog
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -70,6 +71,7 @@ export default function ProfilePageClient() {
     const [isBlockedUsersOpen, setIsBlockedUsersOpen] = useState(false);
     const [interests, setInterests] = useState<string[]>([]);
     const [currentInterest, setCurrentInterest] = useState("");
+    const [showNewPfpPostDialog, setShowNewPfpPostDialog] = useState(false);
 
     const isPremium = userData?.premiumUntil && userData.premiumUntil.toDate() > new Date();
 
@@ -124,25 +126,34 @@ export default function ProfilePageClient() {
     
     
     const handleSaveChanges = async () => {
-        if (!user || !hasChanges) return;
+        if (!user || !hasChanges || !auth.currentUser) return;
+        
+        const emojiWasUpdated = (profileEmoji || '🙂') !== (userData?.profileEmoji || '🙂');
 
         setIsSaving(true);
         try {
-            const result = await updateUserProfile({
-                userId: user.uid,
-                username, bio, age, city, country, gender, privateProfile,
+            // First, update the database and auth profile
+            const dbUpdates = {
+                username, bio, age: Number(age) || null, city, country, gender, privateProfile,
                 acceptsFollowRequests, showOnlineStatus, profileEmoji,
                 selectedBubble, selectedAvatarFrame, interests
-            });
+            };
+            await updateUserProfile(user.uid, dbUpdates);
 
-            if (!result.success) {
-                throw new Error(result.error || "Bilinmeyen bir hata oluştu.");
+            const authUpdates: { displayName?: string } = {};
+            if(username !== auth.currentUser.displayName) authUpdates.displayName = username;
+            if(Object.keys(authUpdates).length > 0) {
+                 await updateProfile(auth.currentUser, authUpdates);
             }
             
             toast({
                 title: "Başarılı!",
                 description: "Profiliniz başarıyla güncellendi.",
             });
+
+            if (emojiWasUpdated) {
+                setShowNewPfpPostDialog(true);
+            }
             
         } catch (error: any) {
             toast({
@@ -474,7 +485,13 @@ export default function ProfilePageClient() {
                 </div>
             )}
             
-             <BlockedUsersDialog isOpen={isBlockedUsersOpen} onOpenChange={setIsBlockedUsersOpen} blockedUserIds={userData.blockedUsers || []}/>
+            <BlockedUsersDialog isOpen={isBlockedUsersOpen} onOpenChange={setIsBlockedUsersOpen} blockedUserIds={userData.blockedUsers || []}/>
+
+            <NewProfilePicturePostDialog 
+                isOpen={showNewPfpPostDialog}
+                onOpenChange={setShowNewPfpPostDialog}
+                newEmoji={profileEmoji}
+            />
         </>
     );
 }

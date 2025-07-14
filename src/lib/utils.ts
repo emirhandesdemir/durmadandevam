@@ -1,4 +1,3 @@
-
 // Bu dosya, proje genelinde kullanılan genel yardımcı fonksiyonları içerir.
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
@@ -24,4 +23,19 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function getChatId(uid1: string, uid2: string): string {
   return [uid1, uid2].sort().join('_');
+}
+
+/**
+ * Converts a single emoji character into a Data URL for use as an image source.
+ * This allows emojis to be used in `<img>` tags, which is useful for posts.
+ * @param emoji The emoji character to convert.
+ * @returns A data URL string representing the emoji as an SVG image.
+ */
+export function emojiToDataUrl(emoji: string): string {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+      <text x="50%" y="50%" font-size="96" text-anchor="middle" dy=".3em">${emoji}</text>
+    </svg>
+  `.replace(/\n/g, '').replace(/\s+/g, ' ');
+  return `data:image/svg+xml;base64,${btoa(svg)}`;
 }
