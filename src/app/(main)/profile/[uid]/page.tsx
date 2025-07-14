@@ -38,8 +38,10 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
   const profileUserData = profileUserSnap.data();
   profileUserData.postCount = postsCountSnap.data().count;
 
+  // ÖNEMLİ: Sunucu Bileşeninden İstemci Bileşenine Veri Aktarımı
   // Firestore'dan gelen ve Timestamp gibi serileştirilemeyen nesneler içeren veriyi
-  // istemci bileşenlerine güvenle aktarılabilen düz JSON formatına çevir.
+  // istemci bileşenlerine (client components) güvenle aktarılabilen düz JSON formatına çeviriyoruz.
+  // Bu işlem, "only plain objects can be passed to Client Components" hatasını önler.
   const serializableProfileUser = deepSerialize(profileUserData);
   
   return (
