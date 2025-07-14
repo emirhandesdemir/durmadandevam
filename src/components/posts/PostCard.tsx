@@ -49,16 +49,16 @@ const ReadMore = ({ text, maxLength = 150 }: { text: string; maxLength?: number 
   const [isExpanded, setIsExpanded] = useState(false);
   
   if (text.length <= maxLength) {
-    return <p className="whitespace-pre-wrap">{text}</p>;
+    return <span className="whitespace-pre-wrap">{text}</span>;
   }
 
   return (
-    <p className="whitespace-pre-wrap">
+    <span className="whitespace-pre-wrap">
       {isExpanded ? text : `${text.substring(0, maxLength)}... `}
       <button onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }} className="text-muted-foreground font-semibold hover:underline">
         {isExpanded ? 'daha az göster' : 'devamını gör'}
       </button>
-    </p>
+    </span>
   );
 };
 
@@ -293,7 +293,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                     <div className="px-2 text-sm space-y-1">
                         {!post.likesHidden && optimisticLikeCount > 0 && (<p className="font-semibold">{optimisticLikeCount || 0} beğeni</p>)}
                         {(post.text && !post.backgroundStyle) && (
-                             <div className="text-sm text-foreground/90">
+                             <div className="text-sm text-foreground/90 whitespace-pre-wrap">
                                 {isEditing ? (
                                     <div className="space-y-4">
                                         <Textarea ref={textareaRef} value={editedText} onChange={(e) => setEditedText(e.target.value)} className="w-full resize-none bg-muted p-2 rounded-lg" onInput={(e) => { const target = e.currentTarget; target.style.height = 'inherit'; target.style.height = `${target.scrollHeight}px`; }} />
@@ -310,7 +310,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                                         <div className="flex justify-end gap-2"><Button variant="ghost" size="sm" onClick={handleCancelEdit}>İptal</Button><Button size="sm" onClick={handleSaveEdit} disabled={isSaving}>{isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Kaydet</Button></div>
                                     </div>
                                 ) : (
-                                    post.text && <p className="whitespace-pre-wrap"><Link href={`/profile/${post.uid}`} className="font-bold hover:underline">{post.username}</Link><span className="ml-1"><ReadMore text={post.text} /></span></p>
+                                    post.text && <div><Link href={`/profile/${post.uid}`} className="font-bold hover:underline">{post.username}</Link><span className="ml-1"><ReadMore text={post.text} /></span></div>
                                 )}
                             </div>
                         )}
