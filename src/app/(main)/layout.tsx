@@ -1,3 +1,4 @@
+
 // src/app/(main)/layout.tsx
 'use client';
 
@@ -6,7 +7,7 @@ import Header from "@/components/layout/Header";
 import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
 import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
 import { motion, AnimatePresence } from 'framer-motion';
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
