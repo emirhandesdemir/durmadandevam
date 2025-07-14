@@ -7,15 +7,13 @@ import Header from "@/components/layout/Header";
 import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
 import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
 import { motion, AnimatePresence } from 'framer-motion';
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import ActiveCallBar from "@/components/voice/ActiveCallBar";
 import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
-import { useAuth } from "@/contexts/AuthContext";
-import AnimatedLogoLoader from "@/components/common/AnimatedLogoLoader";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -110,23 +108,7 @@ export default function MainAppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
-  const router = useRouter();
   const pathname = usePathname();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.replace(`/login?redirect=${pathname}`);
-    }
-  }, [user, loading, router, pathname]);
-
-  if (loading) {
-    return <AnimatedLogoLoader fullscreen />;
-  }
-  
-  if (!user) {
-      return null;
-  }
 
   const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/') || pathname.startsWith('/matchmaking/') || pathname.startsWith('/surf');
   const isHomePage = pathname === '/home';

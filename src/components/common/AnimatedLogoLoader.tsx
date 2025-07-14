@@ -61,9 +61,6 @@ export default function AnimatedLogoLoader({ fullscreen = false, className, isAu
         <div className="flex-1 flex items-center justify-center">
              {loader}
         </div>
-        <p className={cn("pb-4 text-xs", isAuthPage ? 'text-white/70' : 'text-muted-foreground')}>
-            © 2025 BeWalk. All rights reserved.
-        </p>
       </div>
     );
   }

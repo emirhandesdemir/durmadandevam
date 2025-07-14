@@ -1,36 +1,20 @@
 // src/app/signup/page.tsx
 "use client";
 
-import { useEffect, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { Suspense } from 'react';
 import SignUpForm from '@/components/auth/signup-form';
 import AnimatedLogoLoader from '@/components/common/AnimatedLogoLoader';
 
 /**
  * Kayıt Sayfası
  * 
- * Bu bileşen, `Suspense` kullanarak sayfa içeriğinin yüklenmesini bekler.
- * Bu, özellikle yavaş bağlantılarda veya büyük bileşenlerde kullanıcı deneyimini iyileştirir.
- * İçerik yüklenene kadar bir yükleme animasyonu gösterilir.
+ * Bu bileşen, SignUpForm'u gösterir ve yavaş bağlantılarda kullanıcı deneyimini
+ * iyileştirmek için Suspense kullanır. AuthProvider, kayıt sonrası kullanıcıyı
+ * otomatik olarak yönlendirecektir.
  */
 export default function SignUpPage() {
-  const router = useRouter();
-  const { user, loading } = useAuth();
-
-  useEffect(() => {
-    if (!loading && user) {
-      router.replace("/home");
-    }
-  }, [user, loading, router]);
-
-  if (loading || user) {
-    return <AnimatedLogoLoader fullscreen isAuthPage />;
-  }
-
   return (
     <Suspense fallback={<AnimatedLogoLoader fullscreen isAuthPage />}>
-      {/* Asıl sayfa içeriği */}
       <main className="relative flex min-h-screen flex-col items-center justify-center p-4 auth-bg">
         <div className="flex-1 flex flex-col items-center justify-center w-full">
             <div className="w-full max-w-sm animate-in zoom-in-95 duration-500">
