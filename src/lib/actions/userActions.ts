@@ -7,100 +7,8 @@ import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, 
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
-import { getAuth } from 'firebase/auth'; // Removed admin auth, client will handle it
+import { getAuth } from 'firebase/auth';
 import { updateProfile } from "firebase/auth";
-
-// Helper function to process queries in batches to avoid Firestore limits
-async function processQueryInBatches(query: any, updateData: any) {
-    const snapshot = await getDocs(query);
-    if (snapshot.empty) return;
-
-    const batchSize = 499;
-    const batches = [];
-    let currentBatch = writeBatch(db);
-    let operationCount = 0;
-
-    snapshot.docs.forEach((doc) => {
-        currentBatch.update(doc.ref, updateData);
-        operationCount++;
-        if (operationCount === batchSize) {
-            batches.push(currentBatch.commit());
-            currentBatch = writeBatch(db);
-            operationCount = 0;
-        }
-    });
-
-    if (operationCount > 0) {
-        batches.push(currentBatch.commit());
-    }
-
-    await Promise.all(batches);
-}
-
-export async function updateUserPosts(uid: string, updates: { username?: string; photoURL?: string; userAvatarFrame?: string; }) {
-    if (!uid || !updates || Object.keys(updates).length === 0) {
-        return;
-    }
-
-    const postsRef = collection(db, 'posts');
-    const writePromises = [];
-    
-    const postUpdates: { [key: string]: any } = {};
-    if (updates.username) postUpdates.username = updates.username;
-    if (updates.photoURL) postUpdates.photoURL = updates.photoURL;
-    if (updates.userAvatarFrame) postUpdates.userAvatarFrame = updates.userAvatarFrame;
-
-
-    // Update user's own posts (original posts and retweets by them)
-    if(Object.keys(postUpdates).length > 0) {
-        const userPostsQuery = query(postsRef, where('uid', '==', uid));
-        writePromises.push(processQueryInBatches(userPostsQuery, postUpdates));
-    }
-
-
-    // Update user's appearance in others' retweets of their posts
-    const retweetUpdates: { [key: string]: any } = {};
-    if (updates.username) retweetUpdates['retweetOf.username'] = updates.username;
-    if (updates.photoURL) retweetUpdates['retweetOf.photoURL'] = updates.photoURL;
-    if (updates.userAvatarFrame) retweetUpdates['retweetOf.userAvatarFrame'] = updates.userAvatarFrame;
-    
-    if (Object.keys(retweetUpdates).length > 0) {
-        const retweetsQuery = query(postsRef, where('retweetOf.uid', '==', uid));
-        writePromises.push(processQueryInBatches(retweetsQuery, retweetUpdates));
-    }
-
-    try {
-        await Promise.all(writePromises);
-        revalidatePath('/home');
-        revalidatePath(`/profile/${uid}`);
-    } catch (error) {
-        console.error("Kullanıcı gönderileri güncellenirken hata:", error);
-        throw error;
-    }
-}
-
-
-export async function updateUserComments(uid: string, updates: { photoURL?: string; userAvatarFrame?: string; username?: string }) {
-    if (!uid || !updates || Object.keys(updates).length === 0) {
-        return;
-    }
-    
-    const commentUpdates: { [key: string]: any } = {};
-    if (updates.username) commentUpdates.username = updates.username;
-    if (updates.photoURL) commentUpdates.photoURL = updates.photoURL;
-    if (updates.userAvatarFrame) commentUpdates.userAvatarFrame = updates.userAvatarFrame;
-
-    if (Object.keys(commentUpdates).length === 0) return;
-
-    const commentsQuery = query(collectionGroup(db, 'comments'), where('uid', '==', uid));
-
-    try {
-        await processQueryInBatches(commentsQuery, commentUpdates);
-    } catch (error) {
-        console.error("Kullanıcı yorumları güncellenirken hata:", error);
-        throw error;
-    }
-}
 
 export async function updateUserProfile({
     userId,
@@ -136,36 +44,27 @@ export async function updateUserProfile({
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
     
     const userRef = doc(db, 'users', userId);
-
+    
     const updates: { [key: string]: any } = {
         username, bio, age: Number(age) || deleteField(), city, country, gender,
         privateProfile, acceptsFollowRequests, showOnlineStatus, selectedBubble,
         selectedAvatarFrame, interests,
     };
-    const propagationUpdates: { [key: string]: any } = { username, userAvatarFrame: selectedAvatarFrame };
     
+    let photoURL = null;
     if (avatarDataUrl) {
         const avatarRef = storageRef(storage, `upload/avatars/${userId}/avatar.jpg`);
         await uploadString(avatarRef, avatarDataUrl, 'data_url');
-        const photoURL = await getDownloadURL(avatarRef);
+        photoURL = await getDownloadURL(avatarRef);
         updates.photoURL = photoURL;
-        propagationUpdates.photoURL = photoURL;
     }
-
-    const batch = writeBatch(db);
-    batch.update(userRef, updates);
-    await batch.commit();
-
-    // Propagate visual changes after the main profile is updated
-    await Promise.all([
-        updateUserPosts(userId, propagationUpdates),
-        updateUserComments(userId, propagationUpdates)
-    ]);
+    
+    await updateDoc(userRef, updates);
 
     revalidatePath(`/profile/${userId}`, 'page');
     revalidatePath(`/home`);
 
-    return { success: true };
+    return { success: true, photoURL };
 }
 
 

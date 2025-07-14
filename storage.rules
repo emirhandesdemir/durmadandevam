@@ -1,28 +1,19 @@
 rules_version = '2';
+
 service firebase.storage {
   match /b/{bucket}/o {
-    // Profil resimleri: Herkes okuyabilir, sadece giriş yapmış kullanıcılar kendi avatarlarını yazabilir.
+    // Genel olarak, varsayılan olarak tüm yollara erişimi engelle
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Profil fotoğrafları için kurallar
+    // Yolu: /upload/avatars/{userId}/avatar.jpg
     match /upload/avatars/{userId}/avatar.jpg {
+      // Herkesin profil fotoğraflarını okumasına izin ver.
       allow read;
+      // Sadece kimliği doğrulanmış ve kendi profil fotoğrafını yükleyen kullanıcının yazmasına izin ver.
       allow write: if request.auth != null && request.auth.uid == userId;
     }
-
-    // Gönderi resimleri: Herkes okuyabilir, sadece giriş yapmış kullanıcılar yazabilir.
-    match /upload/posts/{userId}/{postId} {
-       allow read;
-       allow write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Surf videoları: Herkes okuyabilir, sadece giriş yapmış kullanıcılar yazabilir.
-    match /upload/videos/{userId}/{videoId} {
-       allow read;
-       allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // DM resimleri/dosyaları: Sadece sohbet katılımcıları okuyabilir ve yazabilir.
-    // Bu kural, güvenliği artırmak için gelecekte eklenebilir. Şimdilik genel izinler geçerlidir.
-    // match /dms/{chatId}/{allPaths=**} {
-    //   allow read, write: if get(/databases/(default)/documents/directMessagesMetadata/$(chatId)).data.participantUids.has(request.auth.uid);
-    // }
   }
 }
