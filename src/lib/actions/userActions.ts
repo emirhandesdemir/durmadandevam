@@ -8,45 +8,105 @@ import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'f
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
 
-export async function updateUserProfile({
-    userId,
-    updates,
-}: {
-    userId: string,
-    updates: Partial<UserProfile> & { photoURL?: string | null },
+// Helper function to convert data URI to Blob
+async function dataUriToBlob(dataUri: string): Promise<Blob> {
+    const response = await fetch(dataUri);
+    const blob = await response.blob();
+    return blob;
+}
+
+export async function updateUserProfile(data: {
+    userId: string;
+    avatarDataUrl?: string | null;
+    username: string;
+    bio: string;
+    age?: number | string;
+    city?: string;
+    country?: string;
+    gender?: 'male' | 'female';
+    privateProfile: boolean;
+    acceptsFollowRequests: boolean;
+    showOnlineStatus: boolean;
+    selectedBubble: string;
+    selectedAvatarFrame: string;
+    interests: string[];
 }) {
+    const { userId, avatarDataUrl, ...otherUpdates } = data;
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
-    
+
     const userRef = doc(db, 'users', userId);
-    
-    await updateDoc(userRef, updates);
+    const updates: { [key: string]: any } = { ...otherUpdates };
+    let newPhotoURL: string | undefined = undefined;
 
-    // Propagate visual changes to all posts and comments
-    const propagationUpdates: { username?: string; photoURL?: string; userAvatarFrame?: string; } = {};
-    if (updates.username) propagationUpdates.username = updates.username;
-    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
-    if (updates.selectedAvatarFrame) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
-
-    if (Object.keys(propagationUpdates).length > 0) {
-        // Find all posts and update them
-        const postsQuery = query(collection(db, "posts"), where("uid", "==", userId));
-        const postsSnap = await getDocs(postsQuery);
-        const batch = writeBatch(db);
-        postsSnap.forEach(postDoc => {
-            batch.update(postDoc.ref, propagationUpdates);
-        });
-        await batch.commit();
-
-        // Note: Updating comments across all posts is more complex and can be slow.
-        // For now, we omit this step for performance, assuming profile pics in comments are less critical
-        // or can be updated via a different mechanism if needed.
+    // 1. Upload new avatar if provided
+    if (avatarDataUrl) {
+        const imageBlob = await dataUriToBlob(avatarDataUrl);
+        const avatarRef = storageRef(storage, `upload/avatars/${userId}/avatar.jpg`);
+        await uploadBytes(avatarRef, imageBlob);
+        newPhotoURL = await getDownloadURL(avatarRef);
+        updates.photoURL = newPhotoURL;
     }
 
+    // 2. Validate username if it's being changed
+    if (updates.username) {
+        const currentUserDoc = await getDoc(userRef);
+        if (currentUserDoc.exists() && currentUserDoc.data().username !== updates.username) {
+            const existingUser = await findUserByUsername(updates.username);
+            if (existingUser && existingUser.uid !== userId) {
+                throw new Error("Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor.");
+            }
+        }
+    }
 
+    // 3. Update the user document in Firestore
+    await updateDoc(userRef, updates);
+
+    // 4. Propagate visual changes (username, photoURL, frame) to all posts and comments
+    const propagationUpdates: { username?: string; photoURL?: string; userAvatarFrame?: string; } = {};
+    if (updates.username) propagationUpdates.username = updates.username;
+    if (newPhotoURL) propagationUpdates.photoURL = newPhotoURL;
+    if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
+    
+    if (Object.keys(propagationUpdates).length > 0) {
+        await updateUserContent(userId, propagationUpdates);
+    }
+    
+    // Revalidate paths to update cache
     revalidatePath(`/profile/${userId}`, 'page');
-    revalidatePath(`/home`, 'layout');
+    revalidatePath(`/home`, 'layout'); // Revalidate layout to update header avatar
 
-    return { success: true };
+    return { success: true, photoURL: newPhotoURL || null };
+}
+
+async function processBatchUpdate(query: any, updates: object) {
+    const snapshot = await getDocs(query);
+    if (snapshot.empty) return;
+
+    const batch = writeBatch(db);
+    snapshot.docs.forEach(doc => {
+        batch.update(doc.ref, updates);
+    });
+    await batch.commit();
+}
+
+async function updateUserContent(uid: string, updates: object) {
+    // Update user's own posts
+    const postsQuery = query(collection(db, 'posts'), where('uid', '==', uid));
+    await processBatchUpdate(postsQuery, updates);
+
+    // Update user's comments
+    const commentsQuery = query(collectionGroup(db, 'comments'), where('uid', '==', uid));
+    await processBatchUpdate(commentsQuery, updates);
+
+    // Update user's appearance in retweets of their posts
+    const retweetUpdates: { [key: string]: any } = {};
+    if ('username' in updates) retweetUpdates['retweetOf.username'] = updates.username;
+    if ('photoURL' in updates) retweetUpdates['retweetOf.photoURL'] = updates.photoURL;
+    if ('userAvatarFrame' in updates) retweetUpdates['retweetOf.userAvatarFrame'] = updates.userAvatarFrame;
+    if (Object.keys(retweetUpdates).length > 0) {
+        const retweetsQuery = query(collection(db, 'posts'), where('retweetOf.uid', '==', uid));
+        await processBatchUpdate(retweetsQuery, retweetUpdates);
+    }
 }
 
 

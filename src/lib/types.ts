@@ -236,7 +236,7 @@ export interface Post {
         postId: string;
         uid: string;
         username: string;
-        photoURL?: string | null;
+        photoURL: string | null;
         userAvatarFrame?: string;
         text: string;
         imageUrl?: string;
