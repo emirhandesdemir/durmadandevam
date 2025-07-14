@@ -25,7 +25,7 @@ import { auth } from "@/lib/firebase";
 import { Textarea } from "../ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { ScrollArea } from "../ui/scroll-area";
-import NewProfilePicturePostDialog from "./NewProfilePicturePostDialog"; // Import the new dialog
+import NewProfilePicturePostDialog from "./NewProfilePicturePostDialog";
 import { AnimatePresence, motion } from "framer-motion";
 
 
@@ -128,7 +128,7 @@ export default function ProfilePageClient() {
     
     
     const handleSaveChanges = async () => {
-        if (!user || !hasChanges) return;
+        if (!user || !hasChanges || !auth.currentUser) return;
         
         const emojiWasUpdated = (profileEmoji || '🙂') !== (userData?.profileEmoji || '🙂');
 
@@ -137,22 +137,27 @@ export default function ProfilePageClient() {
             const updates: { [key: string]: any } = {};
             if (username !== userData?.username) updates.username = username;
             if (bio !== userData?.bio) updates.bio = bio;
-            if ((Number(age) || null) !== (userData?.age || null)) updates.age = Number(age) || null;
+            if ((Number(age) || undefined) !== (userData?.age || undefined)) updates.age = Number(age) || null;
             if (city !== userData?.city) updates.city = city;
             if (country !== userData?.country) updates.country = country;
             if (gender !== userData?.gender) updates.gender = gender;
             if (privateProfile !== userData?.privateProfile) updates.privateProfile = privateProfile;
             if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) updates.acceptsFollowRequests = acceptsFollowRequests;
             if (showOnlineStatus !== (userData?.showOnlineStatus ?? true)) updates.showOnlineStatus = showOnlineStatus;
-            if ((profileEmoji || '🙂') !== (userData?.profileEmoji || '🙂')) updates.profileEmoji = profileEmoji;
+            if (profileEmoji !== (userData?.profileEmoji || '🙂')) updates.profileEmoji = profileEmoji;
             if (selectedBubble !== (userData?.selectedBubble || '')) updates.selectedBubble = selectedBubble;
             if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || '')) updates.selectedAvatarFrame = selectedAvatarFrame;
             if (JSON.stringify(interests.sort()) !== JSON.stringify((userData?.interests || []).sort())) updates.interests = interests;
-
+            
             if (Object.keys(updates).length > 0) {
-                 await updateUserProfile(user.uid, updates);
+                 await updateUserProfile({ userId: user.uid, ...updates });
             }
             
+            await updateProfile(auth.currentUser, { 
+                displayName: username,
+                photoURL: userData?.photoURL, // photoURL is not changed here anymore
+            });
+
             toast({
                 title: "Başarılı!",
                 description: "Profiliniz başarıyla güncellendi.",

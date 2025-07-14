@@ -98,33 +98,32 @@ export async function findUserByUsername(username: string): Promise<UserProfile 
     return deepSerialize(userData);
 }
 
-export async function updateUserProfile(data: {
+export async function updateUserProfile(updates: {
     userId: string;
-    username: string;
-    bio: string;
+    username?: string;
+    bio?: string;
     age?: number | string;
     city?: string;
     country?: string;
     gender?: 'male' | 'female';
-    privateProfile: boolean;
-    acceptsFollowRequests: boolean;
-    showOnlineStatus: boolean;
-    profileEmoji: string | null;
-    selectedBubble: string;
-    selectedAvatarFrame: string;
-    interests: string[];
+    privateProfile?: boolean;
+    acceptsFollowRequests?: boolean;
+    showOnlineStatus?: boolean;
+    profileEmoji?: string | null;
+    selectedBubble?: string;
+    selectedAvatarFrame?: string;
+    interests?: string[];
 }) {
-    const { userId, ...otherUpdates } = data;
+    const { userId, ...otherUpdates } = updates;
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
 
     const userRef = doc(db, 'users', userId);
-    const updates: { [key: string]: any } = { ...otherUpdates };
+    const updatesForDb: { [key: string]: any } = { ...otherUpdates };
     
-    // Convert age to number or delete if empty
-    if(updates.age === '' || updates.age === undefined) {
-        updates.age = deleteField();
+    if (updates.age === '' || updates.age === undefined) {
+        updatesForDb.age = deleteField();
     } else {
-        updates.age = Number(updates.age);
+        updatesForDb.age = Number(updates.age);
     }
 
     // Validate username if it's being changed
@@ -138,21 +137,24 @@ export async function updateUserProfile(data: {
         }
     }
 
-    await updateDoc(userRef, updates);
+    await updateDoc(userRef, updatesForDb);
 
-    const propagationUpdates: { username?: string; profileEmoji?: string | null; userAvatarFrame?: string; } = {};
+    const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (updates.profileEmoji !== undefined) propagationUpdates.profileEmoji = updates.profileEmoji;
-    if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
-    
+    if (updates.profileEmoji) propagationUpdates.profileEmoji = updates.profileEmoji;
+    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL; // Changed from userAvatar
+    if (updates.selectedAvatarFrame) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
+
     if (Object.keys(propagationUpdates).length > 0) {
-        await Promise.all([
-            updateUserPosts(userId, propagationUpdates),
-            updateUserComments(userId, propagationUpdates)
-        ]).catch(e => {
+        try {
+            await Promise.all([
+                updateUserPosts(userId, propagationUpdates),
+                updateUserComments(userId, propagationUpdates)
+            ]);
+        } catch(e) {
             console.error("Error propagating profile updates", e);
             throw new Error("Profil güncellendi ama eski içeriklere yansıtılamadı.");
-        });
+        }
     }
     
     revalidatePath(`/profile/${userId}`, 'page');
