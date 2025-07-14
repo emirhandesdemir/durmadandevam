@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageCircle, Plus, Swords } from 'lucide-react';
+import { Home, MessageCircle, Plus, Swords, Clapperboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMemo } from 'react';
