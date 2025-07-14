@@ -29,8 +29,8 @@ export default function NewPost() {
             <Link href={`/profile/${user.uid}`}>
                  <div className={cn("avatar-frame-wrapper", userData?.selectedAvatarFrame)}>
                     <Avatar className="relative z-[1] h-11 w-11 flex-shrink-0">
-                        <AvatarImage src={user?.photoURL || undefined} />
-                        <AvatarFallback>{user?.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
+                        <AvatarImage src={userData?.photoURL || undefined} />
+                        <AvatarFallback>{userData?.profileEmoji || user?.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
                     </Avatar>
                 </div>
             </Link>

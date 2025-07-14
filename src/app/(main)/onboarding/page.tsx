@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
 import AnimatedLogoLoader from '@/components/common/AnimatedLogoLoader';
 
 export default function OnboardingPage() {

@@ -8,12 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Palette, Loader2, Sparkles, Lock, Camera, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X } from "lucide-react";
+import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import ImageCropperDialog from "@/components/common/ImageCropperDialog";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useRouter } from 'next/navigation';
 import { useTranslation } from "react-i18next";
@@ -23,8 +22,6 @@ import Link from "next/link";
 import BlockedUsersDialog from "./BlockedUsersDialog";
 import { updateUserProfile } from "@/lib/actions/userActions";
 import { Textarea } from "../ui/textarea";
-import { auth } from "@/lib/firebase";
-import { updateProfile } from "firebase/auth";
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -47,7 +44,6 @@ const avatarFrameOptions = [
 
 export default function ProfilePageClient() {
     const { user, userData, loading, handleLogout } = useAuth();
-    const router = useRouter();
     const { toast } = useToast();
     const { theme, setTheme } = useTheme();
     const { t } = useTranslation();
@@ -61,12 +57,10 @@ export default function ProfilePageClient() {
     const [privateProfile, setPrivateProfile] = useState(false);
     const [acceptsFollowRequests, setAcceptsFollowRequests] = useState(true);
     const [showOnlineStatus, setShowOnlineStatus] = useState(true);
-    const [newAvatar, setNewAvatar] = useState<string | null>(null);
-    const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+    const [profileEmoji, setProfileEmoji] = useState<string | null>("");
     const [selectedBubble, setSelectedBubble] = useState("");
     const [selectedAvatarFrame, setSelectedAvatarFrame] = useState("");
     const [isSaving, setIsSaving] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
     const [inviteLink, setInviteLink] = useState("");
     const [isBlockedUsersOpen, setIsBlockedUsersOpen] = useState(false);
     const [interests, setInterests] = useState<string[]>([]);
@@ -85,6 +79,7 @@ export default function ProfilePageClient() {
             setPrivateProfile(userData.privateProfile || false);
             setAcceptsFollowRequests(userData.acceptsFollowRequests ?? true);
             setShowOnlineStatus(userData.showOnlineStatus ?? true);
+            setProfileEmoji(userData.profileEmoji || '🙂');
             setSelectedBubble(userData.selectedBubble || "");
             setSelectedAvatarFrame(userData.selectedAvatarFrame || "");
             setInterests(userData.interests || []);
@@ -101,7 +96,6 @@ export default function ProfilePageClient() {
         const ageAsNumber = age === '' || age === undefined ? undefined : Number(age);
         const userDataAge = userData.age === undefined ? undefined : Number(userData.age);
 
-        if (newAvatar !== null) return true;
         if (username.trim() !== (userData.username || '').trim()) return true;
         if (bio.trim() !== (userData.bio || '').trim()) return true;
         if (ageAsNumber !== userDataAge) return true;
@@ -111,38 +105,19 @@ export default function ProfilePageClient() {
         if (privateProfile !== (userData.privateProfile || false)) return true;
         if (acceptsFollowRequests !== (userData.acceptsFollowRequests ?? true)) return true;
         if (showOnlineStatus !== (userData.showOnlineStatus ?? true)) return true;
+        if (profileEmoji !== (userData.profileEmoji || '🙂')) return true;
         if (selectedBubble !== (userData.selectedBubble || '')) return true;
         if (selectedAvatarFrame !== (userData.selectedAvatarFrame || '')) return true;
         if (JSON.stringify(interests.map(i => i.trim()).sort()) !== JSON.stringify((userData.interests || []).map(i => i.trim()).sort())) return true;
     
         return false;
     }, [
-        newAvatar, username, bio, age, city, country, gender, privateProfile, 
-        acceptsFollowRequests, showOnlineStatus, selectedBubble, 
+        username, bio, age, city, country, gender, privateProfile, 
+        acceptsFollowRequests, showOnlineStatus, profileEmoji, selectedBubble, 
         selectedAvatarFrame, interests, userData
     ]);
     
     
-    const handleAvatarClick = () => { fileInputRef.current?.click(); };
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            if (file.size > 5 * 1024 * 1024) {
-                toast({ variant: "destructive", description: "Resim boyutu 5MB'dan büyük olamaz." });
-                return;
-            }
-            const reader = new FileReader();
-            reader.onload = () => setImageToCrop(reader.result as string);
-            reader.readAsDataURL(e.target.files[0]);
-        }
-    };
-    
-    const handleCropComplete = (croppedDataUrl: string) => {
-        setImageToCrop(null); 
-        setNewAvatar(croppedDataUrl);
-    };
-
     const handleSaveChanges = async () => {
         if (!user || !hasChanges) return;
 
@@ -150,30 +125,19 @@ export default function ProfilePageClient() {
         try {
             const result = await updateUserProfile({
                 userId: user.uid,
-                avatarDataUrl: newAvatar,
                 username, bio, age, city, country, gender, privateProfile,
-                acceptsFollowRequests, showOnlineStatus, selectedBubble,
-                selectedAvatarFrame, interests
+                acceptsFollowRequests, showOnlineStatus, profileEmoji,
+                selectedBubble, selectedAvatarFrame, interests
             });
 
             if (!result.success) {
                 throw new Error(result.error || "Bilinmeyen bir hata oluştu.");
             }
             
-            // This is the critical client-side update for the auth object.
-            if(auth.currentUser && (result.photoURL || username !== auth.currentUser.displayName)) {
-                await updateProfile(auth.currentUser, {
-                   displayName: username,
-                   photoURL: result.photoURL || auth.currentUser.photoURL
-                });
-            }
-            
             toast({
                 title: "Başarılı!",
                 description: "Profiliniz başarıyla güncellendi.",
             });
-            setNewAvatar(null);
-            router.refresh();
             
         } catch (error: any) {
             toast({
@@ -216,19 +180,17 @@ export default function ProfilePageClient() {
                         <CardDescription>Profilinizde görünecek herkese açık bilgiler.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="flex items-center gap-4">
-                            <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-                            <button type="button" onClick={handleAvatarClick} className="relative group rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background" aria-label="Profil fotoğrafını değiştir">
-                                <div className={cn("avatar-frame-wrapper", selectedAvatarFrame)}>
-                                    <Avatar className="relative z-[1] h-20 w-20 border-4 border-background shadow-lg transition-all group-hover:brightness-90">
-                                        <AvatarImage src={newAvatar || userData.photoURL || undefined} />
-                                        <AvatarFallback className="text-2xl bg-primary/20">{username?.charAt(0).toUpperCase()}</AvatarFallback>
-                                    </Avatar>
-                                </div>
-                                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200">
-                                    <Camera className="h-8 w-8" />
-                                </div>
-                            </button>
+                         <div className="flex items-center gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="emoji">Profil Emoji</Label>
+                                 <Input 
+                                    id="emoji" 
+                                    value={profileEmoji || ''} 
+                                    onChange={(e) => setProfileEmoji(e.target.value)} 
+                                    maxLength={2} // Allow for emojis with modifiers
+                                    className="w-20 h-20 text-4xl text-center rounded-2xl"
+                                />
+                            </div>
                             <div className="space-y-2 flex-1">
                                 <Label htmlFor="username">Kullanıcı Adı</Label>
                                 <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} />
@@ -492,14 +454,6 @@ export default function ProfilePageClient() {
                 </div>
             )}
             
-            <ImageCropperDialog 
-              isOpen={!!imageToCrop} 
-              setIsOpen={(isOpen) => !isOpen && setImageToCrop(null)} 
-              imageSrc={imageToCrop} 
-              aspectRatio={1} 
-              onCropComplete={handleCropComplete} 
-              circularCrop={true}
-            />
              <BlockedUsersDialog isOpen={isBlockedUsersOpen} onOpenChange={setIsBlockedUsersOpen} blockedUserIds={userData.blockedUsers || []}/>
         </>
     );

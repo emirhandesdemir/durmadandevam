@@ -62,8 +62,6 @@ export default function SignUpForm() {
     const [showPassword, setShowPassword] = useState(false);
     const { i18n } = useTranslation();
 
-    const defaultAvatarUrl = "https://placehold.co/200x200.png";
-
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -97,7 +95,7 @@ export default function SignUpForm() {
             
             await updateProfile(user, {
                 displayName: values.username,
-                photoURL: defaultAvatarUrl,
+                photoURL: '', // Initially empty, will be set via emoji.
             });
             
             const isAdminEmail = values.email === 'admin@example.com';
@@ -121,7 +119,8 @@ export default function SignUpForm() {
                 uid: user.uid,
                 username: values.username,
                 email: values.email,
-                photoURL: defaultAvatarUrl,
+                photoURL: null,
+                profileEmoji: '🙂', // Default starting emoji
                 bio: "",
                 role: userRole,
                 gender: values.gender,
@@ -143,7 +142,7 @@ export default function SignUpForm() {
             // Credit the referrer if one exists
             if (ref) {
                 try {
-                    await creditReferrer(ref, { uid: user.uid, username: values.username, photoURL: defaultAvatarUrl });
+                    await creditReferrer(ref, { uid: user.uid, username: values.username, photoURL: null, profileEmoji: '🙂' });
                 } catch (e) {
                     console.error("Referrer credit failed, but signup continues:", e);
                 }

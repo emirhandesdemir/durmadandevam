@@ -96,7 +96,7 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
                 <div className={cn("avatar-frame-wrapper", partner.selectedAvatarFrame)}>
                     <Avatar className="relative z-[1]">
                         <AvatarImage src={partner.photoURL || undefined} />
-                        <AvatarFallback>{partner.username.charAt(0)}</AvatarFallback>
+                        <AvatarFallback>{partner.profileEmoji || partner.username.charAt(0)}</AvatarFallback>
                     </Avatar>
                 </div>
                 {partner.isOnline && (
@@ -150,8 +150,8 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
              <div className="dm-input-glow rounded-full">
                 <NewMessageInput
                   chatId={chatId}
-                  sender={{ uid: user.uid, username: userData.username, photoURL: userData.photoURL, selectedAvatarFrame: userData.selectedAvatarFrame }}
-                  receiver={{ uid: partner.uid, username: partner.username, photoURL: partner.photoURL, selectedAvatarFrame: partner.selectedAvatarFrame }}
+                  sender={{ uid: user.uid, username: userData.username, photoURL: userData.photoURL, profileEmoji: userData.profileEmoji, selectedAvatarFrame: userData.selectedAvatarFrame }}
+                  receiver={{ uid: partner.uid, username: partner.username, photoURL: partner.photoURL, profileEmoji: partner.profileEmoji, selectedAvatarFrame: partner.selectedAvatarFrame }}
                 />
             </div>
         )}

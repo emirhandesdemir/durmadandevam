@@ -8,104 +8,79 @@ import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'f
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
 
-// Helper function to convert data URI to Blob
-async function dataUriToBlob(dataUri: string): Promise<Blob> {
-    const response = await fetch(dataUri);
-    const blob = await response.blob();
-    return blob;
-}
-
-export async function updateUserProfile(data: {
-    userId: string;
-    avatarDataUrl?: string | null;
-    username: string;
-    bio: string;
-    age?: number | string;
-    city?: string;
-    country?: string;
-    gender?: 'male' | 'female';
-    privateProfile: boolean;
-    acceptsFollowRequests: boolean;
-    showOnlineStatus: boolean;
-    selectedBubble: string;
-    selectedAvatarFrame: string;
-    interests: string[];
-}) {
-    const { userId, avatarDataUrl, ...otherUpdates } = data;
-    if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
-
-    const userRef = doc(db, 'users', userId);
-    const updates: { [key: string]: any } = { ...otherUpdates };
-    let newPhotoURL: string | undefined = undefined;
-
-    // 1. Upload new avatar if provided
-    if (avatarDataUrl) {
-        const imageBlob = await dataUriToBlob(avatarDataUrl);
-        const avatarRef = storageRef(storage, `upload/avatars/${userId}/avatar.jpg`);
-        await uploadBytes(avatarRef, imageBlob);
-        newPhotoURL = await getDownloadURL(avatarRef);
-        updates.photoURL = newPhotoURL;
-    }
-
-    // 2. Validate username if it's being changed
-    if (updates.username) {
-        const currentUserDoc = await getDoc(userRef);
-        if (currentUserDoc.exists() && currentUserDoc.data().username !== updates.username) {
-            const existingUser = await findUserByUsername(updates.username);
-            if (existingUser && existingUser.uid !== userId) {
-                throw new Error("Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor.");
-            }
-        }
-    }
-
-    // 3. Update the user document in Firestore
-    await updateDoc(userRef, updates);
-
-    // 4. Propagate visual changes (username, photoURL, frame) to all posts and comments
-    const propagationUpdates: { username?: string; photoURL?: string; userAvatarFrame?: string; } = {};
-    if (updates.username) propagationUpdates.username = updates.username;
-    if (newPhotoURL) propagationUpdates.photoURL = newPhotoURL;
-    if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
-    
-    if (Object.keys(propagationUpdates).length > 0) {
-        await updateUserContent(userId, propagationUpdates);
-    }
-    
-    // Revalidate paths to update cache
-    revalidatePath(`/profile/${userId}`, 'page');
-    revalidatePath(`/home`, 'layout'); // Revalidate layout to update header avatar
-
-    return { success: true, photoURL: newPhotoURL || null };
-}
-
-async function processBatchUpdate(query: any, updates: object) {
+// Helper function to process queries in batches to avoid Firestore limits
+async function processQueryInBatches(query: any, updateData: any) {
     const snapshot = await getDocs(query);
     if (snapshot.empty) return;
 
-    const batch = writeBatch(db);
-    snapshot.docs.forEach(doc => {
-        batch.update(doc.ref, updates);
+    const batchSize = 499;
+    const batches = [];
+    let currentBatch = writeBatch(db);
+    let operationCount = 0;
+
+    snapshot.docs.forEach((doc) => {
+        currentBatch.update(doc.ref, updateData);
+        operationCount++;
+        if (operationCount === batchSize) {
+            batches.push(currentBatch.commit());
+            currentBatch = writeBatch(db);
+            operationCount = 0;
+        }
     });
-    await batch.commit();
+
+    if (operationCount > 0) {
+        batches.push(currentBatch.commit());
+    }
+
+    await Promise.all(batches);
 }
 
-async function updateUserContent(uid: string, updates: object) {
-    // Update user's own posts
-    const postsQuery = query(collection(db, 'posts'), where('uid', '==', uid));
-    await processBatchUpdate(postsQuery, updates);
+export async function updateUserPosts(uid: string, updates: { [key: string]: any }) {
+    if (!uid || !updates || Object.keys(updates).length === 0) {
+        return;
+    }
 
-    // Update user's comments
-    const commentsQuery = query(collectionGroup(db, 'comments'), where('uid', '==', uid));
-    await processBatchUpdate(commentsQuery, updates);
+    const postsRef = collection(db, 'posts');
+    const writePromises = [];
 
-    // Update user's appearance in retweets of their posts
+    // Update user's own posts (original posts and retweets by them)
+    const userPostsQuery = query(postsRef, where('uid', '==', uid));
+    writePromises.push(processQueryInBatches(userPostsQuery, updates));
+
+    // Update user's appearance in others' retweets of their posts
     const retweetUpdates: { [key: string]: any } = {};
-    if ('username' in updates) retweetUpdates['retweetOf.username'] = updates.username;
-    if ('photoURL' in updates) retweetUpdates['retweetOf.photoURL'] = updates.photoURL;
-    if ('userAvatarFrame' in updates) retweetUpdates['retweetOf.userAvatarFrame'] = updates.userAvatarFrame;
+    if (updates.username) retweetUpdates['retweetOf.username'] = updates.username;
+    if (updates.photoURL) retweetUpdates['retweetOf.photoURL'] = updates.photoURL;
+    if (updates.profileEmoji) retweetUpdates['retweetOf.profileEmoji'] = updates.profileEmoji;
+    if (updates.userAvatarFrame) retweetUpdates['retweetOf.userAvatarFrame'] = updates.userAvatarFrame;
+    
     if (Object.keys(retweetUpdates).length > 0) {
-        const retweetsQuery = query(collection(db, 'posts'), where('retweetOf.uid', '==', uid));
-        await processBatchUpdate(retweetsQuery, retweetUpdates);
+        const retweetsQuery = query(postsRef, where('retweetOf.uid', '==', uid));
+        writePromises.push(processQueryInBatches(retweetsQuery, retweetUpdates));
+    }
+
+    try {
+        await Promise.all(writePromises);
+        revalidatePath('/home');
+        revalidatePath(`/profile/${uid}`);
+    } catch (error) {
+        console.error("Kullanıcı gönderileri güncellenirken hata:", error);
+        throw error;
+    }
+}
+
+export async function updateUserComments(uid: string, updates: { [key: string]: any }) {
+    if (!uid || !updates || Object.keys(updates).length === 0) {
+        return;
+    }
+
+    const commentsQuery = query(collectionGroup(db, 'comments'), where('uid', '==', uid));
+
+    try {
+        await processQueryInBatches(commentsQuery, updates);
+    } catch (error) {
+        console.error("Kullanıcı yorumları güncellenirken hata:", error);
+        throw error;
     }
 }
 
@@ -122,6 +97,71 @@ export async function findUserByUsername(username: string): Promise<UserProfile 
     const userData = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
     return deepSerialize(userData);
 }
+
+export async function updateUserProfile(data: {
+    userId: string;
+    username: string;
+    bio: string;
+    age?: number | string;
+    city?: string;
+    country?: string;
+    gender?: 'male' | 'female';
+    privateProfile: boolean;
+    acceptsFollowRequests: boolean;
+    showOnlineStatus: boolean;
+    profileEmoji: string | null;
+    selectedBubble: string;
+    selectedAvatarFrame: string;
+    interests: string[];
+}) {
+    const { userId, ...otherUpdates } = data;
+    if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
+
+    const userRef = doc(db, 'users', userId);
+    const updates: { [key: string]: any } = { ...otherUpdates };
+    
+    // Convert age to number or delete if empty
+    if(updates.age === '' || updates.age === undefined) {
+        updates.age = deleteField();
+    } else {
+        updates.age = Number(updates.age);
+    }
+
+    // Validate username if it's being changed
+    if (updates.username) {
+        const currentUserDoc = await getDoc(userRef);
+        if (currentUserDoc.exists() && currentUserDoc.data().username !== updates.username) {
+            const existingUser = await findUserByUsername(updates.username);
+            if (existingUser && existingUser.uid !== userId) {
+                throw new Error("Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor.");
+            }
+        }
+    }
+
+    await updateDoc(userRef, updates);
+
+    const propagationUpdates: { username?: string; profileEmoji?: string | null; userAvatarFrame?: string; } = {};
+    if (updates.username) propagationUpdates.username = updates.username;
+    if (updates.profileEmoji !== undefined) propagationUpdates.profileEmoji = updates.profileEmoji;
+    if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
+    
+    if (Object.keys(propagationUpdates).length > 0) {
+        await Promise.all([
+            updateUserPosts(userId, propagationUpdates),
+            updateUserComments(userId, propagationUpdates)
+        ]).catch(e => {
+            console.error("Error propagating profile updates", e);
+            throw new Error("Profil güncellendi ama eski içeriklere yansıtılamadı.");
+        });
+    }
+    
+    revalidatePath(`/profile/${userId}`, 'page');
+    revalidatePath(`/home`, 'layout');
+
+    return { success: true };
+}
+
+// ... rest of the file remains the same
 
 export async function searchUsers(searchTerm: string, currentUserId: string): Promise<UserProfile[]> {
     if (!searchTerm.trim()) return [];

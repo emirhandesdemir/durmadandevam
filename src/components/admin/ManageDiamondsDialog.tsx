@@ -18,13 +18,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Gem } from "lucide-react";
-import type { UserData } from "@/app/admin/users/page";
+import type { UserProfile } from "@/lib/types";
 import { modifyUserDiamonds } from "@/lib/actions/adminActions";
 
 interface ManageDiamondsDialogProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  user: UserData | null;
+  user: UserProfile | null;
 }
 
 // Form validasyon şeması.

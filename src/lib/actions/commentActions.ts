@@ -22,6 +22,7 @@ interface AddCommentArgs {
         uid: string;
         displayName: string | null;
         photoURL: string | null;
+        profileEmoji: string | null;
         userAvatarFrame?: string;
         role?: 'admin' | 'user';
     };
@@ -31,7 +32,7 @@ interface AddCommentArgs {
     } | null;
 }
 
-async function handleMentions(text: string, postId: string, sender: { uid: string, displayName: string | null, photoURL: string | null, userAvatarFrame?: string }) {
+async function handleMentions(text: string, postId: string, sender: { uid: string, displayName: string | null, photoURL: string | null, profileEmoji: string | null, userAvatarFrame?: string }) {
     const mentionRegex = /(?<!\S)@\w+/g;
     const mentions = text.match(mentionRegex);
 
@@ -47,6 +48,7 @@ async function handleMentions(text: string, postId: string, sender: { uid: strin
                     senderId: sender.uid,
                     senderUsername: sender.displayName || "Biri",
                     photoURL: sender.photoURL,
+                    profileEmoji: sender.profileEmoji,
                     senderAvatarFrame: sender.userAvatarFrame,
                     type: 'mention',
                     postId: postId,
@@ -74,6 +76,7 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
         uid: user.uid,
         username: user.displayName || "Anonim Kullanıcı",
         photoURL: user.photoURL,
+        profileEmoji: user.profileEmoji,
         userAvatarFrame: user.userAvatarFrame || '',
         userRole: user.role || 'user',
         text: text,
@@ -97,6 +100,7 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
             senderId: user.uid,
             senderUsername: user.displayName || "Biri",
             photoURL: user.photoURL,
+            profileEmoji: user.profileEmoji,
             senderAvatarFrame: user.userAvatarFrame,
             type: 'comment',
             postId: postId,
@@ -109,6 +113,7 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
         uid: user.uid,
         displayName: user.displayName,
         photoURL: user.photoURL,
+        profileEmoji: user.profileEmoji,
         userAvatarFrame: user.userAvatarFrame,
     });
 

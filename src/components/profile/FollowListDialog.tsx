@@ -46,6 +46,7 @@ export default function FollowListDialog({
         // Firestore 'in' sorgusu en fazla 30 eleman alabilir, bu yüzden listeyi böl
         for (let i = 0; i < userIds.length; i += 30) {
           const batchIds = userIds.slice(i, i + 30);
+          if(batchIds.length === 0) continue;
           const q = query(
             collection(db, 'users'),
             where('uid', 'in', batchIds)

@@ -76,7 +76,7 @@ export default function CommentItem({ comment, postId, onReply }: CommentItemPro
                 <div className={cn("avatar-frame-wrapper", comment.userAvatarFrame)}>
                     <Avatar className="relative z-[1] h-9 w-9">
                         <AvatarImage src={comment.photoURL || undefined} />
-                        <AvatarFallback>{comment.username?.charAt(0)}</AvatarFallback>
+                        <AvatarFallback>{comment.profileEmoji || comment.username?.charAt(0)}</AvatarFallback>
                     </Avatar>
                 </div>
             </Link>

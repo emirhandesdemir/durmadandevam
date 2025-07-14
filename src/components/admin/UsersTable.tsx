@@ -40,7 +40,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import ManageDiamondsDialog from "./ManageDiamondsDialog";
-import ManagePremiumDialog from "./ManagePremiumDialog"; // Import the new dialog
+import ManagePremiumDialog from "./ManagePremiumDialog";
 import { cn } from "@/lib/utils";
 
 interface UsersTableProps {
@@ -121,7 +121,7 @@ export default function UsersTable({ users }: UsersTableProps) {
                                 <div className="flex items-center gap-3">
                                     <Avatar>
                                         <AvatarImage src={user.photoURL || undefined} />
-                                        <AvatarFallback>{user.username?.charAt(0).toUpperCase()}</AvatarFallback>
+                                        <AvatarFallback>{user.profileEmoji || user.username?.charAt(0).toUpperCase()}</AvatarFallback>
                                     </Avatar>
                                     <div>
                                         <p className="font-medium">{user.username}</p>

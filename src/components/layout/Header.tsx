@@ -87,7 +87,7 @@ export default function Header({}: HeaderProps) {
                                 <Button variant="ghost" size="icon" className="rounded-full">
                                     <Avatar className="h-7 w-7">
                                         <AvatarImage src={userData?.photoURL || undefined} />
-                                        <AvatarFallback>{userData?.username?.charAt(0)}</AvatarFallback>
+                                        <AvatarFallback>{userData?.profileEmoji || userData?.username?.charAt(0)}</AvatarFallback>
                                     </Avatar>
                                     <span className="sr-only">Ana Menü</span>
                                 </Button>

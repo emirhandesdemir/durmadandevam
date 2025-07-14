@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageCircle, Plus, Swords, Clapperboard } from 'lucide-react';
+import { Home, MessageCircle, Plus, Swords } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMemo } from 'react';
@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   
   const navItems = useMemo(() => {
     if (!user) return [];
@@ -20,7 +20,7 @@ export default function BottomNav() {
         { id: 'rooms', href: '/rooms', icon: MessageCircle, label: 'Odalar' },
         { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
         { id: 'surf', href: '/surf', icon: Clapperboard, label: 'Surf' },
-        { id: 'matchmaking', href: `/matchmaking`, icon: Swords, label: 'Maç' },
+        { id: 'profile', href: `/profile/${user.uid}`, icon: Avatar, label: 'Profil' },
       ]
   }, [user]);
 
@@ -59,7 +59,14 @@ export default function BottomNav() {
                             "flex items-center justify-center h-10 w-10 rounded-full transition-all duration-300", 
                             isCreateButton ? 'bg-primary text-primary-foreground rounded-xl h-9 w-9' : ''
                         )}>
-                            <Icon className={cn("h-6 w-6 transition-transform")} />
+                             {item.id === 'profile' ? (
+                                <Avatar className={cn("h-7 w-7 transition-all", isActive && "ring-2 ring-primary ring-offset-2 ring-offset-background")}>
+                                    <AvatarImage src={userData?.photoURL || undefined} />
+                                    <AvatarFallback>{userData?.profileEmoji || userData?.username?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                            ) : (
+                                <Icon className={cn("h-6 w-6 transition-transform")} />
+                            )}
                         </div>
                         {!isCreateButton && <span className="text-[10px] font-medium">{item.label}</span>}
                     </Link>

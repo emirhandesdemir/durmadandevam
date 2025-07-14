@@ -48,6 +48,7 @@ export default function FollowButton({ currentUserData, targetUser }: FollowButt
       await followUser(currentUserData.uid, targetUser.uid, { 
           username: currentUserData.username, 
           photoURL: currentUserData.photoURL || null,
+          profileEmoji: currentUserData.profileEmoji || null,
           userAvatarFrame: currentUserData.selectedAvatarFrame || '',
       });
       if (targetUser.privateProfile) {

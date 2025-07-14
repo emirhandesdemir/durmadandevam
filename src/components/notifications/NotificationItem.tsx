@@ -121,7 +121,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
                             <div className={cn("avatar-frame-wrapper", notification.senderAvatarFrame)}>
                                 <Avatar className="relative z-[1] h-10 w-10">
                                     <AvatarImage src={notification.photoURL || undefined} />
-                                    <AvatarFallback>{notification.senderUsername?.charAt(0)}</AvatarFallback>
+                                    <AvatarFallback>{notification.profileEmoji || notification.senderUsername?.charAt(0)}</AvatarFallback>
                                 </Avatar>
                             </div>
                     </Link>
@@ -132,7 +132,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
             </div>
                 {notification.postImage && (
                     <div className="relative h-12 w-12 rounded-md object-cover">
-                        <Image src={notification.postImage} alt="Post preview" fill className="rounded-md object-cover" />
+                        <Image src={notification.postImage} alt="Post preview" fill sizes="48px" className="rounded-md object-cover" />
                     </div>
                 )}
         </div>
