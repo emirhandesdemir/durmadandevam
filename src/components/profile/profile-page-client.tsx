@@ -23,6 +23,8 @@ import Link from "next/link";
 import BlockedUsersDialog from "./BlockedUsersDialog";
 import { updateUserProfile } from "@/lib/actions/userActions";
 import { Textarea } from "../ui/textarea";
+import { auth } from "@/lib/firebase";
+import { updateProfile } from "firebase/auth";
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -156,6 +158,14 @@ export default function ProfilePageClient() {
 
             if (!result.success) {
                 throw new Error(result.error || "Bilinmeyen bir hata oluştu.");
+            }
+            
+            // This is the critical client-side update for the auth object.
+            if(auth.currentUser && (result.photoURL || username !== auth.currentUser.displayName)) {
+                await updateProfile(auth.currentUser, {
+                   displayName: username,
+                   photoURL: result.photoURL || auth.currentUser.photoURL
+                });
             }
             
             toast({
@@ -471,7 +481,7 @@ export default function ProfilePageClient() {
             </div>
             
             {hasChanges && (
-                <div className="fixed bottom-20 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
+                <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t">
                     <div className="container mx-auto flex justify-between items-center max-w-2xl">
                         <p className="text-sm font-semibold">Kaydedilmemiş değişiklikleriniz var.</p>
                         <Button onClick={handleSaveChanges} disabled={isSaving}>

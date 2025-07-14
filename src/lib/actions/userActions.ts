@@ -7,8 +7,6 @@ import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, 
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
-import { getAuth } from 'firebase/auth';
-import { updateProfile } from "firebase/auth";
 
 export async function updateUserProfile({
     userId,
@@ -64,6 +62,7 @@ export async function updateUserProfile({
     revalidatePath(`/profile/${userId}`, 'page');
     revalidatePath(`/home`);
 
+    // Return the new photoURL so the client can update the auth state
     return { success: true, photoURL };
 }
 
