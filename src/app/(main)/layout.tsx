@@ -6,11 +6,11 @@ import Header from "@/components/layout/Header";
 import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
 import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useRef, useEffect } from 'react';
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import ActiveCallBar from "@/components/voice/ActiveCallBar";
 import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
 import { useAuth } from "@/contexts/AuthContext";
@@ -119,8 +119,12 @@ export default function MainAppLayout({
     }
   }, [user, loading, router, pathname]);
 
-  if (loading || !user) {
+  if (loading) {
     return <AnimatedLogoLoader fullscreen />;
+  }
+  
+  if (!user) {
+      return null;
   }
 
   const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/') || pathname.startsWith('/matchmaking/') || pathname.startsWith('/surf');

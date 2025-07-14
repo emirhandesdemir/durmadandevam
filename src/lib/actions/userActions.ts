@@ -10,60 +10,43 @@ import { revalidatePath } from 'next/cache';
 
 export async function updateUserProfile({
     userId,
-    avatarDataUrl,
-    username,
-    bio,
-    age,
-    city,
-    country,
-    gender,
-    privateProfile,
-    acceptsFollowRequests,
-    showOnlineStatus,
-    selectedBubble,
-    selectedAvatarFrame,
-    interests
+    updates,
 }: {
     userId: string,
-    avatarDataUrl: string | null,
-    username: string,
-    bio: string,
-    age: number | string,
-    city: string,
-    country: string,
-    gender?: 'male' | 'female',
-    privateProfile: boolean,
-    acceptsFollowRequests: boolean,
-    showOnlineStatus: boolean,
-    selectedBubble: string,
-    selectedAvatarFrame: string,
-    interests: string[],
+    updates: Partial<UserProfile> & { photoURL?: string | null },
 }) {
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
     
     const userRef = doc(db, 'users', userId);
     
-    const updates: { [key: string]: any } = {
-        username, bio, age: Number(age) || deleteField(), city, country, gender,
-        privateProfile, acceptsFollowRequests, showOnlineStatus, selectedBubble,
-        selectedAvatarFrame, interests,
-    };
-    
-    let photoURL = null;
-    if (avatarDataUrl) {
-        const avatarRef = storageRef(storage, `upload/avatars/${userId}/avatar.jpg`);
-        await uploadString(avatarRef, avatarDataUrl, 'data_url');
-        photoURL = await getDownloadURL(avatarRef);
-        updates.photoURL = photoURL;
-    }
-    
     await updateDoc(userRef, updates);
 
-    revalidatePath(`/profile/${userId}`, 'page');
-    revalidatePath(`/home`);
+    // Propagate visual changes to all posts and comments
+    const propagationUpdates: { username?: string; photoURL?: string; userAvatarFrame?: string; } = {};
+    if (updates.username) propagationUpdates.username = updates.username;
+    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
+    if (updates.selectedAvatarFrame) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
 
-    // Return the new photoURL so the client can update the auth state
-    return { success: true, photoURL };
+    if (Object.keys(propagationUpdates).length > 0) {
+        // Find all posts and update them
+        const postsQuery = query(collection(db, "posts"), where("uid", "==", userId));
+        const postsSnap = await getDocs(postsQuery);
+        const batch = writeBatch(db);
+        postsSnap.forEach(postDoc => {
+            batch.update(postDoc.ref, propagationUpdates);
+        });
+        await batch.commit();
+
+        // Note: Updating comments across all posts is more complex and can be slow.
+        // For now, we omit this step for performance, assuming profile pics in comments are less critical
+        // or can be updated via a different mechanism if needed.
+    }
+
+
+    revalidatePath(`/profile/${userId}`, 'page');
+    revalidatePath(`/home`, 'layout');
+
+    return { success: true };
 }
 
 

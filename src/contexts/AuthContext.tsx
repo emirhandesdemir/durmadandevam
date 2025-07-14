@@ -37,11 +37,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [featureFlags, setFeatureFlags] = useState<FeatureFlags | null>(null);
   const [themeSettings, setThemeSettings] = useState<ThemeSettings | null>(null);
   const [totalUnreadDms, setTotalUnreadDms] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [firestoreLoading, setFirestoreLoading] = useState(true);
   const { toast } = useToast();
 
   const handleLogout = useCallback(async () => {
-    const userToLogout = user; 
+    const userToLogout = auth.currentUser; 
     try {
         if (userToLogout) {
             const userStatusRef = doc(db, 'users', userToLogout.uid);
@@ -63,20 +64,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             variant: "destructive",
         });
     }
-  }, [toast, user]);
+  }, [toast]);
   
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-      setLoading(true);
       setUser(currentUser);
-      if (!currentUser) {
-        setUserData(null);
-        setLoading(false);
-      }
+      setAuthLoading(false);
     });
 
     const unsubscribeFeatures = onSnapshot(doc(db, 'config', 'featureFlags'), (docSnap) => {
-      setFeatureFlags(docSnap.exists() ? docSnap.data() as FeatureFlags : null);
+      setFeatureFlags(docSnap.exists() ? docSnap.data() as FeatureFlags : { quizGameEnabled: true, postFeedEnabled: true, contentModerationEnabled: true });
     });
 
     const unsubscribeTheme = onSnapshot(doc(db, 'config', 'theme'), (docSnap) => {
@@ -95,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let unsubscribeDms: () => void = () => {};
 
     if (user) {
+        setFirestoreLoading(true);
         const userDocRef = doc(db, 'users', user.uid);
         unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
             if (docSnap.exists()) {
@@ -112,11 +110,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     triggerProfileCompletionNotification(user.uid);
                 }
             } else { setUserData(null); }
-            setLoading(false);
+            setFirestoreLoading(false);
         }, (error) => {
             console.error("Firestore user listener error:", error);
             setUserData(null);
-            setLoading(false);
+            setFirestoreLoading(false);
         });
 
         const dmsQuery = query(collection(db, 'directMessagesMetadata'), where('participantUids', 'array-contains', user.uid));
@@ -137,9 +135,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             window.removeEventListener("beforeunload", onbeforeunload);
         };
     } else {
-      setLoading(false);
+      setUserData(null);
+      setTotalUnreadDms(0);
+      setFirestoreLoading(false);
     }
   }, [user, handleLogout, toast]);
+
+  const loading = authLoading || firestoreLoading;
 
   const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms };
 

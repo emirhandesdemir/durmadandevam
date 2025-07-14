@@ -37,12 +37,7 @@ export default function AdminLayout({
   
   // Yükleme ekranı: Kullanıcı ve yetki verileri gelene kadar gösterilir.
   if (loading) {
-    return (
-      <div className="flex h-screen w-full flex-col items-center justify-center bg-background gap-4">
-        <AnimatedLogoLoader />
-        <p className="text-lg text-muted-foreground">Yönetici bilgileri yükleniyor...</p>
-      </div>
-    );
+    return <AnimatedLogoLoader fullscreen />;
   }
 
   // Yetkisiz erişim ekranı: Giriş yapmış ama 'admin' rolü olmayan kullanıcılar için.

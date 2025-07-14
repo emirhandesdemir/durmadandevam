@@ -24,8 +24,12 @@ export default function SignUpPage() {
     }
   }, [user, loading, router]);
 
-  if (loading || user) {
-     return <AnimatedLogoLoader fullscreen isAuthPage />;
+  if (loading) {
+    return <AnimatedLogoLoader fullscreen isAuthPage />;
+  }
+
+  if (user) {
+    return <AnimatedLogoLoader fullscreen isAuthPage />;
   }
 
   return (
