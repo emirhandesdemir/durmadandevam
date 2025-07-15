@@ -11,7 +11,6 @@ import { Download, X } from 'lucide-react';
 import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
 import { useAuth } from "@/contexts/AuthContext";
 import AnimatedLogoLoader from "@/components/common/AnimatedLogoLoader";
-import { redirect } from "next/navigation";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -105,15 +104,9 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const pathname = usePathname();
 
-  useEffect(() => {
-    if (!loading && !user) {
-      redirect('/login');
-    }
-  }, [user, loading]);
-
+  // AuthProvider now shows the loader, so we can just return null here
+  // to avoid layout shifts while waiting for auth state.
   if (loading || !user) {
-    // AuthProvider now shows the loader, so we can just return null here
-    // to avoid layout shifts while waiting for auth state.
     return null;
   }
 
