@@ -1,9 +1,9 @@
-
+// src/app/(main)/layout.tsx
 'use client';
 
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/Header";
-import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
+import { useVoiceChat, VoiceChatProvider } from "@/contexts/VoiceChatContext";
 import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname } from "next/navigation";
@@ -15,6 +15,7 @@ import ActiveCallBar from "@/components/voice/ActiveCallBar";
 import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
 import { useAuth } from "@/contexts/AuthContext";
 import AnimatedLogoLoader from "@/components/common/AnimatedLogoLoader";
+import { redirect } from "next/navigation";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -104,13 +105,19 @@ function PwaInstallBar() {
 }
 
 
-export default function MainAppLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const { loading } = useAuth();
+function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
   const pathname = usePathname();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      redirect('/login');
+    }
+  }, [user, loading]);
+
+  if (loading || !user) {
+    return <AnimatedLogoLoader fullscreen />;
+  }
 
   const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/') || pathname.startsWith('/matchmaking/') || pathname.startsWith('/surf');
   const isHomePage = pathname === '/home';
@@ -120,10 +127,6 @@ export default function MainAppLayout({
     animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeInOut' } },
     exit: { opacity: 0, y: -10, transition: { duration: 0.2, ease: 'easeOut' } },
   };
-
-  if (loading) {
-    return <AnimatedLogoLoader fullscreen />;
-  }
 
   return (
     <VoiceChatProvider>
@@ -168,4 +171,8 @@ export default function MainAppLayout({
       </div>
     </VoiceChatProvider>
   );
+}
+
+export default function MainAppLayout({ children }: { children: React.ReactNode }) {
+  return <MainAppLayoutContent>{children}</MainAppLayoutContent>;
 }

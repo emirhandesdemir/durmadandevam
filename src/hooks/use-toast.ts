@@ -1,18 +1,11 @@
-
-// Bu dosya, react-hot-toast kütüphanesinden esinlenerek oluşturulmuş
-// özel bir toast (bildirim) yönetim sistemidir.
-// Uygulama genelinde tutarlı ve yönetilebilir bildirimler göstermeyi sağlar.
 "use client"
 
 import * as React from "react"
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast"
 
-// Aynı anda gösterilecek maksimum toast sayısı.
 const TOAST_LIMIT = 1;
-// Bir toast kapatıldıktan sonra DOM'dan kaldırılmadan önce beklenecek süre.
 const TOAST_REMOVE_DELAY = 1000000;
 
-// Toaster'da gösterilecek toast'ın tip tanımı.
 type ToasterToast = ToastProps & {
   id: string;
   title?: React.ReactNode;
@@ -20,7 +13,6 @@ type ToasterToast = ToastProps & {
   action?: ToastActionElement;
 }
 
-// Reducer için eylem tipleri.
 const actionTypes = {
   ADD_TOAST: "ADD_TOAST",
   UPDATE_TOAST: "UPDATE_TOAST",
@@ -28,7 +20,6 @@ const actionTypes = {
   REMOVE_TOAST: "REMOVE_TOAST",
 } as const;
 
-// Benzersiz ID oluşturmak için bir sayaç.
 let count = 0;
 function genId() {
   count = (count + 1) % Number.MAX_SAFE_INTEGER;
@@ -37,19 +28,16 @@ function genId() {
 
 type ActionType = typeof actionTypes;
 
-// Reducer'ın kabul edeceği eylem tipleri.
 type Action =
   | { type: ActionType["ADD_TOAST"]; toast: ToasterToast }
   | { type: ActionType["UPDATE_TOAST"]; toast: Partial<ToasterToast> }
   | { type: ActionType["DISMISS_TOAST"]; toastId?: ToasterToast["id"] }
   | { type: ActionType["REMOVE_TOAST"]; toastId?: ToasterToast["id"] };
 
-// Toast'ların state'ini tutan arayüz.
 interface State {
   toasts: ToasterToast[];
 }
 
-// Kapatılan toast'ların DOM'dan kaldırılması için zamanlayıcıları tutan harita.
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 
 const addToRemoveQueue = (toastId: string) => {
@@ -68,18 +56,15 @@ const addToRemoveQueue = (toastId: string) => {
   toastTimeouts.set(toastId, timeout);
 };
 
-// State'i yöneten reducer fonksiyonu.
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "ADD_TOAST":
-      // Yeni bir toast ekle ve limiti uygula.
       return {
         ...state,
         toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
       };
 
     case "UPDATE_TOAST":
-      // Mevcut bir toast'ı güncelle.
       return {
         ...state,
         toasts: state.toasts.map((t) =>
@@ -88,7 +73,6 @@ export const reducer = (state: State, action: Action): State => {
       };
 
     case "DISMISS_TOAST": {
-      // Bir toast'ı kapat (görünmez yap).
       const { toastId } = action;
 
       if (toastId) {
@@ -109,7 +93,6 @@ export const reducer = (state: State, action: Action): State => {
       };
     }
     case "REMOVE_TOAST":
-      // Bir toast'ı DOM'dan tamamen kaldır.
       if (action.toastId === undefined) {
         return { ...state, toasts: [] };
       }
@@ -120,13 +103,10 @@ export const reducer = (state: State, action: Action): State => {
   }
 };
 
-// State değişikliklerini dinleyen bileşenlerin listesi.
 const listeners: Array<(state: State) => void> = [];
 
-// Tüm uygulama için tek bir state kaynağı.
 let memoryState: State = { toasts: [] };
 
-// State'i güncelleyen ve dinleyicileri bilgilendiren merkezi dispatch fonksiyonu.
 function dispatch(action: Action) {
   memoryState = reducer(memoryState, action);
   listeners.forEach((listener) => {
@@ -136,7 +116,6 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">;
 
-// Dışarıdan kullanılacak ana `toast` fonksiyonu.
 function toast({ ...props }: Toast) {
   const id = genId();
 
@@ -159,7 +138,6 @@ function toast({ ...props }: Toast) {
   return { id, dismiss, update };
 }
 
-// Bileşenlerin toast state'ine erişmesini ve onu yönetmesini sağlayan custom hook.
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState);
 

@@ -1,10 +1,9 @@
-
 // src/contexts/AuthContext.tsx
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { doc, onSnapshot, query, where, setDoc, serverTimestamp, collection } from 'firebase/firestore';
+import { doc, onSnapshot, query, where, setDoc, serverTimestamp, collection, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { FeatureFlags, UserProfile, ThemeSettings } from '@/lib/types';
@@ -67,12 +66,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (!currentUser) {
-        setLoading(false); // If no user, stop loading immediately
+        setLoading(false);
       }
     });
 
     const unsubscribeFeatures = onSnapshot(doc(db, 'config', 'featureFlags'), (docSnap) => {
-      setFeatureFlags(docSnap.exists() ? docSnap.data() as FeatureFlags : { quizGameEnabled: true, postFeedEnabled: true, contentModerationEnabled: true });
+      setFeatureFlags(docSnap.exists() ? docSnap.data() as FeatureFlags : { quizGameEnabled: true, contentModerationEnabled: true });
     });
 
     const unsubscribeTheme = onSnapshot(doc(db, 'config', 'theme'), (docSnap) => {
@@ -108,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     triggerProfileCompletionNotification(user.uid);
                 }
             } else { setUserData(null); }
-            setLoading(false); // Stop loading after user data is fetched
+            setLoading(false);
         }, (error) => {
             console.error("Firestore user listener error:", error);
             setUserData(null);
@@ -122,10 +121,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setTotalUnreadDms(total);
         });
         
-        // Presence management
         const userStatusRef = doc(db, 'users', user.uid);
-        setDoc(userStatusRef, { isOnline: true }, { merge: true });
-        const onbeforeunload = () => setDoc(userStatusRef, { isOnline: false, lastSeen: serverTimestamp() }, { merge: true });
+        updateDoc(userStatusRef, { isOnline: true });
+        
+        const onbeforeunload = () => updateDoc(userStatusRef, { isOnline: false, lastSeen: serverTimestamp() });
         window.addEventListener("beforeunload", onbeforeunload);
 
         return () => {
@@ -138,6 +137,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setTotalUnreadDms(0);
     }
   }, [user, handleLogout, toast]);
+
+  if (loading) {
+      return <AnimatedLogoLoader fullscreen />;
+  }
 
   const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms };
   

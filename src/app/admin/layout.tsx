@@ -1,6 +1,5 @@
 // src/app/admin/layout.tsx
 // This layout handles authentication and authorization for all /admin routes.
-// It ensures only authenticated admin users can access the panel.
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,21 +12,19 @@ import { useState } from "react";
 import AnimatedLogoLoader from "@/components/common/AnimatedLogoLoader";
 import { redirect } from "next/navigation";
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const { userData, loading } = useAuth();
+function AdminLayoutContent({ children }: { children: React.ReactNode }) {
+  const { userData, loading, user } = useAuth();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
-  
-  // Wait for authentication and user data to load
+
   if (loading) {
     return <AnimatedLogoLoader fullscreen />;
   }
 
-  // If user is not logged in, AuthContext will handle redirect.
-  // If logged in user is not an admin, show access denied screen.
+  if (!user) {
+    redirect('/login');
+    return null; // Redirect will happen, return null to avoid rendering anything.
+  }
+  
   if (userData?.role !== 'admin') {
       return (
           <div className="flex h-screen w-full flex-col items-center justify-center bg-background p-4 text-center">
@@ -58,4 +55,9 @@ export default function AdminLayout({
       </div>
     </div>
   );
+}
+
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+    return <AdminLayoutContent>{children}</AdminLayoutContent>;
 }
