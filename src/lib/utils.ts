@@ -36,6 +36,10 @@ export function emojiToDataUrl(emoji: string): string {
     <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
       <text x="50%" y="50%" font-size="96" text-anchor="middle" dy=".3em">${emoji}</text>
     </svg>
-  `.replace(/\n/g, '').replace(/\s+/g, ' ');
-  return `data:image/svg+xml;base64,${btoa(svg)}`;
+  `.trim();
+  
+  // Encode the SVG to Base64 to make it a valid data URL
+  const base64 = typeof window === 'undefined' ? Buffer.from(svg).toString('base64') : btoa(svg);
+  
+  return `data:image/svg+xml;base64,${base64}`;
 }
