@@ -62,6 +62,7 @@ export async function createProfileUpdatePost(data: {
     text: string;
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
+    userGender?: 'male' | 'female';
 }) {
     // Generate an image from the emoji
     const emojiImageUrl = await emojiToDataUrl(data.profileEmoji);
@@ -73,6 +74,7 @@ export async function createProfileUpdatePost(data: {
         profileEmoji: data.profileEmoji,
         userAvatarFrame: data.userAvatarFrame,
         userRole: data.userRole,
+        userGender: data.userGender,
         text: data.text,
         imageUrl: emojiImageUrl, // Use the generated emoji image
         language: 'tr', // Default or detect user language
@@ -119,7 +121,8 @@ export async function createPost(postData: {
             userRole: postData.userRole,
             userGender: postData.userGender,
             text: postData.text,
-            imageUrl: postData.imageUrl || null, // Ensure undefined is converted to null
+            // HATA DÜZELTMESİ: 'undefined' yerine 'null' kullan
+            imageUrl: postData.imageUrl || null, 
             videoUrl: postData.videoUrl || null,
             backgroundStyle: postData.backgroundStyle,
             editedWithAI: postData.editedWithAI,
