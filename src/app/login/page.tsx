@@ -4,6 +4,36 @@
 import { Suspense } from "react";
 import LoginForm from "@/components/auth/login-form";
 import AnimatedLogoLoader from "@/components/common/AnimatedLogoLoader";
+import { useAuth } from "@/contexts/AuthContext";
+import { redirect } from "next/navigation";
+
+function LoginPageContent() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <AnimatedLogoLoader fullscreen isAuthPage />;
+  }
+  
+  if (user) {
+    redirect('/home');
+  }
+
+  return (
+    <main className="relative flex min-h-screen flex-col items-center justify-center p-4 auth-bg">
+        <div className="flex-1 flex flex-col items-center justify-center w-full">
+            <div className="w-full max-w-sm animate-in zoom-in-95 duration-500">
+                <LoginForm />
+            </div>
+        </div>
+        <footer className="py-4">
+            <p className="text-xs text-white/70">
+                © 2025 BeWalk. All rights reserved.
+            </p>
+        </footer>
+      </main>
+  );
+}
+
 
 /**
  * Giriş Sayfası
@@ -16,18 +46,7 @@ export default function LoginPage() {
   return (
     // Suspense, LoginForm ve alt bileşenleri yüklenene kadar bir fallback gösterir.
     <Suspense fallback={<AnimatedLogoLoader fullscreen isAuthPage />}>
-      <main className="relative flex min-h-screen flex-col items-center justify-center p-4 auth-bg">
-        <div className="flex-1 flex flex-col items-center justify-center w-full">
-            <div className="w-full max-w-sm animate-in zoom-in-95 duration-500">
-                <LoginForm />
-            </div>
-        </div>
-        <footer className="py-4">
-            <p className="text-xs text-white/70">
-                © 2025 BeWalk. All rights reserved.
-            </p>
-        </footer>
-      </main>
+      <LoginPageContent/>
     </Suspense>
   );
 }

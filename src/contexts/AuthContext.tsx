@@ -1,3 +1,4 @@
+
 // src/contexts/AuthContext.tsx
 'use client';
 
@@ -10,7 +11,6 @@ import type { FeatureFlags, UserProfile, ThemeSettings } from '@/lib/types';
 import { triggerProfileCompletionNotification } from '@/lib/actions/notificationActions';
 import i18n from '@/lib/i18n';
 import AnimatedLogoLoader from '@/components/common/AnimatedLogoLoader';
-import { usePathname, useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
@@ -40,8 +40,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [totalUnreadDms, setTotalUnreadDms] = useState(0);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const router = useRouter();
-  const pathname = usePathname();
 
   const handleLogout = useCallback(async () => {
     try {
@@ -74,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     const unsubscribeFeatures = onSnapshot(doc(db, 'config', 'featureFlags'), (docSnap) => {
-      setFeatureFlags(docSnap.exists() ? docSnap.data() as FeatureFlags : { quizGameEnabled: true, contentModerationEnabled: true });
+      setFeatureFlags(docSnap.exists() ? docSnap.data() as FeatureFlags : { quizGameEnabled: true, postFeedEnabled: true, contentModerationEnabled: true });
     });
 
     const unsubscribeTheme = onSnapshot(doc(db, 'config', 'theme'), (docSnap) => {
@@ -142,35 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, handleLogout, toast]);
 
   const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms };
-
-  // Handle redirection based on auth state
-  useEffect(() => {
-    if (!loading) {
-        const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/privacy' || pathname === '/terms';
-        if (user && isAuthPage) {
-            router.replace('/home');
-        } else if (!user && !isAuthPage) {
-            router.replace(`/login?redirect=${pathname}`);
-        }
-    }
-  }, [user, loading, pathname, router]);
-
-  // Show a loader while authentication is in progress.
-  if (loading) {
-    const isAuthPage = pathname === '/login' || pathname === '/signup';
-    return <AnimatedLogoLoader fullscreen isAuthPage={isAuthPage} />;
-  }
-
-  // Prevent rendering children if user is not logged in and not on an auth page
-  if (!user && (pathname !== '/login' && pathname !== '/signup' && pathname !== '/privacy' && pathname !== '/terms')) {
-      return <AnimatedLogoLoader fullscreen />;
-  }
   
-  // Prevent rendering children if user is logged in and on an auth page
-  if(user && (pathname === '/login' || pathname === '/signup')) {
-      return <AnimatedLogoLoader fullscreen />;
-  }
-
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

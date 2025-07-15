@@ -11,6 +11,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import AnimatedLogoLoader from "@/components/common/AnimatedLogoLoader";
+import { redirect } from "next/navigation";
 
 export default function AdminLayout({
   children,
@@ -25,8 +26,8 @@ export default function AdminLayout({
     return <AnimatedLogoLoader fullscreen />;
   }
 
-  // If user is not an admin, show access denied screen.
-  // AuthProvider handles redirecting non-logged-in users.
+  // If user is not logged in, AuthContext will handle redirect.
+  // If logged in user is not an admin, show access denied screen.
   if (userData?.role !== 'admin') {
       return (
           <div className="flex h-screen w-full flex-col items-center justify-center bg-background p-4 text-center">

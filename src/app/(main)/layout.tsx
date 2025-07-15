@@ -1,9 +1,9 @@
 
-// src/app/(main)/layout.tsx
 'use client';
 
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/Header";
+import { useAuth } from "@/contexts/AuthContext";
 import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
 import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,6 +14,8 @@ import { Download, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import ActiveCallBar from "@/components/voice/ActiveCallBar";
 import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
+import { redirect } from "next/navigation";
+import AnimatedLogoLoader from "@/components/common/AnimatedLogoLoader";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -108,6 +110,7 @@ export default function MainAppLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { user, loading } = useAuth();
   const pathname = usePathname();
 
   const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/') || pathname.startsWith('/matchmaking/') || pathname.startsWith('/surf');
@@ -118,6 +121,14 @@ export default function MainAppLayout({
     animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeInOut' } },
     exit: { opacity: 0, y: -10, transition: { duration: 0.2, ease: 'easeOut' } },
   };
+
+  if (loading) {
+    return <AnimatedLogoLoader fullscreen />;
+  }
+
+  if (!user) {
+    return redirect('/login');
+  }
 
   return (
     <VoiceChatProvider>

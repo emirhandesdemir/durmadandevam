@@ -4,18 +4,22 @@
 import { Suspense } from 'react';
 import SignUpForm from '@/components/auth/signup-form';
 import AnimatedLogoLoader from '@/components/common/AnimatedLogoLoader';
+import { useAuth } from '@/contexts/AuthContext';
+import { redirect } from 'next/navigation';
 
-/**
- * Kayıt Sayfası
- * 
- * Bu bileşen, SignUpForm'u gösterir ve yavaş bağlantılarda kullanıcı deneyimini
- * iyileştirmek için Suspense kullanır. AuthProvider, kayıt sonrası kullanıcıyı
- * otomatik olarak yönlendirecektir.
- */
-export default function SignUpPage() {
+function SignUpPageContent() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <AnimatedLogoLoader fullscreen isAuthPage />;
+  }
+  
+  if (user) {
+    redirect('/home');
+  }
+
   return (
-    <Suspense fallback={<AnimatedLogoLoader fullscreen isAuthPage />}>
-      <main className="relative flex min-h-screen flex-col items-center justify-center p-4 auth-bg">
+    <main className="relative flex min-h-screen flex-col items-center justify-center p-4 auth-bg">
         <div className="flex-1 flex flex-col items-center justify-center w-full">
             <div className="w-full max-w-sm animate-in zoom-in-95 duration-500">
                 <SignUpForm />
@@ -27,6 +31,21 @@ export default function SignUpPage() {
             </p>
         </footer>
       </main>
+  );
+}
+
+
+/**
+ * Kayıt Sayfası
+ * 
+ * Bu bileşen, SignUpForm'u gösterir ve yavaş bağlantılarda kullanıcı deneyimini
+ * iyileştirmek için Suspense kullanır. AuthProvider, kayıt sonrası kullanıcıyı
+ * otomatik olarak yönlendirecektir.
+ */
+export default function SignUpPage() {
+  return (
+    <Suspense fallback={<AnimatedLogoLoader fullscreen isAuthPage />}>
+      <SignUpPageContent />
     </Suspense>
   );
 }
