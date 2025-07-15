@@ -158,6 +158,7 @@ export default function ProfilePageClient() {
             // Authentication profile updates must happen on the client
             const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
             if (updates.username) authProfileUpdates.displayName = updates.username;
+            // Only generate new data URL if emoji has changed
             if (updates.profileEmoji) {
                 authProfileUpdates.photoURL = emojiToDataUrl(updates.profileEmoji);
             }

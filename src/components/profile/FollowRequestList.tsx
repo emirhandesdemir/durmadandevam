@@ -48,7 +48,7 @@ export default function FollowRequestList({ requests }: FollowRequestListProps) 
                         <div className={cn("avatar-frame-wrapper", request.userAvatarFrame)}>
                              <Avatar className="relative z-[1] h-10 w-10">
                                 <AvatarImage src={request.photoURL || undefined} />
-                                <AvatarFallback>{request.profileEmoji || request.username.charAt(0)}</AvatarFallback>
+                                <AvatarFallback>{request.username?.charAt(0)}</AvatarFallback>
                             </Avatar>
                         </div>
                        <div>
