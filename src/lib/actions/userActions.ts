@@ -139,19 +139,14 @@ export async function updateUserProfile(updates: {
     const updatesForDb: { [key: string]: any } = { ...otherUpdates };
     
     // Convert age to number or remove if empty
-    if (updates.age === '' || updates.age === undefined) {
+    if (updates.age === '' || updates.age === undefined || updates.age === null) {
         updatesForDb.age = deleteField();
     } else {
         updatesForDb.age = Number(updates.age);
     }
     
-    // Generate new photoURL from emoji if changed
-    if (updates.profileEmoji) {
-        updatesForDb.photoURL = emojiToDataUrl(updates.profileEmoji);
-    }
+    const propagationUpdates: { [key: string]: any } = {};
 
-
-    // Validate username if it's being changed
     if (updates.username) {
         const currentUserDoc = await getDoc(userRef);
         if (currentUserDoc.exists() && currentUserDoc.data().username !== updates.username) {
@@ -159,30 +154,29 @@ export async function updateUserProfile(updates: {
             if (existingUser && existingUser.uid !== userId) {
                 throw new Error("Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor.");
             }
+             propagationUpdates.username = updates.username;
         }
     }
+    
+    if (updates.profileEmoji) {
+        const photoURL = emojiToDataUrl(updates.profileEmoji);
+        updatesForDb.photoURL = photoURL;
+        propagationUpdates.photoURL = photoURL;
+        propagationUpdates.profileEmoji = updates.profileEmoji;
+    }
+    
+    if (updates.selectedAvatarFrame) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
 
-    // Update the main user document
     await updateDoc(userRef, updatesForDb);
 
-    // Prepare updates to propagate to other collections
-    const propagationUpdates: { [key: string]: any } = {};
-    if (updates.username) propagationUpdates.username = updates.username;
-    if (updatesForDb.photoURL) propagationUpdates.photoURL = updatesForDb.photoURL; // Use the newly generated URL
-    if (updates.profileEmoji) propagationUpdates.profileEmoji = updates.profileEmoji;
-    if (updates.selectedAvatarFrame) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
-    
-    // Propagate changes if necessary
     if (Object.keys(propagationUpdates).length > 0) {
         await Promise.all([
             updateUserPosts(userId, propagationUpdates),
-            updateUserComments(userId, propagationUpdates)
+            updateUserComments(userId, propagationUpdates),
         ]);
     }
     
-    revalidatePath(`/profile/${userId}`, 'page');
-    revalidatePath(`/home`, 'layout');
-
+    revalidatePath(`/profile/${userId}`, 'layout');
     return { success: true };
 }
 
@@ -271,6 +265,7 @@ export async function getFollowingForSuggestions(userId: string): Promise<Pick<U
     return deepSerialize(suggestions);
 }
 
+// Block and Report Actions
 export async function blockUser(blockerId: string, targetId: string) {
     if (!blockerId || !targetId) throw new Error("Gerekli kullanıcı bilgileri eksik.");
     if (blockerId === targetId) throw new Error("Kendinizi engelleyemezsiniz.");

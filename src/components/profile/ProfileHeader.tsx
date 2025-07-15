@@ -19,9 +19,11 @@ import { blockUser, unblockUser } from '@/lib/actions/userActions';
 import ReportDialog from '../common/ReportDialog';
 import { Loader2 } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '../ui/tooltip';
+import type { UserProfile } from '@/lib/types';
+import { Timestamp } from 'firebase/firestore';
 
 interface ProfileHeaderProps {
-  profileUser: any;
+  profileUser: UserProfile;
 }
 
 export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
@@ -44,7 +46,7 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
   const areMutuals = currentUserData?.following?.includes(profileUser.uid) && profileUser.following?.includes(currentUserAuth?.uid);
   const amIBlockedByThisUser = profileUser.blockedUsers?.includes(currentUserAuth?.uid);
   const haveIBlockedThisUser = currentUserData?.blockedUsers?.includes(profileUser.uid);
-  const isPremium = isClient && profileUser.premiumUntil && new Date(profileUser.premiumUntil) > new Date();
+  const isPremium = isClient && profileUser.premiumUntil && (profileUser.premiumUntil as Timestamp).toDate() > new Date();
 
   const handleStatClick = (type: 'followers' | 'following') => {
     setDialogType(type);

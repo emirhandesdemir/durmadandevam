@@ -135,36 +135,7 @@ export default function ProfilePageClient() {
 
         setIsSaving(true);
         try {
-            const updates: { [key: string]: any } = {};
-            if (username !== userData?.username) updates.username = username;
-            if (bio !== userData?.bio) updates.bio = bio;
-            if ((Number(age) || undefined) !== (userData?.age || undefined)) updates.age = Number(age) || null;
-            if (city !== userData?.city) updates.city = city;
-            if (country !== userData?.country) updates.country = country;
-            if (gender !== userData?.gender) updates.gender = gender;
-            if (privateProfile !== userData?.privateProfile) updates.privateProfile = privateProfile;
-            if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) updates.acceptsFollowRequests = acceptsFollowRequests;
-            if (showOnlineStatus !== (userData?.showOnlineStatus ?? true)) updates.showOnlineStatus = showOnlineStatus;
-            if (profileEmoji !== (userData?.profileEmoji || '🙂')) updates.profileEmoji = profileEmoji;
-            if (selectedBubble !== (userData?.selectedBubble || '')) updates.selectedBubble = selectedBubble;
-            if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || '')) updates.selectedAvatarFrame = selectedAvatarFrame;
-            if (JSON.stringify(interests.sort()) !== JSON.stringify((userData?.interests || []).sort())) updates.interests = interests;
-            
-            // Only call server action if there are changes
-            if (Object.keys(updates).length > 0) {
-                 await updateUserProfile({ userId: user.uid, ...updates });
-            }
-            
-            // Authentication profile updates must happen on the client
-            const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
-            if (updates.username) authProfileUpdates.displayName = updates.username;
-            // Only generate new data URL if emoji has changed
-            if (updates.profileEmoji) {
-                authProfileUpdates.photoURL = emojiToDataUrl(updates.profileEmoji);
-            }
-            if(Object.keys(authProfileUpdates).length > 0) {
-                await updateProfile(auth.currentUser, authProfileUpdates);
-            }
+            await updateUserProfile({ userId: user.uid, username, bio, age, city, country, gender, privateProfile, acceptsFollowRequests, showOnlineStatus, profileEmoji, selectedBubble, selectedAvatarFrame, interests });
 
             toast({
                 title: "Başarılı!",
