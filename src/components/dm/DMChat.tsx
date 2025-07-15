@@ -57,7 +57,7 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
   }, [messages]);
   
   const haveIBlocked = userData?.blockedUsers?.includes(partner.uid);
-  const amIBlockedByPartner = partner.blockedUsers?.includes(user?.uid);
+  const amIBlockedByPartner = partner.blockedUsers?.includes(user?.uid || '');
   
   const handleUnblock = async () => {
     if (!userData) return;
@@ -82,7 +82,7 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
   
   if (!user || !userData) return null;
 
-  const isPartnerPremium = partner.premiumUntil && (partner.premiumUntil as Timestamp).toDate() > new Date();
+  const isPartnerPremium = partner.premiumUntil && new Date(partner.premiumUntil as any) > new Date();
 
   return (
     <div className="flex flex-col h-full bg-background pb-16 md:pb-0">
@@ -112,7 +112,7 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
                     {partner.isOnline 
                         ? <span className="text-green-500 font-semibold">Çevrimiçi</span>
                         : partner.lastSeen 
-                            ? `Son görülme: ${formatDistanceToNow((partner.lastSeen as Timestamp).toDate(), { addSuffix: true, locale: tr })}`
+                            ? `Son görülme: ${formatDistanceToNow(new Date(partner.lastSeen as any), { addSuffix: true, locale: tr })}`
                             : 'Çevrimdışı'
                     }
                 </p>

@@ -3,15 +3,11 @@
 
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/Header";
-import { useVoiceChat, VoiceChatProvider } from "@/contexts/VoiceChatContext";
-import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from 'react';
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import ActiveCallBar from "@/components/voice/ActiveCallBar";
 import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
 import { useAuth } from "@/contexts/AuthContext";
 import AnimatedLogoLoader from "@/components/common/AnimatedLogoLoader";
@@ -116,20 +112,16 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
   }, [user, loading]);
 
   if (loading || !user) {
-    return <AnimatedLogoLoader fullscreen />;
+    // AuthProvider now shows the loader, so we can just return null here
+    // to avoid layout shifts while waiting for auth state.
+    return null;
   }
 
   const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/') || pathname.startsWith('/matchmaking/') || pathname.startsWith('/surf');
   const isHomePage = pathname === '/home';
   
-  const pageVariants = {
-    initial: { opacity: 0, y: 10 },
-    animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeInOut' } },
-    exit: { opacity: 0, y: -10, transition: { duration: 0.2, ease: 'easeOut' } },
-  };
-
   return (
-    <VoiceChatProvider>
+    <>
       <PremiumWelcomeManager />
       <div className="relative flex h-screen w-full flex-col bg-background overflow-hidden">
         <PwaInstallBar />
@@ -147,29 +139,20 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
                 </header>
             )}
             
-             <AnimatePresence mode="wait">
-                <motion.div
-                    key={pathname}
-                    variants={pageVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    className={cn(
-                        "flex-1 flex flex-col",
-                        isFullPageLayout ? "h-full" : "",
-                        !isHomePage && !isFullPageLayout && "p-4"
-                    )}
-                >
-                    {children}
-                </motion.div>
-            </AnimatePresence>
+             <div
+                className={cn(
+                    "flex-1 flex flex-col",
+                    isFullPageLayout ? "h-full" : "",
+                    !isHomePage && !isFullPageLayout && "p-4"
+                )}
+            >
+                {children}
+            </div>
         </main>
         
         <BottomNav />
-        <VoiceAudioPlayer />
-        <ActiveCallBar />
       </div>
-    </VoiceChatProvider>
+    </>
   );
 }
 

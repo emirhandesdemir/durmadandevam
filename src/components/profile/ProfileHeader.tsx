@@ -44,9 +44,11 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
 
   const isOwnProfile = currentUserAuth?.uid === profileUser.uid;
   const areMutuals = currentUserData?.following?.includes(profileUser.uid) && profileUser.following?.includes(currentUserAuth?.uid);
-  const amIBlockedByThisUser = profileUser.blockedUsers?.includes(currentUserAuth?.uid);
+  const amIBlockedByThisUser = profileUser.blockedUsers?.includes(currentUserAuth?.uid || '');
   const haveIBlockedThisUser = currentUserData?.blockedUsers?.includes(profileUser.uid);
-  const isPremium = isClient && profileUser.premiumUntil && (profileUser.premiumUntil as Timestamp).toDate() > new Date();
+  // FIX: Convert the serialized date string back to a Date object for comparison.
+  const isPremium = isClient && profileUser.premiumUntil && new Date(profileUser.premiumUntil as any) > new Date();
+
 
   const handleStatClick = (type: 'followers' | 'following') => {
     setDialogType(type);
@@ -93,7 +95,7 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
     <>
       <div className="flex flex-col items-center text-center p-4">
         {/* Avatar */}
-         <div>
+         <div className={cn("avatar-frame-wrapper", profileUser.selectedAvatarFrame)}>
             <Avatar className="relative z-[1] h-24 w-24 md:h-28 md:w-28 border-4 border-background shadow-lg">
                 <AvatarImage src={profileUser.photoURL || undefined} />
                 <AvatarFallback className="text-5xl">{profileUser.profileEmoji || profileUser.username?.charAt(0).toUpperCase()}</AvatarFallback>

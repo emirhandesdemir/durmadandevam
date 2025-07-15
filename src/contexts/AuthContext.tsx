@@ -37,7 +37,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [featureFlags, setFeatureFlags] = useState<FeatureFlags | null>(null);
   const [themeSettings, setThemeSettings] = useState<ThemeSettings | null>(null);
   const [totalUnreadDms, setTotalUnreadDms] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [firestoreLoading, setFirestoreLoading] = useState(true);
+  
   const { toast } = useToast();
 
   const handleLogout = useCallback(async () => {
@@ -66,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (!currentUser) {
-        setLoading(false);
+        setAuthLoading(false);
       }
     });
 
@@ -107,11 +109,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     triggerProfileCompletionNotification(user.uid);
                 }
             } else { setUserData(null); }
-            setLoading(false);
+            setFirestoreLoading(false);
         }, (error) => {
             console.error("Firestore user listener error:", error);
             setUserData(null);
-            setLoading(false);
+            setFirestoreLoading(false);
         });
 
         const dmsQuery = query(collection(db, 'directMessagesMetadata'), where('participantUids', 'array-contains', user.uid));
@@ -135,16 +137,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       setUserData(null);
       setTotalUnreadDms(0);
+      setFirestoreLoading(false);
     }
   }, [user, handleLogout, toast]);
 
-  if (loading) {
-      return <AnimatedLogoLoader fullscreen />;
-  }
+  const loading = authLoading || firestoreLoading;
 
   const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms };
   
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+      <AuthContext.Provider value={value}>
+        {loading ? <AnimatedLogoLoader fullscreen /> : children}
+      </AuthContext.Provider>
+  );
 }
 
 export const useAuth = () => {

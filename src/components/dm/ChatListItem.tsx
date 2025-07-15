@@ -34,10 +34,10 @@ export default function ChatListItem({ chat, currentUserId, isSelected, isSelect
   const unreadCount = chat.unreadCounts?.[currentUserId] || 0;
   const isUnread = unreadCount > 0;
   const isPinned = chat.pinnedBy?.includes(currentUserId);
-  const isPartnerPremium = partnerInfo.premiumUntil && (partnerInfo.premiumUntil as Timestamp).toDate() > new Date();
+  const isPartnerPremium = partnerInfo.premiumUntil && new Date(partnerInfo.premiumUntil as any) > new Date();
 
   const timeAgo = lastMessage
-    ? formatDistanceToNow(lastMessage.timestamp.toDate(), { addSuffix: true, locale: tr })
+    ? formatDistanceToNow(new Date(lastMessage.timestamp as any), { addSuffix: true, locale: tr })
     : '';
 
   const handleClick = () => {
