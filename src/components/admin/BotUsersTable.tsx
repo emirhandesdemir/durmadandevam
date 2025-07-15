@@ -72,7 +72,7 @@ export default function BotUsersTable({ bots, loading, onBotDeleted }: BotUsersT
   }
 
   if (bots.length === 0) {
-    return <p className="text-sm text-center text-muted-foreground p-4">Henüz hiç bot oluşturulmamış.</p>;
+    return <p className="text-sm text-center text-muted-foreground p-4">Bu özellik sistemden kaldırılmıştır.</p>;
   }
 
   return (

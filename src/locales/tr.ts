@@ -7,10 +7,10 @@ export const tr = {
     login: "Giriş Yap",
     signup: "Kayıt Ol",
     install_app: "Uygulamayı Yükle",
+    
+    // Navigasyon
     logout: "Çıkış Yap",
     save_changes: "Değişiklikleri Kaydet",
-
-    // Navigasyon
     home: "Anasayfa",
     rooms: "Odalar",
     create: "Oluştur",

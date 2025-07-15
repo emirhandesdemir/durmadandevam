@@ -3,12 +3,14 @@ import { Timestamp } from "firebase/firestore";
 
 export interface MatchmakingChat {
     id: string;
-    participants: { [uid: string]: { username: string, photoURL: string | null } };
+    participants: { [uid: string]: { username: string, photoURL: string | null, age?: number } };
     participantUids: string[];
-    status: 'active' | 'revealing' | 'ended' | 'abandoned';
+    status: 'active' | 'ended' | 'abandoned';
     createdAt: Timestamp;
     reactions?: { [uid: string]: 'like' | 'pass' };
+    permanentChatId?: string;
 }
+
 
 // Zihin Savaşları Oyunu Veri Yapıları
 // ===================================
@@ -49,9 +51,9 @@ export interface MindWarSession {
   spectators: { uid: string, username: string }[]; // İzleyiciler
   gameHistory: MindWarTurn[]; // Geçmiş tüm turların kaydı
   currentTurn: MindWarTurn; // Mevcut aktif tur
-  winner?: string | null; // Kazanan oyuncu veya takım
   endSummary?: { // Oyun sonu özeti
     narrative: string;
+    winner: string | null;
     scores: {
       [uid: string]: {
         intelligence: number;
@@ -60,7 +62,6 @@ export interface MindWarSession {
         reward: number;
       };
     };
-    winner?: string | null;
   };
   createdAt: Timestamp; // Başlangıç zamanı
 }
@@ -118,7 +119,8 @@ export interface UserProfile {
     uid: string;
     username: string;
     email: string;
-    photoURL?: string | null;
+    photoURL: string | null;
+    profileEmoji: string | null;
     bio?: string;
     postCount?: number;
     role: 'admin' | 'user';
@@ -161,7 +163,8 @@ export interface ProfileViewer {
     uid: string;
     viewedAt: Timestamp;
     username?: string;
-    photoURL?: string | null;
+    photoURL: string | null;
+    profileEmoji: string | null;
     selectedAvatarFrame?: string;
 }
 
@@ -183,6 +186,7 @@ export interface FollowRequest {
     uid: string;
     username:string;
     photoURL: string | null;
+    profileEmoji: string | null;
     userAvatarFrame?: string;
     requestedAt: Timestamp;
 }
@@ -192,7 +196,8 @@ export interface Notification {
     recipientId: string;
     senderId: string;
     senderUsername: string;
-    senderAvatar: string | null;
+    photoURL: string | null;
+    profileEmoji?: string | null;
     senderAvatarFrame?: string;
     type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile';
     postId?: string | null;
@@ -213,7 +218,8 @@ export interface Post {
     id: string;
     uid: string;
     username: string;
-    userPhotoURL?: string | null;
+    photoURL: string | null;
+    profileEmoji: string | null;
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
@@ -223,7 +229,7 @@ export interface Post {
     backgroundStyle?: string;
     editedWithAI?: boolean;
     createdAt: Timestamp | { seconds: number; nanoseconds: number };
-    likes: string[]; // Beğenen kullanıcıların UID'lerini tutan dizi
+    likes: string[]; // Array of user UIDs who liked the post
     likeCount: number;
     commentCount: number;
     saveCount?: number;
@@ -235,7 +241,8 @@ export interface Post {
         postId: string;
         uid: string;
         username: string;
-        userAvatar?: string | null;
+        photoURL: string | null;
+        profileEmoji: string | null;
         userAvatarFrame?: string;
         text: string;
         imageUrl?: string;
@@ -248,7 +255,8 @@ export interface Comment {
     id: string;
     uid: string;
     username: string;
-    userAvatar?: string;
+    photoURL: string | null;
+    profileEmoji: string | null;
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     text: string;
@@ -262,8 +270,8 @@ export interface Comment {
 export interface Giveaway {
     status: 'idle' | 'active' | 'finished';
     prize: string;
-    participants: { uid: string, username: string, photoURL: string | null }[];
-    winner?: { uid: string, username: string, photoURL: string | null };
+    participants: { uid: string, username: string, photoURL: string | null, profileEmoji: string | null }[];
+    winner?: { uid: string, username: string, photoURL: string | null, profileEmoji: string | null };
     startedAt?: Timestamp;
     endedAt?: Timestamp;
 }
@@ -276,15 +284,16 @@ export interface Room {
     createdBy: {
         uid: string;
         username: string;
-        photoURL?: string | null;
-        role?: 'admin' | 'user';
+        photoURL: string | null;
+        profileEmoji: string | null;
+        role: string;
         selectedAvatarFrame?: string;
     };
     moderators: string[]; // List of moderator UIDs
     createdAt: Timestamp;
     expiresAt?: Timestamp | null;
     portalExpiresAt?: Timestamp; // For public announcements
-    participants: { uid: string, username: string, photoURL?: string | null }[];
+    participants: { uid: string, username: string, photoURL?: string | null, profileEmoji?: string | null }[];
     maxParticipants: number;
     voiceParticipantsCount?: number;
     rules: string | null;
@@ -316,6 +325,7 @@ export interface VoiceParticipant {
     uid: string;
     username: string;
     photoURL?: string | null;
+    profileEmoji: string | null;
     role?: 'admin' | 'user';
     isSpeaker: boolean;
     isMuted: boolean;
@@ -401,6 +411,7 @@ export interface DirectMessageMetadata {
         [uid: string]: {
             username: string;
             photoURL: string | null;
+            profileEmoji: string | null;
             selectedAvatarFrame?: string;
             premiumUntil?: Timestamp;
         }
@@ -423,8 +434,9 @@ export interface Message {
   uid: string;
   username: string;
   photoURL?: string | null;
+  profileEmoji: string | null;
   text?: string;
-  imageUrl?: string; // Changed from imageUrls
+  imageUrl?: string;
   videoUrl?: string;
   type?: 'system' | 'game' | 'portal' | 'user' | 'gameInvite';
   createdAt: Timestamp;
@@ -492,7 +504,7 @@ export interface ActiveGameSession {
     gameType: 'dice' | 'rps' | 'bottle';
     gameName: string;
     hostId: string;
-    players: { uid: string, username: string, photoURL: string | null }[];
+    players: { uid: string, username: string, photoURL: string | null, profileEmoji: string | null }[];
     moves: { [key: string]: string | number };
     status: 'pending' | 'active' | 'finished';
     turn?: string; // For turn-based games

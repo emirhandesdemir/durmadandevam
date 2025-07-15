@@ -102,8 +102,7 @@ Google'ın, web sitenizin gerçekten size ait olduğundan emin olması gerekir. 
     ```
 
 2.  Bu içeriği kopyalayın.
-3.  Projenizdeki `public` klasörünün içinde `.well-known` adında yeni bir klasör oluşturun.
-4.  `.well-known` klasörünün içine de `assetlinks.json` adında yeni bir dosya oluşturun ve kopyaladığınız içeriği bu dosyaya yapıştırın.
-5.  **Çok Önemli:** Bu değişikliği yaptıktan sonra projenizi tekrar yayınlamanız (deploy etmeniz) gerekir. Böylece `https://hiwewalkbeta.netlify.app/.well-known/assetlinks.json` adresi erişilebilir olur.
+3.  Projenizdeki `public/.well-known` klasörünün içindeki `assetlinks.json` dosyasını açın ve kopyaladığınız içeriği bu dosyaya yapıştırın.
+4.  **Çok Önemli:** Bu değişikliği yaptıktan sonra projenizi tekrar yayınlamanız (deploy etmeniz) gerekir. Böylece `https://hiwewalkbeta.netlify.app/.well-known/assetlinks.json` adresi erişilebilir olur.
 
 Bu son adımdan sonra APK dosyanız, URL çubuğu olmadan tam ekran bir şekilde çalışacaktır. Artık bu APK dosyasını test edebilir veya Google Play Console'a yükleyerek yayınlayabilirsiniz!

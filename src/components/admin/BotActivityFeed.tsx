@@ -2,7 +2,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getBotActivityLogs } from '@/lib/actions/botActions';
 import type { BotActivityLog } from '@/lib/types';
 import { Loader2, MessageCircle, Heart, FileUp, UserPlus, Send } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -44,12 +43,8 @@ export default function BotActivityFeed() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        getBotActivityLogs()
-            .then((data) => {
-                setLogs(data);
-                setLoading(false);
-            })
-            .catch(() => setLoading(false));
+        // This function is removed, so we'll just show an empty state.
+        setLoading(false);
     }, []);
 
     const getActionIcon = (type: BotActivityLog['actionType']) => {
@@ -93,7 +88,7 @@ export default function BotActivityFeed() {
     }
     
     if(logs.length === 0) {
-        return <p className="text-sm text-center text-muted-foreground p-4">Henüz bot aktivitesi yok.</p>
+        return <p className="text-sm text-center text-muted-foreground p-4">Bu özellik sistemden kaldırılmıştır.</p>
     }
 
     return (

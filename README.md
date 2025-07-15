@@ -1,4 +1,3 @@
-git push
 
 u# Firebase Studio
 
