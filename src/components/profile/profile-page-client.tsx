@@ -8,11 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X } from "lucide-react";
+import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera } from "lucide-react";
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../common/LanguageSwitcher";
@@ -25,9 +25,12 @@ import { auth, storage } from "@/lib/firebase";
 import { Textarea } from "../ui/textarea";
 import { AnimatePresence, motion } from "framer-motion";
 import { generateAvatar } from "@/ai/flows/generateAvatarFlow";
-import { applyImageFilter } from "@/ai/flows/imageActions";
+import { applyImageFilter } from "@/lib/actions/imageActions";
+import { convertPhotoToAvatar } from "@/lib/actions/avatarActions";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
+import ImageCropperDialog from "../common/ImageCropperDialog";
+
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -72,12 +75,12 @@ export default function ProfilePageClient() {
     const [inviteLink, setInviteLink] = useState("");
     const [isBlockedUsersOpen, setIsBlockedUsersOpen] = useState(false);
 
-    // AI Avatar States
+    // Avatar States
     const [avatar, setAvatar] = useState<string | null>(null);
     const [originalAvatar, setOriginalAvatar] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isStyling, setIsStyling] = useState(false);
-    const [avatarPrompt, setAvatarPrompt] = useState("");
+    const [imageToCrop, setImageToCrop] = useState<string | null>(null);
     const [stylePrompt, setStylePrompt] = useState("");
     const [showAvatarAnimation, setShowAvatarAnimation] = useState(false);
 
@@ -132,57 +135,44 @@ export default function ProfilePageClient() {
         selectedAvatarFrame, interests, userData
     ]);
     
-    const handleSaveChanges = async () => {
-        if (!user || !hasChanges || !auth.currentUser) return;
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleAvatarClick = () => { fileInputRef.current?.click(); };
     
-        setIsSaving(true);
-        try {
-            let finalPhotoURL = userData?.photoURL || null;
-            if (avatar && avatar !== userData?.photoURL) {
-                const response = await fetch(avatar);
-                const blob = await response.blob();
-                const avatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.jpg`);
-                await uploadString(avatarRef, avatar, 'data_url');
-                finalPhotoURL = await getDownloadURL(avatarRef);
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            if (file.size > 10 * 1024 * 1024) { 
+                toast({ variant: "destructive", title: "Dosya Çok Büyük", description: "Resim boyutu 10MB'dan büyük olamaz." });
+                return;
             }
-            
-            const updatesForDb = { userId: user.uid, photoURL: finalPhotoURL, username, bio, age, city, country, gender, privateProfile, acceptsFollowRequests, showOnlineStatus, selectedBubble, selectedAvatarFrame, interests };
-            await updateUserProfile(updatesForDb);
-            
-            if (finalPhotoURL !== auth.currentUser.photoURL || username !== auth.currentUser.displayName) {
-                await updateProfile(auth.currentUser, { displayName: username, photoURL: finalPhotoURL });
-            }
-
-            toast({ title: "Başarılı!", description: "Profiliniz başarıyla güncellendi." });
-            setOriginalAvatar(finalPhotoURL);
-
-        } catch (error: any) {
-            toast({ title: "Hata", description: error.message || "Profil güncellenirken bir hata oluştu.", variant: "destructive" });
-        } finally {
-            setIsSaving(false);
+            const reader = new FileReader();
+            reader.onload = () => setImageToCrop(reader.result as string);
+            reader.readAsDataURL(e.target.files[0]);
         }
     };
 
-    const handleGenerateAvatar = async () => {
-        if (!avatarPrompt) return;
+    const handleCropComplete = async (croppedDataUrl: string) => {
+        setImageToCrop(null);
         setIsGenerating(true);
+        toast({ description: "Fotoğrafınız avatara dönüştürülüyor..." });
         try {
-            const result = await generateAvatar({ prompt: avatarPrompt });
-            if (result.avatarDataUri) {
-                setAvatar(result.avatarDataUri);
+            const result = await convertPhotoToAvatar({ photoDataUri: croppedDataUrl });
+            if (result.success && result.data?.avatarDataUri) {
+                setAvatar(result.data.avatarDataUri);
+                setOriginalAvatar(result.data.avatarDataUri); // Set the new base avatar
             } else {
-                throw new Error("Avatar oluşturulamadı.");
+                throw new Error(result.error || "Avatar oluşturulamadı.");
             }
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'AI Hatası', description: error.message });
+        } catch(e: any) {
+            toast({ variant: 'destructive', title: "AI Hatası", description: e.message });
         } finally {
             setIsGenerating(false);
-            setAvatarPrompt("");
         }
     };
-    
+
     const handleStyleAvatar = async () => {
-        if (!avatar || !stylePrompt) return;
+        if (!avatar || !stylePrompt.trim()) return;
         setIsStyling(true);
         try {
             const result = await applyImageFilter({ photoDataUri: avatar, style: stylePrompt });
@@ -198,12 +188,35 @@ export default function ProfilePageClient() {
             setStylePrompt("");
         }
     };
+    
+    const handleSaveChanges = async () => {
+        if (!user || !hasChanges || !auth.currentUser) return;
+    
+        setIsSaving(true);
+        try {
+            let finalPhotoURL = userData?.photoURL || null;
+            if (avatar && avatar !== userData?.photoURL) {
+                const avatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.jpg`);
+                await uploadString(avatarRef, avatar, 'data_url');
+                finalPhotoURL = await getDownloadURL(avatarRef);
+            }
+            
+            const updatesForDb = { userId: user.uid, photoURL: finalPhotoURL, username, bio, age, city, country, gender, privateProfile, acceptsFollowRequests, showOnlineStatus, selectedBubble, selectedAvatarFrame, interests };
+            await updateUserProfile(updatesForDb);
+            
+            if (finalPhotoURL !== auth.currentUser.photoURL || username !== auth.currentUser.displayName) {
+                await updateProfile(auth.currentUser, { displayName: username, photoURL: finalPhotoURL });
+            }
 
-    const handleAvatarClick = () => {
-        setShowAvatarAnimation(true);
-        setTimeout(() => setShowAvatarAnimation(false), 300);
-    }
-
+            toast({ title: "Başarılı!", description: "Profiliniz başarıyla güncellendi." });
+            setOriginalAvatar(finalPhotoURL);
+        } catch (error: any) {
+            toast({ title: "Hata", description: error.message || "Profil güncellenirken bir hata oluştu.", variant: "destructive" });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
     const handleAddInterest = () => {
         const newInterest = currentInterest.trim();
         if (newInterest && !interests.includes(newInterest) && interests.length < 10) {
@@ -216,14 +229,14 @@ export default function ProfilePageClient() {
         setInterests(interests.filter(i => i !== interestToRemove));
     };
     
-    if (loading || !user || !userData) {
-        return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-    }
-
     const copyToClipboard = () => {
         navigator.clipboard.writeText(inviteLink);
         toast({ description: "Davet linki kopyalandı!" });
     };
+
+    if (loading || !user || !userData) {
+        return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    }
 
     return (
         <>
@@ -241,29 +254,24 @@ export default function ProfilePageClient() {
                                     onClick={handleAvatarClick}
                                     className="relative group rounded-full"
                                 >
-                                    <Avatar className={cn("h-24 w-24 border-2 shadow-sm transition-transform", showAvatarAnimation && "animate-like-pop")}>
+                                    <Avatar className={cn("h-24 w-24 border-2 shadow-sm", isGenerating && "animate-pulse")}>
                                         <AvatarImage src={avatar || undefined} />
                                         <AvatarFallback className="text-4xl">
                                             {username?.charAt(0).toUpperCase()}
                                         </AvatarFallback>
                                     </Avatar>
+                                     <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                        <Camera className="h-8 w-8" />
+                                    </div>
                                 </button>
+                                {isGenerating && <p className="text-xs text-primary">Avatar oluşturuluyor...</p>}
                                 {avatar && originalAvatar && avatar !== originalAvatar && (
                                     <Button size="sm" variant="ghost" onClick={() => setAvatar(originalAvatar)}>Geri Al</Button>
                                 )}
                             </div>
                             <div className="w-full space-y-3">
-                                <div className="space-y-1">
-                                    <Label>Avatar Oluştur (AI)</Label>
-                                    <div className="flex gap-2">
-                                        <Input placeholder="Mavi saçlı, gözlüklü kedi..." value={avatarPrompt} onChange={e => setAvatarPrompt(e.target.value)} disabled={isGenerating || isStyling} />
-                                        <Button onClick={handleGenerateAvatar} disabled={isGenerating || isStyling || !avatarPrompt}>
-                                            {isGenerating ? <Loader2 className="animate-spin" /> : <Sparkles />}
-                                        </Button>
-                                    </div>
-                                </div>
-                                <div className="space-y-1">
-                                     <Label>Stil Ver (AI)</Label>
+                                 <div className="space-y-1">
+                                     <Label>Avatarı Stilize Et (AI)</Label>
                                     <div className="flex gap-2">
                                         <Input placeholder="Gözlük ekle, 8-bit yap..." value={stylePrompt} onChange={e => setStylePrompt(e.target.value)} disabled={isGenerating || isStyling || !avatar} />
                                         <Button onClick={handleStyleAvatar} disabled={isGenerating || isStyling || !stylePrompt || !avatar}>
@@ -545,7 +553,15 @@ export default function ProfilePageClient() {
             </AnimatePresence>
             
             <BlockedUsersDialog isOpen={isBlockedUsersOpen} onOpenChange={setIsBlockedUsersOpen} blockedUserIds={userData.blockedUsers || []}/>
-
+            
+            <ImageCropperDialog 
+              isOpen={!!imageToCrop} 
+              setIsOpen={(isOpen) => !isOpen && setImageToCrop(null)} 
+              imageSrc={imageToCrop} 
+              aspectRatio={1} 
+              onCropComplete={handleCropComplete} 
+              circularCrop={true}
+            />
         </>
     );
 }

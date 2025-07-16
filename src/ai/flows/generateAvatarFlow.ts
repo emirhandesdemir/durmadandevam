@@ -44,7 +44,7 @@ const generateAvatarFlow = ai.defineFlow(
     // Gemini modelini çağırarak resmi oluştur
     const { media } = await ai.generate({
         model: imageGenerationModel,
-        prompt: `Generate a high-quality, cartoon-style avatar based on the following description. The avatar should have a plain, neutral background. Description: ${input.prompt}`,
+        prompt: `Generate a high-quality, Disney-Pixar style cartoon avatar based on the following description. The avatar should be just the character on a plain, neutral background. Description: ${input.prompt}`,
         config: {
             // Hem resim hem metin çıktısı talep etmek, modelin daha iyi çalışmasını sağlar
             responseModalities: ['IMAGE', 'TEXT'],
