@@ -7,6 +7,8 @@ import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, 
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
+import { updateProfile } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 // Helper function to process queries in batches to avoid Firestore limits
 async function processQueryInBatches(query: any, updateData: any) {
@@ -46,7 +48,6 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
     if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
-    if (updates.profileEmoji) propagationUpdates.profileEmoji = updates.profileEmoji;
     if (updates.userAvatarFrame) propagationUpdates.userAvatarFrame = updates.userAvatarFrame;
     
     if (Object.keys(propagationUpdates).length === 0) return;
@@ -59,7 +60,6 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
     const retweetUpdates: { [key: string]: any } = {};
     if (updates.username) retweetUpdates['retweetOf.username'] = updates.username;
     if (updates.photoURL) retweetUpdates['retweetOf.photoURL'] = updates.photoURL;
-    if (updates.profileEmoji) retweetUpdates['retweetOf.profileEmoji'] = updates.profileEmoji;
     if (updates.userAvatarFrame) retweetUpdates['retweetOf.userAvatarFrame'] = updates.userAvatarFrame;
     
     if (Object.keys(retweetUpdates).length > 0) {
@@ -85,7 +85,6 @@ export async function updateUserComments(uid: string, updates: { [key: string]: 
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
     if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
-    if (updates.profileEmoji) propagationUpdates.profileEmoji = updates.profileEmoji;
     if (updates.userAvatarFrame) propagationUpdates.userAvatarFrame = updates.userAvatarFrame;
     
     if (Object.keys(propagationUpdates).length === 0) return;
@@ -127,7 +126,6 @@ export async function updateUserProfile(updates: {
     acceptsFollowRequests?: boolean;
     showOnlineStatus?: boolean;
     photoURL?: string | null;
-    profileEmoji?: string | null;
     selectedBubble?: string;
     selectedAvatarFrame?: string;
     interests?: string[];
@@ -145,8 +143,7 @@ export async function updateUserProfile(updates: {
         updatesForDb.age = Number(updates.age);
     }
     
-    const propagationUpdates: { [key: string]: any } = {};
-
+    // Check for username uniqueness
     if (updates.username) {
         const currentUserDoc = await getDoc(userRef);
         if (currentUserDoc.exists() && currentUserDoc.data().username !== updates.username) {
@@ -154,21 +151,27 @@ export async function updateUserProfile(updates: {
             if (existingUser && existingUser.uid !== userId) {
                 throw new Error("Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor.");
             }
-             propagationUpdates.username = updates.username;
         }
     }
-    
-    if (updates.photoURL) {
-        propagationUpdates.photoURL = updates.photoURL;
-    }
-    
-    if (updates.profileEmoji) {
-        propagationUpdates.profileEmoji = updates.profileEmoji;
-    }
-    
-    if (updates.selectedAvatarFrame) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
 
+    // Update Firestore document
     await updateDoc(userRef, updatesForDb);
+    
+    const user = auth.currentUser;
+    if (user && user.uid === userId) {
+      const authUpdates: { displayName?: string, photoURL?: string } = {};
+      if (updates.username) authUpdates.displayName = updates.username;
+      if (updates.photoURL) authUpdates.photoURL = updates.photoURL;
+
+      if (Object.keys(authUpdates).length > 0) {
+        await updateProfile(user, authUpdates);
+      }
+    }
+
+    const propagationUpdates: { [key: string]: any } = {};
+    if (updates.username) propagationUpdates.username = updates.username;
+    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
+    if (updates.selectedAvatarFrame) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
 
     if (Object.keys(propagationUpdates).length > 0) {
         await Promise.all([
