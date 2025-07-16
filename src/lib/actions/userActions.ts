@@ -129,8 +129,18 @@ export async function updateUserProfile(updates: {
     
     let isNewProfilePic = false;
     if (updates.photoURL !== undefined) {
-        updatesForDb.photoURL = updates.photoURL;
-        authUpdates.photoURL = updates.photoURL ?? undefined;
+        // If the URL is a data URL, upload to storage first.
+        if(updates.photoURL && updates.photoURL.startsWith('data:image/')) {
+            const photoDataUrl = updates.photoURL;
+            const storagePath = `upload/avatars/${userId}/avatar.jpg`;
+            const imageStorageRef = ref(storage, storagePath);
+            await uploadString(imageStorageRef, photoDataUrl, 'data_url');
+            updatesForDb.photoURL = await getDownloadURL(imageStorageRef);
+            authUpdates.photoURL = updatesForDb.photoURL;
+        } else {
+            updatesForDb.photoURL = updates.photoURL;
+            authUpdates.photoURL = updates.photoURL ?? undefined;
+        }
         isNewProfilePic = true;
     }
 
@@ -145,7 +155,7 @@ export async function updateUserProfile(updates: {
     
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (updates.photoURL !== undefined) propagationUpdates.photoURL = updates.photoURL;
+    if (updates.photoURL) propagationUpdates.photoURL = updatesForDb.photoURL;
     if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
     if (updates.profileEmoji) propagationUpdates.profileEmoji = updates.profileEmoji;
     
@@ -155,6 +165,7 @@ export async function updateUserProfile(updates: {
             updateUserComments(userId, propagationUpdates),
         ]).catch(err => {
             console.error("Propagasyon hatası:", err);
+            // Don't throw to the client, but log it.
         });
     }
     

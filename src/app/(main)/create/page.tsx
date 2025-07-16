@@ -30,17 +30,6 @@ export default function CreatePage() {
                         </div>
                     </Card>
                 </Link>
-                
-                 <Link href="/avatar-creator" className="block">
-                    <Card className="p-6 flex items-center gap-4 hover:bg-muted transition-colors cursor-pointer">
-                        <Sparkles className="h-8 w-8 text-primary" />
-                        <div>
-                            <h2 className="font-semibold">Avatar Oluşturucu</h2>
-                            <p className="text-sm text-muted-foreground">Karakterini detaylıca tasarla.</p>
-                        </div>
-                    </Card>
-                </Link>
-
             </div>
         </div>
     )
