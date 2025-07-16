@@ -31,12 +31,12 @@ export default function CreatePage() {
                     </Card>
                 </Link>
                 
-                 <Link href="/avatar-studio" className="block">
+                 <Link href="/avatar-creator" className="block">
                     <Card className="p-6 flex items-center gap-4 hover:bg-muted transition-colors cursor-pointer">
                         <Sparkles className="h-8 w-8 text-primary" />
                         <div>
-                            <h2 className="font-semibold">Avatar Stüdyosu</h2>
-                            <p className="text-sm text-muted-foreground">Yapay zeka ile avatarını tasarla.</p>
+                            <h2 className="font-semibold">Avatar Oluşturucu</h2>
+                            <p className="text-sm text-muted-foreground">Karakterini detaylıca tasarla.</p>
                         </div>
                     </Card>
                 </Link>

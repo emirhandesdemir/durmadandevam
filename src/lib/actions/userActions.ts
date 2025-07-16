@@ -9,6 +9,7 @@ import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/lib/firebase';
 import { updateProfile } from 'firebase/auth';
+import { createProfileUpdatePost } from './postActions';
 
 // Helper function to process queries in batches to avoid Firestore limits
 async function processQueryInBatches(queryToProcess: any, updateData: any) {
@@ -96,6 +97,7 @@ export async function updateUserProfile(updates: {
     acceptsFollowRequests?: boolean;
     showOnlineStatus?: boolean;
     photoURL?: string | null;
+    profileEmoji?: string | null;
     selectedBubble?: string;
     selectedAvatarFrame?: string;
     interests?: string[];
@@ -106,14 +108,12 @@ export async function updateUserProfile(updates: {
     const userRef = doc(db, 'users', userId);
     const updatesForDb: { [key: string]: any } = { ...otherUpdates };
     
-    // Convert age to number or remove if empty
     if (updates.age === '' || updates.age === undefined || updates.age === null) {
         updatesForDb.age = deleteField();
     } else {
         updatesForDb.age = Number(updates.age);
     }
     
-    // Check for username uniqueness
     if (updates.username) {
         const currentUserDoc = await getDoc(userRef);
         if (currentUserDoc.exists() && currentUserDoc.data().username !== updates.username) {
@@ -126,17 +126,18 @@ export async function updateUserProfile(updates: {
 
     const authUpdates: { displayName?: string, photoURL?: string } = {};
     if (updates.username) authUpdates.displayName = updates.username;
-    if (updates.photoURL) {
-        updatesForDb.photoURL = updates.photoURL; // Add to DB updates
-        authUpdates.photoURL = updates.photoURL;
+    
+    let isNewProfilePic = false;
+    if (updates.photoURL !== undefined) {
+        updatesForDb.photoURL = updates.photoURL;
+        authUpdates.photoURL = updates.photoURL ?? undefined;
+        isNewProfilePic = true;
     }
 
-    // Update Firestore document first
     if (Object.keys(updatesForDb).length > 0) {
         await updateDoc(userRef, updatesForDb);
     }
     
-    // Then update Firebase Auth profile
     const user = auth.currentUser;
     if (user && user.uid === userId && Object.keys(authUpdates).length > 0) {
       await updateProfile(user, authUpdates);
@@ -144,19 +145,34 @@ export async function updateUserProfile(updates: {
     
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
+    if (updates.photoURL !== undefined) propagationUpdates.photoURL = updates.photoURL;
     if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
-
+    if (updates.profileEmoji) propagationUpdates.profileEmoji = updates.profileEmoji;
+    
     if (Object.keys(propagationUpdates).length > 0) {
         await Promise.all([
             updateUserPosts(userId, propagationUpdates),
             updateUserComments(userId, propagationUpdates),
         ]).catch(err => {
             console.error("Propagasyon hatası:", err);
-            // Don't throw, as the main update was successful
         });
     }
     
+    if (isNewProfilePic) {
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) {
+            const userData = userDoc.data();
+            await createProfileUpdatePost({
+                userId: userId,
+                username: userData.username,
+                profileEmoji: "📷",
+                text: `${userData.username} profil fotoğrafını güncelledi!`,
+                userAvatarFrame: userData.selectedAvatarFrame || '',
+                userRole: userData.role,
+            });
+        }
+    }
+
     revalidatePath(`/profile/${userId}`, 'layout');
     return { success: true };
 }

@@ -194,7 +194,7 @@ export default function ProfilePage() {
                                     <AvatarFallback className="text-4xl bg-primary/20">{userData.username?.charAt(0).toUpperCase()}</AvatarFallback>
                                 </Avatar>
                             </div>
-                            <Button variant="outline" onClick={() => router.push('/avatar-studio')}>
+                            <Button variant="outline" onClick={() => router.push('/avatar-creator')}>
                                 <Sparkles className="mr-2 h-4 w-4" />
                                 Avatarı Düzenle
                             </Button>
