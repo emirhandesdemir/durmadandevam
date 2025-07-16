@@ -1,4 +1,3 @@
-
 // src/lib/actions/postActions.ts
 'use server';
 
@@ -16,7 +15,7 @@ import {
     addDoc,
     collection
 } from "firebase/firestore";
-import { ref, deleteObject } from "firebase/storage";
+import { ref, deleteObject, uploadString, getDownloadURL } from "firebase/storage";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
 import { findUserByUsername } from "./userActions";
@@ -62,7 +61,6 @@ export async function createProfileUpdatePost(data: {
     text: string;
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
-    userGender?: 'male' | 'female';
 }) {
     // Generate an image from the emoji
     const emojiImageUrl = await emojiToDataUrl(data.profileEmoji);
@@ -74,7 +72,6 @@ export async function createProfileUpdatePost(data: {
         profileEmoji: data.profileEmoji,
         userAvatarFrame: data.userAvatarFrame,
         userRole: data.userRole,
-        userGender: data.userGender,
         text: data.text,
         imageUrl: emojiImageUrl, // Use the generated emoji image
         language: 'tr', // Default or detect user language
@@ -89,13 +86,12 @@ export async function createPost(postData: {
     username: string;
     photoURL: string | null;
     profileEmoji: string | null;
-    userAvatarFrame: string;
+    userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
     text: string;
     imageUrl?: string;
     videoUrl?: string;
-    backgroundStyle?: string;
     editedWithAI?: boolean;
     language: string;
     commentsDisabled?: boolean;
@@ -121,10 +117,8 @@ export async function createPost(postData: {
             userRole: postData.userRole,
             userGender: postData.userGender,
             text: postData.text,
-            // HATA DÜZELTMESİ: 'undefined' yerine 'null' kullan
             imageUrl: postData.imageUrl || null, 
             videoUrl: postData.videoUrl || null,
-            backgroundStyle: postData.backgroundStyle,
             editedWithAI: postData.editedWithAI,
             language: postData.language,
             commentsDisabled: postData.commentsDisabled,

@@ -3,7 +3,7 @@ import { Timestamp } from "firebase/firestore";
 
 export interface MatchmakingChat {
     id: string;
-    participants: { [uid: string]: { username: string, photoURL: string | null, age?: number, profileEmoji: string | null } };
+    participants: { [uid: string]: { username: string, photoURL: string | null, age?: number } };
     participantUids: string[];
     status: 'active' | 'ended' | 'abandoned';
     createdAt: Timestamp;
@@ -20,7 +20,6 @@ export interface MindWarPlayer {
   uid: string; // Oyuncunun kimliği
   username: string; // Oyuncu adı
   photoURL: string | null; // Profil resmi
-  profileEmoji: string | null; // Profil emojisi
   role: string; // Oyuna özel rolü (Hacker, Lider, Casus vb.)
   status: 'alive' | 'eliminated'; // Oyundaki durumu
   objective: string; // Oyuncunun kişisel görevi
@@ -225,8 +224,8 @@ export interface Post {
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
     text: string;
-    imageUrl?: string;
-    videoUrl?: string;
+    imageUrl?: string | null; // Can be null
+    videoUrl?: string | null; // Can be null
     backgroundStyle?: string;
     editedWithAI?: boolean;
     createdAt: Timestamp | { seconds: number; nanoseconds: number };
@@ -246,8 +245,8 @@ export interface Post {
         profileEmoji: string | null;
         userAvatarFrame?: string;
         text: string;
-        imageUrl?: string;
-        videoUrl?: string;
+        imageUrl?: string | null;
+        videoUrl?: string | null;
         createdAt: Timestamp | { seconds: number; nanoseconds: number };
     }
 }
@@ -271,8 +270,8 @@ export interface Comment {
 export interface Giveaway {
     status: 'idle' | 'active' | 'finished';
     prize: string;
-    participants: { uid: string, username: string, photoURL: string | null, profileEmoji: string | null }[];
-    winner?: { uid: string, username: string, photoURL: string | null, profileEmoji: string | null };
+    participants: { uid: string, username: string, photoURL: string | null }[];
+    winner?: { uid: string, username: string, photoURL: string | null };
     startedAt?: Timestamp;
     endedAt?: Timestamp;
 }
@@ -286,7 +285,6 @@ export interface Room {
         uid: string;
         username: string;
         photoURL: string | null;
-        profileEmoji: string | null;
         role: string;
         selectedAvatarFrame?: string;
     };
@@ -294,7 +292,7 @@ export interface Room {
     createdAt: Timestamp;
     expiresAt?: Timestamp | null;
     portalExpiresAt?: Timestamp; // For public announcements
-    participants: { uid: string, username: string, photoURL?: string | null, profileEmoji?: string | null }[];
+    participants: { uid: string, username: string, photoURL?: string | null }[];
     maxParticipants: number;
     voiceParticipantsCount?: number;
     rules: string | null;
