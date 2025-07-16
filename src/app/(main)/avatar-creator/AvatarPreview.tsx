@@ -3,7 +3,6 @@
 
 import { AvatarState } from './page';
 import { useEffect, useRef } from 'react';
-import { renderToString } from 'react-dom/server';
 
 interface AvatarPreviewProps {
   avatarState: AvatarState;
@@ -13,6 +12,7 @@ interface AvatarPreviewProps {
 // This is a simplified SVG renderer. A real implementation would be more complex.
 export default function AvatarPreview({ avatarState, setSvgString }: AvatarPreviewProps) {
   const { skinColor, hair, eyes, eyebrows, nose, mouth, clothes } = avatarState;
+  const svgRef = useRef<HTMLDivElement>(null);
 
   // Basic shapes to represent features. In a real app, these would be complex <path> elements.
   const featureStyles = {
@@ -59,14 +59,14 @@ export default function AvatarPreview({ avatarState, setSvgString }: AvatarPrevi
   );
 
   useEffect(() => {
-    // This is not a perfect server-side render, but it's a way to get the string
-    // without complex client-side logic for this demo.
-    const rawSvgString = renderToString(svgContent);
-    setSvgString(rawSvgString);
-  }, [avatarState, setSvgString, svgContent]);
+    // Client-side method to get the SVG string from the DOM
+    if (svgRef.current) {
+        setSvgString(svgRef.current.innerHTML);
+    }
+  }, [avatarState, setSvgString]);
   
   return (
-    <div className="w-64 h-64 rounded-full flex items-center justify-center overflow-hidden" style={{ backgroundColor: skinColor }}>
+    <div ref={svgRef} className="w-64 h-64 rounded-full flex items-center justify-center overflow-hidden" style={{ backgroundColor: skinColor }}>
        {svgContent}
     </div>
   );

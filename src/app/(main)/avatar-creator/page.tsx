@@ -12,7 +12,6 @@ import AvatarPreview from './AvatarPreview';
 import CategoryTabs, { categories } from './CategoryTabs';
 import OptionSelector from './OptionSelector';
 import ColorSelector from './ColorSelector';
-import { renderToString } from 'react-dom/server';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Sparkles } from 'lucide-react';
@@ -74,9 +73,10 @@ export default function AvatarCreatorPage() {
     toast({ description: "Avatar kaydediliyor..."});
     
     try {
+        const dataUrl = `data:image/svg+xml;base64,${btoa(svgString)}`;
         await updateUserProfile({ 
             userId: user.uid, 
-            photoURL: `data:image/svg+xml;base64,${btoa(svgString)}`
+            photoURL: dataUrl
         });
         toast({ description: "Avatar başarıyla kaydedildi!"});
         router.back();
