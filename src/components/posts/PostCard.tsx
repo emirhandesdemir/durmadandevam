@@ -38,6 +38,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/
 import Link from "next/link";
 import QuoteRetweetDialog from "./QuoteRetweetDialog";
 import ReportDialog from '../common/ReportDialog';
+import { Switch } from "../ui/switch";
+import { Label } from "../ui/label";
 
 interface PostCardProps {
     post: Post;
@@ -111,7 +113,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     const isOwner = currentUser?.uid === post.uid;
     const isAdmin = currentUserData?.role === 'admin';
     const createdAtDate = safeParseTimestamp(post.createdAt);
-    const timeAgo = post.createdAt ? formatDistanceToNow(createdAtDate, { addSuffix: true, locale: tr }) : "az önce";
+    const timeAgo = createdAtDate.getTime() !== 0 ? formatDistanceToNow(createdAtDate, { addSuffix: true, locale: tr }) : "az önce";
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
