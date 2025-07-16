@@ -1,4 +1,3 @@
-
 // src/app/(main)/profile/page.tsx
 "use client";
 
@@ -38,16 +37,6 @@ const bubbleOptions = [
     { id: "bubble-style-premium", name: "Premium", isPremium: true },
 ];
 
-const avatarFrameOptions = [
-    { id: "", name: "Yok" },
-    { id: "avatar-frame-angel", name: "Melek Kanadı" },
-    { id: "avatar-frame-devil", name: "Şeytan Kanadı" },
-    { id: "avatar-frame-snake", name: "Yılan" },
-    { id: "avatar-frame-tech", name: "Tekno Aura" },
-    { id: "avatar-frame-premium", name: "Premium", isPremium: true },
-];
-
-
 export default function ProfilePage() {
     const { user, userData, loading, handleLogout } = useAuth();
     const { toast } = useToast();
@@ -66,7 +55,6 @@ export default function ProfilePage() {
     const [acceptsFollowRequests, setAcceptsFollowRequests] = useState(true);
     const [showOnlineStatus, setShowOnlineStatus] = useState(true);
     const [selectedBubble, setSelectedBubble] = useState("");
-    const [selectedAvatarFrame, setSelectedAvatarFrame] = useState("");
     const [isSaving, setIsSaving] = useState(false);
     const [interests, setInterests] = useState<string[]>([]);
     const [currentInterest, setCurrentInterest] = useState("");
@@ -87,7 +75,6 @@ export default function ProfilePage() {
             setAcceptsFollowRequests(userData.acceptsFollowRequests ?? true);
             setShowOnlineStatus(userData.showOnlineStatus ?? true);
             setSelectedBubble(userData.selectedBubble || "");
-            setSelectedAvatarFrame(userData.selectedAvatarFrame || "");
             setInterests(userData.interests || []);
         }
         if (user) {
@@ -111,14 +98,13 @@ export default function ProfilePage() {
         if (acceptsFollowRequests !== (userData.acceptsFollowRequests ?? true)) return true;
         if (showOnlineStatus !== (userData.showOnlineStatus ?? true)) return true;
         if (selectedBubble !== (userData.selectedBubble || '')) return true;
-        if (selectedAvatarFrame !== (userData.selectedAvatarFrame || '')) return true;
         if (JSON.stringify(interests.map(i => i.trim()).sort()) !== JSON.stringify((userData.interests || []).map(i => i.trim()).sort())) return true;
     
         return false;
     }, [
         username, bio, age, city, country, gender, privateProfile, 
         acceptsFollowRequests, showOnlineStatus, selectedBubble, 
-        selectedAvatarFrame, interests, userData
+        interests, userData
     ]);
     
     
@@ -153,7 +139,6 @@ export default function ProfilePage() {
             if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) updatesForDb.acceptsFollowRequests = acceptsFollowRequests;
             if (showOnlineStatus !== (userData?.showOnlineStatus ?? true)) updatesForDb.showOnlineStatus = showOnlineStatus;
             if (selectedBubble !== (userData?.selectedBubble || "")) updatesForDb.selectedBubble = selectedBubble;
-            if (selectedAvatarFrame !== (userData?.selectedAvatarFrame || "")) updatesForDb.selectedAvatarFrame = selectedAvatarFrame;
             if (JSON.stringify(interests.sort()) !== JSON.stringify((userData?.interests || []).sort())) updatesForDb.interests = interests;
             
             if (Object.keys(updatesForDb).length > 0) {
@@ -209,7 +194,7 @@ export default function ProfilePage() {
                                     <AvatarFallback className="text-4xl bg-primary/20">{userData.username?.charAt(0).toUpperCase()}</AvatarFallback>
                                 </Avatar>
                             </div>
-                            <Button variant="outline" onClick={() => router.push('/avatar-creator')}>
+                            <Button variant="outline" onClick={() => router.push('/avatar-studio')}>
                                 <Sparkles className="mr-2 h-4 w-4" />
                                 Avatarı Düzenle
                             </Button>
@@ -475,5 +460,3 @@ export default function ProfilePage() {
         </>
     );
 }
-
-    
