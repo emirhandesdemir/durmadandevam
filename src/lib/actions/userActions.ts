@@ -7,7 +7,6 @@ import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, 
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
-import { emojiToDataUrl } from '../utils';
 
 // Helper function to process queries in batches to avoid Firestore limits
 async function processQueryInBatches(query: any, updateData: any) {
@@ -127,6 +126,7 @@ export async function updateUserProfile(updates: {
     privateProfile?: boolean;
     acceptsFollowRequests?: boolean;
     showOnlineStatus?: boolean;
+    photoURL?: string | null;
     profileEmoji?: string | null;
     selectedBubble?: string;
     selectedAvatarFrame?: string;
@@ -158,10 +158,11 @@ export async function updateUserProfile(updates: {
         }
     }
     
+    if (updates.photoURL) {
+        propagationUpdates.photoURL = updates.photoURL;
+    }
+    
     if (updates.profileEmoji) {
-        const photoURL = emojiToDataUrl(updates.profileEmoji);
-        updatesForDb.photoURL = photoURL;
-        propagationUpdates.photoURL = photoURL;
         propagationUpdates.profileEmoji = updates.profileEmoji;
     }
     

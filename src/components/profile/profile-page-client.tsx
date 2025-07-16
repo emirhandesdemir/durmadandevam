@@ -21,14 +21,13 @@ import Link from "next/link";
 import BlockedUsersDialog from "./BlockedUsersDialog";
 import { updateUserProfile } from "@/lib/actions/userActions";
 import { updateProfile } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, storage } from "@/lib/firebase";
 import { Textarea } from "../ui/textarea";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { ScrollArea } from "../ui/scroll-area";
-import NewProfilePicturePostDialog from "./NewProfilePicturePostDialog";
 import { AnimatePresence, motion } from "framer-motion";
-import { emojiToDataUrl } from "@/lib/utils";
-
+import { generateAvatar } from "@/ai/flows/generateAvatarFlow";
+import { applyImageFilter } from "@/ai/flows/imageActions";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
+import { ref, uploadString, getDownloadURL } from "firebase/storage";
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -49,14 +48,13 @@ const avatarFrameOptions = [
     { id: "avatar-frame-premium", name: "Premium", isPremium: true },
 ];
 
-const EMOJI_LIST = ['🙂', '😂', '😍', '🤔', '😎', '😢', '😡', '🤯', '🥳', '👍', '👎', '❤️', '🔥', '⭐', '🚀', '🌈', '💡', '🤖', '👻', '👽', '👾', '👑', '🎩', '💼'];
-
 export default function ProfilePageClient() {
     const { user, userData, loading, handleLogout } = useAuth();
     const { toast } = useToast();
     const { theme, setTheme } = useTheme();
     const { t } = useTranslation();
     
+    // Form States
     const [username, setUsername] = useState("");
     const [bio, setBio] = useState("");
     const [age, setAge] = useState<number | string>("");
@@ -66,15 +64,22 @@ export default function ProfilePageClient() {
     const [privateProfile, setPrivateProfile] = useState(false);
     const [acceptsFollowRequests, setAcceptsFollowRequests] = useState(true);
     const [showOnlineStatus, setShowOnlineStatus] = useState(true);
-    const [profileEmoji, setProfileEmoji] = useState<string | null>("");
     const [selectedBubble, setSelectedBubble] = useState("");
     const [selectedAvatarFrame, setSelectedAvatarFrame] = useState("");
     const [isSaving, setIsSaving] = useState(false);
-    const [inviteLink, setInviteLink] = useState("");
-    const [isBlockedUsersOpen, setIsBlockedUsersOpen] = useState(false);
     const [interests, setInterests] = useState<string[]>([]);
     const [currentInterest, setCurrentInterest] = useState("");
-    const [showNewPfpPostDialog, setShowNewPfpPostDialog] = useState(false);
+    const [inviteLink, setInviteLink] = useState("");
+    const [isBlockedUsersOpen, setIsBlockedUsersOpen] = useState(false);
+
+    // AI Avatar States
+    const [avatar, setAvatar] = useState<string | null>(null);
+    const [originalAvatar, setOriginalAvatar] = useState<string | null>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [isStyling, setIsStyling] = useState(false);
+    const [avatarPrompt, setAvatarPrompt] = useState("");
+    const [stylePrompt, setStylePrompt] = useState("");
+    const [showAvatarAnimation, setShowAvatarAnimation] = useState(false);
 
     const isPremium = userData?.premiumUntil && userData.premiumUntil.toDate() > new Date();
 
@@ -89,10 +94,11 @@ export default function ProfilePageClient() {
             setPrivateProfile(userData.privateProfile || false);
             setAcceptsFollowRequests(userData.acceptsFollowRequests ?? true);
             setShowOnlineStatus(userData.showOnlineStatus ?? true);
-            setProfileEmoji(userData.profileEmoji || '🙂');
             setSelectedBubble(userData.selectedBubble || "");
             setSelectedAvatarFrame(userData.selectedAvatarFrame || "");
             setInterests(userData.interests || []);
+            setAvatar(userData.photoURL || null);
+            setOriginalAvatar(userData.photoURL || null);
         }
         if (user) {
             const encodedRef = btoa(user.uid);
@@ -102,7 +108,6 @@ export default function ProfilePageClient() {
     
     const hasChanges = useMemo(() => {
         if (!userData) return false;
-        
         const ageAsNumber = age === '' || age === undefined ? undefined : Number(age);
         const userDataAge = userData.age === undefined ? undefined : Number(userData.age);
 
@@ -115,7 +120,7 @@ export default function ProfilePageClient() {
         if (privateProfile !== (userData.privateProfile || false)) return true;
         if (acceptsFollowRequests !== (userData.acceptsFollowRequests ?? true)) return true;
         if (showOnlineStatus !== (userData.showOnlineStatus ?? true)) return true;
-        if ((profileEmoji || '🙂') !== (userData.profileEmoji || '🙂')) return true;
+        if (avatar !== (userData.photoURL || null)) return true;
         if (selectedBubble !== (userData.selectedBubble || '')) return true;
         if (selectedAvatarFrame !== (userData.selectedAvatarFrame || '')) return true;
         if (JSON.stringify(interests.map(i => i.trim()).sort()) !== JSON.stringify((userData.interests || []).map(i => i.trim()).sort())) return true;
@@ -123,39 +128,81 @@ export default function ProfilePageClient() {
         return false;
     }, [
         username, bio, age, city, country, gender, privateProfile, 
-        acceptsFollowRequests, showOnlineStatus, profileEmoji, selectedBubble, 
+        acceptsFollowRequests, showOnlineStatus, avatar, selectedBubble, 
         selectedAvatarFrame, interests, userData
     ]);
     
-    
     const handleSaveChanges = async () => {
         if (!user || !hasChanges || !auth.currentUser) return;
-        
-        const emojiWasUpdated = (profileEmoji || '🙂') !== (userData?.profileEmoji || '🙂');
-
+    
         setIsSaving(true);
         try {
-            await updateUserProfile({ userId: user.uid, username, bio, age, city, country, gender, privateProfile, acceptsFollowRequests, showOnlineStatus, profileEmoji, selectedBubble, selectedAvatarFrame, interests });
-
-            toast({
-                title: "Başarılı!",
-                description: "Profiliniz başarıyla güncellendi.",
-            });
-
-            if (emojiWasUpdated) {
-                setShowNewPfpPostDialog(true);
+            let finalPhotoURL = userData?.photoURL || null;
+            if (avatar && avatar !== userData?.photoURL) {
+                const response = await fetch(avatar);
+                const blob = await response.blob();
+                const avatarRef = ref(storage, `upload/avatars/${user.uid}/avatar.jpg`);
+                await uploadString(avatarRef, avatar, 'data_url');
+                finalPhotoURL = await getDownloadURL(avatarRef);
             }
             
+            const updatesForDb = { userId: user.uid, photoURL: finalPhotoURL, username, bio, age, city, country, gender, privateProfile, acceptsFollowRequests, showOnlineStatus, selectedBubble, selectedAvatarFrame, interests };
+            await updateUserProfile(updatesForDb);
+            
+            if (finalPhotoURL !== auth.currentUser.photoURL || username !== auth.currentUser.displayName) {
+                await updateProfile(auth.currentUser, { displayName: username, photoURL: finalPhotoURL });
+            }
+
+            toast({ title: "Başarılı!", description: "Profiliniz başarıyla güncellendi." });
+            setOriginalAvatar(finalPhotoURL);
+
         } catch (error: any) {
-            toast({
-                title: "Hata",
-                description: error.message || "Profil güncellenirken bir hata oluştu.",
-                variant: "destructive",
-            });
+            toast({ title: "Hata", description: error.message || "Profil güncellenirken bir hata oluştu.", variant: "destructive" });
         } finally {
             setIsSaving(false);
         }
     };
+
+    const handleGenerateAvatar = async () => {
+        if (!avatarPrompt) return;
+        setIsGenerating(true);
+        try {
+            const result = await generateAvatar({ prompt: avatarPrompt });
+            if (result.avatarDataUri) {
+                setAvatar(result.avatarDataUri);
+            } else {
+                throw new Error("Avatar oluşturulamadı.");
+            }
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'AI Hatası', description: error.message });
+        } finally {
+            setIsGenerating(false);
+            setAvatarPrompt("");
+        }
+    };
+    
+    const handleStyleAvatar = async () => {
+        if (!avatar || !stylePrompt) return;
+        setIsStyling(true);
+        try {
+            const result = await applyImageFilter({ photoDataUri: avatar, style: stylePrompt });
+            if (result.success && result.data?.styledPhotoDataUri) {
+                setAvatar(result.data.styledPhotoDataUri);
+            } else {
+                throw new Error(result.error || "Avatar stilize edilemedi.");
+            }
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'AI Hatası', description: error.message });
+        } finally {
+            setIsStyling(false);
+            setStylePrompt("");
+        }
+    };
+
+    const handleAvatarClick = () => {
+        setShowAvatarAnimation(true);
+        setTimeout(() => setShowAvatarAnimation(false), 300);
+    }
 
     const handleAddInterest = () => {
         const newInterest = currentInterest.trim();
@@ -187,40 +234,51 @@ export default function ProfilePageClient() {
                         <CardDescription>Profilinizde görünecek herkese açık bilgiler.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                         <div className="flex items-center gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="emoji">Profil Emoji</Label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" className="w-20 h-20 text-4xl text-center rounded-2xl">
-                                            {profileEmoji}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
-                                        <ScrollArea className="h-48">
-                                            <div className="grid grid-cols-6 gap-1 p-2">
-                                                {EMOJI_LIST.map(emoji => (
-                                                    <Button
-                                                        key={emoji}
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="text-2xl rounded-lg"
-                                                        onClick={() => setProfileEmoji(emoji)}
-                                                    >
-                                                        {emoji}
-                                                    </Button>
-                                                ))}
-                                            </div>
-                                        </ScrollArea>
-                                    </PopoverContent>
-                                </Popover>
+                        <div className="flex flex-col sm:flex-row items-center gap-4">
+                            <div className="flex flex-col items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleAvatarClick}
+                                    className="relative group rounded-full"
+                                >
+                                    <Avatar className={cn("h-24 w-24 border-2 shadow-sm transition-transform", showAvatarAnimation && "animate-like-pop")}>
+                                        <AvatarImage src={avatar || undefined} />
+                                        <AvatarFallback className="text-4xl">
+                                            {username?.charAt(0).toUpperCase()}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                </button>
+                                {avatar && originalAvatar && avatar !== originalAvatar && (
+                                    <Button size="sm" variant="ghost" onClick={() => setAvatar(originalAvatar)}>Geri Al</Button>
+                                )}
                             </div>
-                            <div className="space-y-2 flex-1">
-                                <Label htmlFor="username">Kullanıcı Adı</Label>
-                                <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} />
+                            <div className="w-full space-y-3">
+                                <div className="space-y-1">
+                                    <Label>Avatar Oluştur (AI)</Label>
+                                    <div className="flex gap-2">
+                                        <Input placeholder="Mavi saçlı, gözlüklü kedi..." value={avatarPrompt} onChange={e => setAvatarPrompt(e.target.value)} disabled={isGenerating || isStyling} />
+                                        <Button onClick={handleGenerateAvatar} disabled={isGenerating || isStyling || !avatarPrompt}>
+                                            {isGenerating ? <Loader2 className="animate-spin" /> : <Sparkles />}
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                     <Label>Stil Ver (AI)</Label>
+                                    <div className="flex gap-2">
+                                        <Input placeholder="Gözlük ekle, 8-bit yap..." value={stylePrompt} onChange={e => setStylePrompt(e.target.value)} disabled={isGenerating || isStyling || !avatar} />
+                                        <Button onClick={handleStyleAvatar} disabled={isGenerating || isStyling || !stylePrompt || !avatar}>
+                                             {isStyling ? <Loader2 className="animate-spin" /> : <Brush />}
+                                        </Button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div className="space-y-2">
+
+                         <div className="space-y-2">
+                            <Label htmlFor="username">Kullanıcı Adı</Label>
+                            <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} />
+                        </div>
+                         <div className="space-y-2">
                             <Label htmlFor="bio">Biyografi</Label>
                             <Textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Kendini anlat..." className="rounded-xl" maxLength={150} />
                         </div>
@@ -488,11 +546,6 @@ export default function ProfilePageClient() {
             
             <BlockedUsersDialog isOpen={isBlockedUsersOpen} onOpenChange={setIsBlockedUsersOpen} blockedUserIds={userData.blockedUsers || []}/>
 
-            <NewProfilePicturePostDialog 
-                isOpen={showNewPfpPostDialog}
-                onOpenChange={setShowNewPfpPostDialog}
-                newEmoji={profileEmoji}
-            />
         </>
     );
 }
