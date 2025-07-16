@@ -10,6 +10,7 @@ import type { FeatureFlags, UserProfile, ThemeSettings } from '@/lib/types';
 import { triggerProfileCompletionNotification } from '@/lib/actions/notificationActions';
 import i18n from '@/lib/i18n';
 import AnimatedLogoLoader from '@/components/common/AnimatedLogoLoader';
+import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
@@ -37,10 +38,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [featureFlags, setFeatureFlags] = useState<FeatureFlags | null>(null);
   const [themeSettings, setThemeSettings] = useState<ThemeSettings | null>(null);
   const [totalUnreadDms, setTotalUnreadDms] = useState(0);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [firestoreLoading, setFirestoreLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Single loading state
   
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleLogout = useCallback(async () => {
     try {
@@ -65,19 +66,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [toast]);
   
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      if (!currentUser) {
-        setAuthLoading(false);
-      }
-    });
-
+    // Listen for global configs (theme, features)
     const unsubscribeFeatures = onSnapshot(doc(db, 'config', 'featureFlags'), (docSnap) => {
       setFeatureFlags(docSnap.exists() ? docSnap.data() as FeatureFlags : { quizGameEnabled: true, contentModerationEnabled: true });
     });
 
     const unsubscribeTheme = onSnapshot(doc(db, 'config', 'theme'), (docSnap) => {
       if (docSnap.exists()) setThemeSettings(docSnap.data() as ThemeSettings);
+    });
+
+    // Main authentication listener
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+        setUser(currentUser);
+        if (!currentUser) {
+            setUserData(null);
+            setTotalUnreadDms(0);
+            setLoading(false); // If no user, we are done loading
+        }
     });
 
     return () => {
@@ -87,61 +92,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+
   useEffect(() => {
-    let unsubscribeUser: () => void = () => {};
-    let unsubscribeDms: () => void = () => {};
+    if (!user) return; // Only run this if user object exists
 
-    if (user) {
-        const userDocRef = doc(db, 'users', user.uid);
-        unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const data = docSnap.data() as UserProfile;
-                if (data.isBanned) {
-                    toast({ variant: 'destructive', title: 'Hesabınız Askıya Alındı', description: 'Bu hesaba erişiminiz kısıtlanmıştır.', duration: Infinity });
-                    handleLogout();
-                    return;
-                }
-                setUserData(data);
-                if (data.language && i18n.language !== data.language) {
-                    i18n.changeLanguage(data.language);
-                }
-                if (!data.bio && !data.profileCompletionNotificationSent) {
-                    triggerProfileCompletionNotification(user.uid);
-                }
-            } else { setUserData(null); }
-            setFirestoreLoading(false);
-        }, (error) => {
-            console.error("Firestore user listener error:", error);
+    // We have a user, now listen for their data
+    const userDocRef = doc(db, 'users', user.uid);
+    const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const data = docSnap.data() as UserProfile;
+            if (data.isBanned) {
+                toast({ variant: 'destructive', title: 'Hesabınız Askıya Alındı', description: 'Bu hesaba erişiminiz kısıtlanmıştır.', duration: Infinity });
+                handleLogout();
+                return;
+            }
+            setUserData(data);
+            if (data.language && i18n.language !== data.language) {
+                i18n.changeLanguage(data.language);
+            }
+            if (!data.bio && !data.profileCompletionNotificationSent) {
+                triggerProfileCompletionNotification(user.uid);
+            }
+        } else { 
             setUserData(null);
-            setFirestoreLoading(false);
-        });
+        }
+        setLoading(false); // User data loaded (or not found), we are done loading.
+    }, (error) => {
+        console.error("Firestore user listener error:", error);
+        setUserData(null);
+        setLoading(false);
+    });
 
-        const dmsQuery = query(collection(db, 'directMessagesMetadata'), where('participantUids', 'array-contains', user.uid));
-        unsubscribeDms = onSnapshot(dmsQuery, (snapshot) => {
-            let total = 0;
-            snapshot.forEach(doc => { total += doc.data().unreadCounts?.[user.uid] || 0; });
-            setTotalUnreadDms(total);
-        });
-        
-        const userStatusRef = doc(db, 'users', user.uid);
-        updateDoc(userStatusRef, { isOnline: true });
-        
-        const onbeforeunload = () => updateDoc(userStatusRef, { isOnline: false, lastSeen: serverTimestamp() });
-        window.addEventListener("beforeunload", onbeforeunload);
+    const dmsQuery = query(collection(db, 'directMessagesMetadata'), where('participantUids', 'array-contains', user.uid));
+    const unsubscribeDms = onSnapshot(dmsQuery, (snapshot) => {
+        let total = 0;
+        snapshot.forEach(doc => { total += doc.data().unreadCounts?.[user.uid] || 0; });
+        setTotalUnreadDms(total);
+    });
+    
+    // Set user online status
+    const userStatusRef = doc(db, 'users', user.uid);
+    updateDoc(userStatusRef, { isOnline: true });
+    
+    const onbeforeunload = () => updateDoc(userStatusRef, { isOnline: false, lastSeen: serverTimestamp() });
+    window.addEventListener("beforeunload", onbeforeunload);
+    
+    return () => {
+      unsubscribeUser();
+      unsubscribeDms();
+      window.removeEventListener("beforeunload", onbeforeunload);
+    };
 
-        return () => {
-            unsubscribeUser();
-            unsubscribeDms();
-            window.removeEventListener("beforeunload", onbeforeunload);
-        };
-    } else {
-      setUserData(null);
-      setTotalUnreadDms(0);
-      setFirestoreLoading(false);
-    }
   }, [user, handleLogout, toast]);
-
-  const loading = authLoading || firestoreLoading;
 
   const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms };
   
