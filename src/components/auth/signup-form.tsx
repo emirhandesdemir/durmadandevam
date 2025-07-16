@@ -38,6 +38,7 @@ import { Checkbox } from "../ui/checkbox";
 import { countries } from "@/lib/countries";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { useTranslation } from "react-i18next";
+import { emojiToDataUrl } from "@/lib/utils";
 
 const formSchema = z.object({
   username: z.string()
@@ -93,9 +94,12 @@ export default function SignUpForm() {
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const user = userCredential.user;
             
+            const defaultEmoji = '🙂';
+            const defaultAvatarUrl = emojiToDataUrl(defaultEmoji);
+
             await updateProfile(user, {
                 displayName: values.username,
-                photoURL: '', // Initially empty, will be set via emoji.
+                photoURL: defaultAvatarUrl,
             });
             
             const isAdminEmail = values.email === 'admin@example.com';
@@ -119,8 +123,8 @@ export default function SignUpForm() {
                 uid: user.uid,
                 username: values.username,
                 email: values.email,
-                photoURL: null,
-                profileEmoji: '🙂', // Default starting emoji
+                photoURL: defaultAvatarUrl,
+                profileEmoji: defaultEmoji, 
                 bio: "",
                 role: userRole,
                 gender: values.gender,
@@ -142,7 +146,7 @@ export default function SignUpForm() {
             // Credit the referrer if one exists
             if (ref) {
                 try {
-                    await creditReferrer(ref, { uid: user.uid, username: values.username, photoURL: null, profileEmoji: '🙂' });
+                    await creditReferrer(ref, { uid: user.uid, username: values.username, photoURL: defaultAvatarUrl, profileEmoji: defaultEmoji });
                 } catch (e) {
                     console.error("Referrer credit failed, but signup continues:", e);
                 }

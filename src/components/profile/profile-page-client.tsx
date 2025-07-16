@@ -19,17 +19,18 @@ import LanguageSwitcher from "../common/LanguageSwitcher";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import Link from "next/link";
 import BlockedUsersDialog from "./BlockedUsersDialog";
-import { updateUserProfile } from "@/lib/actions/userActions";
+import { updateUserProfile, findUserByUsername } from "@/lib/actions/userActions";
 import { updateProfile } from "firebase/auth";
 import { auth, storage } from "@/lib/firebase";
 import { Textarea } from "../ui/textarea";
 import { AnimatePresence, motion } from "framer-motion";
-import { generateAvatar } from "@/ai/flows/generateAvatarFlow";
 import { applyImageFilter } from "@/lib/actions/imageActions";
 import { convertPhotoToAvatar } from "@/lib/actions/avatarActions";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import ImageCropperDialog from "../common/ImageCropperDialog";
+import { updateUserPosts, updateUserComments } from "@/lib/actions/userActions";
+import { emojiToDataUrl } from "@/lib/utils";
 
 
 const bubbleOptions = [
@@ -50,6 +51,17 @@ const avatarFrameOptions = [
     { id: "avatar-frame-tech", name: "Tekno Aura" },
     { id: "avatar-frame-premium", name: "Premium", isPremium: true },
 ];
+
+// Helper function to generate a vibrant background from a string (e.g., username)
+const generateAvatarColor = (name: string) => {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const h = hash % 360;
+    return `hsl(${h}, 70%, 50%)`;
+};
+
 
 export default function ProfilePageClient() {
     const { user, userData, loading, handleLogout } = useAuth();
@@ -210,6 +222,7 @@ export default function ProfilePageClient() {
 
             toast({ title: "Başarılı!", description: "Profiliniz başarıyla güncellendi." });
             setOriginalAvatar(finalPhotoURL);
+            setNewAvatar(null);
         } catch (error: any) {
             toast({ title: "Hata", description: error.message || "Profil güncellenirken bir hata oluştu.", variant: "destructive" });
         } finally {
@@ -238,6 +251,8 @@ export default function ProfilePageClient() {
         return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
     }
 
+    const avatarColor = generateAvatarColor(user.uid);
+
     return (
         <>
             <div className="space-y-6 pb-24">
@@ -256,7 +271,7 @@ export default function ProfilePageClient() {
                                 >
                                     <Avatar className={cn("h-24 w-24 border-2 shadow-sm", isGenerating && "animate-pulse")}>
                                         <AvatarImage src={avatar || undefined} />
-                                        <AvatarFallback className="text-4xl">
+                                        <AvatarFallback className="text-4xl" style={{ backgroundColor: avatarColor }}>
                                             {username?.charAt(0).toUpperCase()}
                                         </AvatarFallback>
                                     </Avatar>
@@ -541,7 +556,7 @@ export default function ProfilePageClient() {
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     className="fixed bottom-[68px] left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t"
                 >
-                    <div className="container mx-auto flex justify-between items-center max-w-2xl">
+                    <div className="container mx-auto flex justify-between items-center max-w-4xl">
                         <p className="text-sm font-semibold">Kaydedilmemiş değişiklikleriniz var.</p>
                         <Button onClick={handleSaveChanges} disabled={isSaving}>
                             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

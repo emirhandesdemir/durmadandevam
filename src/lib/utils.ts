@@ -39,7 +39,9 @@ export function emojiToDataUrl(emoji: string): string {
   `.trim();
   
   // Encode the SVG to Base64 to make it a valid data URL
-  const base64 = typeof window === 'undefined' ? Buffer.from(svg).toString('base64') : btoa(svg);
-  
-  return `data:image/svg+xml;base64,${base64}`;
+  if (typeof window !== 'undefined') {
+    return `data:image/svg+xml;base64,${btoa(svg)}`;
+  } else {
+    return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
+  }
 }
