@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import type { Post } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSavedPosts } from '@/lib/actions/userActions';
-import { Loader2, Bookmark, Lock, Video } from 'lucide-react';
+import { Loader2, Bookmark, Lock, Video, FileTextIcon } from 'lucide-react';
 import Image from 'next/image';
 import PostViewerDialog from '@/components/posts/PostViewerDialog';
 
@@ -39,8 +39,6 @@ export default function SavedPostsGrid({ userId }: SavedPostsGridProps) {
     }
 
     if (!isOwnProfile) {
-        // This case should not be reached if the tab is correctly hidden.
-        // It's a fallback.
         return (
           <div className="text-center py-10 mt-4 text-muted-foreground">
             <Lock className="h-12 w-12 mx-auto mb-4" />
@@ -71,9 +69,10 @@ export default function SavedPostsGrid({ userId }: SavedPostsGridProps) {
                     >
                         {post.imageUrl ? (
                            <Image
-                                src={post.imageUrl!}
+                                src={post.imageUrl}
                                 alt="Kaydedilen gönderi"
                                 fill
+                                sizes="(max-width: 768px) 33vw, 25vw"
                                 className="object-cover"
                                 onContextMenu={(e) => e.preventDefault()}
                             />
@@ -83,8 +82,8 @@ export default function SavedPostsGrid({ userId }: SavedPostsGridProps) {
                                 <video src={post.videoUrl} className="absolute inset-0 w-full h-full object-cover -z-10" muted/>
                             </div>
                         ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                                <p className="text-xs p-2 text-muted-foreground line-clamp-3">{post.text}</p>
+                             <div className="w-full h-full flex items-center justify-center p-2">
+                                <FileTextIcon className="h-6 w-6 text-muted-foreground" />
                             </div>
                         )}
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors" />

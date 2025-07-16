@@ -10,6 +10,9 @@ import ProfileViewLogger from '@/components/profile/ProfileViewLogger';
 import { Separator } from '@/components/ui/separator';
 import { deepSerialize } from '@/lib/server-utils';
 import { Grid3x3, FileText, Bookmark } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getAuth } from '@/lib/firebaseAdmin';
+import SavedPostsGrid from '@/components/profile/SavedPostsGrid';
 
 interface UserProfilePageProps {
   params: { uid: string };
@@ -17,6 +20,8 @@ interface UserProfilePageProps {
 
 export default async function UserProfilePage({ params }: UserProfilePageProps) {
   const { uid } = params;
+  const authUser = await getAuth().getUserToken();
+  const isOwnProfile = authUser?.uid === uid;
 
   // Veritabanı sorguları için referanslar oluştur.
   const profileUserRef = doc(db, 'users', uid);
@@ -55,10 +60,29 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
         
         <Separator className="my-4" />
 
-        {/* Tüm gönderiler için tek bir grid */}
-        <div className="w-full border-t pt-4">
-            <ProfilePosts userId={uid} />
-        </div>
+        {/* Sekmeli Gönderiler Bölümü */}
+        <Tabs defaultValue="posts" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="posts">
+                    <Grid3x3 className="h-5 w-5 mr-2" />
+                    Gönderiler
+                </TabsTrigger>
+                {isOwnProfile && (
+                    <TabsTrigger value="saved">
+                        <Bookmark className="h-5 w-5 mr-2" />
+                        Kaydedilenler
+                    </TabsTrigger>
+                )}
+            </TabsList>
+            <TabsContent value="posts" className="mt-4">
+                <ProfilePosts userId={uid} />
+            </TabsContent>
+            {isOwnProfile && (
+                <TabsContent value="saved" className="mt-4">
+                    <SavedPostsGrid userId={uid} />
+                </TabsContent>
+            )}
+        </Tabs>
       </div>
     </>
   );

@@ -1,7 +1,7 @@
 // src/lib/actions/postActions.ts
 'use server';
 
-import { db } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
 import { 
     doc, 
     deleteDoc,
@@ -16,7 +16,7 @@ import {
     collection,
     writeBatch
 } from "firebase/firestore";
-import { ref, deleteObject } from "firebase/storage";
+import { ref, deleteObject, uploadBytes, getDownloadURL } from "firebase/storage";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
 import { findUserByUsername } from "./userActions";
@@ -118,7 +118,7 @@ export async function createPost(postData: {
             userRole: postData.userRole,
             userGender: postData.userGender,
             text: postData.text,
-            imageUrl: postData.imageUrl || null, // Use the provided URL, or null
+            imageUrl: postData.imageUrl || null,
             videoUrl: postData.videoUrl || null,
             editedWithAI: postData.editedWithAI,
             language: postData.language,

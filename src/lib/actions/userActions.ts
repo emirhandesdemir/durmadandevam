@@ -4,7 +4,7 @@
 import { db, storage } from '@/lib/firebase';
 import type { Report, UserProfile, Post, Comment } from '../types';
 import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, orderBy, setDoc, collectionGroup, deleteField } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
 import { emojiToDataUrl } from '../utils';
@@ -377,6 +377,7 @@ export async function getSavedPosts(userId: string): Promise<Post[]> {
     const savedPosts: Post[] = [];
     for (let i = 0; i < savedPostIds.length; i += 30) {
         const batchIds = savedPostIds.slice(i, i + 30);
+        if (batchIds.length === 0) continue;
         const postsQuery = query(collection(db, 'posts'), where('__name__', 'in', batchIds));
         const postsSnapshot = await getDocs(postsQuery);
         postsSnapshot.forEach(doc => {
@@ -384,6 +385,7 @@ export async function getSavedPosts(userId: string): Promise<Post[]> {
         });
     }
 
+    // Sort the fetched posts based on the original `savedPostIds` order (newest first)
     const sortedPosts = savedPosts.sort((a, b) => {
         return savedPostIds.indexOf(b.id) - savedPostIds.indexOf(a.id);
     });
