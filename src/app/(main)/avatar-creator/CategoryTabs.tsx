@@ -1,16 +1,19 @@
+
 'use client';
 
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Face, Gem, Palmtree } from 'lucide-react';
+import { User, Eye, Smile, Shirt } from 'lucide-react'; // Replace with better icons
+
 
 export const categories = [
-  { id: 'face', label: 'Yüz', icon: Face },
+  { id: 'face', label: 'Yüz', icon: User },
   { id: 'hair', label: 'Saç', icon: Gem },
-  { id: 'eyes', label: 'Gözler', icon: Gem },
-  { id: 'eyebrows', label: 'Kaşlar', icon: Gem },
-  { id: 'nose', label: 'Burun', icon: Gem },
-  { id: 'mouth', label: 'Ağız', icon: Gem },
-  { id: 'clothes', label: 'Kıyafet', icon: Palmtree },
+  { id: 'eyes', label: 'Gözler', icon: Eye },
+  { id: 'eyebrows', label: 'Kaşlar', icon: Gem }, // Placeholder icon
+  { id: 'nose', label: 'Burun', icon: Gem }, // Placeholder icon
+  { id: 'mouth', label: 'Ağız', icon: Smile },
+  { id: 'clothes', label: 'Kıyafet', icon: Shirt },
 ];
 
 interface CategoryTabsProps {

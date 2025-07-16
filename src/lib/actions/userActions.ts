@@ -43,7 +43,7 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
     if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
-    if (updates.userAvatarFrame) propagationUpdates.userAvatarFrame = updates.userAvatarFrame;
+    if (updates.userAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.userAvatarFrame;
     if (updates.profileEmoji) propagationUpdates.profileEmoji = updates.profileEmoji;
     
     if (Object.keys(propagationUpdates).length === 0) return;
@@ -61,7 +61,7 @@ export async function updateUserComments(uid: string, updates: { [key: string]: 
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
     if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
-    if (updates.userAvatarFrame) propagationUpdates.userAvatarFrame = updates.userAvatarFrame;
+    if (updates.userAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.userAvatarFrame;
     if (updates.profileEmoji) propagationUpdates.profileEmoji = updates.profileEmoji;
     
     if (Object.keys(propagationUpdates).length === 0) return;

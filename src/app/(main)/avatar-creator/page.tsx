@@ -1,8 +1,9 @@
+
 'use client';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { ArrowLeft, Check, Save } from 'lucide-react';
+import { Tabs } from '@/components/ui/tabs';
+import { ArrowLeft, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -11,6 +12,11 @@ import AvatarPreview from './AvatarPreview';
 import CategoryTabs, { categories } from './CategoryTabs';
 import OptionSelector from './OptionSelector';
 import ColorSelector from './ColorSelector';
+import { renderToString } from 'react-dom/server';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Sparkles } from 'lucide-react';
+
 
 export interface AvatarState {
   gender: 'male' | 'female';
@@ -26,6 +32,7 @@ export interface AvatarState {
 // In a real app, these would be fetched or more extensive
 const hairStyles = [{ id: 'style1', label: 'Kısa' }, { id: 'style2', label: 'Orta' }, { id: 'style3', label: 'Uzun' }];
 const eyeStyles = [{ id: 'style1', label: 'Yuvarlak' }, { id: 'style2', label: 'Çekik' }];
+const eyebrowStyles = [{ id: 'style1', label: 'Kavisli' }, { id: 'style2', label: 'Düz' }];
 const noseStyles = [{ id: 'style1', label: 'Kemerli' }, { id: 'style2', label: 'Düz' }];
 const mouthStyles = [{ id: 'style1', label: 'Gülümseyen' }, { id: 'style2', label: 'Düz' }];
 const clothesStyles = [{ id: 'style1', label: 'T-Shirt' }, { id: 'style2', label: 'Gömlek' }];
@@ -39,13 +46,14 @@ export default function AvatarCreatorPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { toast } = useToast();
+  const [svgString, setSvgString] = useState('');
 
   const [avatarState, setAvatarState] = useState<AvatarState>({
     gender: 'female',
     skinColor: '#F9E4D6',
     hair: { style: 'style1', color: '#4B3F35' },
     eyes: { style: 'style1', color: '#5E3C2B' },
-    eyebrows: { style: 'style1' }, // Add other features similarly
+    eyebrows: { style: 'style1' },
     nose: { style: 'style1' },
     mouth: { style: 'style1' },
     clothes: { style: 'style1', color: '#3498DB' },
@@ -58,16 +66,25 @@ export default function AvatarCreatorPage() {
         toast({ variant: 'destructive', description: 'Kaydetmek için giriş yapmalısınız.'});
         return;
     }
-    // In a real app, you would convert the avatarState to an SVG string and save it.
-    console.log("Saving avatar state:", avatarState);
-    toast({ description: "Avatar kaydedildi! (Simülasyon)"})
-    // Example of saving (this would be more complex):
-    // const svgString = renderAvatarToSvg(avatarState);
-    // await updateUserProfile({ userId: user.uid, photoURL: `data:image/svg+xml;base64,${btoa(svgString)}`});
-    router.back();
+    if (!svgString) {
+        toast({ variant: 'destructive', description: 'Kaydedilecek avatar bulunamadı.'});
+        return;
+    }
+
+    toast({ description: "Avatar kaydediliyor..."});
+    
+    try {
+        await updateUserProfile({ 
+            userId: user.uid, 
+            photoURL: `data:image/svg+xml;base64,${btoa(svgString)}`
+        });
+        toast({ description: "Avatar başarıyla kaydedildi!"});
+        router.back();
+    } catch(error: any) {
+        toast({ variant: 'destructive', description: `Hata: ${error.message}` });
+    }
   };
 
-  const currentCategoryData = categories.find(c => c.id === selectedCategory);
 
   const renderPreview = (style: string, category: string) => {
     // This is a placeholder for rendering small SVG previews of each option
@@ -90,7 +107,7 @@ export default function AvatarCreatorPage() {
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Preview Panel */}
         <div className="md:w-1/2 flex items-center justify-center p-4 bg-muted/30 border-b md:border-b-0 md:border-r">
-          <AvatarPreview avatarState={avatarState} />
+          <AvatarPreview avatarState={avatarState} setSvgString={setSvgString} />
         </div>
 
         {/* Customization Panel */}
@@ -101,7 +118,7 @@ export default function AvatarCreatorPage() {
               </Tabs>
            </div>
           <div className="p-4 space-y-4 overflow-y-auto">
-            <h2 className="font-bold text-xl">{currentCategoryData?.label}</h2>
+            <h2 className="font-bold text-xl">{categories.find(c => c.id === selectedCategory)?.label}</h2>
              {selectedCategory === 'face' && (
                 <ColorSelector colors={skinTones} selectedColor={avatarState.skinColor} onSelect={(color) => setAvatarState(s => ({...s, skinColor: color}))} />
              )}
@@ -117,6 +134,9 @@ export default function AvatarCreatorPage() {
                      <ColorSelector colors={eyeColors} selectedColor={avatarState.eyes.color} onSelect={(color) => setAvatarState(s => ({ ...s, eyes: { ...s.eyes, color } }))} />
                 </div>
              )}
+            {selectedCategory === 'eyebrows' && (
+                 <OptionSelector options={eyebrowStyles} selectedOption={avatarState.eyebrows.style} onSelect={(style) => setAvatarState(s => ({ ...s, eyebrows: { style } }))} renderPreview={(style) => renderPreview(style, 'eyebrows')} />
+            )}
             {selectedCategory === 'nose' && (
                  <OptionSelector options={noseStyles} selectedOption={avatarState.nose.style} onSelect={(style) => setAvatarState(s => ({ ...s, nose: { style } }))} renderPreview={(style) => renderPreview(style, 'nose')} />
             )}
@@ -129,7 +149,6 @@ export default function AvatarCreatorPage() {
                     <ColorSelector colors={clothesColors} selectedColor={avatarState.clothes.color} onSelect={(color) => setAvatarState(s => ({ ...s, clothes: {...s.clothes, color} }))} />
                  </div>
             )}
-            {/* Add more TabsContent for other categories */}
           </div>
         </div>
       </div>
