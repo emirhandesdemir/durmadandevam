@@ -9,11 +9,12 @@ import ProfilePosts from '@/components/profile/ProfilePosts';
 import ProfileViewLogger from '@/components/profile/ProfileViewLogger';
 import { Separator } from '@/components/ui/separator';
 import { deepSerialize } from '@/lib/server-utils';
-import { Grid3x3, FileText, Bookmark } from 'lucide-react';
+import { Grid3x3, Bookmark } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getAuth } from '@/lib/firebaseAdmin';
 import SavedPostsGrid from '@/components/profile/SavedPostsGrid';
 import { cookies } from 'next/headers';
+import { cn } from '@/lib/utils';
 
 interface UserProfilePageProps {
   params: { uid: string };
@@ -76,7 +77,7 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
 
         {/* Sekmeli Gönderiler Bölümü */}
         <Tabs defaultValue="posts" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className={cn("grid w-full", isOwnProfile ? "grid-cols-2" : "grid-cols-1")}>
                 <TabsTrigger value="posts">
                     <Grid3x3 className="h-5 w-5 mr-2" />
                     Gönderiler

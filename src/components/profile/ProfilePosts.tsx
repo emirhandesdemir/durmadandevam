@@ -1,21 +1,16 @@
-
 // src/components/profile/ProfilePosts.tsx
 "use client";
 
 import { collection, query, where, orderBy, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Post, UserProfile } from '../types';
+import type { Post, UserProfile } from '@/lib/types';
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, CameraOff, ShieldOff, Lock, FileTextIcon, Video } from 'lucide-react';
 import Image from 'next/image';
-import { Heart, MessageCircle } from 'lucide-react';
 import PostViewerDialog from '@/components/posts/PostViewerDialog';
 import { Card, CardContent } from '../ui/card';
-import { formatDistanceToNow, toDate } from 'date-fns';
-import { tr } from 'date-fns/locale';
-import { Timestamp } from 'firebase/firestore';
-
+import { Heart, MessageCircle } from 'lucide-react';
 
 interface ProfilePostsProps {
   userId: string;
@@ -41,9 +36,9 @@ export default function ProfilePosts({ userId }: ProfilePostsProps) {
     }, [userId]);
 
     const isOwnProfile = currentUserData?.uid === userId;
-    const isFollower = profileUser?.followers?.includes(currentUserData?.uid || '') || false;
-    const canViewContent = !profileUser?.privateProfile || isFollower || isOwnProfile;
-    const amIBlockedByThisUser = profileUser?.blockedUsers?.includes(currentUserData?.uid || '');
+    const isFollower = useMemo(() => profileUser?.followers?.includes(currentUserData?.uid || '') || false, [profileUser, currentUserData]);
+    const canViewContent = useMemo(() => !profileUser?.privateProfile || isFollower || isOwnProfile, [profileUser, isFollower, isOwnProfile]);
+    const amIBlockedByThisUser = useMemo(() => profileUser?.blockedUsers?.includes(currentUserData?.uid || ''), [profileUser, currentUserData]);
 
     useEffect(() => {
         if (authLoading || !profileUser) {
@@ -138,14 +133,18 @@ export default function ProfilePosts({ userId }: ProfilePostsProps) {
                         )}
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center text-white opacity-0 group-hover:opacity-100">
                         <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-1">
-                                <Heart className="h-5 w-5 fill-white"/>
-                                <span className="font-bold text-sm">{post.likeCount}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                <MessageCircle className="h-5 w-5 fill-white"/>
-                                <span className="font-bold text-sm">{post.commentCount}</span>
-                            </div>
+                            {!post.likesHidden && (
+                                <div className="flex items-center gap-1">
+                                    <Heart className="h-5 w-5 fill-white"/>
+                                    <span className="font-bold text-sm">{post.likeCount}</span>
+                                </div>
+                            )}
+                            {!post.commentsDisabled && (
+                                <div className="flex items-center gap-1">
+                                    <MessageCircle className="h-5 w-5 fill-white"/>
+                                    <span className="font-bold text-sm">{post.commentCount}</span>
+                                </div>
+                            )}
                         </div>
                         </div>
                     </button>
