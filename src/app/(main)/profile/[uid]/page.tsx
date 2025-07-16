@@ -14,6 +14,7 @@ import SavedPostsGrid from '@/components/profile/SavedPostsGrid';
 import { cookies } from 'next/headers';
 import { cn } from '@/lib/utils';
 import UserPostsGrid from '@/components/profile/UserPostsGrid';
+import ProfileViewLogger from '@/components/profile/ProfileViewLogger';
 
 interface UserProfilePageProps {
   params: { uid: string };
