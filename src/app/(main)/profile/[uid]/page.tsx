@@ -5,8 +5,6 @@ import { doc, getDoc, collection, query, where, getCountFromServer } from 'fireb
 import { db } from '@/lib/firebase';
 import { notFound } from 'next/navigation';
 import ProfileHeader from '@/components/profile/ProfileHeader';
-import ProfilePosts from '@/components/profile/ProfilePosts';
-import ProfileViewLogger from '@/components/profile/ProfileViewLogger';
 import { Separator } from '@/components/ui/separator';
 import { deepSerialize } from '@/lib/server-utils';
 import { Grid3x3, Bookmark } from 'lucide-react';
@@ -15,6 +13,7 @@ import { getAuth } from '@/lib/firebaseAdmin';
 import SavedPostsGrid from '@/components/profile/SavedPostsGrid';
 import { cookies } from 'next/headers';
 import { cn } from '@/lib/utils';
+import UserPostsGrid from '@/components/profile/UserPostsGrid';
 
 interface UserProfilePageProps {
   params: { uid: string };
@@ -90,7 +89,7 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
                 )}
             </TabsList>
             <TabsContent value="posts" className="mt-4">
-                <ProfilePosts userId={uid} />
+                <UserPostsGrid profileUser={serializableProfileUser} />
             </TabsContent>
             {isOwnProfile && (
                 <TabsContent value="saved" className="mt-4">

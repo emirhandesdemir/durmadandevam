@@ -3,7 +3,7 @@
 
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff, UserCheck, Crown } from 'lucide-react';
+import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff, UserCheck, Crown, Bookmark } from 'lucide-react';
 import FollowButton from './FollowButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
@@ -46,7 +46,6 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
   const areMutuals = currentUserData?.following?.includes(profileUser.uid) && profileUser.following?.includes(currentUserAuth?.uid);
   const amIBlockedByThisUser = profileUser.blockedUsers?.includes(currentUserAuth?.uid || '');
   const haveIBlockedThisUser = currentUserData?.blockedUsers?.includes(profileUser.uid);
-  // FIX: Convert the serialized date string back to a Date object for comparison.
   const isPremium = isClient && profileUser.premiumUntil && new Date(profileUser.premiumUntil as any) > new Date();
 
 
