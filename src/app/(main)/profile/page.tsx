@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera } from "lucide-react";
+import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
@@ -22,12 +22,10 @@ import Link from "next/link";
 import BlockedUsersDialog from "@/components/profile/BlockedUsersDialog";
 import { updateUserProfile, findUserByUsername } from "@/lib/actions/userActions";
 import { updateProfile } from "firebase/auth";
-import { auth, storage } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from "framer-motion";
-import ImageCropperDialog from "@/components/common/ImageCropperDialog";
-import { ref, uploadString, getDownloadURL } from "firebase/storage";
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -73,13 +71,9 @@ export default function ProfilePageClient() {
     const [currentInterest, setCurrentInterest] = useState("");
     const [inviteLink, setInviteLink] = useState("");
     const [isBlockedUsersOpen, setIsBlockedUsersOpen] = useState(false);
-    const [imageToCrop, setImageToCrop] = useState<string | null>(null);
-    const [newAvatar, setNewAvatar] = useState<string | null>(null);
-
+    
     const isPremium = userData?.premiumUntil && userData.premiumUntil.toDate() > new Date();
     
-    const fileInputRef = useRef<HTMLInputElement>(null);
-
     useEffect(() => {
         if (userData) {
             setUsername(userData.username || "");
@@ -118,13 +112,12 @@ export default function ProfilePageClient() {
         if (selectedBubble !== (userData.selectedBubble || '')) return true;
         if (selectedAvatarFrame !== (userData.selectedAvatarFrame || '')) return true;
         if (JSON.stringify(interests.map(i => i.trim()).sort()) !== JSON.stringify((userData.interests || []).map(i => i.trim()).sort())) return true;
-        if (newAvatar !== null) return true;
     
         return false;
     }, [
         username, bio, age, city, country, gender, privateProfile, 
         acceptsFollowRequests, showOnlineStatus, selectedBubble, 
-        selectedAvatarFrame, interests, userData, newAvatar
+        selectedAvatarFrame, interests, userData
     ]);
     
     
@@ -134,15 +127,7 @@ export default function ProfilePageClient() {
         setIsSaving(true);
         try {
             const updatesForDb: { [key: string]: any } = {};
-            const authProfileUpdates: { displayName?: string, photoURL?: string } = {};
-            
-            if (newAvatar) {
-                const avatarRef = ref(storage, `avatars/${user.uid}.jpg`);
-                await uploadString(avatarRef, newAvatar, 'data_url');
-                const finalPhotoURL = await getDownloadURL(avatarRef);
-                updatesForDb.photoURL = finalPhotoURL;
-                authProfileUpdates.photoURL = finalPhotoURL;
-            }
+            const authProfileUpdates: { displayName?: string } = {};
             
             if (username !== userData?.username) {
                 if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
@@ -179,7 +164,6 @@ export default function ProfilePageClient() {
             }
 
             toast({ title: "Başarılı!", description: "Profiliniz başarıyla güncellendi." });
-            setNewAvatar(null);
         } catch (error: any) {
             toast({ title: "Hata", description: error.message || "Profil güncellenirken bir hata oluştu.", variant: "destructive" });
         } finally {
@@ -204,28 +188,6 @@ export default function ProfilePageClient() {
         toast({ description: "Davet linki kopyalandı!" });
     };
 
-    const handleAvatarClick = () => {
-        fileInputRef.current?.click();
-    };
-    
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            if (file.size > 5 * 1024 * 1024) { 
-                toast({ variant: "destructive", description: "Resim boyutu 5MB'dan büyük olamaz." });
-                return;
-            }
-            const reader = new FileReader();
-            reader.onload = () => setImageToCrop(reader.result as string);
-            reader.readAsDataURL(e.target.files[0]);
-        }
-    };
-
-    const handleCropComplete = (croppedDataUrl: string) => {
-        setNewAvatar(croppedDataUrl);
-        setImageToCrop(null);
-    };
-
     if (loading || !user || !userData) {
         return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
     }
@@ -240,26 +202,15 @@ export default function ProfilePageClient() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="flex flex-col items-center gap-4">
-                            <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-                            <button
-                                type="button"
-                                onClick={handleAvatarClick}
-                                className="relative group rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                                aria-label="Profil fotoğrafını değiştir"
-                            >
-                               <div className={cn("avatar-frame-wrapper", userData?.selectedAvatarFrame)}>
-                                    <Avatar className="relative z-[1] h-24 w-24 border-2 shadow-sm">
-                                        <AvatarImage src={newAvatar || userData.photoURL || undefined} />
-                                        <AvatarFallback className="text-4xl bg-primary/20">{userData.username?.charAt(0).toUpperCase()}</AvatarFallback>
-                                    </Avatar>
-                                </div>
-                                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200">
-                                    <Camera className="h-8 w-8" />
-                                </div>
-                           </button>
-                            <Button variant="outline" onClick={() => router.push('/avatar-creator')}>
+                           <div className={cn("avatar-frame-wrapper", userData?.selectedAvatarFrame)}>
+                                <Avatar className="relative z-[1] h-24 w-24 border-2 shadow-sm">
+                                    <AvatarImage src={userData.photoURL || undefined} />
+                                    <AvatarFallback className="text-4xl bg-primary/20">{userData.username?.charAt(0).toUpperCase()}</AvatarFallback>
+                                </Avatar>
+                            </div>
+                            <Button variant="outline" onClick={() => router.push('/avatar-studio')}>
                                 <Sparkles className="mr-2 h-4 w-4" />
-                                Avatar Oluşturucu
+                                AI Avatar Stüdyosu
                             </Button>
                         </div>
 
@@ -521,15 +472,13 @@ export default function ProfilePageClient() {
             
             <BlockedUsersDialog isOpen={isBlockedUsersOpen} onOpenChange={setIsBlockedUsersOpen} blockedUserIds={userData.blockedUsers || []}/>
             <ImageCropperDialog 
-                isOpen={!!imageToCrop} 
-                setIsOpen={(isOpen) => !isOpen && setImageToCrop(null)} 
-                imageSrc={imageToCrop} 
-                aspectRatio={1} 
-                onCropComplete={handleCropComplete} 
-                circularCrop={true}
+              isOpen={!!imageToCrop} 
+              setIsOpen={(isOpen) => !isOpen && setImageToCrop(null)} 
+              imageSrc={imageToCrop} 
+              aspectRatio={1} 
+              onCropComplete={handleCropComplete} 
+              circularCrop={true}
             />
         </>
     );
 }
-
-    
