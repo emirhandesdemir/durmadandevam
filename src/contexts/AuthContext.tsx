@@ -2,7 +2,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
-import { onAuthStateChanged, User, signOut } from 'firebase/auth';
+import { onIdTokenChanged, User, signOut } from 'firebase/auth';
 import { doc, onSnapshot, query, where, setDoc, serverTimestamp, collection, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -10,7 +10,6 @@ import type { FeatureFlags, UserProfile, ThemeSettings } from '@/lib/types';
 import { triggerProfileCompletionNotification } from '@/lib/actions/notificationActions';
 import i18n from '@/lib/i18n';
 import AnimatedLogoLoader from '@/components/common/AnimatedLogoLoader';
-import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
@@ -32,6 +31,18 @@ const AuthContext = createContext<AuthContextType>({
   handleLogout: async () => {},
 });
 
+async function setSessionCookie(idToken: string | null) {
+  if (idToken) {
+    await fetch('/api/auth/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken }),
+    });
+  } else {
+    await fetch('/api/auth/session', { method: 'DELETE' });
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserProfile | null>(null);
@@ -41,7 +52,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true); // Single loading state
   
   const { toast } = useToast();
-  const router = useRouter();
 
   const handleLogout = useCallback(async () => {
     try {
@@ -50,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await setDoc(userStatusRef, { isOnline: false, lastSeen: serverTimestamp() }, { merge: true });
         }
         await signOut(auth);
+        await setSessionCookie(null);
         toast({
             title: "Oturum Kapatıldı",
             description: "Başarıyla çıkış yaptınız.",
@@ -66,7 +77,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [toast]);
   
   useEffect(() => {
-    // Listen for global configs (theme, features)
     const unsubscribeFeatures = onSnapshot(doc(db, 'config', 'featureFlags'), (docSnap) => {
       setFeatureFlags(docSnap.exists() ? docSnap.data() as FeatureFlags : { quizGameEnabled: true, contentModerationEnabled: true });
     });
@@ -75,14 +85,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (docSnap.exists()) setThemeSettings(docSnap.data() as ThemeSettings);
     });
 
-    // Main authentication listener
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-        setUser(currentUser);
-        if (!currentUser) {
-            setUserData(null);
-            setTotalUnreadDms(0);
-            setLoading(false); // If no user, we are done loading
-        }
+    const unsubscribeAuth = onIdTokenChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      const idToken = await currentUser?.getIdToken() || null;
+      await setSessionCookie(idToken);
+      if (!currentUser) {
+          setUserData(null);
+          setTotalUnreadDms(0);
+          setLoading(false);
+      }
     });
 
     return () => {
@@ -92,11 +103,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-
   useEffect(() => {
-    if (!user) return; // Only run this if user object exists
+    if (!user) {
+        setLoading(false);
+        return;
+    };
 
-    // We have a user, now listen for their data
+    setLoading(true);
+
     const userDocRef = doc(db, 'users', user.uid);
     const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
         if (docSnap.exists()) {
@@ -116,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else { 
             setUserData(null);
         }
-        setLoading(false); // User data loaded (or not found), we are done loading.
+        setLoading(false);
     }, (error) => {
         console.error("Firestore user listener error:", error);
         setUserData(null);
@@ -130,7 +144,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setTotalUnreadDms(total);
     });
     
-    // Set user online status
     const userStatusRef = doc(db, 'users', user.uid);
     updateDoc(userStatusRef, { isOnline: true });
     
@@ -142,7 +155,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubscribeDms();
       window.removeEventListener("beforeunload", onbeforeunload);
     };
-
   }, [user, handleLogout, toast]);
 
   const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms };

@@ -13,14 +13,28 @@ import { Grid3x3, FileText, Bookmark } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getAuth } from '@/lib/firebaseAdmin';
 import SavedPostsGrid from '@/components/profile/SavedPostsGrid';
+import { cookies } from 'next/headers';
 
 interface UserProfilePageProps {
   params: { uid: string };
 }
 
+async function getAuthenticatedUser() {
+    try {
+        const sessionCookie = cookies().get('session')?.value;
+        if (!sessionCookie) return null;
+        return await getAuth().verifySessionCookie(sessionCookie, true);
+    } catch (error) {
+        // Session cookie is invalid or expired.
+        // This is a normal scenario for logged-out users.
+        return null;
+    }
+}
+
+
 export default async function UserProfilePage({ params }: UserProfilePageProps) {
   const { uid } = params;
-  const authUser = await getAuth().getUserToken();
+  const authUser = await getAuthenticatedUser();
   const isOwnProfile = authUser?.uid === uid;
 
   // Veritabanı sorguları için referanslar oluştur.
