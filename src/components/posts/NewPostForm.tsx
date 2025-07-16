@@ -15,10 +15,9 @@ import type { UserProfile } from "@/lib/types";
 import ImageCropperDialog from "@/components/common/ImageCropperDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
-import { Image as ImageIcon, Send, Loader2, X, Sparkles, RefreshCcw, MessageCircleOff, HeartOff } from "lucide-react";
+import { Image as ImageIcon, Send, Loader2, X, Sparkles, RefreshCcw, MessageCircleOff, HeartOff, ChevronLeft } from "lucide-react";
 import { ScrollArea } from "../ui/scroll-area";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
 import { Input } from "../ui/input";
@@ -26,6 +25,8 @@ import { useTranslation } from "react-i18next";
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
 import Image from "next/image";
+import Link from "next/link";
+import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 
 // Helper function to convert data URI to Blob for more robust uploads
 async function dataUriToBlob(dataUri: string): Promise<Blob> {
@@ -49,18 +50,15 @@ export default function NewPostForm() {
   const [wasEditedByAI, setWasEditedByAI] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Mention States
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<Pick<UserProfile, 'uid' | 'username' | 'photoURL'>[]>([]);
   const [suggestionLoading, setSuggestionLoading] = useState(false);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Post Settings
   const [commentsDisabled, setCommentsDisabled] = useState(false);
   const [likesHidden, setLikesHidden] = useState(false);
 
-  // AI Edit States
   const [isAiEditing, setIsAiEditing] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -204,8 +202,8 @@ export default function NewPostForm() {
   const handleAiEdit = async () => {
     if (!croppedImage || !aiPrompt.trim()) return;
 
-    setIsAiEditing(false); // Close dialog
-    setIsAiLoading(true); // Show progress bar on the form
+    setIsAiEditing(false);
+    setIsAiLoading(true);
     try {
         const result = await applyImageFilter({
             photoDataUri: croppedImage,
@@ -231,6 +229,14 @@ export default function NewPostForm() {
     }
   };
 
+  const handleRevertAiEdit = () => {
+      if (originalCroppedImage) {
+          setCroppedImage(originalCroppedImage);
+          setWasEditedByAI(false);
+          toast({ description: "AI düzenlemesi geri alındı." });
+      }
+  };
+  
   const handleShare = async () => {
     if (!user || !userData) {
       toast({ variant: 'destructive', description: 'Bu işlemi yapmak için giriş yapmalısınız veya verilerinizin yüklenmesini beklemelisiniz.' });
@@ -247,7 +253,6 @@ export default function NewPostForm() {
         let finalImageUrl = "";
         
         if (croppedImage) {
-            // Step 1: Moderate the image
             if (featureFlags?.contentModerationEnabled) {
                 const safetyResult = await checkImageSafety({ photoDataUri: croppedImage });
                 if (!safetyResult.success || !safetyResult.data?.isSafe) {
@@ -255,7 +260,6 @@ export default function NewPostForm() {
                 }
             }
             
-            // Step 2: Upload to storage
             const imageBlob = await dataUriToBlob(croppedImage);
             const fileExtension = imageBlob.type.split('/')[1] || 'jpg';
             const imageRef = ref(storage, `upload/posts/${user.uid}/${Date.now()}_post.${fileExtension}`);
@@ -295,41 +299,39 @@ export default function NewPostForm() {
     }
   };
 
-  const handleRevertAiEdit = () => {
-      if (originalCroppedImage) {
-          setCroppedImage(originalCroppedImage);
-          setWasEditedByAI(false);
-          toast({ description: "AI düzenlemesi geri alındı." });
-      }
-  };
-
   const isLoading = isSubmitting || isAiLoading;
 
   return (
     <>
-      <Card className="w-full overflow-hidden rounded-3xl border-0 bg-card/80 shadow-xl shadow-black/5 backdrop-blur-sm">
-        <CardHeader>
-             <CardTitle className="text-2xl font-bold">Yeni Gönderi</CardTitle>
-             <CardDescription>Ne paylaşmak istersin?</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+      <main className="flex flex-col h-full bg-background">
+        {/* Header */}
+        <header className="flex items-center justify-between p-2 border-b">
+          <Button asChild variant="ghost" className="rounded-full">
+            <Link href="/home"><ChevronLeft className="mr-2 h-4 w-4" /> Geri</Link>
+          </Button>
+          <Button onClick={handleShare} disabled={isLoading || (!text.trim() && !croppedImage)}>
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+            Paylaş
+          </Button>
+        </header>
+
+        {/* Content */}
+        <ScrollArea className="flex-1">
+          <div className="p-4 space-y-4">
             <Popover open={mentionQuery !== null}>
                 <PopoverAnchor asChild>
-                    <div className="flex items-start gap-4">
-                        <div className={cn("avatar-frame-wrapper", userData?.selectedAvatarFrame)}>
-                        <Avatar className="relative z-[1] h-11 w-11 flex-shrink-0 border-2 border-white">
+                    <div className="flex items-start gap-3">
+                        <Avatar className="h-10 w-10 border">
                             <AvatarImage src={userData?.photoURL || undefined} />
-                            <AvatarFallback>{userData?.profileEmoji || user?.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
+                            <AvatarFallback>{userData?.username?.charAt(0)}</AvatarFallback>
                         </Avatar>
-                        </div>
                         <Textarea
                             ref={textareaRef}
                             value={text}
                             onChange={handleTextChange}
                             onKeyDown={handleKeyDown}
                             placeholder="Aklında ne var? Birinden bahsetmek için @kullaniciadi kullan."
-                            className="min-h-[100px] flex-1 resize-none border rounded-xl bg-muted p-3 text-base placeholder:text-muted-foreground/80 focus-visible:ring-1"
-                            rows={3}
+                            className="flex-1 resize-none border-0 p-0 text-base placeholder:text-muted-foreground focus-visible:ring-0 shadow-none min-h-[100px]"
                             disabled={isLoading}
                         />
                     </div>
@@ -345,10 +347,7 @@ export default function NewPostForm() {
                                     key={user.uid}
                                     onClick={() => handleMentionSelect(user.username)}
                                     onMouseMove={() => setActiveSuggestionIndex(index)}
-                                    className={cn(
-                                        "w-full text-left flex items-center gap-2 p-2 rounded-md hover:bg-accent",
-                                        index === activeSuggestionIndex && "bg-accent"
-                                    )}
+                                    className={cn("w-full text-left flex items-center gap-2 p-2 rounded-md hover:bg-accent", index === activeSuggestionIndex && "bg-accent")}
                                 >
                                     <Avatar className="h-7 w-7"><AvatarImage src={user.photoURL || undefined} /><AvatarFallback>{user.username.charAt(0)}</AvatarFallback></Avatar>
                                     <span className="font-medium text-sm">{user.username}</span>
@@ -362,81 +361,73 @@ export default function NewPostForm() {
                 </PopoverContent>
             </Popover>
 
-          {isAiLoading && (
-            <div className="px-5 pb-2">
-                <div className="flex items-center gap-2 text-sm text-primary p-2 bg-primary/10 rounded-lg animate-in fade-in">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Yapay zeka resmi düzenliyor, lütfen bekleyin...</span>
-                </div>
-            </div>
-          )}
+            {isAiLoading && (
+              <div className="flex items-center gap-2 text-sm text-primary p-2 bg-primary/10 rounded-lg animate-in fade-in">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Yapay zeka resmi düzenliyor, lütfen bekleyin...</span>
+              </div>
+            )}
 
-          {croppedImage && (
-            <div className="ml-0 sm:ml-16 space-y-2">
-                <div className="relative group">
-                    <div className="overflow-hidden rounded-xl border">
-                        <Image src={croppedImage} width={500} height={281} alt="Önizleme" className="max-h-80 w-auto object-contain" />
-                    </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setIsAiEditing(true)} disabled={isLoading}>
-                        <Sparkles className="mr-2 h-4 w-4" />
-                        AI ile Düzenle
+            {croppedImage && (
+              <div className="relative group w-full aspect-video rounded-xl overflow-hidden border">
+                <Image src={croppedImage} layout="fill" objectFit="cover" alt="Önizleme" />
+                <div className="absolute top-2 right-2 flex items-center gap-2">
+                    <Button variant="outline" size="icon" onClick={() => setIsAiEditing(true)} disabled={isLoading} className="bg-background/50 hover:bg-background/80 h-8 w-8">
+                        <Sparkles className="h-4 w-4" />
                     </Button>
                     {wasEditedByAI && (
-                        <Button variant="outline" size="sm" onClick={handleRevertAiEdit} disabled={isLoading}>
-                        <RefreshCcw className="mr-2 h-4 w-4" />
-                        Geri Al
+                        <Button variant="outline" size="icon" onClick={handleRevertAiEdit} disabled={isLoading} className="bg-background/50 hover:bg-background/80 h-8 w-8">
+                            <RefreshCcw className="h-4 w-4" />
                         </Button>
                     )}
-                    <Button variant="destructive" size="sm" onClick={removeImage} disabled={isLoading}>
-                        <X className="mr-2 h-4 w-4" />
-                        Kaldır
+                    <Button variant="destructive" size="icon" onClick={removeImage} disabled={isLoading} className="h-8 w-8">
+                        <X className="h-4 w-4" />
                     </Button>
                 </div>
-            </div>
-          )}
-           <div className="ml-0 sm:ml-16 space-y-3 pt-2">
-                <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
-                    <div className="space-y-0.5">
-                        <Label htmlFor="disable-comments" className="font-semibold flex items-center gap-2"><MessageCircleOff className="h-4 w-4"/> Yorumları Kapat</Label>
-                        <p className="text-xs text-muted-foreground pl-6">Bu gönderiye kimse yorum yapamaz.</p>
-                    </div>
-                    <Switch id="disable-comments" checked={commentsDisabled} onCheckedChange={setCommentsDisabled} />
-                </div>
-                <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
-                    <div className="space-y-0.5">
-                         <Label htmlFor="hide-likes" className="font-semibold flex items-center gap-2"><HeartOff className="h-4 w-4"/> Beğeni Sayısını Gizle</Label>
-                        <p className="text-xs text-muted-foreground pl-6">Diğerleri bu gönderiyi kaç kişinin beğendiğini göremez.</p>
-                    </div>
-                    <Switch id="hide-likes" checked={likesHidden} onCheckedChange={setLikesHidden} />
-                </div>
-            </div>
-        </CardContent>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
         
-        <CardFooter className="flex items-center justify-between border-t border-border/50 bg-muted/20 px-4 py-3">
-          <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" className="hidden" />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-            onClick={handleImageClick}
-            disabled={isLoading || !!croppedImage}
-          >
-            <ImageIcon className="h-5 w-5" />
-            <span className="sr-only">Resim Ekle</span>
-          </Button>
-          
-          <Button 
-            className="rounded-full font-semibold px-4"
-            onClick={handleShare}
-            disabled={isLoading || (!text.trim() && !croppedImage)}
-          >
-            {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-            <span className="ml-2 hidden sm:inline">{isSubmitting ? 'Paylaşılıyor...' : 'Paylaş'}</span>
-          </Button>
-        </CardFooter>
-      </Card>
+        {/* Footer */}
+        <div className="p-2 border-t flex items-center justify-between">
+            <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" className="hidden" />
+            <Button
+                variant="ghost"
+                className="text-muted-foreground"
+                onClick={handleImageClick}
+                disabled={isLoading || !!croppedImage}
+            >
+                <ImageIcon className="h-5 w-5 mr-2" />
+                Resim Ekle
+            </Button>
+            
+            <Sheet>
+                <SheetTrigger asChild>
+                    <Button variant="ghost" className="text-muted-foreground">Ayarlar</Button>
+                </SheetTrigger>
+                <SheetContent side="bottom">
+                    <div className="p-4 space-y-4">
+                         <div className="flex items-center justify-between">
+                            <div>
+                                <Label htmlFor="disable-comments" className="font-semibold flex items-center gap-2"><MessageCircleOff className="h-4 w-4"/> Yorumları Kapat</Label>
+                                <p className="text-xs text-muted-foreground pl-6">Bu gönderiye kimse yorum yapamaz.</p>
+                            </div>
+                            <Switch id="disable-comments" checked={commentsDisabled} onCheckedChange={setCommentsDisabled} />
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                 <Label htmlFor="hide-likes" className="font-semibold flex items-center gap-2"><HeartOff className="h-4 w-4"/> Beğeni Sayısını Gizle</Label>
+                                <p className="text-xs text-muted-foreground pl-6">Diğerleri bu gönderiyi kaç kişinin beğendiğini göremez.</p>
+                            </div>
+                            <Switch id="hide-likes" checked={likesHidden} onCheckedChange={setLikesHidden} />
+                        </div>
+                    </div>
+                </SheetContent>
+            </Sheet>
+        </div>
+      </main>
+
       <ImageCropperDialog
         isOpen={!!imageToCrop}
         setIsOpen={(isOpen) => !isOpen && setImageToCrop(null)}
