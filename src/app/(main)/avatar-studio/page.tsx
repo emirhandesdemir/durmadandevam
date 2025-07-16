@@ -1,7 +1,7 @@
 // src/app/(main)/avatar-studio/page.tsx
 'use client';
 
-import { useState, useCallback, useReducer } from 'react';
+import { useState, useCallback, useReducer, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -9,57 +9,46 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Save, Sparkles, Wand2, RefreshCw, Bot, Loader2 } from 'lucide-react';
 import { generateAvatar, type GenerateAvatarInput } from '@/ai/flows/generateAvatarFlow';
-import { styleAvatar, type StyleAvatarInput } from '@/ai/flows/styleAvatarFlow';
 import { updateUserProfile } from '@/lib/actions/userActions';
 import Image from 'next/image';
-import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 
 type AvatarState = {
-  baseAvatar: string | null;
   currentAvatar: string | null;
   history: string[];
   historyIndex: number;
-  prompt: string;
 };
 
 type AvatarAction =
   | { type: 'SET_AVATAR'; payload: string }
-  | { type: 'SET_PROMPT'; payload: string }
-  | { type: 'START_EDIT'; payload: string }
+  | { type: 'PUSH_HISTORY'; payload: string }
   | { type: 'UNDO' }
   | { type: 'REDO' }
   | { type: 'RESET' };
 
 const initialState: AvatarState = {
-  baseAvatar: null,
   currentAvatar: null,
   history: [],
   historyIndex: -1,
-  prompt: '',
 };
 
 function avatarReducer(state: AvatarState, action: AvatarAction): AvatarState {
   switch (action.type) {
     case 'SET_AVATAR':
-      const newHistory = [action.payload];
+      return {
+        ...initialState,
+        currentAvatar: action.payload,
+        history: [action.payload],
+        historyIndex: 0,
+      };
+    case 'PUSH_HISTORY':
+      const newHistory = state.history.slice(0, state.historyIndex + 1);
+      newHistory.push(action.payload);
       return {
         ...state,
-        baseAvatar: action.payload,
         currentAvatar: action.payload,
         history: newHistory,
-        historyIndex: 0,
-        prompt: '',
-      };
-    case 'START_EDIT':
-      const truncatedHistory = state.history.slice(0, state.historyIndex + 1);
-      const updatedHistory = [...truncatedHistory, action.payload];
-      return {
-        ...state,
-        currentAvatar: action.payload,
-        history: updatedHistory,
-        historyIndex: updatedHistory.length - 1,
-        prompt: '',
+        historyIndex: newHistory.length - 1,
       };
     case 'UNDO':
         if (state.historyIndex > 0) {
@@ -82,14 +71,15 @@ function avatarReducer(state: AvatarState, action: AvatarAction): AvatarState {
         }
         return state;
     case 'RESET':
-        return {
-            ...state,
-            currentAvatar: state.baseAvatar,
-            history: state.baseAvatar ? [state.baseAvatar] : [],
-            historyIndex: state.baseAvatar ? 0 : -1,
+        if(state.history.length > 0) {
+            return {
+                ...state,
+                currentAvatar: state.history[0],
+                history: [state.history[0]],
+                historyIndex: 0,
+            }
         }
-    case 'SET_PROMPT':
-      return { ...state, prompt: action.payload };
+        return state;
     default:
       return state;
   }
@@ -97,54 +87,48 @@ function avatarReducer(state: AvatarState, action: AvatarAction): AvatarState {
 
 export default function AvatarStudioPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   const { toast } = useToast();
   const [state, dispatch] = useReducer(avatarReducer, initialState);
+  const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    // Load user's existing avatar on initial load
+    if (userData?.photoURL && !state.currentAvatar) {
+        dispatch({ type: 'SET_AVATAR', payload: userData.photoURL });
+    }
+  }, [userData, state.currentAvatar]);
   
   const canUndo = state.historyIndex > 0;
   const canRedo = state.historyIndex < state.history.length - 1;
 
-  const handleGenerate = useCallback(async (basePrompt: string) => {
+  const handleGenerateOrStyle = useCallback(async (basePrompt: string) => {
     setIsLoading(true);
     try {
       const input: GenerateAvatarInput = {
         prompt: basePrompt,
+        baseAvatarDataUri: state.currentAvatar || undefined,
       };
       const result = await generateAvatar(input);
+
       if (result.avatarDataUri) {
-        dispatch({ type: 'SET_AVATAR', payload: result.avatarDataUri });
+         if(state.currentAvatar) {
+            dispatch({ type: 'PUSH_HISTORY', payload: result.avatarDataUri });
+         } else {
+            dispatch({ type: 'SET_AVATAR', payload: result.avatarDataUri });
+         }
       } else {
-        throw new Error('Avatar oluşturulamadı.');
+        throw new Error('Avatar oluşturulamadı veya stilize edilemedi.');
       }
+      setPrompt(''); // Clear prompt after use
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Hata', description: error.message });
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
-  
-  const handleStyle = useCallback(async () => {
-    if (!state.currentAvatar || !state.prompt) return;
-    setIsLoading(true);
-    try {
-      const input: StyleAvatarInput = {
-        avatarDataUri: state.currentAvatar,
-        prompt: state.prompt,
-      };
-      const result = await styleAvatar(input);
-       if (result.styledAvatarDataUri) {
-        dispatch({ type: 'START_EDIT', payload: result.styledAvatarDataUri });
-      } else {
-        throw new Error('Avatar stilize edilemedi.');
-      }
-    } catch (error: any) {
-        toast({ variant: 'destructive', title: 'Hata', description: error.message });
-    } finally {
-        setIsLoading(false);
-    }
-  }, [state.currentAvatar, state.prompt, toast]);
+  }, [toast, state.currentAvatar]);
 
   const handleSave = async () => {
     if (!user || !state.currentAvatar) {
@@ -155,7 +139,7 @@ export default function AvatarStudioPage() {
     try {
         await updateUserProfile({ userId: user.uid, photoURL: state.currentAvatar });
         toast({ description: "Avatar başarıyla kaydedildi!" });
-        router.back();
+        router.push(`/profile/${user.uid}`);
     } catch (error: any) {
         toast({ variant: 'destructive', description: `Hata: ${error.message}` });
     } finally {
@@ -169,12 +153,12 @@ export default function AvatarStudioPage() {
             <Bot className="h-12 w-12 text-primary"/>
         </div>
       <h2 className="text-xl font-bold">Avatar Stüdyosuna Hoş Geldin!</h2>
-      <p className="text-muted-foreground mt-2 mb-6">Hayalindeki avatarı metinle tarif etmeye başla.</p>
+      <p className="text-muted-foreground mt-2 mb-6">Başlamak için bir temel model seç veya hayalindeki avatarı metinle tarif et.</p>
       <div className="w-full max-w-sm space-y-4">
-        <Button className="w-full" onClick={() => handleGenerate("A full-body 3D character of a man with short brown hair, a friendly expression, wearing a simple t-shirt and jeans, on a plain background, modern cartoon style.")}>
+        <Button className="w-full" onClick={() => handleGenerateOrStyle("A full-body 3D character of a man with short brown hair, a friendly expression, wearing a simple t-shirt and jeans, on a plain background, modern cartoon style.")}>
           Erkek Model Oluştur
         </Button>
-        <Button className="w-full" onClick={() => handleGenerate("A full-body 3D character of a woman with long black hair, a friendly expression, wearing a simple t-shirt and jeans, on a plain background, modern cartoon style.")}>
+        <Button className="w-full" onClick={() => handleGenerateOrStyle("A full-body 3D character of a woman with long black hair, a friendly expression, wearing a simple t-shirt and jeans, on a plain background, modern cartoon style.")}>
           Kadın Model Oluştur
         </Button>
       </div>
@@ -214,7 +198,7 @@ export default function AvatarStudioPage() {
              {isLoading && (
                 <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center gap-4 z-20">
                     <Loader2 className="h-12 w-12 text-white animate-spin"/>
-                    <p className="text-white font-semibold">Avatar oluşturuluyor...</p>
+                    <p className="text-white font-semibold">Avatar işleniyor...</p>
                 </div>
             )}
         </div>
@@ -223,16 +207,16 @@ export default function AvatarStudioPage() {
              <div className="flex items-center justify-center gap-2">
                 <Button variant="outline" size="icon" onClick={() => dispatch({ type: 'UNDO' })} disabled={!canUndo || isLoading}><RefreshCw className="h-4 w-4 transform -scale-x-100" /></Button>
                 <Button variant="outline" size="icon" onClick={() => dispatch({ type: 'REDO' })} disabled={!canRedo || isLoading}><RefreshCw className="h-4 w-4" /></Button>
-                 <Button variant="outline" onClick={() => dispatch({ type: 'RESET' })} disabled={!state.baseAvatar || isLoading}>Sıfırla</Button>
+                <Button variant="outline" onClick={() => dispatch({ type: 'RESET' })} disabled={state.history.length <= 1 || isLoading}>Sıfırla</Button>
             </div>
-            <form onSubmit={(e) => { e.preventDefault(); handleStyle(); }} className="flex gap-2">
+            <form onSubmit={(e) => { e.preventDefault(); handleGenerateOrStyle(prompt); }} className="flex gap-2">
                  <Input
                     placeholder='örn: "siyah deri ceket giydir", "gözlük ekle"'
-                    value={state.prompt}
-                    onChange={(e) => dispatch({ type: 'SET_PROMPT', payload: e.target.value })}
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
                     disabled={!state.currentAvatar || isLoading}
                 />
-                <Button type="submit" disabled={!state.currentAvatar || isLoading || !state.prompt.trim()}>
+                <Button type="submit" disabled={!state.currentAvatar || isLoading || !prompt.trim()}>
                     <Wand2 className="mr-2 h-4 w-4" /> Stil Ver
                 </Button>
             </form>

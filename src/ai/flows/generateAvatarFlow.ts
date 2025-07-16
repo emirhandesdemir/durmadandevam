@@ -2,7 +2,7 @@
 /**
  * @fileOverview Kullanıcının metin istemine göre yapay zeka ile bir avatar oluşturur.
  *
- * - generateAvatar - Metin girdisinden bir avatar resmi oluşturur.
+ * - generateAvatar - Metin girdisinden bir avatar resmi oluşturur veya mevcut bir avatarı günceller.
  * - GenerateAvatarInput - Fonksiyonun giriş tipi.
  * - GenerateAvatarOutput - Fonksiyonun dönüş tipi.
  */
@@ -12,13 +12,14 @@ import { z } from 'genkit';
 
 // Giriş şeması
 export const GenerateAvatarInputSchema = z.object({
-  prompt: z.string().describe('Oluşturulacak avatarın detaylı açıklaması. Örneğin: "A full-body 3D character of a man..."'),
+  prompt: z.string().describe('Oluşturulacak veya güncellenecek avatarın detaylı açıklaması. Örneğin: "siyah deri ceket giydir", "saçını sarı yap"'),
+  baseAvatarDataUri: z.string().optional().describe("Eğer bir düzenleme yapılıyorsa, temel alınacak mevcut avatarın Data URI'si."),
 });
 export type GenerateAvatarInput = z.infer<typeof GenerateAvatarInputSchema>;
 
 // Çıkış şeması
 export const GenerateAvatarOutputSchema = z.object({
-  avatarDataUri: z.string().describe("Oluşturulan avatar resminin Data URI'si."),
+  avatarDataUri: z.string().describe("Oluşturulan veya güncellenen avatar resminin Data URI'si."),
 });
 export type GenerateAvatarOutput = z.infer<typeof GenerateAvatarOutputSchema>;
 
@@ -36,10 +37,22 @@ const generateAvatarFlow = ai.defineFlow(
     inputSchema: GenerateAvatarInputSchema,
     outputSchema: GenerateAvatarOutputSchema,
   },
-  async ({ prompt }) => {
+  async ({ prompt, baseAvatarDataUri }) => {
+
+    const generationPrompt: any[] = [];
+    
+    // Eğer düzenlenecek bir temel avatar varsa, bunu prompt'un başına ekle.
+    if (baseAvatarDataUri) {
+        generationPrompt.push({ media: { url: baseAvatarDataUri } });
+        generationPrompt.push({ text: `Apply the following change to the character in the image, maintaining the same character, art style, and background. Style change: "${prompt}"` });
+    } else {
+        // Sıfırdan bir avatar oluşturuyorsak
+        generationPrompt.push({ text: `Generate a full body shot of a 3D character based on the following description. The character should be centered against a simple, plain background. Style: modern, clean, Pixar-like. Description: "${prompt}"` });
+    }
+
     const { media } = await ai.generate({
       model: imageGenerationModel,
-      prompt: `Generate a full body shot of a 3D character based on the following description. The character should be centered against a simple, plain background. Style: modern, clean, Pixar-like. Description: "${prompt}"`,
+      prompt: generationPrompt,
       config: {
         responseModalities: ['IMAGE', 'TEXT'],
         safetySettings: [
