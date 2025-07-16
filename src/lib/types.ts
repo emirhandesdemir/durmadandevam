@@ -186,6 +186,7 @@ export interface FollowRequest {
     uid: string;
     username:string;
     photoURL: string | null;
+    profileEmoji: string | null;
     userAvatarFrame?: string;
     requestedAt: Timestamp;
 }
@@ -224,7 +225,7 @@ export interface Post {
     userGender?: 'male' | 'female';
     text: string;
     imageUrl?: string | null; // Can be null
-    videoUrl?: string | null; // Can be null
+    videoUrl?: string | null;
     backgroundStyle?: string;
     editedWithAI?: boolean;
     createdAt: Timestamp | { seconds: number; nanoseconds: number };
@@ -269,8 +270,8 @@ export interface Comment {
 export interface Giveaway {
     status: 'idle' | 'active' | 'finished';
     prize: string;
-    participants: { uid: string, username: string, photoURL: string | null }[];
-    winner?: { uid: string, username: string, photoURL: string | null };
+    participants: { uid: string, username: string, photoURL: string | null, profileEmoji: string | null }[];
+    winner?: { uid: string, username: string, photoURL: string | null, profileEmoji: string | null };
     startedAt?: Timestamp;
     endedAt?: Timestamp;
 }
@@ -284,6 +285,7 @@ export interface Room {
         uid: string;
         username: string;
         photoURL: string | null;
+        profileEmoji: string | null;
         role: string;
         selectedAvatarFrame?: string;
     };
@@ -291,7 +293,7 @@ export interface Room {
     createdAt: Timestamp;
     expiresAt?: Timestamp | null;
     portalExpiresAt?: Timestamp; // For public announcements
-    participants: { uid: string, username: string, photoURL?: string | null }[];
+    participants: { uid: string, username: string, photoURL?: string | null, profileEmoji?: string | null }[];
     maxParticipants: number;
     voiceParticipantsCount?: number;
     rules: string | null;

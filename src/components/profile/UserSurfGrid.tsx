@@ -1,4 +1,4 @@
-// src/components/profile/UserPostsGrid.tsx
+// src/components/profile/UserSurfGrid.tsx
 "use client";
 
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
@@ -6,16 +6,15 @@ import { db } from '@/lib/firebase';
 import type { Post, UserProfile } from '@/lib/types';
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, CameraOff, ShieldOff, Lock } from 'lucide-react';
-import Image from 'next/image';
-import PostViewerDialog from '@/components/posts/PostViewerDialog';
+import { Loader2, Clapperboard, ShieldOff, Lock } from 'lucide-react';
 import { Heart, MessageCircle } from 'lucide-react';
+import PostViewerDialog from '@/components/posts/PostViewerDialog';
 
-interface UserPostsGridProps {
+interface UserSurfGridProps {
   profileUser: UserProfile;
 }
 
-export default function UserPostsGrid({ profileUser }: UserPostsGridProps) {
+export default function UserSurfGrid({ profileUser }: UserSurfGridProps) {
     const { userData: currentUserData, loading: authLoading } = useAuth();
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
@@ -40,7 +39,8 @@ export default function UserPostsGrid({ profileUser }: UserPostsGridProps) {
         const q = query(
             postsRef, 
             where('uid', '==', profileUser.uid), 
-            where('videoUrl', '==', null), // Sadece video olmayanları al
+            where('videoUrl', '!=', null), // Sadece video içerenleri al
+            orderBy('videoUrl'),
             orderBy('createdAt', 'desc')
         );
         
@@ -49,7 +49,7 @@ export default function UserPostsGrid({ profileUser }: UserPostsGridProps) {
             setPosts(fetchedPosts);
             setLoading(false);
         }, (error) => {
-            console.error("Gönderiler çekilirken hata:", error);
+            console.error("Surf videoları çekilirken hata:", error);
             setLoading(false);
         });
 
@@ -74,7 +74,7 @@ export default function UserPostsGrid({ profileUser }: UserPostsGridProps) {
           <div className="text-center py-10 mt-4 text-muted-foreground">
             <Lock className="h-12 w-12 mx-auto mb-4" />
             <h2 className="text-lg font-semibold">Bu Hesap Gizli</h2>
-            <p>Gönderilerini görmek için bu hesabı takip et.</p>
+            <p>İçeriği görmek için bu hesabı takip et.</p>
           </div>
         );
     }
@@ -82,8 +82,8 @@ export default function UserPostsGrid({ profileUser }: UserPostsGridProps) {
     if (posts.length === 0) {
         return (
              <div className="text-center py-10 mt-4 text-muted-foreground">
-                <CameraOff className="h-12 w-12 mx-auto mb-4" />
-                <h2 className="text-lg font-semibold">Henüz Hiç Gönderi Yok</h2>
+                <Clapperboard className="h-12 w-12 mx-auto mb-4" />
+                <h2 className="text-lg font-semibold">Henüz Surf Videosu Yok</h2>
             </div>
         )
     }
@@ -94,38 +94,23 @@ export default function UserPostsGrid({ profileUser }: UserPostsGridProps) {
                 {posts.map((post) => (
                     <button 
                         key={post.id} 
-                        className="group relative aspect-square block bg-muted/50 focus:outline-none"
+                        className="group relative aspect-square block bg-black focus:outline-none"
                         onClick={() => setSelectedPost(post)}
                     >
-                        {post.imageUrl ? (
-                           <Image
-                                src={post.imageUrl}
-                                alt="Kullanıcı gönderisi"
-                                fill
-                                sizes="(max-width: 768px) 33vw, 25vw"
-                                className="object-cover"
-                                onContextMenu={(e) => e.preventDefault()}
-                            />
-                        ) : (
-                             <div className={`w-full h-full flex items-center justify-center p-2 text-primary-foreground ${post.backgroundStyle || 'bg-muted'}`}>
-                                <p className="text-xs font-bold text-center line-clamp-4">{post.text}</p>
-                            </div>
+                        {post.videoUrl && (
+                             <video src={post.videoUrl} className="w-full h-full object-cover" muted />
                         )}
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center text-white opacity-0 group-hover:opacity-100">
-                        <div className="flex items-center gap-4">
-                            {!post.likesHidden && (
+                            <div className="flex items-center gap-4">
                                 <div className="flex items-center gap-1">
                                     <Heart className="h-5 w-5 fill-white"/>
                                     <span className="font-bold text-sm">{post.likeCount}</span>
                                 </div>
-                            )}
-                            {!post.commentsDisabled && (
                                 <div className="flex items-center gap-1">
                                     <MessageCircle className="h-5 w-5 fill-white"/>
                                     <span className="font-bold text-sm">{post.commentCount}</span>
                                 </div>
-                            )}
-                        </div>
+                            </div>
                         </div>
                     </button>
                 ))}

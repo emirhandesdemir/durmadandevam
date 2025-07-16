@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Post } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck, Sparkles, Repeat, EyeOff, MessageCircleOff, HeartOff, Bookmark, ShieldAlert } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck, Sparkles, Repeat, EyeOff, MessageCircleOff, HeartOff, Bookmark, ShieldAlert, Clapperboard } from "lucide-react";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -277,7 +277,12 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                         />
                     </div>
                 )}
-                 {(post.backgroundStyle && !post.imageUrl) && (
+                {post.videoUrl && !isEditing && (
+                    <div className="relative w-full bg-black">
+                         <video src={post.videoUrl} controls className="w-full max-h-[80vh] object-contain"/>
+                    </div>
+                )}
+                 {(post.backgroundStyle && !post.imageUrl && !post.videoUrl) && (
                      <div onDoubleClick={handleDoubleClick} className={cn("h-80 flex items-center justify-center p-4", post.backgroundStyle)}>
                         <p className="text-2xl font-bold text-center text-primary-foreground drop-shadow-md">{post.text}</p>
                      </div>
