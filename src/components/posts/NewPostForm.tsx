@@ -250,7 +250,7 @@ export default function NewPostForm() {
     setIsSubmitting(true);
     
     try {
-        let finalImageUrl = "";
+        let imageUrl: string | null = null;
         
         if (croppedImage) {
             if (featureFlags?.contentModerationEnabled) {
@@ -260,11 +260,7 @@ export default function NewPostForm() {
                 }
             }
             
-            const imageBlob = await dataUriToBlob(croppedImage);
-            const fileExtension = imageBlob.type.split('/')[1] || 'jpg';
-            const imageRef = ref(storage, `upload/posts/${user.uid}/${Date.now()}_post.${fileExtension}`);
-            const snapshot = await uploadBytes(imageRef, imageBlob);
-            finalImageUrl = await getDownloadURL(snapshot.ref);
+            imageUrl = croppedImage;
         }
 
         await createPost({
@@ -276,7 +272,7 @@ export default function NewPostForm() {
             userRole: userData.role || 'user',
             userGender: userData.gender,
             text: text,
-            imageUrl: finalImageUrl,
+            imageUrl: imageUrl, // Pass data URI directly
             editedWithAI: wasEditedByAI,
             language: i18n.language,
             commentsDisabled: commentsDisabled,

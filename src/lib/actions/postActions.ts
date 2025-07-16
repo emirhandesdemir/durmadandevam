@@ -13,7 +13,8 @@ import {
     arrayRemove,
     arrayUnion,
     addDoc,
-    collection
+    collection,
+    writeBatch
 } from "firebase/firestore";
 import { ref, deleteObject, uploadString, getDownloadURL } from "firebase/storage";
 import { revalidatePath } from "next/cache";
@@ -40,7 +41,7 @@ async function handlePostMentions(postId: string, text: string, sender: { uid: s
                         recipientId: mentionedUser.uid,
                         senderId: sender.uid,
                         senderUsername: sender.displayName || "Biri",
-                        photoURL: sender.photoURL,
+                        senderAvatar: sender.photoURL,
                         profileEmoji: sender.profileEmoji,
                         senderAvatarFrame: sender.userAvatarFrame,
                         type: 'mention',
@@ -90,7 +91,7 @@ export async function createPost(postData: {
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
     text: string;
-    imageUrl?: string;
+    imageUrl?: string | null;
     videoUrl?: string;
     editedWithAI?: boolean;
     language: string;
@@ -100,6 +101,19 @@ export async function createPost(postData: {
     const newPostRef = doc(collection(db, 'posts'));
     const userRef = doc(db, 'users', postData.uid);
     let finalPostId = newPostRef.id;
+    let finalImageUrl: string | null = null;
+
+    if (postData.imageUrl) {
+        // Assume it's a data URI, convert to blob and upload
+        const response = await fetch(postData.imageUrl);
+        const imageBlob = await response.blob();
+        
+        const fileExtension = imageBlob.type.split('/')[1] || 'jpg';
+        const imageRef = ref(storage, `upload/posts/${postData.uid}/${Date.now()}_post.${fileExtension}`);
+        const snapshot = await uploadBytes(imageRef, imageBlob);
+        finalImageUrl = await getDownloadURL(snapshot.ref);
+    }
+
 
     await runTransaction(db, async (transaction) => {
         const userSnap = await transaction.get(userRef);
@@ -117,7 +131,7 @@ export async function createPost(postData: {
             userRole: postData.userRole,
             userGender: postData.userGender,
             text: postData.text,
-            imageUrl: postData.imageUrl || null, 
+            imageUrl: finalImageUrl, // Use the uploaded URL, or null
             videoUrl: postData.videoUrl || null,
             editedWithAI: postData.editedWithAI,
             language: postData.language,
@@ -181,7 +195,6 @@ export async function deletePost(postId: string) {
             transaction.delete(postRef);
             transaction.update(userRef, { postCount: increment(-1) });
 
-            // Do not delete from storage if it's an emoji data URL
             if (postData.imageUrl && !postData.imageUrl.startsWith('data:image/svg+xml')) {
                 try {
                     const imageStorageRef = ref(storage, postData.imageUrl);
