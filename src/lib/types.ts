@@ -186,7 +186,6 @@ export interface FollowRequest {
     uid: string;
     username:string;
     photoURL: string | null;
-    profileEmoji: string | null;
     userAvatarFrame?: string;
     requestedAt: Timestamp;
 }

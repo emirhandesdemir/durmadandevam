@@ -99,7 +99,7 @@ export default function CommentSheet({ open, onOpenChange, post }: CommentSheetP
 
         const prefix = value.substring(0, startIndex);
         const suffix = value.substring(cursorPos);
-        const newText = `${prefix}@${username} ${suffix}`;
+        const newText = `${prefix}${username} ${suffix}`;
         
         setNewCommentText(newText);
         setMentionQuery(null);
@@ -169,6 +169,7 @@ export default function CommentSheet({ open, onOpenChange, post }: CommentSheetP
                     uid: user.uid,
                     displayName: userData.username,
                     photoURL: userData.photoURL || null,
+                    profileEmoji: userData.profileEmoji || null,
                     userAvatarFrame: userData.selectedAvatarFrame || '',
                     role: userData.role,
                 },
@@ -223,8 +224,8 @@ export default function CommentSheet({ open, onOpenChange, post }: CommentSheetP
                             <div className="flex items-start gap-2">
                                 <div className={cn("avatar-frame-wrapper", userData?.selectedAvatarFrame)}>
                                     <Avatar className="relative z-[1] h-9 w-9">
-                                        <AvatarImage src={user?.photoURL || undefined} />
-                                        <AvatarFallback>{user?.displayName?.charAt(0)}</AvatarFallback>
+                                        <AvatarImage src={userData?.photoURL || undefined} />
+                                        <AvatarFallback>{userData?.profileEmoji || userData?.username?.charAt(0)}</AvatarFallback>
                                     </Avatar>
                                 </div>
                                 <div className="flex-1 relative">
