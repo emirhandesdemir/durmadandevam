@@ -34,8 +34,8 @@ export async function styleImage(input: StyleImageInput): Promise<StyleImageOutp
 }
 
 
-// Gemini 2.0 Flash ile resim üreten AI modeli
-const imageGenerationModel = 'googleai/gemini-2.0-flash-preview-image-generation';
+// Gemini 1.5 Flash ile resim üreten AI modeli
+const imageGenerationModel = 'googleai/gemini-1.5-flash-preview';
 
 
 // Genkit akışı tanımı
