@@ -16,6 +16,7 @@ import CategoryTabs from '@/components/avatar-creator/CategoryTabs';
 import type { AvatarState } from '@/components/avatar-creator/types';
 import { styleImage } from '@/ai/flows/imageStyleFlow';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const initialMaleState: AvatarState = {
     gender: 'male',
