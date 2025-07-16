@@ -27,6 +27,8 @@ import { Label } from "../ui/label";
 import Image from "next/image";
 import Link from "next/link";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
+import { storage } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 // Helper function to convert data URI to Blob for more robust uploads
 async function dataUriToBlob(dataUri: string): Promise<Blob> {
@@ -250,37 +252,37 @@ export default function NewPostForm() {
     setIsSubmitting(true);
     
     try {
-        let imageUrl: string | null = null;
-        
-        if (croppedImage) {
-            if (featureFlags?.contentModerationEnabled) {
-                const safetyResult = await checkImageSafety({ photoDataUri: croppedImage });
-                if (!safetyResult.success || !safetyResult.data?.isSafe) {
-                    throw new Error(safetyResult.error || safetyResult.data?.reason || "Resim, topluluk kurallarını ihlal ediyor.");
-                }
-            }
-            
-            imageUrl = croppedImage;
-        }
+      let finalImageUrl: string | null = null;
+      if (croppedImage) {
+          if (featureFlags?.contentModerationEnabled) {
+              const safetyResult = await checkImageSafety({ photoDataUri: croppedImage });
+              if (!safetyResult.success || !safetyResult.data?.isSafe) {
+                  throw new Error(safetyResult.error || safetyResult.data?.reason || "Resim, topluluk kurallarını ihlal ediyor.");
+              }
+          }
+          const imageBlob = await dataUriToBlob(croppedImage);
+          const imageRef = ref(storage, `upload/posts/${user.uid}/${Date.now()}.jpg`);
+          const snapshot = await uploadBytes(imageRef, imageBlob);
+          finalImageUrl = await getDownloadURL(snapshot.ref);
+      }
 
-        await createPost({
-            uid: user.uid,
-            username: userData.username,
-            photoURL: userData.photoURL || null,
-            profileEmoji: userData.profileEmoji || null,
-            userAvatarFrame: userData.selectedAvatarFrame || '',
-            userRole: userData.role || 'user',
-            userGender: userData.gender,
-            text: text,
-            imageUrl: imageUrl, // Pass data URI directly
-            editedWithAI: wasEditedByAI,
-            language: i18n.language,
-            commentsDisabled: commentsDisabled,
-            likesHidden: likesHidden,
-        });
+      await createPost({
+          uid: user.uid,
+          username: userData.username,
+          photoURL: userData.photoURL || null,
+          userAvatarFrame: userData.selectedAvatarFrame || '',
+          userRole: userData.role || 'user',
+          userGender: userData.gender,
+          text: text,
+          imageUrl: finalImageUrl,
+          editedWithAI: wasEditedByAI,
+          language: i18n.language,
+          commentsDisabled: commentsDisabled,
+          likesHidden: likesHidden,
+      });
 
-        toast({ title: "Başarıyla Paylaşıldı!", description: "Gönderiniz ana sayfada görünecektir." });
-        router.push('/home');
+      toast({ title: "Başarıyla Paylaşıldı!", description: "Gönderiniz ana sayfada görünecektir." });
+      router.push('/home');
 
     } catch (error: any) {
         console.error("Gönderi paylaşılırken hata:", error);

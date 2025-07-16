@@ -1,7 +1,7 @@
 // src/lib/actions/postActions.ts
 'use server';
 
-import { db, storage } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { 
     doc, 
     deleteDoc,
@@ -16,7 +16,7 @@ import {
     collection,
     writeBatch
 } from "firebase/firestore";
-import { ref, deleteObject, uploadString, getDownloadURL, uploadBytes } from "firebase/storage";
+import { ref, deleteObject } from "firebase/storage";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
 import { findUserByUsername } from "./userActions";
@@ -41,7 +41,7 @@ async function handlePostMentions(postId: string, text: string, sender: { uid: s
                         recipientId: mentionedUser.uid,
                         senderId: sender.uid,
                         senderUsername: sender.displayName || "Biri",
-                        senderAvatar: sender.photoURL,
+                        photoURL: sender.photoURL,
                         profileEmoji: sender.profileEmoji,
                         senderAvatarFrame: sender.userAvatarFrame,
                         type: 'mention',
@@ -74,7 +74,7 @@ export async function createProfileUpdatePost(data: {
         userAvatarFrame: data.userAvatarFrame,
         userRole: data.userRole,
         text: data.text,
-        imageUrl: emojiImageUrl, // Use the generated emoji image
+        imageUrl: emojiImageUrl,
         language: 'tr', // Default or detect user language
         commentsDisabled: true, // Typically these posts don't need comments
         likesHidden: false,
@@ -86,7 +86,7 @@ export async function createPost(postData: {
     uid: string;
     username: string;
     photoURL: string | null;
-    profileEmoji: string | null;
+    profileEmoji?: string | null;
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
@@ -101,19 +101,6 @@ export async function createPost(postData: {
     const newPostRef = doc(collection(db, 'posts'));
     const userRef = doc(db, 'users', postData.uid);
     let finalPostId = newPostRef.id;
-    let finalImageUrl: string | null = null;
-
-    if (postData.imageUrl) {
-        // Assume it's a data URI, convert to blob and upload
-        const response = await fetch(postData.imageUrl);
-        const imageBlob = await response.blob();
-        
-        const fileExtension = imageBlob.type.split('/')[1] || 'jpg';
-        const imageRef = ref(storage, `upload/posts/${postData.uid}/${Date.now()}_post.${fileExtension}`);
-        const snapshot = await uploadBytes(imageRef, imageBlob);
-        finalImageUrl = await getDownloadURL(snapshot.ref);
-    }
-
 
     await runTransaction(db, async (transaction) => {
         const userSnap = await transaction.get(userRef);
@@ -126,12 +113,12 @@ export async function createPost(postData: {
             uid: postData.uid,
             username: postData.username,
             photoURL: postData.photoURL,
-            profileEmoji: postData.profileEmoji,
-            userAvatarFrame: postData.userAvatarFrame,
+            profileEmoji: postData.profileEmoji || null,
+            userAvatarFrame: postData.userAvatarFrame || '',
             userRole: postData.userRole,
             userGender: postData.userGender,
             text: postData.text,
-            imageUrl: finalImageUrl, // Use the uploaded URL, or null
+            imageUrl: postData.imageUrl || null, // Use the provided URL, or null
             videoUrl: postData.videoUrl || null,
             editedWithAI: postData.editedWithAI,
             language: postData.language,
@@ -376,8 +363,8 @@ export async function retweetPost(
             userRole: retweeter.userRole,
             userGender: retweeter.userGender,
             text: quoteText || '',
-            imageUrl: '', 
-            videoUrl: '', 
+            imageUrl: null, 
+            videoUrl: null, 
             createdAt: serverTimestamp(),
             likes: [],
             likeCount: 0,
