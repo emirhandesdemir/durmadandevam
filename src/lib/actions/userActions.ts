@@ -7,12 +7,12 @@ import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, 
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
-import { updateProfile } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { updateProfile } from 'firebase/auth';
 
 // Helper function to process queries in batches to avoid Firestore limits
-async function processQueryInBatches(query: any, updateData: any) {
-    const snapshot = await getDocs(query);
+async function processQueryInBatches(queryToProcess: any, updateData: any) {
+    const snapshot = await getDocs(queryToProcess);
     if (snapshot.empty) return;
 
     const batchSize = 499;
@@ -38,66 +38,36 @@ async function processQueryInBatches(query: any, updateData: any) {
 }
 
 export async function updateUserPosts(uid: string, updates: { [key: string]: any }) {
-    if (!uid || !updates || Object.keys(updates).length === 0) {
-        return;
-    }
-
-    const postsRef = collection(db, 'posts');
-    const writePromises = [];
-
+    if (!uid || !updates || Object.keys(updates).length === 0) return;
+    
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
     if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
     if (updates.userAvatarFrame) propagationUpdates.userAvatarFrame = updates.userAvatarFrame;
+    if (updates.profileEmoji) propagationUpdates.profileEmoji = updates.profileEmoji;
     
     if (Object.keys(propagationUpdates).length === 0) return;
 
-    // Update user's own posts (original posts and retweets by them)
-    const userPostsQuery = query(postsRef, where('uid', '==', uid));
-    writePromises.push(processQueryInBatches(userPostsQuery, propagationUpdates));
+    const userPostsQuery = query(collection(db, 'posts'), where('uid', '==', uid));
+    await processQueryInBatches(userPostsQuery, propagationUpdates);
 
-    // Update user's appearance in others' retweets of their posts
-    const retweetUpdates: { [key: string]: any } = {};
-    if (updates.username) retweetUpdates['retweetOf.username'] = updates.username;
-    if (updates.photoURL) retweetUpdates['retweetOf.photoURL'] = updates.photoURL;
-    if (updates.userAvatarFrame) retweetUpdates['retweetOf.userAvatarFrame'] = updates.userAvatarFrame;
-    
-    if (Object.keys(retweetUpdates).length > 0) {
-        const retweetsQuery = query(postsRef, where('retweetOf.uid', '==', uid));
-        writePromises.push(processQueryInBatches(retweetsQuery, retweetUpdates));
-    }
-
-    try {
-        await Promise.all(writePromises);
-        revalidatePath('/home');
-        revalidatePath(`/profile/${uid}`);
-    } catch (error) {
-        console.error("Kullanıcı gönderileri güncellenirken hata:", error);
-        throw error;
-    }
+    revalidatePath('/home');
+    revalidatePath(`/profile/${uid}`);
 }
 
 export async function updateUserComments(uid: string, updates: { [key: string]: any }) {
-    if (!uid || !updates || Object.keys(updates).length === 0) {
-        return;
-    }
+    if (!uid || !updates || Object.keys(updates).length === 0) return;
 
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
     if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
     if (updates.userAvatarFrame) propagationUpdates.userAvatarFrame = updates.userAvatarFrame;
+    if (updates.profileEmoji) propagationUpdates.profileEmoji = updates.profileEmoji;
     
     if (Object.keys(propagationUpdates).length === 0) return;
 
-
     const commentsQuery = query(collectionGroup(db, 'comments'), where('uid', '==', uid));
-
-    try {
-        await processQueryInBatches(commentsQuery, propagationUpdates);
-    } catch (error) {
-        console.error("Kullanıcı yorumları güncellenirken hata:", error);
-        throw error;
-    }
+    await processQueryInBatches(commentsQuery, propagationUpdates);
 }
 
 
@@ -154,30 +124,37 @@ export async function updateUserProfile(updates: {
         }
     }
 
-    // Update Firestore document
-    await updateDoc(userRef, updatesForDb);
-    
-    const user = auth.currentUser;
-    if (user && user.uid === userId) {
-      const authUpdates: { displayName?: string, photoURL?: string } = {};
-      if (updates.username) authUpdates.displayName = updates.username;
-      if (updates.photoURL) authUpdates.photoURL = updates.photoURL;
-
-      if (Object.keys(authUpdates).length > 0) {
-        await updateProfile(user, authUpdates);
-      }
+    const authUpdates: { displayName?: string, photoURL?: string } = {};
+    if (updates.username) authUpdates.displayName = updates.username;
+    if (updates.photoURL) {
+        updatesForDb.photoURL = updates.photoURL; // Add to DB updates
+        authUpdates.photoURL = updates.photoURL;
     }
 
+    // Update Firestore document first
+    if (Object.keys(updatesForDb).length > 0) {
+        await updateDoc(userRef, updatesForDb);
+    }
+    
+    // Then update Firebase Auth profile
+    const user = auth.currentUser;
+    if (user && user.uid === userId && Object.keys(authUpdates).length > 0) {
+      await updateProfile(user, authUpdates);
+    }
+    
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
     if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
-    if (updates.selectedAvatarFrame) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
+    if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
 
     if (Object.keys(propagationUpdates).length > 0) {
         await Promise.all([
             updateUserPosts(userId, propagationUpdates),
             updateUserComments(userId, propagationUpdates),
-        ]);
+        ]).catch(err => {
+            console.error("Propagasyon hatası:", err);
+            // Don't throw, as the main update was successful
+        });
     }
     
     revalidatePath(`/profile/${userId}`, 'layout');
@@ -285,6 +262,7 @@ export async function blockUser(blockerId: string, targetId: string) {
             lastActionTimestamp: serverTimestamp()
         });
         
+        // Force unfollow both ways
         batch.update(blockerRef, { following: arrayRemove(targetId) });
         batch.update(targetRef, { followers: arrayRemove(blockerId) });
         batch.update(targetRef, { following: arrayRemove(blockerId) });
