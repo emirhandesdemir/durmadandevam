@@ -475,7 +475,7 @@ export default function ProfilePage() {
                     animate={{ y: 0, opacity: 1 }}
                     exit={{ y: "100%", opacity: 0 }}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur-sm border-t"
+                    className="fixed bottom-0 left-0 right-0 z-[60] p-4 bg-background/80 backdrop-blur-sm border-t"
                 >
                     <div className="container mx-auto flex justify-between items-center max-w-4xl">
                         <p className="text-sm font-semibold">Kaydedilmemiş değişiklikleriniz var.</p>
