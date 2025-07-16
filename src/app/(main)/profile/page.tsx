@@ -1,3 +1,4 @@
+
 // src/app/(main)/profile/page.tsx
 "use client";
 
@@ -6,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -25,7 +25,8 @@ import { auth } from "@/lib/firebase";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from "framer-motion";
-import ImageCropperDialog from "@/components/common/ImageCropperDialog";
+import { Label } from "@/components/ui/label";
+
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -47,7 +48,7 @@ const avatarFrameOptions = [
 ];
 
 
-export default function ProfilePageClient() {
+export default function ProfilePage() {
     const { user, userData, loading, handleLogout } = useAuth();
     const { toast } = useToast();
     const { theme, setTheme } = useTheme();
@@ -471,14 +472,8 @@ export default function ProfilePageClient() {
             </AnimatePresence>
             
             <BlockedUsersDialog isOpen={isBlockedUsersOpen} onOpenChange={setIsBlockedUsersOpen} blockedUserIds={userData.blockedUsers || []}/>
-            <ImageCropperDialog 
-              isOpen={!!imageToCrop} 
-              setIsOpen={(isOpen) => !isOpen && setImageToCrop(null)} 
-              imageSrc={imageToCrop} 
-              aspectRatio={1} 
-              onCropComplete={handleCropComplete} 
-              circularCrop={true}
-            />
         </>
     );
 }
+
+    
