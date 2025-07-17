@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { onIdTokenChanged, User, signOut } from 'firebase/auth';
-import { doc, onSnapshot, query, where, setDoc, serverTimestamp, collection, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot, query, where, setDoc, serverTimestamp, collection, updateDoc, writeBatch } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { FeatureFlags, UserProfile, ThemeSettings } from '@/lib/types';
@@ -18,7 +18,7 @@ interface AuthContextType {
   themeSettings: ThemeSettings | null;
   totalUnreadDms: number;
   loading: boolean;
-  handleLogout: () => Promise<void>;
+  handleLogout: (isBan?: boolean) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -128,7 +128,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 handleLogout(true);
                 return;
             }
-            setUserData(data);
+
+            // Ensure essential arrays exist to prevent runtime errors elsewhere
+            const sanitizedData = {
+                ...data,
+                followers: data.followers || [],
+                following: data.following || [],
+                blockedUsers: data.blockedUsers || [],
+                hiddenPostIds: data.hiddenPostIds || [],
+                savedPosts: data.savedPosts || [],
+                interests: data.interests || [],
+            };
+
+            setUserData(sanitizedData);
             if (data.language && i18n.language !== data.language) {
                 i18n.changeLanguage(data.language);
             }

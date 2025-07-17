@@ -126,6 +126,9 @@ export default function SignUpForm() {
                 photoURL: defaultAvatarUrl,
                 profileEmoji: defaultEmoji, 
                 bio: "",
+                age: null,
+                city: null,
+                interests: [],
                 role: userRole,
                 gender: values.gender,
                 country: values.country,
@@ -154,13 +157,7 @@ export default function SignUpForm() {
 
             i18n.changeLanguage(preferredLanguage);
 
-            toast({
-                title: "Hesap Oluşturuldu!",
-                description: "Uygulamaya hoş geldin!",
-            });
-            
-            router.push('/home');
-
+            // Let AuthProvider handle redirect
         } catch (error: any) {
             console.error("Kayıt hatası", error);
             let errorMessage = "Hesap oluşturulurken bilinmeyen bir hata oluştu. Lütfen tekrar deneyin.";
