@@ -34,11 +34,20 @@ export default function ChatListItem({ chat, currentUserId, isSelected, isSelect
   const unreadCount = chat.unreadCounts?.[currentUserId] || 0;
   const isUnread = unreadCount > 0;
   const isPinned = chat.pinnedBy?.includes(currentUserId);
-  const isPartnerPremium = partnerInfo.premiumUntil && new Date(partnerInfo.premiumUntil as any) > new Date();
+  const isPartnerPremium = partnerInfo.premiumUntil && new Date((partnerInfo.premiumUntil as any)?.seconds * 1000 || partnerInfo.premiumUntil) > new Date();
 
-  const timeAgo = lastMessage
-    ? formatDistanceToNow(new Date(lastMessage.timestamp as any), { addSuffix: true, locale: tr })
-    : '';
+  const getTimeAgo = () => {
+    if (!lastMessage || !lastMessage.timestamp) return '';
+    try {
+      const date = (lastMessage.timestamp as any).toDate ? (lastMessage.timestamp as any).toDate() : new Date(lastMessage.timestamp as any);
+      return formatDistanceToNow(date, { addSuffix: true, locale: tr });
+    } catch (e) {
+      console.error("Invalid time value for chat list item:", lastMessage.timestamp);
+      return '';
+    }
+  };
+
+  const timeAgo = getTimeAgo();
 
   const handleClick = () => {
     if (isSelectionMode) {

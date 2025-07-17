@@ -82,7 +82,7 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
   
   if (!user || !userData) return null;
 
-  const isPartnerPremium = partner.premiumUntil && new Date(partner.premiumUntil as any) > new Date();
+  const isPartnerPremium = partner.premiumUntil && new Date((partner.premiumUntil as any)?.seconds * 1000 || partner.premiumUntil) > new Date();
 
   return (
     <div className="flex flex-col h-full bg-background pb-16 md:pb-0">
@@ -112,7 +112,7 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
                     {partner.isOnline 
                         ? <span className="text-green-500 font-semibold">Çevrimiçi</span>
                         : partner.lastSeen 
-                            ? `Son görülme: ${formatDistanceToNow(new Date(partner.lastSeen as any), { addSuffix: true, locale: tr })}`
+                            ? `Son görülme: ${formatDistanceToNow(new Date((partner.lastSeen as any)?.seconds * 1000 || partner.lastSeen), { addSuffix: true, locale: tr })}`
                             : 'Çevrimdışı'
                     }
                 </p>
