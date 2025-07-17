@@ -5,3 +5,5 @@
 import '@/ai/flows/moderateImageFlow';
 import '@/ai/flows/generateQuizQuestionFlow';
 import '@/ai/flows/roomChatFlow';
+import '@/ai/flows/generateAvatarFlow';
+import '@/ai/flows/photoToAvatarFlow';

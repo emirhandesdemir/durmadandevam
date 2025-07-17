@@ -42,7 +42,7 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
     
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL; // Corrected from userAvatar
+    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
     if (updates.userAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.userAvatarFrame;
     if (updates.profileEmoji) propagationUpdates.profileEmoji = updates.profileEmoji;
     
@@ -60,7 +60,7 @@ export async function updateUserComments(uid: string, updates: { [key: string]: 
 
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL; // Corrected from photoURL
+    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
     if (updates.userAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.userAvatarFrame;
     if (updates.profileEmoji) propagationUpdates.profileEmoji = updates.profileEmoji;
     
@@ -109,7 +109,7 @@ export async function updateUserProfile(updates: {
     
     if (updates.age === '' || updates.age === undefined || updates.age === null) {
         updatesForDb.age = deleteField();
-    } else {
+    } else if (updates.age !== undefined) {
         updatesForDb.age = Number(updates.age);
     }
     
@@ -132,11 +132,7 @@ export async function updateUserProfile(updates: {
         await updateDoc(userRef, updatesForDb);
     }
     
-    const user = auth.currentUser;
-    if (user && user.uid === userId && Object.keys(authUpdates).length > 0) {
-      await updateProfile(user, authUpdates);
-    }
-    
+    // Propagate visual changes to all posts and comments
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
     if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
