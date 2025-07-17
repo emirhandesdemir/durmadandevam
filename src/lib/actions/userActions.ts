@@ -42,7 +42,7 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
     
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
+    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL; // Corrected from userAvatar
     if (updates.userAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.userAvatarFrame;
     if (updates.profileEmoji) propagationUpdates.profileEmoji = updates.profileEmoji;
     
@@ -60,7 +60,7 @@ export async function updateUserComments(uid: string, updates: { [key: string]: 
 
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
+    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL; // Corrected from photoURL
     if (updates.userAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.userAvatarFrame;
     if (updates.profileEmoji) propagationUpdates.profileEmoji = updates.profileEmoji;
     
@@ -123,23 +123,10 @@ export async function updateUserProfile(updates: {
         }
     }
 
-    const authUpdates: { displayName?: string, photoURL?: string } = {};
+    const authUpdates: { displayName?: string, photoURL?: string | null } = {};
     if (updates.username) authUpdates.displayName = updates.username;
-    
-    if (updates.photoURL !== undefined) {
-        // If the URL is a data URL, upload to storage first.
-        if(updates.photoURL && updates.photoURL.startsWith('data:image/')) {
-            const photoDataUrl = updates.photoURL;
-            const storagePath = `upload/avatars/${userId}/avatar.jpg`;
-            const imageStorageRef = ref(storage, storagePath);
-            await uploadString(imageStorageRef, photoDataUrl, 'data_url');
-            updatesForDb.photoURL = await getDownloadURL(imageStorageRef);
-            authUpdates.photoURL = updatesForDb.photoURL;
-        } else {
-            updatesForDb.photoURL = updates.photoURL;
-            authUpdates.photoURL = updates.photoURL ?? undefined;
-        }
-    }
+    if (updates.photoURL !== undefined) authUpdates.photoURL = updates.photoURL;
+
 
     if (Object.keys(updatesForDb).length > 0) {
         await updateDoc(userRef, updatesForDb);
@@ -152,7 +139,7 @@ export async function updateUserProfile(updates: {
     
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (updates.photoURL) propagationUpdates.photoURL = updatesForDb.photoURL;
+    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
     if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
     if (updates.profileEmoji) propagationUpdates.profileEmoji = updates.profileEmoji;
     
