@@ -1,19 +1,17 @@
+// This file is no longer needed as the `multiavatar` system in `avatar-studio` is now the primary method.
+// This can be deleted in a future cleanup.
 'use client';
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AnimatedLogoLoader from '@/components/common/AnimatedLogoLoader';
 
-export default function OnboardingPage() {
+export default function AvatarCreatorRedirect() {
   const router = useRouter();
 
-  // Onboarding has been removed, so we redirect users to the home page.
   useEffect(() => {
     router.replace('/avatar-studio');
   }, [router]);
 
-  // Show a loader while redirecting.
-  return (
-    <AnimatedLogoLoader fullscreen />
-  );
+  return <AnimatedLogoLoader fullscreen />;
 }

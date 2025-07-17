@@ -1,3 +1,4 @@
+
 // src/app/(main)/profile/page.tsx
 "use client";
 
@@ -25,8 +26,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from "framer-motion";
 import { Label } from "@/components/ui/label";
-import ImageCropperDialog from '@/components/common/ImageCropperDialog';
-
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -61,11 +60,6 @@ export default function ProfilePage() {
     const [currentInterest, setCurrentInterest] = useState("");
     const [inviteLink, setInviteLink] = useState("");
     const [isBlockedUsersOpen, setIsBlockedUsersOpen] = useState(false);
-    
-    // New state for photo upload
-    const [newAvatar, setNewAvatar] = useState<string | null>(null);
-    const [imageToCrop, setImageToCrop] = useState<string | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
     
     const isPremium = userData?.premiumUntil && userData.premiumUntil.toDate() > new Date();
     
@@ -105,34 +99,13 @@ export default function ProfilePage() {
         if (showOnlineStatus !== (userData.showOnlineStatus ?? true)) return true;
         if (selectedBubble !== (userData.selectedBubble || '')) return true;
         if (JSON.stringify(interests.map(i => i.trim()).sort()) !== JSON.stringify((userData.interests || []).map(i => i.trim()).sort())) return true;
-        if (newAvatar !== null) return true;
     
         return false;
     }, [
         username, bio, age, city, country, gender, privateProfile, 
         acceptsFollowRequests, showOnlineStatus, selectedBubble, 
-        interests, userData, newAvatar
+        interests, userData
     ]);
-    
-    const handleAvatarClick = () => { fileInputRef.current?.click(); };
-    
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                toast({ variant: "destructive", description: "Resim boyutu 5MB'dan büyük olamaz." });
-                return;
-            }
-            const reader = new FileReader();
-            reader.onload = () => setImageToCrop(reader.result as string);
-            reader.readAsDataURL(e.target.files[0]);
-        }
-    };
-    
-    const handleCropComplete = (croppedDataUrl: string) => {
-        setImageToCrop(null);
-        setNewAvatar(croppedDataUrl);
-    };
 
     const handleSaveChanges = async () => {
         if (!user || !hasChanges || !auth.currentUser) return;
@@ -141,10 +114,6 @@ export default function ProfilePage() {
         try {
             const updatesForDb: { [key: string]: any } = {};
             
-            if (newAvatar) {
-                updatesForDb.photoURL = newAvatar;
-            }
-
             if (username !== userData?.username) {
                 if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
                     toast({ variant: "destructive", title: "Geçersiz Kullanıcı Adı", description: "Kullanıcı adı 3-20 karakter uzunluğunda olmalı ve sadece harf, rakam veya alt çizgi içermelidir." });
@@ -174,7 +143,6 @@ export default function ProfilePage() {
             }
             
             toast({ title: "Başarılı!", description: "Profiliniz başarıyla güncellendi." });
-            setNewAvatar(null);
         } catch (error: any) {
             toast({ title: "Hata", description: error.message || "Profil güncellenirken bir hata oluştu.", variant: "destructive" });
         } finally {
@@ -213,16 +181,15 @@ export default function ProfilePage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="flex flex-col items-center gap-4">
-                            <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
                            <button
                                 type="button"
-                                onClick={handleAvatarClick}
+                                onClick={() => router.push('/avatar-studio')}
                                 className="relative group rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                                 aria-label="Profil fotoğrafını değiştir"
                             >
                                <div className={cn("avatar-frame-wrapper", userData?.selectedAvatarFrame)}>
                                     <Avatar className="relative z-[1] h-24 w-24 border-2 shadow-sm">
-                                        <AvatarImage src={newAvatar || userData.photoURL || undefined} />
+                                        <AvatarImage src={userData.photoURL || undefined} />
                                         <AvatarFallback className="text-4xl bg-primary/20">{userData.username?.charAt(0).toUpperCase()}</AvatarFallback>
                                     </Avatar>
                                 </div>
@@ -460,7 +427,7 @@ export default function ProfilePage() {
                     <CardHeader>
                         <CardTitle>Hesap İşlemleri</CardTitle>
                     </CardHeader>
-                    <CardContent className="flex flex-wrap gap-2">
+                    <CardContent>
                         <Button variant="destructive" onClick={handleLogout}>
                             <LogOut className="mr-2 h-4 w-4" />Çıkış Yap
                         </Button>
@@ -489,14 +456,7 @@ export default function ProfilePage() {
             </AnimatePresence>
             
             <BlockedUsersDialog isOpen={isBlockedUsersOpen} onOpenChange={setIsBlockedUsersOpen} blockedUserIds={userData.blockedUsers || []}/>
-            <ImageCropperDialog 
-              isOpen={!!imageToCrop} 
-              setIsOpen={(isOpen) => !isOpen && setImageToCrop(null)} 
-              imageSrc={imageToCrop} 
-              aspectRatio={1} 
-              onCropComplete={handleCropComplete} 
-              circularCrop={true}
-            />
+            
         </>
     );
 }
