@@ -216,13 +216,8 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
         setIsSubmitting(true);
         try {
             if (audioBlob && recordingStatus === 'preview') {
-                const reader = new FileReader();
-                reader.readAsDataURL(audioBlob);
-                reader.onloadend = async () => {
-                    const base64Audio = reader.result as string;
-                    await sendMessage(chatId, sender, receiver, { audio: { dataUrl: base64Audio, duration: recordingDuration } });
-                    cancelAndReset();
-                };
+                await sendMessage(chatId, sender, receiver, { audio: { dataUrl: audioUrl!, blob: audioBlob, duration: recordingDuration } });
+                cancelAndReset();
             } else if (file) {
               const reader = new FileReader();
               reader.readAsDataURL(file);

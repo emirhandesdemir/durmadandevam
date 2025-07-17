@@ -21,7 +21,7 @@ import {
   arrayUnion,
   arrayRemove,
 } from 'firebase/firestore';
-import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { revalidatePath } from 'next/cache';
 import { v4 as uuidv4 } from 'uuid';
 import { getChatId } from '../utils';
@@ -74,7 +74,7 @@ export async function sendMessage(
     text?: string; 
     imageUrl?: string; 
     imageType?: 'permanent' | 'timed';
-    audio?: { dataUrl: string; duration: number };
+    audio?: { dataUrl: string; blob: Blob, duration: number };
   }
 ) {
   const { text, imageUrl, imageType, audio } = content;
@@ -118,10 +118,10 @@ export async function sendMessage(
   }
 
   let finalAudioUrl: string | undefined;
-  if (audio) {
-      const audioPath = `dms/${chatId}/audio/${uuidv4()}.webm`;
+  if (audio?.blob) {
+      const audioPath = `dms/${sender.uid}/audio/${uuidv4()}.webm`;
       const audioStorageRef = storageRef(storage, audioPath);
-      await uploadString(audioStorageRef, audio.dataUrl, 'data_url');
+      await uploadBytes(audioStorageRef, audio.blob, { contentType: 'audio/webm' });
       finalAudioUrl = await getDownloadURL(audioStorageRef);
   }
 
@@ -188,7 +188,7 @@ export async function sendMessage(
     profileEmoji: sender.profileEmoji,
     senderAvatarFrame: sender.selectedAvatarFrame,
     type: 'dm_message',
-    messageText: content.text || (content.imageUrl ? '📷 Fotoğraf' : '🎤 Sesli Mesaj'),
+    messageText: text || (finalImageUrl ? '📷 Fotoğraf' : '🎤 Sesli Mesaj'),
     chatId: chatId,
   });
 
@@ -250,13 +250,11 @@ export async function markMessagesAsRead(chatId: string, currentUserId: string) 
 
     const batch = writeBatch(db);
 
-    // Update metadata
     batch.update(metadataDocRef, {
         [`unreadCounts.${currentUserId}`]: 0,
         'lastMessage.read': true, 
     });
 
-    // Update individual unread messages
     const unreadSnapshot = await getDocs(unreadMessagesQuery);
     unreadSnapshot.forEach(doc => {
         batch.update(doc.ref, { read: true });
