@@ -1,2 +1,2 @@
-// This file is no longer needed as it was part of the old, complex avatar system.
-// The new `multiavatar` system simplifies this greatly. It can be deleted.
+// This file is no longer needed as the avatar system is being moved to /avatar-studio.
+// It can be safely deleted.

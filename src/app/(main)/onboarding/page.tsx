@@ -6,9 +6,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { updateUserProfile } from '@/lib/actions/userActions';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
@@ -23,10 +21,10 @@ function OnboardingWelcome() {
              <Card className="mt-8 text-left">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Sparkles className="text-primary"/> Avatar Stüdyosu</CardTitle>
-                    <CardDescription>Yapay zeka ile benzersiz bir profil resmi oluştur.</CardDescription>
+                    <CardDescription>Benzersiz bir profil resmi oluştur.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-sm">Metin komutlarıyla hayalindeki karakteri yarat veya kendi fotoğrafını sanatsal bir portreye dönüştür.</p>
+                    <p className="text-sm">Bir metin girerek veya rastgele oluşturarak benzersiz avatarınızı yaratın.</p>
                     <Button asChild className="mt-4 w-full">
                         <Link href="/avatar-studio">Stüdyoya Git <ArrowRight className="ml-2 h-4 w-4"/></Link>
                     </Button>
