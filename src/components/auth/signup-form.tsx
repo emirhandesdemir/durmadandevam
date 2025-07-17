@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -57,7 +57,6 @@ const formSchema = z.object({
 
 export default function SignUpForm() {
     const { toast } = useToast();
-    const router = useRouter();
     const searchParams = useSearchParams();
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -139,6 +138,9 @@ export default function SignUpForm() {
                 postCount: 0,
                 followers: [],
                 following: [],
+                blockedUsers: [],
+                savedPosts: [],
+                hiddenPostIds: [],
                 privateProfile: false,
                 acceptsFollowRequests: true,
                 followRequests: [],
@@ -149,7 +151,8 @@ export default function SignUpForm() {
             // Credit the referrer if one exists
             if (ref) {
                 try {
-                    await creditReferrer(ref, { uid: user.uid, username: values.username, photoURL: defaultAvatarUrl, profileEmoji: defaultEmoji });
+                    const defaultAvatar = emojiToDataUrl(defaultEmoji);
+                    await creditReferrer(ref, { uid: user.uid, username: values.username, photoURL: defaultAvatar, profileEmoji: defaultEmoji });
                 } catch (e) {
                     console.error("Referrer credit failed, but signup continues:", e);
                 }

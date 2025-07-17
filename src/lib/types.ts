@@ -125,8 +125,8 @@ export interface UserProfile {
     postCount?: number;
     role: 'admin' | 'user';
     gender?: 'male' | 'female';
-    age?: number;
-    city?: string;
+    age?: number | null;
+    city?: string | null;
     country?: string;
     interests?: string[];
     createdAt: Timestamp;
@@ -285,7 +285,6 @@ export interface Room {
         uid: string;
         username: string;
         photoURL: string | null;
-        profileEmoji: string | null;
         role: string;
         selectedAvatarFrame?: string;
     };
