@@ -5,7 +5,9 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   register: true,
   skipWaiting: true,
   disable: false,
-  sw: 'firebase-messaging-sw.js',
+  // Correctly import the Firebase script into the generated service worker
+  // instead of trying to compile it directly.
+  importScripts: ['/firebase-messaging-sw.js'], 
   cacheOnFrontEndNav: true,
   runtimeCaching: [
     {
