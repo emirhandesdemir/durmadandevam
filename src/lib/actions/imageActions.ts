@@ -1,7 +1,7 @@
-
+// src/lib/actions/imageActions.ts
 'use server';
 
-import { styleImage, type StyleImageInput } from '@/ai/flows/imageStyleFlow';
+import { styleImage, type StyleImageInput } from '@/ai/flows/styleAvatarFlow';
 
 /**
  * Bir resme yapay zeka ile sanatsal bir filtre uygular.
