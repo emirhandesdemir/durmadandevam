@@ -245,8 +245,8 @@ export interface Post {
         profileEmoji: string | null;
         userAvatarFrame?: string;
         text: string;
-        imageUrl?: string | null;
-        videoUrl?: string | null;
+        imageUrl?: string;
+        videoUrl?: string;
         createdAt: Timestamp | { seconds: number; nanoseconds: number };
     }
 }

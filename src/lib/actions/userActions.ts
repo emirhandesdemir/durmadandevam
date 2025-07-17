@@ -132,7 +132,6 @@ export async function updateUserProfile(updates: {
         await updateDoc(userRef, updatesForDb);
     }
     
-    // Propagate visual changes to all posts and comments
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
     if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
@@ -140,13 +139,16 @@ export async function updateUserProfile(updates: {
     if (updates.profileEmoji) propagationUpdates.profileEmoji = updates.profileEmoji;
     
     if (Object.keys(propagationUpdates).length > 0) {
-        await Promise.all([
-            updateUserPosts(userId, propagationUpdates),
-            updateUserComments(userId, propagationUpdates),
-        ]).catch(err => {
-            console.error("Propagasyon hatası:", err);
-            // Don't throw to the client, but log it.
-        });
+        try {
+            await Promise.all([
+                updateUserPosts(userId, propagationUpdates),
+                updateUserComments(userId, propagationUpdates),
+            ]).catch(err => {
+                console.error("Propagasyon hatası:", err);
+            });
+        } catch (err) {
+            console.error("Error during propagation, but profile update was successful:", err);
+        }
     }
 
     revalidatePath(`/profile/${userId}`, 'layout');
@@ -359,7 +361,6 @@ export async function getSavedPosts(userId: string): Promise<Post[]> {
         });
     }
 
-    // Sort the fetched posts based on the original `savedPostIds` order (newest first)
     const sortedPosts = savedPosts.sort((a, b) => {
         return savedPostIds.indexOf(b.id) - savedPostIds.indexOf(a.id);
     });

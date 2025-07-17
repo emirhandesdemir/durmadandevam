@@ -63,10 +63,6 @@ export async function createProfileUpdatePost(data: {
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
 }) {
-    // This now needs to be handled on the client-side before calling createPost.
-    // For simplicity, we'll pass the emoji and let the client construct the data URL if needed.
-    // However, the action now expects a full image URL.
-    // This flow is now deprecated in favor of direct updates.
     console.warn("createProfileUpdatePost is deprecated. Profile picture posts are now handled differently.");
     return { success: false, error: "This function is deprecated." };
 }
@@ -203,7 +199,7 @@ export async function updatePost(postId: string, updates: { text?: string; comme
     const postRef = doc(db, "posts", postId);
     await updateDoc(postRef, {
         ...updates,
-        editedAt: serverTimestamp() // Add an edited timestamp
+        editedAt: serverTimestamp()
     });
 
     const postSnap = await getDoc(postRef);
@@ -279,14 +275,12 @@ export async function toggleSavePost(postId: string, userId: string) {
         const isCurrentlySaved = (userData.savedPosts || []).includes(postId);
 
         if (isCurrentlySaved) {
-            // Unsave the post
             transaction.update(userRef, { savedPosts: arrayRemove(postId) });
             transaction.update(postRef, {
                 savedBy: arrayRemove(userId),
                 saveCount: increment(-1)
             });
         } else {
-            // Save the post
             transaction.update(userRef, { savedPosts: arrayUnion(postId) });
             transaction.update(postRef, {
                 savedBy: arrayUnion(userId),
@@ -379,7 +373,6 @@ export async function retweetPost(
             postId: newPostRef.id,
         });
     }
-
 
     revalidatePath('/home');
     revalidatePath(`/profile/${retweeter.uid}`);

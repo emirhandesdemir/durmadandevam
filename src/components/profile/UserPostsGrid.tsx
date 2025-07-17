@@ -41,6 +41,7 @@ export default function UserPostsGrid({ profileUser }: UserPostsGridProps) {
             postsRef, 
             where('uid', '==', profileUser.uid), 
             where('videoUrl', '==', null), // Sadece video olmayanları al
+            orderBy('videoUrl'),
             orderBy('createdAt', 'desc')
         );
         

@@ -22,6 +22,22 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
 import Image from "next/image";
+import { Timestamp } from "firebase/firestore";
+
+
+const safeParseTimestamp = (timestamp: any): Date => {
+    if (!timestamp) return new Date(0); 
+    if (timestamp instanceof Date) return timestamp;
+    if (timestamp instanceof Timestamp) return timestamp.toDate();
+    if (typeof timestamp === 'object' && 'seconds' in timestamp && 'nanoseconds' in timestamp) {
+        return new Timestamp(timestamp.seconds, timestamp.nanoseconds).toDate();
+    }
+    if (typeof timestamp === 'string') {
+        const date = new Date(timestamp);
+        if (!isNaN(date.getTime())) return date;
+    }
+    return new Date(0);
+};
 
 interface QuoteRetweetDialogProps {
   isOpen: boolean;
@@ -49,7 +65,8 @@ export default function QuoteRetweetDialog({ isOpen, onOpenChange, post }: Quote
         {
           uid: user.uid,
           username: userData.username,
-          photoURL: userData.photoURL,
+          photoURL: userData.photoURL || null,
+          profileEmoji: userData.profileEmoji,
           userAvatarFrame: userData.selectedAvatarFrame,
           userRole: userData.role,
           userGender: userData.gender,
@@ -66,7 +83,8 @@ export default function QuoteRetweetDialog({ isOpen, onOpenChange, post }: Quote
     }
   };
   
-  const timeAgo = post.createdAt ? formatDistanceToNow(new Date(post.createdAt.seconds * 1000), { addSuffix: true, locale: tr }) : "";
+  const originalCreatedAtDate = safeParseTimestamp(post.createdAt);
+  const timeAgo = originalCreatedAtDate.getTime() !== 0 ? formatDistanceToNow(originalCreatedAtDate, { addSuffix: true, locale: tr }) : "az önce";
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -103,7 +121,7 @@ export default function QuoteRetweetDialog({ isOpen, onOpenChange, post }: Quote
                 {post.text && <p className="text-sm text-muted-foreground line-clamp-3">{post.text}</p>}
                 {post.imageUrl && (
                     <div className="relative h-24 w-24 overflow-hidden rounded-md border">
-                        <Image src={post.imageUrl} alt="Alıntılanan resim" fill className="object-cover" />
+                        <Image src={post.imageUrl} alt="Alıntılanan resim" fill sizes="96px" className="object-cover" />
                     </div>
                 )}
             </div>
