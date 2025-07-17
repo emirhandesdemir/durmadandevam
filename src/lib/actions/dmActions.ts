@@ -184,7 +184,7 @@ export async function sendMessage(
     recipientId: receiver.uid,
     senderId: sender.uid,
     senderUsername: sender.username,
-    photoURL: sender.photoURL,
+    senderAvatar: sender.photoURL,
     profileEmoji: sender.profileEmoji,
     senderAvatarFrame: sender.selectedAvatarFrame,
     type: 'dm_message',
@@ -240,16 +240,32 @@ export async function deleteMessageImage(chatId: string, messageId: string, imag
 
 export async function markMessagesAsRead(chatId: string, currentUserId: string) {
     const metadataDocRef = doc(db, 'directMessagesMetadata', chatId);
-    const metadataDoc = await getDoc(metadataDocRef);
+    const messagesColRef = collection(db, 'directMessages', chatId, 'messages');
+    
+    const unreadMessagesQuery = query(
+        messagesColRef,
+        where('receiverId', '==', currentUserId),
+        where('read', '==', false)
+    );
 
-    if (metadataDoc.exists() && (metadataDoc.data().unreadCounts?.[currentUserId] || 0) > 0) {
-        await updateDoc(metadataDocRef, {
-            [`unreadCounts.${currentUserId}`]: 0,
-            'lastMessage.read': true, 
-        });
-        revalidatePath(`/dm/${chatId}`);
-        revalidatePath('/dm');
-    }
+    const batch = writeBatch(db);
+
+    // Update metadata
+    batch.update(metadataDocRef, {
+        [`unreadCounts.${currentUserId}`]: 0,
+        'lastMessage.read': true, 
+    });
+
+    // Update individual unread messages
+    const unreadSnapshot = await getDocs(unreadMessagesQuery);
+    unreadSnapshot.forEach(doc => {
+        batch.update(doc.ref, { read: true });
+    });
+    
+    await batch.commit();
+
+    revalidatePath(`/dm/${chatId}`);
+    revalidatePath('/dm');
 }
 
 
