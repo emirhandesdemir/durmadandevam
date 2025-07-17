@@ -1,5 +1,4 @@
-// src/components/dm/MessageBubble.tsx
-'use client';
+{'use client';
 
 import { useState, useRef, useEffect } from 'react';
 import type { DirectMessage } from '@/lib/types';
@@ -27,7 +26,7 @@ const REACTION_EMOJIS = ['👍', '❤️', '😂', '🎉', '😢', '🔥'];
 const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
-    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
 };
 
 const AudioPlayer = ({ audioUrl, duration }: { audioUrl: string; duration: number }) => {
@@ -257,9 +256,9 @@ export default function MessageBubble({ message, currentUserId, chatId }: Messag
                     <img src={message.imageUrl} alt="Gönderilen resim" className="rounded-lg max-w-xs max-h-64 object-cover cursor-pointer mb-2" onClick={() => window.open(message.imageUrl, '_blank')} />
                   ) : null}
 
-                  {message.audioUrl && message.audioDuration && (
+                  {message.audioUrl && message.audioDuration ? (
                      <AudioPlayer audioUrl={message.audioUrl} duration={message.audioDuration} />
-                  )}
+                  ) : null}
                   {message.text && (
                     <p className="text-sm break-words whitespace-pre-wrap">{message.text}</p>
                   )}

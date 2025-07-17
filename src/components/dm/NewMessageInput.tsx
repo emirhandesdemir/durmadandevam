@@ -1,5 +1,4 @@
-// src/components/dm/NewMessageInput.tsx
-'use client';
+{'use client';
 
 import { useState, useRef, useEffect } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
@@ -12,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Send, Loader2, ImagePlus, Mic, Trash2, Camera, Timer, X, StopCircle, Play, Pause } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface UserInfo {
   uid: string;
@@ -34,8 +34,8 @@ type MessageFormValues = z.infer<typeof messageSchema>;
 
 const formatRecordingTime = (timeInSeconds: number) => {
     const minutes = Math.floor(timeInSeconds / 60);
-    const remainingSeconds = Math.floor(timeInSeconds % 60);
-    return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+    const seconds = Math.floor(timeInSeconds % 60);
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
 
 const AudioPreviewPlayer = ({ audioUrl, duration }: { audioUrl: string; duration: number }) => {
@@ -87,12 +87,10 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
         resolver: zodResolver(messageSchema),
     });
 
-    // File/Image state
     const [file, setFile] = useState<File | null>(null);
     const [preview, setPreview] = useState<string | null>(null);
     const [imageSendType, setImageSendType] = useState<'permanent' | 'timed'>('permanent');
     
-    // Audio state
     const [recordingStatus, setRecordingStatus] = useState<'idle' | 'recording' | 'preview'>('idle');
     const [recordingDuration, setRecordingDuration] = useState(0);
     const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -100,7 +98,6 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    // General state
     const [isSubmitting, setIsSubmitting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textValue = watch('text');
@@ -165,7 +162,7 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
                 stream.getTracks().forEach(track => track.stop());
                 if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
                 
-                if (chunks.length === 0) return; // Cancelled before any data
+                if (chunks.length === 0) return;
 
                 const newAudioBlob = new Blob(chunks, { type: 'audio/webm' });
                  if (newAudioBlob.size > 10 * 1024 * 1024) { // 10MB limit
@@ -241,9 +238,13 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
                 </div>
             )}
             
-            <>
+            <AnimatePresence>
             {recordingStatus !== 'idle' ? (
-                <div
+                <motion.div
+                    key="recorder-ui"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
                     className="flex w-full items-center justify-between p-2 overflow-hidden"
                 >
                     {recordingStatus === 'recording' ? (
@@ -259,7 +260,7 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
                                 <StopCircle className="h-5 w-5" />
                             </Button>
                          </>
-                    ) : ( // preview
+                    ) : (
                          <>
                             <Button type="button" variant="ghost" size="icon" className="rounded-full" onClick={cancelAndReset}>
                                 <Trash2 className="h-5 w-5 text-destructive" />
@@ -270,9 +271,14 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
                             </Button>
                          </>
                     )}
-                </div>
+                </motion.div>
             ) : (
-                <div>
+                <motion.div
+                     key="input-ui"
+                     initial={{ opacity: 0, y: -10 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     exit={{ opacity: 0, y: -10 }}
+                >
                     <form 
                       onSubmit={handleSubmit(onSubmit)} 
                       className="flex w-full items-center space-x-2 p-1"
@@ -315,9 +321,9 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
                             </Button>
                         )}
                     </form>
-                </div>
+                </motion.div>
             )}
-            </>
+            </AnimatePresence>
         </div>
     );
 }

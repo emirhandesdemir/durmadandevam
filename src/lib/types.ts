@@ -224,7 +224,7 @@ export interface Post {
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
     text: string;
-    imageUrl?: string | null; // Can be null
+    imageUrl?: string | null;
     videoUrl?: string | null;
     backgroundStyle?: string;
     editedWithAI?: boolean;

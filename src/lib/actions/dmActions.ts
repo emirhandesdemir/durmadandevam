@@ -1,5 +1,4 @@
-// src/lib/actions/dmActions.ts
-'use server';
+{'use server';
 
 import { db, storage } from '@/lib/firebase';
 import {
@@ -27,12 +26,12 @@ import { v4 as uuidv4 } from 'uuid';
 import { getChatId } from '../utils';
 import { deleteChatWithSubcollections } from '../firestoreUtils';
 import { createNotification } from './notificationActions';
-import { triggerBotResponse } from './roomActions';
 
 interface UserInfo {
   uid: string;
   username: string;
   photoURL: string | null;
+  profileEmoji: string | null;
   selectedAvatarFrame?: string;
 }
 
@@ -82,7 +81,6 @@ export async function sendMessage(
     throw new Error('Mesaj içeriği boş olamaz.');
   }
 
-  // Security check: Verify that neither user has blocked the other.
   const senderDocRef = doc(db, 'users', sender.uid);
   const receiverDocRef = doc(db, 'users', receiver.uid);
 
@@ -159,15 +157,14 @@ export async function sendMessage(
 
     transaction.set(newMessageRef, messageData);
     
-    // Update sender's last action timestamp for rate limiting
     transaction.update(senderDocRef, { lastActionTimestamp: serverTimestamp() });
     
     if (!metadataDoc.exists()) {
       transaction.set(metadataDocRef, {
         participantUids: [sender.uid, receiver.uid],
         participantInfo: {
-          [sender.uid]: { username: sender.username, photoURL: sender.photoURL || null, premiumUntil: senderData.premiumUntil || null },
-          [receiver.uid]: { username: receiver.username, photoURL: receiver.photoURL || null, premiumUntil: receiverData.premiumUntil || null },
+          [sender.uid]: { username: sender.username, photoURL: sender.photoURL || null, profileEmoji: sender.profileEmoji, selectedAvatarFrame: sender.selectedAvatarFrame || '', premiumUntil: senderData.premiumUntil || null },
+          [receiver.uid]: { username: receiver.username, photoURL: receiver.photoURL || null, profileEmoji: receiver.profileEmoji, selectedAvatarFrame: receiver.selectedAvatarFrame || '', premiumUntil: receiverData.premiumUntil || null },
         },
         lastMessage: { text: lastMessageText, senderId: sender.uid, timestamp: serverTimestamp(), read: false },
         unreadCounts: { [receiver.uid]: 1, [sender.uid]: 0 },
@@ -176,18 +173,19 @@ export async function sendMessage(
       transaction.update(metadataDocRef, {
         lastMessage: { text: lastMessageText, senderId: sender.uid, timestamp: serverTimestamp(), read: false },
         [`unreadCounts.${receiver.uid}`]: increment(1),
-        [`participantInfo.${sender.uid}`]: { username: sender.username, photoURL: sender.photoURL || null, premiumUntil: senderData.premiumUntil || null },
-        [`participantInfo.${receiver.uid}`]: { username: receiver.username, photoURL: receiver.photoURL || null, premiumUntil: receiverData.premiumUntil || null },
+        [`participantInfo.${sender.uid}`]: { username: sender.username, photoURL: sender.photoURL || null, profileEmoji: sender.profileEmoji, selectedAvatarFrame: sender.selectedAvatarFrame || '', premiumUntil: senderData.premiumUntil || null },
+        [`participantInfo.${receiver.uid}`]: { username: receiver.username, photoURL: receiver.photoURL || null, profileEmoji: receiver.profileEmoji, selectedAvatarFrame: receiver.selectedAvatarFrame || '', premiumUntil: receiverData.premiumUntil || null },
       });
     }
   });
 
-  // Create notification for the receiver
   await createNotification({
     recipientId: receiver.uid,
     senderId: sender.uid,
     senderUsername: sender.username,
-    senderAvatar: sender.photoURL,
+    photoURL: sender.photoURL,
+    profileEmoji: sender.profileEmoji,
+    senderAvatarFrame: sender.selectedAvatarFrame,
     type: 'dm_message',
     messageText: content.text || (content.imageUrl ? '📷 Fotoğraf' : '🎤 Sesli Mesaj'),
     chatId: chatId,
@@ -219,22 +217,19 @@ export async function markImageAsOpened(chatId: string, messageId: string, viewe
 export async function deleteMessageImage(chatId: string, messageId: string, imageUrl: string) {
   const messageRef = doc(db, 'directMessages', chatId, 'messages', messageId);
 
-  // Delete from storage
   try {
     const imageStorageRef = storageRef(storage, imageUrl);
     await deleteObject(imageStorageRef);
   } catch (error: any) {
-    // It's okay if the file is already deleted.
     if (error.code !== 'storage/object-not-found') {
       console.error("Depolamadan resim silinirken hata:", error);
     }
   }
 
-  // Update Firestore document
   await updateDoc(messageRef, {
     imageUrl: null,
     text: "Süreli fotoğrafın süresi doldu.",
-    imageType: 'timed', // Keep type to identify it was a timed photo
+    imageType: 'timed', 
   });
 
   revalidatePath(`/dm/${chatId}`);
@@ -242,11 +237,6 @@ export async function deleteMessageImage(chatId: string, messageId: string, imag
 }
 
 
-/**
- * Bir sohbetteki okunmamış mesajları okundu olarak işaretler.
- * @param chatId Sohbetin ID'si.
- * @param currentUserId İşlemi yapan (mesajları okuyan) kullanıcının ID'si.
- */
 export async function markMessagesAsRead(chatId: string, currentUserId: string) {
     const metadataDocRef = doc(db, 'directMessagesMetadata', chatId);
     const metadataDoc = await getDoc(metadataDocRef);
@@ -254,16 +244,14 @@ export async function markMessagesAsRead(chatId: string, currentUserId: string) 
     if (metadataDoc.exists() && (metadataDoc.data().unreadCounts?.[currentUserId] || 0) > 0) {
         await updateDoc(metadataDocRef, {
             [`unreadCounts.${currentUserId}`]: 0,
-            'lastMessage.read': true, // Mark last message as read by this user
+            'lastMessage.read': true, 
         });
         revalidatePath(`/dm/${chatId}`);
         revalidatePath('/dm');
     }
 }
 
-/**
- * Kullanıcının kendi gönderdiği bir mesajı düzenler.
- */
+
 export async function editMessage(chatId: string, messageId: string, newText: string, senderId: string) {
     if (!newText.trim()) throw new Error("Mesaj boş olamaz.");
 
@@ -286,9 +274,6 @@ export async function editMessage(chatId: string, messageId: string, newText: st
 }
 
 
-/**
- * Kullanıcının kendi gönderdiği bir mesajı siler.
- */
 export async function deleteMessage(chatId: string, messageId: string, senderId: string) {
     const messageRef = doc(db, 'directMessages', chatId, 'messages', messageId);
     
@@ -315,9 +300,6 @@ export async function deleteMessage(chatId: string, messageId: string, senderId:
 }
 
 
-/**
- * Bir mesaja emoji tepkisi ekler veya kaldırır.
- */
 export async function toggleReaction(chatId: string, messageId: string, emoji: string, userId: string) {
   if (!chatId || !messageId || !emoji || !userId) {
     throw new Error("Gerekli bilgiler eksik.");
@@ -368,7 +350,6 @@ export async function togglePinChat(chatId: string, userId: string, pinState?: b
     const pinnedBy: string[] = docSnap.data().pinnedBy || [];
     const isCurrentlyPinned = pinnedBy.includes(userId);
 
-    // If pinState is provided, use it. Otherwise, toggle.
     const shouldBePinned = pinState !== undefined ? pinState : !isCurrentlyPinned;
 
     if (shouldBePinned && !isCurrentlyPinned) {
@@ -396,13 +377,11 @@ export async function deleteDirectMessage(chatId: string, currentUserId: string)
         return { success: true };
     }
     
-    // Check if the current user is a participant.
     const participants: string[] = docSnap.data().participantUids || [];
     if (!participants.includes(currentUserId)) {
         throw new Error("Bu sohbeti silme yetkiniz yok.");
     }
     
-    // This will delete metadata and the messages subcollection.
     await deleteChatWithSubcollections(chatId);
 
     revalidatePath('/dm');
