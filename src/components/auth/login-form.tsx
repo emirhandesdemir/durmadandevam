@@ -5,7 +5,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth"; 
 import { auth } from "@/lib/firebase";
@@ -43,7 +42,8 @@ export default function LoginForm() {
     const [showPassword, setShowPassword] = useState(false);
 
     useEffect(() => {
-        if (localStorage.getItem('isBanned') === 'true') {
+        // This effect checks if the user was logged out due to being banned.
+        if (typeof window !== 'undefined' && localStorage.getItem('isBanned') === 'true') {
             toast({
                 title: "Hesap Askıya Alındı",
                 description: "Bu hesaba erişiminiz kısıtlanmıştır.",
@@ -66,12 +66,12 @@ export default function LoginForm() {
         setIsLoading(true);
         try {
             await signInWithEmailAndPassword(auth, values.email, values.password);
-            // Successful sign-in is handled by the AuthContext, which will redirect to /home.
+            // SUCCESS: Let AuthProvider handle the redirect after userData is loaded.
         } catch (error: any) {
             console.error("Giriş hatası", error);
             let errorMessage = "Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.";
             // Firebase v9'dan beri hem kullanıcı bulunamadı hem de yanlış şifre 'auth/invalid-credential' kodunu döndürür.
-            if (error.code === 'auth/invalid-credential') {
+            if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
                 errorMessage = "E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edip tekrar deneyin.";
             } else if (error.code === 'auth/too-many-requests') {
                 errorMessage = "Çok fazla hatalı deneme yapıldı. Lütfen daha sonra tekrar deneyin.";

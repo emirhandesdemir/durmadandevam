@@ -13,8 +13,9 @@ function LoginPageContent() {
   // The loading state is now handled by the AuthProvider wrapper.
   // We just need to handle the redirect if the user is already logged in.
   if (!loading && user) {
-    redirect('/home');
-    return null; // Return null during redirection
+    // AuthProvider will handle redirecting to /home after data loads.
+    // For now, we can show the loader or just wait.
+    return <AnimatedLogoLoader fullscreen isAuthPage />;
   }
   
   // If not loading and no user, show the login form.
@@ -36,7 +37,7 @@ function LoginPageContent() {
   }
 
   // Fallback for the brief moment between auth state change and redirect.
-  return null; 
+  return <AnimatedLogoLoader fullscreen isAuthPage />; 
 }
 
 
