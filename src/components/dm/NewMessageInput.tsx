@@ -1,4 +1,5 @@
-{'use client';
+
+'use client';
 
 import { useState, useRef, useEffect } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
@@ -42,20 +43,24 @@ const AudioPreviewPlayer = ({ audioUrl, duration }: { audioUrl: string; duration
     const audioRef = useRef<HTMLAudioElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
+    const [playbackRate, setPlaybackRate] = useState(1);
 
     useEffect(() => {
         const audio = audioRef.current;
         if (!audio) return;
+
         const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
         const handleEnded = () => setIsPlaying(false);
+
         audio.addEventListener('timeupdate', handleTimeUpdate);
         audio.addEventListener('ended', handleEnded);
+
         return () => {
             audio.removeEventListener('timeupdate', handleTimeUpdate);
             audio.removeEventListener('ended', handleEnded);
         };
     }, []);
-
+    
     const togglePlayPause = () => {
         if (audioRef.current) {
             if (isPlaying) {
@@ -66,6 +71,16 @@ const AudioPreviewPlayer = ({ audioUrl, duration }: { audioUrl: string; duration
             setIsPlaying(!isPlaying);
         }
     };
+
+    const changePlaybackRate = () => {
+        const rates = [1, 1.5, 2];
+        const nextRate = rates[(rates.indexOf(playbackRate) + 1) % rates.length];
+        if (audioRef.current) {
+            audioRef.current.playbackRate = nextRate;
+        }
+        setPlaybackRate(nextRate);
+    };
+
     return (
         <div className="flex items-center gap-2 p-2 w-full">
             <audio ref={audioRef} src={audioUrl} preload="metadata" />
@@ -75,7 +90,12 @@ const AudioPreviewPlayer = ({ audioUrl, duration }: { audioUrl: string; duration
             <div className="flex-1 h-1 bg-muted rounded-full relative">
                 <div className="bg-primary h-full rounded-full" style={{ width: `${(currentTime / duration) * 100}%` }} />
             </div>
-            <span className="text-xs font-mono w-12 text-right">{formatRecordingTime(duration)}</span>
+            <div className="flex items-center gap-2">
+                 <span className="text-xs font-mono w-12 text-right">{formatRecordingTime(currentTime)}</span>
+                <Button variant="outline" size="sm" className="w-12 text-xs" onClick={changePlaybackRate}>
+                    {playbackRate}x
+                </Button>
+            </div>
         </div>
     );
 };
