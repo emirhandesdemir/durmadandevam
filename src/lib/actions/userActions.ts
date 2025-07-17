@@ -9,7 +9,6 @@ import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/lib/firebase';
 import { updateProfile } from 'firebase/auth';
-import { createProfileUpdatePost } from './postActions';
 
 // Helper function to process queries in batches to avoid Firestore limits
 async function processQueryInBatches(queryToProcess: any, updateData: any) {
@@ -127,7 +126,6 @@ export async function updateUserProfile(updates: {
     const authUpdates: { displayName?: string, photoURL?: string } = {};
     if (updates.username) authUpdates.displayName = updates.username;
     
-    let isNewProfilePic = false;
     if (updates.photoURL !== undefined) {
         // If the URL is a data URL, upload to storage first.
         if(updates.photoURL && updates.photoURL.startsWith('data:image/')) {
@@ -141,7 +139,6 @@ export async function updateUserProfile(updates: {
             updatesForDb.photoURL = updates.photoURL;
             authUpdates.photoURL = updates.photoURL ?? undefined;
         }
-        isNewProfilePic = true;
     }
 
     if (Object.keys(updatesForDb).length > 0) {
@@ -167,21 +164,6 @@ export async function updateUserProfile(updates: {
             console.error("Propagasyon hatası:", err);
             // Don't throw to the client, but log it.
         });
-    }
-    
-    if (isNewProfilePic) {
-        const userDoc = await getDoc(userRef);
-        if (userDoc.exists()) {
-            const userData = userDoc.data();
-            await createProfileUpdatePost({
-                userId: userId,
-                username: userData.username,
-                profileEmoji: "📷",
-                text: `${userData.username} profil fotoğrafını güncelledi!`,
-                userAvatarFrame: userData.selectedAvatarFrame || '',
-                userRole: userData.role,
-            });
-        }
     }
 
     revalidatePath(`/profile/${userId}`, 'layout');

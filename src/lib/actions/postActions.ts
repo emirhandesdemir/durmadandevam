@@ -63,22 +63,12 @@ export async function createProfileUpdatePost(data: {
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
 }) {
-    // Generate an image from the emoji
-    const emojiImageUrl = await emojiToDataUrl(data.profileEmoji);
-
-    return createPost({
-        uid: data.userId,
-        username: data.username,
-        photoURL: null, // User's actual photoURL is not used for this special post
-        profileEmoji: data.profileEmoji,
-        userAvatarFrame: data.userAvatarFrame,
-        userRole: data.userRole,
-        text: data.text,
-        imageUrl: emojiImageUrl,
-        language: 'tr', // Default or detect user language
-        commentsDisabled: true, // Typically these posts don't need comments
-        likesHidden: false,
-    });
+    // This now needs to be handled on the client-side before calling createPost.
+    // For simplicity, we'll pass the emoji and let the client construct the data URL if needed.
+    // However, the action now expects a full image URL.
+    // This flow is now deprecated in favor of direct updates.
+    console.warn("createProfileUpdatePost is deprecated. Profile picture posts are now handled differently.");
+    return { success: false, error: "This function is deprecated." };
 }
 
 
@@ -86,12 +76,11 @@ export async function createPost(postData: {
     uid: string;
     username: string;
     photoURL: string | null;
-    profileEmoji?: string | null;
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
     text: string;
-    imageUrl?: string | null;
+    imageUrl: string | null;
     videoUrl?: string;
     editedWithAI?: boolean;
     language: string;
@@ -113,7 +102,6 @@ export async function createPost(postData: {
             uid: postData.uid,
             username: postData.username,
             photoURL: postData.photoURL,
-            profileEmoji: postData.profileEmoji || null,
             userAvatarFrame: postData.userAvatarFrame || '',
             userRole: postData.userRole,
             userGender: postData.userGender,
@@ -149,7 +137,6 @@ export async function createPost(postData: {
         uid: postData.uid,
         displayName: postData.username,
         photoURL: postData.photoURL,
-        profileEmoji: postData.profileEmoji,
         userAvatarFrame: postData.userAvatarFrame
     });
 
