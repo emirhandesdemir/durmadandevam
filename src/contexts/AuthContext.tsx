@@ -53,18 +53,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   const { toast } = useToast();
 
-  const handleLogout = useCallback(async () => {
+  const handleLogout = useCallback(async (isBan: boolean = false) => {
     try {
         if (auth.currentUser) { 
             const userStatusRef = doc(db, 'users', auth.currentUser.uid);
             await setDoc(userStatusRef, { isOnline: false, lastSeen: serverTimestamp() }, { merge: true });
+            if (isBan) {
+              localStorage.setItem('isBanned', 'true');
+            }
         }
         await signOut(auth);
         await setSessionCookie(null);
-        toast({
-            title: "Oturum Kapatıldı",
-            description: "Başarıyla çıkış yaptınız.",
-        });
+        if (!isBan) {
+          toast({
+              title: "Oturum Kapatıldı",
+              description: "Başarıyla çıkış yaptınız.",
+          });
+        }
         window.location.href = '/login'; 
     } catch (error) {
         console.error("Logout error", error);
@@ -86,6 +91,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     const unsubscribeAuth = onIdTokenChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        localStorage.removeItem('isBanned');
+      }
       setUser(currentUser);
       const idToken = await currentUser?.getIdToken() || null;
       await setSessionCookie(idToken);
@@ -117,7 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const data = docSnap.data() as UserProfile;
             if (data.isBanned) {
                 toast({ variant: 'destructive', title: 'Hesabınız Askıya Alındı', description: 'Bu hesaba erişiminiz kısıtlanmıştır.', duration: Infinity });
-                handleLogout();
+                handleLogout(true);
                 return;
             }
             setUserData(data);

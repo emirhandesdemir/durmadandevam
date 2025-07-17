@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth"; 
 import { auth } from "@/lib/firebase";
 import Image from "next/image";
@@ -41,6 +41,18 @@ export default function LoginForm() {
     const [isLoading, setIsLoading] = useState(false);
     const [isResetting, setIsResetting] = useState(false); 
     const [showPassword, setShowPassword] = useState(false);
+
+    useEffect(() => {
+        if (localStorage.getItem('isBanned') === 'true') {
+            toast({
+                title: "Hesap Askıya Alındı",
+                description: "Bu hesaba erişiminiz kısıtlanmıştır.",
+                variant: "destructive",
+                duration: Infinity
+            });
+            localStorage.removeItem('isBanned');
+        }
+    }, [toast]);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
