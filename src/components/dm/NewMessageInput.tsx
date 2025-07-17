@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -91,7 +90,7 @@ const AudioPreviewPlayer = ({ audioUrl, duration }: { audioUrl: string; duration
                 <div className="bg-primary h-full rounded-full" style={{ width: `${(currentTime / duration) * 100}%` }} />
             </div>
             <div className="flex items-center gap-2">
-                 <span className="text-xs font-mono w-12 text-right">{formatRecordingTime(currentTime)}</span>
+                 <span className="text-xs font-mono w-12 text-right">{formatRecordingTime(duration)}</span>
                 <Button variant="outline" size="sm" className="w-12 text-xs" onClick={changePlaybackRate}>
                     {playbackRate}x
                 </Button>
@@ -216,8 +215,13 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
         setIsSubmitting(true);
         try {
             if (audioBlob && recordingStatus === 'preview') {
-                await sendMessage(chatId, sender, receiver, { audio: { dataUrl: audioUrl!, blob: audioBlob, duration: recordingDuration } });
-                cancelAndReset();
+                const reader = new FileReader();
+                reader.readAsDataURL(audioBlob);
+                reader.onloadend = async () => {
+                    const base64Audio = reader.result as string;
+                    await sendMessage(chatId, sender, receiver, { audio: { dataUrl: base64Audio, duration: recordingDuration } });
+                    cancelAndReset();
+                };
             } else if (file) {
               const reader = new FileReader();
               reader.readAsDataURL(file);

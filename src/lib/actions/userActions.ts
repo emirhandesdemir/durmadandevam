@@ -7,8 +7,8 @@ import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, 
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/lib/firebase';
-import { updateProfile } from 'firebase/auth';
+import { updateProfile } from "firebase/auth";
+import { getAuth } from '../firebaseAdmin';
 
 // Helper function to process queries in batches to avoid Firestore limits
 async function processQueryInBatches(queryToProcess: any, updateData: any) {
@@ -123,6 +123,7 @@ export async function updateUserProfile(updates: {
         }
     }
 
+    const auth = getAuth();
     const authUpdates: { displayName?: string, photoURL?: string | null } = {};
     if (updates.username) authUpdates.displayName = updates.username;
     if (updates.photoURL !== undefined) authUpdates.photoURL = updates.photoURL;
@@ -132,6 +133,10 @@ export async function updateUserProfile(updates: {
         await updateDoc(userRef, updatesForDb);
     }
     
+    if (Object.keys(authUpdates).length > 0) {
+        await auth.updateUser(userId, authUpdates);
+    }
+
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
     if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;

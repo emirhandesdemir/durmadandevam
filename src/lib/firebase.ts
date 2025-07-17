@@ -5,13 +5,13 @@ import { getStorage } from "firebase/storage";
 import { getMessaging } from "firebase/messaging";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBHLuoO7KM9ai0dMeCcGhmSHSVYCDO1rEo",
-  authDomain: "yenidendeneme-ea9ed.firebaseapp.com",
-  projectId: "yenidendeneme-ea9ed",
-  storageBucket: "yenidendeneme-ea9ed",
-  messagingSenderId: "903324685291",
-  appId: "1:903324685291:web:2e82831fac65c682b3ffae",
-  measurementId: "G-J3EB02J0LN"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
@@ -19,6 +19,6 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
-const messaging = (typeof window !== 'undefined') ? getMessaging(app) : null;
+const messaging = (typeof window !== 'undefined' && typeof navigator !== 'undefined' && 'serviceWorker' in navigator) ? getMessaging(app) : null;
 
 export { app, auth, db, storage, messaging };

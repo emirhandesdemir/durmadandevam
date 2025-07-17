@@ -21,7 +21,7 @@ import {
   arrayUnion,
   arrayRemove,
 } from 'firebase/firestore';
-import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { revalidatePath } from 'next/cache';
 import { v4 as uuidv4 } from 'uuid';
 import { getChatId } from '../utils';
@@ -74,7 +74,7 @@ export async function sendMessage(
     text?: string; 
     imageUrl?: string; 
     imageType?: 'permanent' | 'timed';
-    audio?: { dataUrl: string; blob: Blob, duration: number };
+    audio?: { dataUrl: string, duration: number };
   }
 ) {
   const { text, imageUrl, imageType, audio } = content;
@@ -118,10 +118,10 @@ export async function sendMessage(
   }
 
   let finalAudioUrl: string | undefined;
-  if (audio?.blob) {
-      const audioPath = `dms/${sender.uid}/audio/${uuidv4()}.webm`;
+  if (audio?.dataUrl) {
+      const audioPath = `dms/${chatId}/audio/${uuidv4()}.webm`;
       const audioStorageRef = storageRef(storage, audioPath);
-      await uploadBytes(audioStorageRef, audio.blob, { contentType: 'audio/webm' });
+      await uploadString(audioStorageRef, audio.dataUrl, 'data_url', { contentType: 'audio/webm' });
       finalAudioUrl = await getDownloadURL(audioStorageRef);
   }
 
