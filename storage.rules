@@ -1,53 +1,43 @@
 rules_version = '2';
 
-// By default, deny all reads and writes
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow avatar uploads for any authenticated user, but only for their own UID folder.
-    // Limit file size to 5MB and content type to images.
-    match /upload/avatars/{userId}/{allPaths=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null 
-                    && request.auth.uid == userId
-                    && request.resource.size < 5 * 1024 * 1024
-                    && request.resource.contentType.matches('image/.*');
-    }
-    
-    // Allow post image uploads for any authenticated user to their own UID folder.
-    match /upload/posts/{userId}/{allPaths=**} {
-        allow read: if request.auth != null;
-        allow write: if request.auth.uid == userId;
-    }
-
-    // Allow video uploads for any authenticated user to their own UID folder.
-    match /upload/videos/{userId}/{allPaths=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth.uid == userId
-                    && request.resource.size < 50 * 1024 * 1024 // 50MB
-                    && request.resource.contentType.matches('video/.*');
-    }
-    
-    // **NEW RULE for DM Audio**
-    // Allow audio uploads within a specific DM chat folder.
-    // The user's UID must be part of the chat folder name.
-    // This rule allows authenticated users to upload audio files up to 10MB to their DMs.
-    match /dms/{chatId}/audio/{fileName} {
-      allow read, write: if request.auth != null
-                          && request.auth.uid in chatId.split('_')
-                          && request.resource.size < 10 * 1024 * 1024
-                          && request.resource.contentType == 'audio/webm';
-    }
-
-    // Allow image uploads within a DM chat folder.
-    match /dms/{chatId}/{folder}/{fileName} {
-        allow read, write: if request.auth != null
-                            && request.auth.uid in chatId.split('_')
-                            && request.resource.contentType.matches('image/.*');
-    }
-
-    // Deny all other access
+    // Default to denying all access
     match /{allPaths=**} {
       allow read, write: if false;
+    }
+    
+    // Allow users to manage their own avatar
+    // Avatars are public to read by anyone
+    match /upload/avatars/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Allow users to upload images for their posts
+    // Post images are public to read
+    match /upload/posts/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Allow users to upload videos for their surf posts
+    // Surf videos are public to read
+    match /upload/videos/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Allow users to upload media in their direct messages
+    // Only chat participants should be able to read/write
+    match /dms/{chatId}/{mediaType}/{fileName} {
+      allow read, write: if request.auth != null && chatId.split('_').includes(request.auth.uid);
+    }
+    
+    // Allow users to upload music to rooms
+    // This could be restricted further if needed (e.g., only room participants)
+    match /music/{roomId}/{fileName} {
+        allow read, write: if request.auth != null;
     }
   }
 }
