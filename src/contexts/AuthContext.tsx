@@ -49,7 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [featureFlags, setFeatureFlags] = useState<FeatureFlags | null>(null);
   const [themeSettings, setThemeSettings] = useState<ThemeSettings | null>(null);
   const [totalUnreadDms, setTotalUnreadDms] = useState(0);
-  const [loading, setLoading] = useState(true); // Single loading state
+  const [authLoading, setAuthLoading] = useState(true);
+  const [firestoreLoading, setFirestoreLoading] = useState(true);
   
   const { toast } = useToast();
 
@@ -91,16 +92,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     const unsubscribeAuth = onIdTokenChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        localStorage.removeItem('isBanned');
-      }
       setUser(currentUser);
+      setAuthLoading(false);
       const idToken = await currentUser?.getIdToken() || null;
       await setSessionCookie(idToken);
       if (!currentUser) {
           setUserData(null);
           setTotalUnreadDms(0);
-          setLoading(false);
+          setFirestoreLoading(false);
       }
     });
 
@@ -113,11 +112,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!user) {
-        setLoading(false);
+        setFirestoreLoading(false);
         return;
     };
-
-    setLoading(true);
 
     const userDocRef = doc(db, 'users', user.uid);
     const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
@@ -129,7 +126,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 return;
             }
 
-            // Ensure essential arrays exist to prevent runtime errors elsewhere
             const sanitizedData = {
                 ...data,
                 followers: data.followers || [],
@@ -150,11 +146,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else { 
             setUserData(null);
         }
-        setLoading(false);
+        setFirestoreLoading(false);
     }, (error) => {
         console.error("Firestore user listener error:", error);
         setUserData(null);
-        setLoading(false);
+        setFirestoreLoading(false);
     });
 
     const dmsQuery = query(collection(db, 'directMessagesMetadata'), where('participantUids', 'array-contains', user.uid));
@@ -177,6 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [user, handleLogout, toast]);
 
+  const loading = authLoading || firestoreLoading;
   const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms };
   
   return (
