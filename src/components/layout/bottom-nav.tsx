@@ -22,7 +22,7 @@ export default function BottomNav() {
         { id: 'surf', href: '/surf', icon: Clapperboard, label: 'Surf' },
         { id: 'profile', href: `/profile/${user.uid}`, icon: Avatar, label: 'Profil' },
       ]
-  }, [user]);
+  }, [user, userData]); // Added userData to dependency array
 
   if (!user) {
     return null;
