@@ -4,26 +4,13 @@
 import { Suspense } from 'react';
 import SignUpForm from '@/components/auth/signup-form';
 import AnimatedLogoLoader from '@/components/common/AnimatedLogoLoader';
-import { useAuth } from '@/contexts/AuthContext';
-import { redirect } from 'next/navigation';
-import { useEffect } from 'react';
 
+/**
+ * Kayıt sayfası.
+ * Artık tüm yönlendirme ve yükleme mantığı AuthContext'te yönetildiği için
+ * bu bileşen sadece kayıt formunu render etmekle sorumludur.
+ */
 function SignUpPageContent() {
-  const { user, loading } = useAuth();
-
-  useEffect(() => {
-    if (!loading && user) {
-      redirect('/home');
-    }
-  }, [user, loading]);
-
-  // The loading state is now handled by the AuthProvider wrapper.
-  // We just need to handle the redirect if the user is already logged in.
-  if (!loading && user) {
-    return null; // Return null during redirection
-  }
-
-  if (!loading && !user) {
     return (
       <main className="relative flex min-h-screen flex-col items-center justify-center p-4 auth-bg">
           <div className="flex-1 flex flex-col items-center justify-center w-full">
@@ -38,10 +25,6 @@ function SignUpPageContent() {
           </footer>
         </main>
     );
-  }
-
-  // Fallback for the brief moment between auth state change and redirect.
-  return null;
 }
 
 

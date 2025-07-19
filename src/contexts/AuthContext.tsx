@@ -3,13 +3,15 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { onIdTokenChanged, User, signOut } from 'firebase/auth';
-import { doc, onSnapshot, query, where, setDoc, serverTimestamp, collection, updateDoc, writeBatch } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { FeatureFlags, UserProfile, ThemeSettings } from '@/lib/types';
+import type { FeatureFlags, UserProfile, ThemeSettings, DirectMessageMetadata } from '@/lib/types';
 import { triggerProfileCompletionNotification } from '@/lib/actions/notificationActions';
 import i18n from '@/lib/i18n';
 import AnimatedLogoLoader from '@/components/common/AnimatedLogoLoader';
+import { collection, query, where } from 'firebase/firestore';
+import { usePathname, useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
@@ -49,9 +51,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [featureFlags, setFeatureFlags] = useState<FeatureFlags | null>(null);
   const [themeSettings, setThemeSettings] = useState<ThemeSettings | null>(null);
   const [totalUnreadDms, setTotalUnreadDms] = useState(0);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [firestoreLoading, setFirestoreLoading] = useState(true);
-  
+  const [loading, setLoading] = useState(true); // Single loading state
+
+  const router = useRouter();
+  const pathname = usePathname();
   const { toast } = useToast();
 
   const handleLogout = useCallback(async (isBan: boolean = false) => {
@@ -65,13 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         await signOut(auth);
         await setSessionCookie(null);
-        if (!isBan) {
-          toast({
-              title: "Oturum Kapatıldı",
-              description: "Başarıyla çıkış yaptınız.",
-          });
-        }
-        window.location.href = '/login'; 
+        // Toast is now shown in the effect below for consistency
     } catch (error) {
         console.error("Logout error", error);
         toast({
@@ -92,14 +89,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     const unsubscribeAuth = onIdTokenChanged(auth, async (currentUser) => {
+      setLoading(true); // Start loading when auth state changes
       setUser(currentUser);
-      setAuthLoading(false);
       const idToken = await currentUser?.getIdToken() || null;
       await setSessionCookie(idToken);
+
       if (!currentUser) {
+          // USER IS LOGGED OUT
           setUserData(null);
           setTotalUnreadDms(0);
-          setFirestoreLoading(false);
+          if (!pathname.startsWith('/login') && !pathname.startsWith('/signup')) {
+            router.replace('/login');
+            toast({
+              title: "Oturum Kapatıldı",
+              description: "Başarıyla çıkış yaptınız.",
+            });
+          }
+          setLoading(false);
       }
     });
 
@@ -108,11 +114,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubscribeFeatures();
       unsubscribeTheme();
     };
-  }, []);
+  }, [router, toast]);
+
 
   useEffect(() => {
     if (!user) {
-        setFirestoreLoading(false);
+        setLoading(false); // No user, stop loading
         return;
     };
 
@@ -121,7 +128,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (docSnap.exists()) {
             const data = docSnap.data() as UserProfile;
             if (data.isBanned) {
-                toast({ variant: 'destructive', title: 'Hesabınız Askıya Alındı', description: 'Bu hesaba erişiminiz kısıtlanmıştır.', duration: Infinity });
                 handleLogout(true);
                 return;
             }
@@ -143,14 +149,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (!data.bio && !data.profileCompletionNotificationSent) {
                 triggerProfileCompletionNotification(user.uid);
             }
+            
+            // Redirect after user data is loaded
+            if(pathname.startsWith('/login') || pathname.startsWith('/signup')) {
+              // Redirect to onboarding if profile is incomplete, otherwise home
+              if(!sanitizedData.bio) {
+                router.replace('/onboarding');
+              } else {
+                router.replace('/home');
+              }
+            }
         } else { 
-            setUserData(null);
+            // This can happen briefly during signup.
+            console.log("Waiting for user document to be created...");
         }
-        setFirestoreLoading(false);
+        setLoading(false); // Stop loading after user data is processed
     }, (error) => {
         console.error("Firestore user listener error:", error);
         setUserData(null);
-        setFirestoreLoading(false);
+        setLoading(false); // Stop loading on error
     });
 
     const dmsQuery = query(collection(db, 'directMessagesMetadata'), where('participantUids', 'array-contains', user.uid));
@@ -171,9 +188,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubscribeDms();
       window.removeEventListener("beforeunload", onbeforeunload);
     };
-  }, [user, handleLogout, toast]);
+  }, [user, handleLogout, router, pathname]);
 
-  const loading = authLoading || firestoreLoading;
   const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms };
   
   return (
