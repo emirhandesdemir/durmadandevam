@@ -5,7 +5,6 @@ import { Suspense } from "react";
 import LoginForm from "@/components/auth/login-form";
 import AnimatedLogoLoader from "@/components/common/AnimatedLogoLoader";
 import { useAuth } from "@/contexts/AuthContext";
-import { redirect } from "next/navigation";
 
 function LoginPageContent() {
   const { user, loading } = useAuth();
