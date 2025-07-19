@@ -251,13 +251,25 @@ export default function NewPostForm() {
 
     setIsSubmitting(true);
     
+    // --- Optimistic UI Change ---
+    // Show toast and navigate away immediately.
+    toast({ title: "Paylaşılıyor...", description: "Gönderiniz hazırlanıyor ve yakında akışta görünecek." });
+    router.push('/home');
+
     try {
       let finalImageUrl: string | null = null;
       if (croppedImage) {
           if (featureFlags?.contentModerationEnabled) {
               const safetyResult = await checkImageSafety({ photoDataUri: croppedImage });
               if (!safetyResult.success || !safetyResult.data?.isSafe) {
-                  throw new Error(safetyResult.error || safetyResult.data?.reason || "Resim, topluluk kurallarını ihlal ediyor.");
+                  // Inform user about the failure if it happens in the background
+                  toast({
+                      variant: 'destructive',
+                      title: 'Gönderi Reddedildi',
+                      description: safetyResult.error || safetyResult.data?.reason || "Resim, topluluk kurallarını ihlal ettiği için paylaşılamadı.",
+                      duration: 9000
+                  });
+                  return; // Stop the process
               }
           }
           const imageBlob = await dataUriToBlob(croppedImage);
@@ -281,8 +293,8 @@ export default function NewPostForm() {
           likesHidden: likesHidden,
       });
 
-      toast({ title: "Başarıyla Paylaşıldı!", description: "Gönderiniz ana sayfada görünecektir." });
-      router.push('/home');
+      // No success toast needed here as the user is already on the home page
+      // and a toast has been shown.
 
     } catch (error: any) {
         console.error("Gönderi paylaşılırken hata:", error);
@@ -292,9 +304,8 @@ export default function NewPostForm() {
             description: error.message || 'Gönderiniz paylaşılamadı. Lütfen tekrar deneyin.', 
             duration: 9000 
         });
-    } finally {
-        setIsSubmitting(false);
     }
+    // No need to set isSubmitting to false, as the component will be unmounted.
   };
 
   const isLoading = isSubmitting || isAiLoading;
