@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { createPost } from "@/lib/actions/postActions";
-import { getFollowingForSuggestions } from "@/lib/actions/userActions";
+import { getFollowingForSuggestions } from "@/lib/actions/suggestionActions";
 import { applyImageFilter } from "@/lib/actions/imageActions";
 import { checkImageSafety } from "@/lib/actions/moderationActions";
 import type { UserProfile } from "@/lib/types";
@@ -287,6 +287,7 @@ export default function NewPostForm() {
           userGender: userData.gender,
           text: text,
           imageUrl: finalImageUrl,
+          videoUrl: null,
           editedWithAI: wasEditedByAI,
           language: i18n.language,
           commentsDisabled: commentsDisabled,
@@ -316,7 +317,7 @@ export default function NewPostForm() {
         {/* Header */}
         <header className="flex items-center justify-between p-2 border-b">
           <Button asChild variant="ghost" className="rounded-full">
-            <Link href="/home"><ChevronLeft className="mr-2 h-4 w-4" /> Geri</Link>
+            <Link href="/create"><ChevronLeft className="mr-2 h-4 w-4" /> Geri</Link>
           </Button>
           <Button onClick={handleShare} disabled={isLoading || (!text.trim() && !croppedImage)}>
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
