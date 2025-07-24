@@ -110,9 +110,8 @@ export interface ThemeSettings {
 export interface UserProfile {
     uid: string;
     username: string;
-    email: string;
+    username_lowercase: string;
     photoURL: string | null;
-    profileEmoji: string | null;
     bio: string | null;
     postCount: number;
     role: 'admin' | 'user';
@@ -156,7 +155,6 @@ export interface ProfileViewer {
     viewedAt: Timestamp;
     username?: string;
     photoURL: string | null;
-    profileEmoji: string | null;
     selectedAvatarFrame?: string;
 }
 
@@ -177,7 +175,6 @@ export interface FollowRequest {
     uid: string;
     username:string;
     photoURL: string | null;
-    profileEmoji: string | null;
     userAvatarFrame?: string;
     requestedAt: Timestamp;
 }
@@ -187,8 +184,7 @@ export interface Notification {
     recipientId: string;
     senderId: string;
     senderUsername: string;
-    photoURL: string | null;
-    profileEmoji?: string | null;
+    senderAvatar: string | null;
     senderAvatarFrame?: string;
     type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile';
     postId?: string | null;
@@ -209,8 +205,7 @@ export interface Post {
     id: string;
     uid: string;
     username: string;
-    photoURL: string | null;
-    profileEmoji: string | null;
+    userPhotoURL: string | null;
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
@@ -232,8 +227,7 @@ export interface Post {
         postId: string;
         uid: string;
         username: string;
-        photoURL: string | null;
-        profileEmoji: string | null;
+        userPhotoURL: string | null;
         userAvatarFrame?: string;
         text: string;
         imageUrl?: string;
@@ -247,7 +241,6 @@ export interface Comment {
     uid: string;
     username: string;
     photoURL: string | null;
-    profileEmoji: string | null;
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     text: string;
@@ -261,8 +254,8 @@ export interface Comment {
 export interface Giveaway {
     status: 'idle' | 'active' | 'finished';
     prize: string;
-    participants: { uid: string, username: string, photoURL: string | null, profileEmoji: string | null }[];
-    winner?: { uid: string, username: string, photoURL: string | null, profileEmoji: string | null };
+    participants: { uid: string, username: string, photoURL: string | null }[];
+    winner?: { uid: string, username: string, photoURL: string | null };
     startedAt?: Timestamp;
     endedAt?: Timestamp;
 }
@@ -282,7 +275,7 @@ export interface Room {
     createdAt: Timestamp;
     expiresAt?: Timestamp | null;
     portalExpiresAt?: Timestamp;
-    participants: { uid: string, username: string, photoURL?: string | null, profileEmoji?: string | null }[];
+    participants: { uid: string, username: string, photoURL?: string | null }[];
     maxParticipants: number;
     voiceParticipantsCount?: number;
     rules: string | null;
@@ -313,7 +306,6 @@ export interface VoiceParticipant {
     uid: string;
     username: string;
     photoURL?: string | null;
-    profileEmoji: string | null;
     role?: 'admin' | 'user';
     isSpeaker: boolean;
     isMuted: boolean;
@@ -397,7 +389,6 @@ export interface DirectMessageMetadata {
         [uid: string]: {
             username: string;
             photoURL: string | null;
-            profileEmoji: string | null;
             selectedAvatarFrame?: string;
             premiumUntil?: Timestamp;
         }
@@ -420,7 +411,6 @@ export interface Message {
   uid: string;
   username: string;
   photoURL?: string | null;
-  profileEmoji: string | null;
   text?: string;
   imageUrl?: string;
   videoUrl?: string;
@@ -489,7 +479,7 @@ export interface ActiveGameSession {
     gameType: 'dice' | 'rps' | 'bottle';
     gameName: string;
     hostId: string;
-    players: { uid: string, username: string, photoURL: string | null, profileEmoji: string | null }[];
+    players: { uid: string, username: string, photoURL: string | null }[];
     moves: { [key: string]: string | number };
     status: 'pending' | 'active' | 'finished';
     turn?: string;

@@ -16,13 +16,11 @@ import {
     collection,
     writeBatch
 } from "firebase/firestore";
-import { ref, deleteObject, uploadBytes, getDownloadURL } from "firebase/storage";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
 import { findUserByUsername } from "./userActions";
-import { emojiToDataUrl } from "../utils";
 
-async function handlePostMentions(postId: string, text: string, sender: { uid: string; displayName: string | null; photoURL: string | null; profileEmoji?: string | null; userAvatarFrame?: string }) {
+async function handlePostMentions(postId: string, text: string, sender: { uid: string; displayName: string | null; photoURL: string | null; userAvatarFrame?: string }) {
     if (!text) return;
     const mentionRegex = /(?<!\S)@\w+/g;
     const mentions = text.match(mentionRegex);
@@ -42,12 +40,11 @@ async function handlePostMentions(postId: string, text: string, sender: { uid: s
                         senderId: sender.uid,
                         senderUsername: sender.displayName || "Biri",
                         photoURL: sender.photoURL,
-                        profileEmoji: sender.profileEmoji,
                         senderAvatarFrame: sender.userAvatarFrame,
                         type: 'mention',
                         postId: postId,
                         postImage: postData?.imageUrl || null,
-                        commentText: text, // The post text where the mention happened
+                        commentText: text,
                     });
                 }
             }
@@ -55,30 +52,17 @@ async function handlePostMentions(postId: string, text: string, sender: { uid: s
     }
 }
 
-export async function createProfileUpdatePost(data: {
-    userId: string;
-    username: string;
-    profileEmoji: string;
-    text: string;
-    userAvatarFrame?: string;
-    userRole?: 'admin' | 'user';
-}) {
-    console.warn("createProfileUpdatePost is deprecated. Profile picture posts are now handled differently.");
-    return { success: false, error: "This function is deprecated." };
-}
-
 
 export async function createPost(postData: {
     uid: string;
     username: string;
-    photoURL: string | null;
+    userPhotoURL: string | null;
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
     text: string;
     imageUrl: string | null;
-    videoUrl?: string;
-    editedWithAI?: boolean;
+    videoUrl: string | null;
     language: string;
     commentsDisabled?: boolean;
     likesHidden?: boolean;
@@ -97,14 +81,14 @@ export async function createPost(postData: {
         const newPostData = {
             uid: postData.uid,
             username: postData.username,
-            photoURL: postData.photoURL,
+            userPhotoURL: postData.userPhotoURL,
             userAvatarFrame: postData.userAvatarFrame || '',
             userRole: postData.userRole,
             userGender: postData.userGender,
             text: postData.text,
             imageUrl: postData.imageUrl || null,
-            videoUrl: postData.videoUrl || null,
-            editedWithAI: postData.editedWithAI,
+            videoUrl: postData.videoUrl,
+            editedWithAI: false, // This feature was removed
             language: postData.language,
             commentsDisabled: postData.commentsDisabled,
             likesHidden: postData.likesHidden,
@@ -132,7 +116,7 @@ export async function createPost(postData: {
     await handlePostMentions(finalPostId, postData.text, {
         uid: postData.uid,
         displayName: postData.username,
-        photoURL: postData.photoURL,
+        photoURL: postData.userPhotoURL,
         userAvatarFrame: postData.userAvatarFrame
     });
 
@@ -164,27 +148,6 @@ export async function deletePost(postId: string) {
 
             transaction.delete(postRef);
             transaction.update(userRef, { postCount: increment(-1) });
-
-            if (postData.imageUrl && !postData.imageUrl.startsWith('data:image/svg+xml')) {
-                try {
-                    const imageStorageRef = ref(storage, postData.imageUrl);
-                    await deleteObject(imageStorageRef);
-                } catch(error: any) {
-                    if (error.code !== 'storage/object-not-found') {
-                        console.error("Storage resmi silinirken hata oluştu:", error);
-                    }
-                }
-            }
-            if (postData.videoUrl) {
-                 try {
-                    const videoRef = ref(storage, postData.videoUrl);
-                    await deleteObject(videoRef);
-                } catch(error: any) {
-                    if (error.code !== 'storage/object-not-found') {
-                        console.error("Storage videosu silinirken hata oluştu:", error);
-                    }
-                }
-            }
         });
         revalidatePath('/home');
         revalidatePath('/surf');
@@ -214,7 +177,7 @@ export async function updatePost(postId: string, updates: { text?: string; comme
 
 export async function likePost(
     postId: string,
-    currentUser: { uid: string, displayName: string | null, photoURL: string | null, profileEmoji: string | null, userAvatarFrame?: string }
+    currentUser: { uid: string, displayName: string | null, userPhotoURL: string | null, userAvatarFrame?: string }
 ) {
     const postRef = doc(db, "posts", postId);
     
@@ -240,8 +203,7 @@ export async function likePost(
                     recipientId: postData.uid,
                     senderId: currentUser.uid,
                     senderUsername: currentUser.displayName || "Biri",
-                    photoURL: currentUser.photoURL,
-                    profileEmoji: currentUser.profileEmoji,
+                    photoURL: currentUser.userPhotoURL,
                     senderAvatarFrame: currentUser.userAvatarFrame,
                     type: 'like',
                     postId: postId,
@@ -301,7 +263,6 @@ export async function retweetPost(
         uid: string; 
         username: string; 
         photoURL: string | null;
-        profileEmoji: string | null;
         userAvatarFrame?: string;
         userRole?: 'admin' | 'user';
         userGender?: 'male' | 'female';
@@ -326,8 +287,7 @@ export async function retweetPost(
             postId: originalPostId,
             uid: originalPostData.uid,
             username: originalPostData.username,
-            photoURL: originalPostData.photoURL,
-            profileEmoji: originalPostData.profileEmoji,
+            userPhotoURL: originalPostData.userPhotoURL,
             userAvatarFrame: originalPostData.userAvatarFrame,
             text: originalPostData.text,
             imageUrl: originalPostData.imageUrl,
@@ -338,8 +298,7 @@ export async function retweetPost(
         const newPostData = {
             uid: retweeter.uid,
             username: retweeter.username,
-            photoURL: retweeter.photoURL,
-            profileEmoji: retweeter.profileEmoji,
+            userPhotoURL: retweeter.photoURL,
             userAvatarFrame: retweeter.userAvatarFrame,
             userRole: retweeter.userRole,
             userGender: retweeter.userGender,
@@ -367,7 +326,6 @@ export async function retweetPost(
             senderId: retweeter.uid,
             senderUsername: retweeter.username,
             photoURL: retweeter.photoURL,
-            profileEmoji: retweeter.profileEmoji,
             senderAvatarFrame: retweeter.userAvatarFrame,
             type: 'retweet',
             postId: newPostRef.id,

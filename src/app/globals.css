@@ -27,24 +27,24 @@
   }
  
   .dark {
-    --background: 0 0% 0%;
+    --background: 240 10% 3.9%;
     --foreground: 210 40% 98%;
-    --card: 0 0% 2.5%;
+    --card: 240 4.8% 11.0%;
     --card-foreground: 210 40% 98%;
-    --popover: 0 0% 2%;
+    --popover: 240 10% 3.9%;
     --popover-foreground: 210 40% 98%;
     --primary: 217.2 91.2% 59.8%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 0 0% 8%;
+    --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 0 0% 8%;
+    --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
-    --accent: 0 0% 8%;
+    --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 0 0% 8%;
-    --input: 0 0% 8%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
     --ring: 217.2 91.2% 59.8%;
   }
 }
@@ -64,7 +64,7 @@
     overscroll-behavior-y: contain;
   }
   .auth-bg {
-    background: linear-gradient(-45deg, #ef4444, #dc2626, #3b82f6, #2563eb);
+    background: linear-gradient(-45deg, hsl(var(--primary)), hsl(var(--primary) / 0.7), hsl(var(--secondary)), hsl(var(--background)));
     background-size: 400% 400%;
     animation: gradientBG 15s ease infinite;
   }

@@ -27,9 +27,8 @@ async function updateUserPosts(uid: string, updates: { [key: string]: any }) {
     
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
+    if (updates.photoURL) propagationUpdates.userPhotoURL = updates.photoURL;
     if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
-    if (updates.profileEmoji !== undefined) propagationUpdates.profileEmoji = updates.profileEmoji;
     
     if (Object.keys(propagationUpdates).length === 0) return;
 
@@ -44,7 +43,6 @@ async function updateUserComments(uid: string, updates: { [key: string]: any }) 
     if (updates.username) propagationUpdates.username = updates.username;
     if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
     if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
-    if (updates.profileEmoji !== undefined) propagationUpdates.profileEmoji = updates.profileEmoji;
     
     if (Object.keys(propagationUpdates).length === 0) return;
 
@@ -78,7 +76,6 @@ export async function updateUserProfile(updates: {
     acceptsFollowRequests?: boolean;
     showOnlineStatus?: boolean;
     photoURL?: string | null;
-    profileEmoji?: string | null;
     selectedBubble?: string;
     selectedAvatarFrame?: string;
     interests?: string[];
@@ -117,12 +114,11 @@ export async function updateUserProfile(updates: {
         batch.update(userRef, updatesForDb);
     }
     
-    // Auth profile needs to be updated separately for displayName and photoURL
-    const authProfileUpdates: { displayName?: string, photoURL?: string } = {};
+    const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
     if(updates.username && updates.username !== userData.username) {
       authProfileUpdates.displayName = updates.username;
     }
-    if(updates.photoURL && updates.photoURL !== userData.photoURL) {
+    if(updates.photoURL !== undefined && updates.photoURL !== userData.photoURL) {
       authProfileUpdates.photoURL = updates.photoURL;
     }
 
@@ -133,13 +129,10 @@ export async function updateUserProfile(updates: {
 
     await batch.commit();
 
-    // Propagate changes separately as they can be long-running
-    const propagationBatch = writeBatch(db);
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
+    if (updates.photoURL !== undefined) propagationUpdates.photoURL = updates.photoURL;
     if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
-    if (updates.profileEmoji !== undefined) propagationUpdates.profileEmoji = updates.profileEmoji;
 
     if (Object.keys(propagationUpdates).length > 0) {
          try {
@@ -147,13 +140,12 @@ export async function updateUserProfile(updates: {
                 updateUserPosts(userId, propagationUpdates),
                 updateUserComments(userId, propagationUpdates),
             ]);
-            await propagationBatch.commit().catch(err => console.error("Propagation batch commit error:", err));
         } catch(err) {
             console.error("Propagasyon hatası:", err);
+            throw new Error("Profil güncellendi ancak eski içeriklere yansıtılamadı.");
         }
     }
     
-
     revalidatePath(`/profile/${userId}`, 'layout');
     return { success: true };
 }
@@ -358,16 +350,8 @@ export async function deleteUserAccount(userId: string) {
         const roomDeletePromises = roomsSnapshot.docs.map(roomDoc => deleteRoomWithSubcollections(roomDoc.id));
         await Promise.all(roomDeletePromises);
         
-        // 4. Delete user's main document and avatar
+        // 4. Delete user's main document. The user's avatar is a data URI, so no Storage deletion needed.
         const userRef = doc(db, "users", userId);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-            const userData = userSnap.data();
-            if (userData.photoURL && userData.photoURL.includes('firebasestorage')) {
-                const avatarRef = ref(storage, userData.photoURL);
-                deleteObject(avatarRef).catch(e => console.error("Avatar deletion error:", e));
-            }
-        }
         batch.delete(userRef);
         
         await batch.commit();
