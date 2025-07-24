@@ -1,4 +1,3 @@
+// src/components/profile/profile-page-client.tsx
+// This file is obsolete and has been removed to clean up the project.
 
-// This component has been removed as its functionality is now split
-// between the main profile page and the new avatar-creator page.
-// This file is now obsolete and can be safely deleted.

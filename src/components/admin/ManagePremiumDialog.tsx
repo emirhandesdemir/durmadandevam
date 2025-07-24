@@ -29,7 +29,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Crown } from "lucide-react";
-import type { UserData } from "@/app/admin/users/page";
+import type { UserProfile } from "@/lib/types";
 import { manageUserPremium } from "@/lib/actions/adminActions";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Label } from "../ui/label";
@@ -37,7 +37,7 @@ import { Label } from "../ui/label";
 interface ManagePremiumDialogProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  user: UserData | null;
+  user: UserProfile | null;
 }
 
 const durationOptions = [

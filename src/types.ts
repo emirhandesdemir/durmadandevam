@@ -110,7 +110,6 @@ export interface ThemeSettings {
 export interface UserProfile {
     uid: string;
     username: string;
-    email: string;
     photoURL: string | null;
     profileEmoji: string | null;
     bio: string | null;
@@ -359,7 +358,6 @@ export interface GameSettings {
 export interface FeatureFlags {
     quizGameEnabled: boolean;
     contentModerationEnabled: boolean;
-    postFeedEnabled: boolean;
 }
 
 export interface VoiceStats {
