@@ -75,6 +75,8 @@ export default function LoginForm() {
                 errorMessage = "E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edip tekrar deneyin.";
             } else if (error.code === 'auth/too-many-requests') {
                 errorMessage = "Çok fazla hatalı deneme yapıldı. Lütfen daha sonra tekrar deneyin.";
+            } else if (error.code === 'auth/user-disabled') {
+                errorMessage = "Bu kullanıcı hesabı askıya alınmıştır.";
             }
             toast({
                 title: "Giriş Başarısız",

@@ -86,7 +86,7 @@
     overscroll-behavior-y: contain;
   }
   .auth-bg {
-    background: linear-gradient(-45deg, #73A580, #E9967A, #F5F5DC, #73A580);
+    background: linear-gradient(-45deg, hsl(var(--primary)), hsl(var(--primary) / 0.7), hsl(var(--secondary)), hsl(var(--primary)));
     background-size: 400% 400%;
     animation: gradientBG 15s ease infinite;
   }

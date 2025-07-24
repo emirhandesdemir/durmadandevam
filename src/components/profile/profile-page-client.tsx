@@ -1,3 +1,2 @@
-// src/components/profile/profile-page-client.tsx
-// This file is obsolete and has been removed to clean up the project.
-
+// This file is obsolete as its contents have been moved to `src/app/(main)/profile/page.tsx`.
+// It can be safely removed in a future cleanup.

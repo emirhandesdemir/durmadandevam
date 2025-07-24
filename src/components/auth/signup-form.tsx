@@ -75,7 +75,7 @@ export default function SignUpForm() {
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsLoading(true);
         try {
-            const existingUser = await findUserByUsername(values.username);
+            const existingUser = await findUserByUsername(values.username.toLowerCase());
             if (existingUser) {
                 toast({
                     title: "Kullanıcı Adı Alınmış",
@@ -108,11 +108,10 @@ export default function SignUpForm() {
             const encodedRef = searchParams.get('ref');
             if (encodedRef) {
                 try {
-                    // Decode the Base64 encoded UID
                     ref = atob(encodedRef);
                 } catch (e) {
                     console.error("Failed to decode referral code:", e);
-                    ref = null; // Treat malformed ref as no ref
+                    ref = null;
                 }
             }
 
@@ -124,17 +123,18 @@ export default function SignUpForm() {
                 email: values.email,
                 photoURL: defaultAvatarUrl,
                 profileEmoji: defaultEmoji, 
-                bio: "",
+                bio: null,
                 age: null,
                 city: null,
+                country: values.country,
                 interests: [],
                 role: userRole,
                 gender: values.gender,
-                country: values.country,
-                language: preferredLanguage,
                 createdAt: serverTimestamp(),
-                diamonds: 10, // Start with 10 diamonds
+                lastActionTimestamp: serverTimestamp(),
+                diamonds: 10,
                 referredBy: ref || null,
+                referralCount: 0,
                 postCount: 0,
                 followers: [],
                 following: [],
@@ -146,13 +146,19 @@ export default function SignUpForm() {
                 followRequests: [],
                 selectedBubble: '',
                 selectedAvatarFrame: '',
+                isBanned: false,
+                reportCount: 0,
+                isOnline: true,
+                lastSeen: serverTimestamp(),
+                premiumUntil: null,
+                isFirstPremium: false,
+                unlimitedRoomCreationUntil: null,
+                profileCompletionNotificationSent: false,
             });
 
-            // Credit the referrer if one exists
             if (ref) {
                 try {
-                    const defaultAvatar = emojiToDataUrl(defaultEmoji);
-                    await creditReferrer(ref, { uid: user.uid, username: values.username, photoURL: defaultAvatar, profileEmoji: defaultEmoji });
+                    await creditReferrer(ref, { uid: user.uid, username: values.username, photoURL: defaultAvatarUrl });
                 } catch (e) {
                     console.error("Referrer credit failed, but signup continues:", e);
                 }
@@ -160,7 +166,6 @@ export default function SignUpForm() {
 
             i18n.changeLanguage(preferredLanguage);
 
-            // Let AuthProvider handle redirect
         } catch (error: any) {
             console.error("Kayıt hatası", error);
             let errorMessage = "Hesap oluşturulurken bilinmeyen bir hata oluştu. Lütfen tekrar deneyin.";
@@ -178,7 +183,7 @@ export default function SignUpForm() {
                     form.setError("password", { type: "manual", message: errorMessage });
                     break;
                 default:
-                    console.error(error.message); // Log the specific error for debugging
+                    console.error(error.message);
             }
             toast({
                 title: "Kayıt Başarısız",

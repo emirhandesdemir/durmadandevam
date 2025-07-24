@@ -24,3 +24,18 @@ export function cn(...inputs: ClassValue[]) {
 export function getChatId(uid1: string, uid2: string): string {
   return [uid1, uid2].sort().join('_');
 }
+
+/**
+ * Bir emojiyi data URI formatında bir SVG'ye dönüştürür.
+ * Bu, avatarlar için varsayılan bir görsel sağlamak amacıyla kullanılır.
+ * @param emoji - SVG'ye dönüştürülecek emoji.
+ * @returns Data URI formatında bir SVG string'i.
+ */
+export const emojiToDataUrl = (emoji: string) => {
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+        <text x="50%" y="50%" font-size="80" text-anchor="middle" dominant-baseline="central">${emoji}</text>
+      </svg>
+    `.replace(/\n/g, "").replace(/\s+/g, " ");
+    return `data:image/svg+xml;base64,${btoa(svg)}`;
+};
