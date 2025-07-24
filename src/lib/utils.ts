@@ -34,6 +34,7 @@ export function getChatId(uid1: string, uid2: string): string {
 export const emojiToDataUrl = (emoji: string) => {
     const svg = `
       <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+        <rect width="100" height="100" fill="hsl(220 9% 46% / 0.1)" />
         <text x="50%" y="50%" font-size="80" text-anchor="middle" dominant-baseline="central">${emoji}</text>
       </svg>
     `.replace(/\n/g, "").replace(/\s+/g, " ");

@@ -10,16 +10,19 @@ import { revalidatePath } from 'next/cache';
 import { getAuth } from '../firebaseAdmin';
 import { deleteRoomWithSubcollections } from '../firestoreUtils';
 
-async function processQueryInBatches(transaction: WriteBatch, queryToProcess: any, updateData: any) {
+async function processQueryInBatches(queryToProcess: any, updates: any) {
     const snapshot = await getDocs(queryToProcess);
     if (snapshot.empty) return;
 
+    const batch = writeBatch(db);
     snapshot.docs.forEach((doc) => {
-        transaction.update(doc.ref, updateData);
+        batch.update(doc.ref, updates);
     });
+    await batch.commit();
 }
 
-async function updateUserPosts(transaction: WriteBatch, uid: string, updates: { [key: string]: any }) {
+
+async function updateUserPosts(uid: string, updates: { [key: string]: any }) {
     if (!uid || !updates || Object.keys(updates).length === 0) return;
     
     const propagationUpdates: { [key: string]: any } = {};
@@ -31,10 +34,10 @@ async function updateUserPosts(transaction: WriteBatch, uid: string, updates: { 
     if (Object.keys(propagationUpdates).length === 0) return;
 
     const userPostsQuery = query(collection(db, 'posts'), where('uid', '==', uid));
-    await processQueryInBatches(transaction, userPostsQuery, propagationUpdates);
+    await processQueryInBatches(userPostsQuery, propagationUpdates);
 }
 
-async function updateUserComments(transaction: WriteBatch, uid: string, updates: { [key: string]: any }) {
+async function updateUserComments(uid: string, updates: { [key: string]: any }) {
     if (!uid || !updates || Object.keys(updates).length === 0) return;
 
     const propagationUpdates: { [key: string]: any } = {};
@@ -46,14 +49,14 @@ async function updateUserComments(transaction: WriteBatch, uid: string, updates:
     if (Object.keys(propagationUpdates).length === 0) return;
 
     const commentsQuery = query(collectionGroup(db, 'comments'), where('uid', '==', uid));
-    await processQueryInBatches(transaction, commentsQuery, propagationUpdates);
+    await processQueryInBatches(commentsQuery, propagationUpdates);
 }
 
 
 export async function findUserByUsername(username: string): Promise<UserProfile | null> {
     if (!username) return null;
     const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('username', '==', username.toLowerCase()), limit(1));
+    const q = query(usersRef, where('username_lowercase', '==', username.toLowerCase()), limit(1));
     const snapshot = await getDocs(q);
     if (snapshot.empty) {
         return null;
@@ -94,7 +97,7 @@ export async function updateUserProfile(updates: {
     const updatesForDb: { [key: string]: any } = { ...otherUpdates };
     
     if (updates.age === '' || updates.age === undefined || updates.age === null) {
-        updatesForDb.age = deleteField();
+        updatesForDb.age = null;
     } else if (updates.age !== undefined) {
         updatesForDb.age = Number(updates.age);
     }
@@ -114,6 +117,20 @@ export async function updateUserProfile(updates: {
         batch.update(userRef, updatesForDb);
     }
     
+    // Auth profile needs to be updated separately for displayName and photoURL
+    const authProfileUpdates: { displayName?: string, photoURL?: string } = {};
+    if(updates.username && updates.username !== userData.username) {
+      authProfileUpdates.displayName = updates.username;
+    }
+    if(updates.photoURL && updates.photoURL !== userData.photoURL) {
+      authProfileUpdates.photoURL = updates.photoURL;
+    }
+
+    if(Object.keys(authProfileUpdates).length > 0) {
+      const auth = getAuth();
+      await auth.updateUser(userId, authProfileUpdates);
+    }
+
     await batch.commit();
 
     // Propagate changes separately as they can be long-running
@@ -125,22 +142,15 @@ export async function updateUserProfile(updates: {
     if (updates.profileEmoji !== undefined) propagationUpdates.profileEmoji = updates.profileEmoji;
 
     if (Object.keys(propagationUpdates).length > 0) {
-         await Promise.all([
-            updateUserPosts(propagationBatch, userId, propagationUpdates),
-            updateUserComments(propagationBatch, userId, propagationUpdates),
-        ]).catch(err => {
+         try {
+            await Promise.all([
+                updateUserPosts(userId, propagationUpdates),
+                updateUserComments(userId, propagationUpdates),
+            ]);
+            await propagationBatch.commit().catch(err => console.error("Propagation batch commit error:", err));
+        } catch(err) {
             console.error("Propagasyon hatası:", err);
-        });
-        await propagationBatch.commit();
-    }
-
-    const auth = getAuth();
-    const authUpdates: { displayName?: string, photoURL?: string | null } = {};
-    if (updates.username) authUpdates.displayName = updates.username;
-    if (updates.photoURL !== undefined) authUpdates.photoURL = updates.photoURL;
-
-    if (Object.keys(authUpdates).length > 0) {
-        await auth.updateUser(userId, authUpdates);
+        }
     }
     
 
@@ -312,4 +322,62 @@ export async function getNearbyUsers(currentUid: string, latitude: number, longi
     });
 
     return deepSerialize(nearbyUsers);
+}
+
+
+export async function deleteUserAccount(userId: string) {
+    if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
+    
+    try {
+        const batch = writeBatch(db);
+        
+        // 1. Delete user's posts
+        const postsQuery = query(collection(db, "posts"), where("uid", "==", userId));
+        const postsSnapshot = await getDocs(postsQuery);
+        postsSnapshot.forEach((postDoc) => {
+            const postData = postDoc.data();
+            if (postData.imageUrl) {
+                 const imageRef = ref(storage, postData.imageUrl);
+                 deleteObject(imageRef).catch(e => console.error("Post image deletion error:", e));
+            }
+             if (postData.videoUrl) {
+                 const videoRef = ref(storage, postData.videoUrl);
+                 deleteObject(videoRef).catch(e => console.error("Post video deletion error:", e));
+            }
+            batch.delete(postDoc.ref)
+        });
+        
+        // 2. Delete user's comments
+        const commentsQuery = query(collectionGroup(db, "comments"), where("uid", "==", userId));
+        const commentsSnapshot = await getDocs(commentsQuery);
+        commentsSnapshot.forEach((doc) => batch.delete(doc.ref));
+        
+        // 3. Delete user's rooms
+        const roomsQuery = query(collection(db, 'rooms'), where('createdBy.uid', '==', userId));
+        const roomsSnapshot = await getDocs(roomsQuery);
+        const roomDeletePromises = roomsSnapshot.docs.map(roomDoc => deleteRoomWithSubcollections(roomDoc.id));
+        await Promise.all(roomDeletePromises);
+        
+        // 4. Delete user's main document and avatar
+        const userRef = doc(db, "users", userId);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+            const userData = userSnap.data();
+            if (userData.photoURL && userData.photoURL.includes('firebasestorage')) {
+                const avatarRef = ref(storage, userData.photoURL);
+                deleteObject(avatarRef).catch(e => console.error("Avatar deletion error:", e));
+            }
+        }
+        batch.delete(userRef);
+        
+        await batch.commit();
+
+        const auth = getAuth();
+        await auth.deleteUser(userId);
+        
+        return { success: true };
+    } catch (error: any) {
+        console.error("Error deleting user account:", error);
+        return { success: false, error: "Hesap silinirken bir hata oluştu." };
+    }
 }

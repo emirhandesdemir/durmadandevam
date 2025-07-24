@@ -75,7 +75,7 @@ export default function SignUpForm() {
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsLoading(true);
         try {
-            const existingUser = await findUserByUsername(values.username.toLowerCase());
+            const existingUser = await findUserByUsername(values.username);
             if (existingUser) {
                 toast({
                     title: "Kullanıcı Adı Alınmış",
@@ -120,6 +120,7 @@ export default function SignUpForm() {
             await setDoc(doc(db, "users", user.uid), {
                 uid: user.uid,
                 username: values.username,
+                username_lowercase: values.username.toLowerCase(),
                 email: values.email,
                 photoURL: defaultAvatarUrl,
                 profileEmoji: defaultEmoji, 
@@ -197,7 +198,7 @@ export default function SignUpForm() {
 
     return (
         <Card className="w-full max-w-sm mx-auto shadow-2xl rounded-2xl bg-card/80 backdrop-blur-lg border-white/20">
-            <CardHeader className="text-center space-y-4">
+            <CardHeader className="text-center space-y-4 pt-10">
                 <Image src="/icons/icon.svg" alt="HiweWalk Logo" width={64} height={64} className="h-16 w-16 mx-auto" />
                 <CardTitle className="text-3xl font-bold">Aramıza Katıl</CardTitle>
                 <CardDescription>
