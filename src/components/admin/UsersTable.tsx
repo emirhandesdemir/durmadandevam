@@ -3,11 +3,11 @@
 
 import { useState } from "react";
 import type { UserProfile } from "@/lib/types";
-import { format } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { tr } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
 import { updateUserRole, banUser, deleteUserAndContent } from "@/lib/actions/adminActions";
-import { MoreHorizontal, Trash2, UserCheck, UserX, Loader2, ShieldCheck, Shield, Gem, Ban, Swords, Crown } from "lucide-react";
+import { MoreHorizontal, Trash2, UserCheck, UserX, Loader2, ShieldCheck, Shield, Gem, Ban, Crown, CheckCircle2, CircleOff } from "lucide-react";
 
 import {
   Table,
@@ -43,7 +43,7 @@ import ManageDiamondsDialog from "./ManageDiamondsDialog";
 import ManagePremiumDialog from "./ManagePremiumDialog";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-
+import Link from 'next/link';
 
 interface UsersTableProps {
   users: UserProfile[];
@@ -108,10 +108,12 @@ export default function UsersTable({ users }: UsersTableProps) {
             <TableHeader>
                 <TableRow>
                 <TableHead>Kullanıcı</TableHead>
-                <TableHead>Rol</TableHead>
+                <TableHead>E-posta</TableHead>
+                <TableHead>Cinsiyet</TableHead>
                 <TableHead>Durum</TableHead>
+                <TableHead>Rol</TableHead>
                 <TableHead>Elmas</TableHead>
-                <TableHead>Katılma Tarihi</TableHead>
+                <TableHead>Son Görülme</TableHead>
                 <TableHead className="text-right">Eylemler</TableHead>
                 </TableRow>
             </TableHeader>
@@ -119,20 +121,34 @@ export default function UsersTable({ users }: UsersTableProps) {
                 {users.map((user) => {
                     const isPremium = user.premiumUntil && user.premiumUntil.toDate() > new Date();
                     return (
-                        <TableRow key={user.uid} className={cn(user.reportCount && user.reportCount > 2 && "bg-destructive/10 hover:bg-destructive/20")}>
+                        <TableRow key={user.uid} className={cn(user.reportCount && user.reportCount > 5 && "bg-destructive/10 hover:bg-destructive/20")}>
                             <TableCell>
-                                <div className="flex items-center gap-3">
+                                <Link href={`/profile/${user.uid}`} className="flex items-center gap-3 group hover:underline" target="_blank">
                                     <Avatar>
                                         <AvatarImage src={user.photoURL || undefined} />
-                                        <AvatarFallback>{user.profileEmoji || user.username?.charAt(0).toUpperCase()}</AvatarFallback>
+                                        <AvatarFallback>{user.username?.charAt(0).toUpperCase()}</AvatarFallback>
                                     </Avatar>
                                     <div>
-                                        <p className="font-medium">{user.username}</p>
+                                        <p className="font-medium group-hover:text-primary">{user.username}</p>
                                         {user.reportCount && user.reportCount > 0 && (
                                             <span className="text-xs text-destructive font-bold">{user.reportCount} şikayet</span>
                                         )}
                                     </div>
-                                </div>
+                                </Link>
+                            </TableCell>
+                             <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                             <TableCell className="text-muted-foreground capitalize">{user.gender === 'male' ? 'Erkek' : user.gender === 'female' ? 'Kadın' : 'Belirtilmemiş'}</TableCell>
+                             <TableCell>
+                                {user.isOnline ? (
+                                    <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700">
+                                        <CheckCircle2 className="mr-1 h-3 w-3" />Çevrimiçi
+                                    </Badge>
+                                ) : (
+                                    <Badge variant="secondary">
+                                        <CircleOff className="mr-1 h-3 w-3" />Çevrimdışı
+                                    </Badge>
+                                )}
+                                 {user.isBanned && <Badge variant="destructive" className="ml-2">Yasaklı</Badge>}
                             </TableCell>
                             <TableCell>
                                 {isPremium ? (
@@ -148,18 +164,13 @@ export default function UsersTable({ users }: UsersTableProps) {
                                 )}
                             </TableCell>
                             <TableCell>
-                                <Badge variant={user.isBanned ? 'destructive' : 'secondary'}>
-                                    {user.isBanned ? 'Yasaklı' : 'Aktif'}
-                                </Badge>
-                            </TableCell>
-                            <TableCell>
                                 <div className="flex items-center font-semibold">
                                     <Gem className="mr-2 h-4 w-4 text-cyan-400" />
                                     {user.diamonds || 0}
                                 </div>
                             </TableCell>
-                            <TableCell>
-                                {user.createdAt ? format(user.createdAt.toDate(), 'PPpp', { locale: tr }) : 'Bilinmiyor'}
+                            <TableCell className="text-muted-foreground text-xs">
+                                {user.lastSeen ? formatDistanceToNow(user.lastSeen.toDate(), { locale: tr, addSuffix: true }) : 'Bilinmiyor'}
                             </TableCell>
                             <TableCell className="text-right">
                                 <DropdownMenu>
