@@ -126,7 +126,7 @@ export default function UsersTable({ users }: UsersTableProps) {
                                 <Link href={`/profile/${user.uid}`} className="flex items-center gap-3 group hover:underline" target="_blank">
                                     <Avatar>
                                         <AvatarImage src={user.photoURL || undefined} />
-                                        <AvatarFallback>{user.username?.charAt(0).toUpperCase()}</AvatarFallback>
+                                        <AvatarFallback>{user.profileEmoji || user.username?.charAt(0).toUpperCase()}</AvatarFallback>
                                     </Avatar>
                                     <div>
                                         <p className="font-medium group-hover:text-primary">{user.username}</p>

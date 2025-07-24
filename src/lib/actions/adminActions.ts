@@ -1,10 +1,9 @@
-
 // src/lib/actions/adminActions.ts
 'use server';
 
 import { db } from '@/lib/firebase';
 import { getAuth } from '@/lib/firebaseAdmin';
-import { doc, deleteDoc, updateDoc, increment, runTransaction, Timestamp, getDocs, collection, query, where, arrayUnion, writeBatch, arrayRemove, setDoc } from 'firebase/firestore';
+import { doc, deleteDoc, updateDoc, increment, runTransaction, Timestamp, getDocs, collection, query, where, arrayUnion, writeBatch, arrayRemove, setDoc, collectionGroup, deleteField } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
 import { deleteRoomWithSubcollections } from '../firestoreUtils';
 
@@ -30,7 +29,7 @@ export async function deleteUserAndContent(userId: string, adminId: string) {
         const postsSnapshot = await getDocs(postsQuery);
         postsSnapshot.forEach((doc) => batch.delete(doc.ref));
         
-        // 2. Delete user's comments (This is slow, but necessary for now)
+        // 2. Delete user's comments
         const commentsQuery = query(collectionGroup(db, "comments"), where("uid", "==", userId));
         const commentsSnapshot = await getDocs(commentsQuery);
         commentsSnapshot.forEach((doc) => batch.delete(doc.ref));
