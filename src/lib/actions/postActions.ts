@@ -19,6 +19,9 @@ import {
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
 import { findUserByUsername } from "./userActions";
+import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { v4 as uuidv4 } from 'uuid';
+
 
 async function handlePostMentions(postId: string, text: string, sender: { uid: string; displayName: string | null; photoURL: string | null; userAvatarFrame?: string }) {
     if (!text) return;
@@ -53,83 +56,94 @@ async function handlePostMentions(postId: string, text: string, sender: { uid: s
 }
 
 
-export async function createPost(postData: {
-    uid: string;
-    username: string;
-    userPhotoURL: string | null;
-    userAvatarFrame?: string;
-    userRole?: 'admin' | 'user';
-    userGender?: 'male' | 'female';
-    text: string;
-    imageUrl: string | null;
-    videoUrl: string | null;
-    language: string;
-    commentsDisabled?: boolean;
-    likesHidden?: boolean;
-}) {
-    const newPostRef = doc(collection(db, 'posts'));
-    const userRef = doc(db, 'users', postData.uid);
-    let finalPostId = newPostRef.id;
+const uploadImage = async (imageBlob: Blob): Promise<string> => {
+    const fileExtension = imageBlob.type.split('/')[1] || 'jpg';
+    const imageRef = storageRef(storage, `upload/posts/${uuidv4()}.${fileExtension}`);
+    const snapshot = await uploadBytes(imageRef, imageBlob);
+    return getDownloadURL(snapshot.ref);
+};
 
-    await runTransaction(db, async (transaction) => {
-        const userSnap = await transaction.get(userRef);
-        if (!userSnap.exists()) throw new Error("User not found.");
-        
-        const userData = userSnap.data();
-        const postCount = userData.postCount || 0;
-        
-        const newPostData = {
+// Add a static method to the main function for easy access
+export const createPost = Object.assign(
+    async (postData: {
+        uid: string;
+        username: string;
+        userPhotoURL: string | null;
+        userAvatarFrame?: string;
+        userRole?: 'admin' | 'user';
+        userGender?: 'male' | 'female';
+        text: string;
+        imageUrl: string | null;
+        videoUrl: string | null;
+        language: string;
+        commentsDisabled?: boolean;
+        likesHidden?: boolean;
+    }) => {
+        const newPostRef = doc(collection(db, 'posts'));
+        const userRef = doc(db, 'users', postData.uid);
+        let finalPostId = newPostRef.id;
+
+        await runTransaction(db, async (transaction) => {
+            const userSnap = await transaction.get(userRef);
+            if (!userSnap.exists()) throw new Error("User not found.");
+            
+            const userData = userSnap.data();
+            const postCount = userData.postCount || 0;
+            
+            const newPostData = {
+                uid: postData.uid,
+                username: postData.username,
+                photoURL: postData.userPhotoURL,
+                userAvatarFrame: postData.userAvatarFrame || '',
+                userRole: postData.userRole,
+                userGender: postData.userGender,
+                text: postData.text,
+                imageUrl: postData.imageUrl,
+                videoUrl: postData.videoUrl,
+                editedWithAI: false, // This feature was removed
+                language: postData.language,
+                commentsDisabled: postData.commentsDisabled,
+                likesHidden: postData.likesHidden,
+                createdAt: serverTimestamp(),
+                likes: [],
+                likeCount: 0,
+                commentCount: 0,
+                saveCount: 0,
+                savedBy: [],
+            };
+            transaction.set(newPostRef, newPostData);
+            
+            const userUpdates: { [key: string]: any } = {
+                lastActionTimestamp: serverTimestamp(),
+                postCount: increment(1)
+            };
+
+            if (postCount === 0 && !postData.videoUrl) {
+                userUpdates.diamonds = increment(90);
+            }
+            
+            transaction.update(userRef, userUpdates);
+        });
+
+        await handlePostMentions(finalPostId, postData.text, {
             uid: postData.uid,
-            username: postData.username,
-            userPhotoURL: postData.userPhotoURL,
-            userAvatarFrame: postData.userAvatarFrame || '',
-            userRole: postData.userRole,
-            userGender: postData.userGender,
-            text: postData.text,
-            imageUrl: postData.imageUrl || null,
-            videoUrl: postData.videoUrl,
-            editedWithAI: false, // This feature was removed
-            language: postData.language,
-            commentsDisabled: postData.commentsDisabled,
-            likesHidden: postData.likesHidden,
-            createdAt: serverTimestamp(),
-            likes: [],
-            likeCount: 0,
-            commentCount: 0,
-            saveCount: 0,
-            savedBy: [],
-        };
-        transaction.set(newPostRef, newPostData);
-        
-        const userUpdates: { [key: string]: any } = {
-            lastActionTimestamp: serverTimestamp(),
-            postCount: increment(1)
-        };
+            displayName: postData.username,
+            photoURL: postData.userPhotoURL,
+            userAvatarFrame: postData.userAvatarFrame
+        });
 
-        if (postCount === 0 && !postData.videoUrl) {
-            userUpdates.diamonds = increment(90);
+        revalidatePath('/home');
+        if (postData.videoUrl) {
+          revalidatePath('/surf');
         }
-        
-        transaction.update(userRef, userUpdates);
-    });
+        if (postData.uid) {
+            revalidatePath(`/profile/${postData.uid}`);
+        }
 
-    await handlePostMentions(finalPostId, postData.text, {
-        uid: postData.uid,
-        displayName: postData.username,
-        photoURL: postData.userPhotoURL,
-        userAvatarFrame: postData.userAvatarFrame
-    });
-
-    revalidatePath('/home');
-    if (postData.videoUrl) {
-      revalidatePath('/surf');
-    }
-    if (postData.uid) {
-        revalidatePath(`/profile/${postData.uid}`);
-    }
-
-    return { success: true, postId: finalPostId };
-}
+        return { success: true, postId: finalPostId };
+    },
+    { uploadImage }
+);
 
 
 export async function deletePost(postId: string) {
@@ -145,6 +159,15 @@ export async function deletePost(postId: string) {
             
             const postData = postSnap.data();
             const userRef = doc(db, 'users', postData.uid);
+
+            if (postData.imageUrl) {
+                const imageRef = storageRef(storage, postData.imageUrl);
+                await deleteObject(imageRef).catch((error) => {
+                    if (error.code !== 'storage/object-not-found') {
+                        console.error("Storage resmi silinirken hata oluştu:", error);
+                    }
+                });
+            }
 
             transaction.delete(postRef);
             transaction.update(userRef, { postCount: increment(-1) });
@@ -177,7 +200,7 @@ export async function updatePost(postId: string, updates: { text?: string; comme
 
 export async function likePost(
     postId: string,
-    currentUser: { uid: string, displayName: string | null, userPhotoURL: string | null, userAvatarFrame?: string }
+    currentUser: { uid: string, displayName: string, photoURL: string | null, profileEmoji: string | null, userAvatarFrame?: string }
 ) {
     const postRef = doc(db, "posts", postId);
     
@@ -203,7 +226,8 @@ export async function likePost(
                     recipientId: postData.uid,
                     senderId: currentUser.uid,
                     senderUsername: currentUser.displayName || "Biri",
-                    photoURL: currentUser.userPhotoURL,
+                    photoURL: currentUser.photoURL,
+                    profileEmoji: currentUser.profileEmoji,
                     senderAvatarFrame: currentUser.userAvatarFrame,
                     type: 'like',
                     postId: postId,
@@ -262,7 +286,8 @@ export async function retweetPost(
     retweeter: { 
         uid: string; 
         username: string; 
-        photoURL: string | null;
+        userPhotoURL: string | null;
+        profileEmoji: string | null;
         userAvatarFrame?: string;
         userRole?: 'admin' | 'user';
         userGender?: 'male' | 'female';
@@ -288,6 +313,7 @@ export async function retweetPost(
             uid: originalPostData.uid,
             username: originalPostData.username,
             userPhotoURL: originalPostData.userPhotoURL,
+            profileEmoji: originalPostData.profileEmoji,
             userAvatarFrame: originalPostData.userAvatarFrame,
             text: originalPostData.text,
             imageUrl: originalPostData.imageUrl,
@@ -299,6 +325,7 @@ export async function retweetPost(
             uid: retweeter.uid,
             username: retweeter.username,
             userPhotoURL: retweeter.photoURL,
+            profileEmoji: retweeter.profileEmoji,
             userAvatarFrame: retweeter.userAvatarFrame,
             userRole: retweeter.userRole,
             userGender: retweeter.userGender,
@@ -326,6 +353,7 @@ export async function retweetPost(
             senderId: retweeter.uid,
             senderUsername: retweeter.username,
             photoURL: retweeter.photoURL,
+            profileEmoji: retweeter.profileEmoji,
             senderAvatarFrame: retweeter.userAvatarFrame,
             type: 'retweet',
             postId: newPostRef.id,

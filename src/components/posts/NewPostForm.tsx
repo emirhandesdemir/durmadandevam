@@ -8,35 +8,46 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { createPost } from "@/lib/actions/postActions";
 import { getFollowingForSuggestions } from "@/lib/actions/suggestionActions";
-import type { UserProfile } from "@/lib/types";
+import type { UserProfile, Post } from "@/lib/types";
+import { checkImageSafety } from "@/lib/actions/moderationActions";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
-import { Send, Loader2, MessageCircleOff, HeartOff, ChevronLeft } from "lucide-react";
+import { Send, Loader2, MessageCircleOff, HeartOff, ChevronLeft, Image as ImageIcon, X } from "lucide-react";
 import { ScrollArea } from "../ui/scroll-area";
 import { useTranslation } from "react-i18next";
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
 import Link from "next/link";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
+import ImageCropperDialog from "../common/ImageCropperDialog";
+
+async function dataUriToBlob(dataUri: string): Promise<Blob> {
+    const response = await fetch(dataUri);
+    const blob = await response.blob();
+    return blob;
+}
 
 export default function NewPostForm() {
   const router = useRouter();
-  const { user, userData } = useAuth();
+  const { user, userData, featureFlags } = useAuth();
   const { toast } = useToast();
   const { i18n } = useTranslation();
   const searchParams = useSearchParams();
   
   const [text, setText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+  const [croppedImage, setCroppedImage] = useState<string | null>(null);
   
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<Pick<UserProfile, 'uid' | 'username' | 'photoURL'>[]>([]);
   const [suggestionLoading, setSuggestionLoading] = useState(false);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [commentsDisabled, setCommentsDisabled] = useState(false);
   const [likesHidden, setLikesHidden] = useState(false);
@@ -61,6 +72,35 @@ export default function NewPostForm() {
       setText(initialText.trim());
     }
   }, [searchParams]);
+  
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 10 * 1024 * 1024) { 
+          toast({ variant: "destructive", title: "Dosya Çok Büyük", description: "Resim boyutu 10MB'dan büyük olamaz." });
+          return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+          setImageToCrop(reader.result as string);
+      };
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  };
+  
+  const handleCropComplete = (croppedDataUrl: string) => {
+    setCroppedImage(croppedDataUrl);
+    setImageToCrop(null);
+  }
+
+  const removeImage = () => {
+      setImageToCrop(null);
+      setCroppedImage(null);
+      if(fileInputRef.current) {
+          fileInputRef.current.value = "";
+      }
+  }
+
 
   const fetchSuggestions = useCallback(async () => {
     if (!userData || suggestions.length > 0) return;
@@ -146,8 +186,8 @@ export default function NewPostForm() {
       toast({ variant: 'destructive', description: 'Bu işlemi yapmak için giriş yapmalısınız veya verilerinizin yüklenmesini beklemelisiniz.' });
       return;
     }
-    if (!text.trim()) {
-      toast({ variant: 'destructive', description: 'Paylaşmak için bir metin yazın.' });
+    if (!text.trim() && !croppedImage) {
+      toast({ variant: 'destructive', description: 'Paylaşmak için bir metin yazın veya resim seçin.' });
       return;
     }
 
@@ -157,20 +197,33 @@ export default function NewPostForm() {
     router.push('/home');
 
     try {
-      await createPost({
-          uid: user.uid,
-          username: userData.username,
-          userPhotoURL: userData.photoURL || null,
-          userAvatarFrame: userData.selectedAvatarFrame || '',
-          userRole: userData.role || 'user',
-          userGender: userData.gender,
-          text: text,
-          imageUrl: null, // Image upload removed
-          videoUrl: null,
-          language: i18n.language,
-          commentsDisabled: commentsDisabled,
-          likesHidden: likesHidden,
-      });
+        let finalImageUrl: string | null = null;
+        
+        if (croppedImage) {
+            if (featureFlags?.contentModerationEnabled) {
+                const safetyResult = await checkImageSafety({ photoDataUri: croppedImage });
+                if (!safetyResult.success || !safetyResult.data?.isSafe) {
+                    throw new Error(safetyResult.error || safetyResult.data?.reason || "Resim güvenlik kontrolünden geçemedi.");
+                }
+            }
+            const imageBlob = await dataUriToBlob(croppedImage);
+            finalImageUrl = await createPost.uploadImage(imageBlob);
+        }
+
+        await createPost({
+            uid: user.uid,
+            username: userData.username,
+            userPhotoURL: userData.photoURL || null,
+            userAvatarFrame: userData.selectedAvatarFrame || '',
+            userRole: userData.role || 'user',
+            userGender: userData.gender,
+            text: text,
+            imageUrl: finalImageUrl,
+            videoUrl: null,
+            language: i18n.language,
+            commentsDisabled: commentsDisabled,
+            likesHidden: likesHidden,
+        });
     } catch (error: any) {
         console.error("Gönderi paylaşılırken hata:", error);
         toast({ 
@@ -189,7 +242,7 @@ export default function NewPostForm() {
           <Button asChild variant="ghost" className="rounded-full">
             <Link href="/create"><ChevronLeft className="mr-2 h-4 w-4" /> Geri</Link>
           </Button>
-          <Button onClick={handleShare} disabled={isSubmitting || !text.trim()}>
+          <Button onClick={handleShare} disabled={isSubmitting || (!text.trim() && !croppedImage)}>
             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
             Paylaş
           </Button>
@@ -239,10 +292,29 @@ export default function NewPostForm() {
                     )}
                 </PopoverContent>
             </Popover>
+             {croppedImage && (
+                <div className="ml-12 relative w-fit">
+                    <img src={croppedImage} alt="Önizleme" className="max-h-72 rounded-lg border" />
+                    <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-7 w-7 rounded-full" onClick={removeImage} disabled={isSubmitting}>
+                        <X className="h-4 w-4" />
+                    </Button>
+                </div>
+            )}
           </div>
         </ScrollArea>
         
-        <div className="p-2 border-t flex items-center justify-end">
+        <div className="p-2 border-t flex items-center justify-between">
+            <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" className="hidden" />
+            <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isSubmitting || !!croppedImage}
+            >
+                <ImageIcon className="h-5 w-5" />
+                <span className="sr-only">Resim Ekle</span>
+            </Button>
             <Sheet>
                 <SheetTrigger asChild>
                     <Button variant="ghost" className="text-muted-foreground">Ayarlar</Button>
@@ -268,6 +340,13 @@ export default function NewPostForm() {
             </Sheet>
         </div>
       </main>
+      <ImageCropperDialog
+        isOpen={!!imageToCrop}
+        setIsOpen={setImageToCrop}
+        imageSrc={imageToCrop}
+        aspectRatio={16/9}
+        onCropComplete={handleCropComplete}
+      />
     </>
   );
 }

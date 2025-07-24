@@ -1,2 +1,2 @@
-// This file is obsolete and has been moved to clean up the project.
-// The profile page logic is now handled in `src/app/(main)/profile/page.tsx`.
+// This file is no longer in use, as its logic has been merged into /src/app/(main)/profile/page.tsx
+// It can be safely deleted.
