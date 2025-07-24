@@ -1,4 +1,4 @@
-// src/lib/types.ts
+// src/types.ts
 import { Timestamp } from "firebase/firestore";
 
 export interface MatchmakingChat {
@@ -11,47 +11,43 @@ export interface MatchmakingChat {
     permanentChatId?: string;
 }
 
-
 // Zihin Savaşları Oyunu Veri Yapıları
 // ===================================
 
-// Oyuncunun bireysel durumunu ve rolünü tanımlar.
 export interface MindWarPlayer {
-  uid: string; // Oyuncunun kimliği
-  username: string; // Oyuncu adı
-  photoURL: string | null; // Profil resmi
-  role: string; // Oyuna özel rolü (Hacker, Lider, Casus vb.)
-  status: 'alive' | 'eliminated'; // Oyundaki durumu
-  objective: string; // Oyuncunun kişisel görevi
-  inventory: string[]; // Sahip olduğu eşyalar
+  uid: string;
+  username: string;
+  photoURL: string | null;
+  role: string;
+  status: 'alive' | 'eliminated';
+  objective: string;
+  inventory: string[];
 }
 
-// Oyunun her bir turunu veya olayını kaydeder.
 export interface MindWarTurn {
-  turnNumber: number; // Tur numarası
-  activePlayerUid: string | null; // Sırası gelen oyuncu (null ise anlatıcı konuşur)
-  narrative: string; // Yapay zeka anlatıcısının o turdaki hikaye metni
-  choices: { [key: string]: string }; // Oyuncuya sunulan seçenekler (örn: { 'A': 'Kapıyı aç', 'B': 'Pencereyi kontrol et' })
-  playerChoice?: { // Oyuncunun yaptığı seçim
+  turnNumber: number;
+  activePlayerUid: string | null;
+  narrative: string;
+  choices: { [key: string]: string };
+  playerChoice?: {
     uid: string;
-    choiceKey: string; // 'A' veya 'B' gibi
+    choiceKey: string;
     choiceText: string;
   };
-  outcome?: string; // Seçim sonucunda ne olduğu
-  timestamp: Timestamp; // Turun zamanı
+  outcome?: string;
+  timestamp: Timestamp;
 }
 
-// Oyun oturumunun tamamını kapsayan ana veri yapısı.
 export interface MindWarSession {
-  id: string; // Oturum ID'si
-  status: 'lobby' | 'ongoing' | 'finished'; // Oyunun mevcut durumu
-  hostId: string; // Oyunu başlatan kişi
-  theme: string; // Oyunun ana teması (örn: "Kıyamet sonrası sığınak")
-  players: MindWarPlayer[]; // Oyuncuların listesi
-  spectators: { uid: string, username: string }[]; // İzleyiciler
-  gameHistory: MindWarTurn[]; // Geçmiş tüm turların kaydı
-  currentTurn: MindWarTurn; // Mevcut aktif tur
-  endSummary?: { // Oyun sonu özeti
+  id: string;
+  status: 'lobby' | 'ongoing' | 'finished';
+  hostId: string;
+  theme: string;
+  players: MindWarPlayer[];
+  spectators: { uid: string, username: string }[];
+  gameHistory: MindWarTurn[];
+  currentTurn: MindWarTurn;
+  endSummary?: {
     narrative: string;
     winner: string | null;
     scores: {
@@ -63,7 +59,7 @@ export interface MindWarSession {
       };
     };
   };
-  createdAt: Timestamp; // Başlangıç zamanı
+  createdAt: Timestamp;
 }
 
 
@@ -78,10 +74,6 @@ export interface LiveSession {
     createdAt: Timestamp;
     endedAt?: Timestamp;
 }
-
-
-// Mevcut Tiplere Eklemeler
-// ==========================
 
 export interface ColorTheme {
   background: string;
@@ -108,8 +100,8 @@ export interface ColorTheme {
 export interface ThemeSettings {
     light: ColorTheme;
     dark: ColorTheme;
-    radius: string; // e.g. "0.5rem"
-    font: string; // e.g. "var(--font-jakarta)"
+    radius: string;
+    font: string;
     appName?: string;
     appLogoUrl?: string;
     defaultMode?: 'light' | 'dark' | 'system';
@@ -121,42 +113,42 @@ export interface UserProfile {
     email: string;
     photoURL: string | null;
     profileEmoji: string | null;
-    bio?: string;
-    postCount?: number;
+    bio: string | null;
+    postCount: number;
     role: 'admin' | 'user';
     gender?: 'male' | 'female';
-    age?: number;
-    city?: string;
-    country?: string;
-    interests?: string[];
+    age: number | null;
+    city: string | null;
+    country: string | null;
+    interests: string[];
     createdAt: Timestamp;
-    lastActionTimestamp?: Timestamp; // For rate limiting
-    lastAdWatchedAt?: Timestamp; // For ad reward cooldown
+    lastActionTimestamp?: Timestamp;
+    lastAdWatchedAt?: Timestamp;
     privateProfile: boolean;
     acceptsFollowRequests: boolean;
-    showOnlineStatus?: boolean;
+    showOnlineStatus: boolean;
     followers: string[];
     following: string[];
     followRequests: FollowRequest[];
     diamonds: number;
-    referredBy?: string | null;
-    referralCount?: number;
-    hasUnreadNotifications?: boolean;
+    referredBy: string | null;
+    referralCount: number;
+    hasUnreadNotifications: boolean;
     fcmTokens?: string[];
-    blockedUsers?: string[];
-    hiddenPostIds?: string[];
-    savedPosts?: string[];
-    isBanned?: boolean;
-    reportCount?: number;
-    isOnline?: boolean;
+    blockedUsers: string[];
+    hiddenPostIds: string[];
+    savedPosts: string[];
+    isBanned: boolean;
+    reportCount: number;
+    isOnline: boolean;
     lastSeen?: Timestamp;
-    premiumUntil?: Timestamp;
-    isFirstPremium?: boolean;
-    unlimitedRoomCreationUntil?: Timestamp;
-    profileCompletionNotificationSent?: boolean;
-    selectedBubble?: string;
-    selectedAvatarFrame?: string;
-    activeMatchmakingChatId?: string | null; // Aktif eşleşme sohbet ID'si
+    premiumUntil: Timestamp | null;
+    isFirstPremium: boolean;
+    unlimitedRoomCreationUntil: Timestamp | null;
+    profileCompletionNotificationSent: boolean;
+    selectedBubble: string;
+    selectedAvatarFrame: string;
+    activeMatchmakingChatId: string | null;
 }
 
 export interface ProfileViewer {
@@ -176,11 +168,10 @@ export interface Report {
     reportedUsername: string;
     reason: string;
     details: string;
-    targetId: string; // Can be userId or postId
+    targetId: string;
     targetType: 'user' | 'post';
     timestamp: Timestamp;
 }
-
 
 export interface FollowRequest {
     uid: string;
@@ -224,12 +215,12 @@ export interface Post {
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
     text: string;
-    imageUrl?: string;
-    videoUrl?: string;
+    imageUrl?: string | null;
+    videoUrl?: string | null;
     backgroundStyle?: string;
     editedWithAI?: boolean;
     createdAt: Timestamp | { seconds: number; nanoseconds: number };
-    likes: string[]; // Array of user UIDs who liked the post
+    likes: string[];
     likeCount: number;
     commentCount: number;
     saveCount?: number;
@@ -276,7 +267,6 @@ export interface Giveaway {
     endedAt?: Timestamp;
 }
 
-
 export interface Room {
     id: string;
     name: string;
@@ -285,14 +275,13 @@ export interface Room {
         uid: string;
         username: string;
         photoURL: string | null;
-        profileEmoji: string | null;
         role: string;
         selectedAvatarFrame?: string;
     };
-    moderators: string[]; // List of moderator UIDs
+    moderators: string[];
     createdAt: Timestamp;
     expiresAt?: Timestamp | null;
-    portalExpiresAt?: Timestamp; // For public announcements
+    portalExpiresAt?: Timestamp;
     participants: { uid: string, username: string, photoURL?: string | null, profileEmoji?: string | null }[];
     maxParticipants: number;
     voiceParticipantsCount?: number;
@@ -301,13 +290,12 @@ export interface Room {
     pinnedMessageId: string | null;
     language?: string;
     type?: 'public' | 'private' | 'event';
-    // Music Player State
     djUid?: string | null;
     isMusicPlaying?: boolean;
     currentTrackIndex?: number;
     currentTrackName?: string;
     giveaway?: Giveaway;
-    activeMindWarSessionId?: string | null; // Zihin Savaşları oturum ID'si
+    activeMindWarSessionId?: string | null;
 }
 
 export interface PlaylistTrack {
@@ -329,7 +317,7 @@ export interface VoiceParticipant {
     role?: 'admin' | 'user';
     isSpeaker: boolean;
     isMuted: boolean;
-    canSpeak: boolean; // Permission to speak in request-to-speak mode
+    canSpeak: boolean;
     isSharingScreen: boolean;
     isSharingVideo: boolean;
     joinedAt: Timestamp;
@@ -342,8 +330,8 @@ export interface ActiveGame {
     id: string;
     questions: QuizQuestion[];
     currentQuestionIndex: number;
-    scores: { [key: string]: number }; // uid -> score
-    answeredBy: string[]; // This has been changed to a simple array of UIDs
+    scores: { [key: string]: number };
+    answeredBy: string[];
     status: 'countdown' | 'active' | 'finished';
     countdownStartTime?: Timestamp;
     startTime?: Timestamp;
@@ -357,7 +345,6 @@ export interface QuizQuestion {
     correctOptionIndex: number;
 }
 
-
 export interface GameSettings {
     gameIntervalMinutes: number;
     questionTimerSeconds: number;
@@ -369,10 +356,10 @@ export interface GameSettings {
     videoBitrate: number;
 }
 
-
 export interface FeatureFlags {
     quizGameEnabled: boolean;
     contentModerationEnabled: boolean;
+    postFeedEnabled: boolean;
 }
 
 export interface VoiceStats {
@@ -396,16 +383,16 @@ export interface DirectMessage {
   editedAt?: Timestamp;
   deleted?: boolean;
   reactions?: {
-      [emoji: string]: string[]; // key: emoji, value: array of user UIDs
+      [emoji: string]: string[];
   };
   callData?: {
       status: 'started' | 'ended' | 'missed' | 'declined';
-      duration?: string; // e.g., "5 dakika 32 saniye"
+      duration?: string;
   };
 }
 
 export interface DirectMessageMetadata {
-    id: string; // chatId
+    id: string;
     participantUids: string[];
     participantInfo: {
         [uid: string]: {
@@ -471,7 +458,6 @@ export interface Call {
   duration?: string;
 }
 
-
 // Admin Analytics Types
 export interface UserGrowthDataPoint {
     month: string;
@@ -507,7 +493,7 @@ export interface ActiveGameSession {
     players: { uid: string, username: string, photoURL: string | null, profileEmoji: string | null }[];
     moves: { [key: string]: string | number };
     status: 'pending' | 'active' | 'finished';
-    turn?: string; // For turn-based games
+    turn?: string;
     winnerId?: string | null;
     createdAt: Timestamp;
 }
