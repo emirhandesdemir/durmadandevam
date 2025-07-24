@@ -3,28 +3,62 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { doc, deleteDoc, updateDoc, increment, runTransaction, Timestamp, getDocs, collection, query, where, arrayUnion, writeBatch, arrayRemove } from 'firebase/firestore';
+import { getAuth } from '@/lib/firebaseAdmin';
+import { doc, deleteDoc, updateDoc, increment, runTransaction, Timestamp, getDocs, collection, query, where, arrayUnion, writeBatch, arrayRemove, setDoc } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
+import { deleteRoomWithSubcollections } from '../firestoreUtils';
 
-/**
- * Bir kullanıcının Firestore veritabanı kaydını siler.
- * Not: Bu işlem, Firebase Authentication kaydını silmez. 
- * Tam bir silme için bir Cloud Function tetikleyicisi gerekir.
- * @param uid Silinecek kullanıcının ID'si.
- */
-export async function deleteUserFromFirestore(uid: string) {
-    if (!uid) throw new Error("Kullanıcı ID'si gerekli.");
-    
-    try {
-        const userDocRef = doc(db, 'users', uid);
-        await deleteDoc(userDocRef);
-        revalidatePath('/admin/users');
-        return { success: true };
-    } catch (error) {
-        console.error("Firestore'dan kullanıcı silinirken hata:", error);
-        return { success: false, error: "Kullanıcı silinemedi." };
+async function verifyAdmin(adminId: string) {
+    if (!adminId) throw new Error("Admin ID required.");
+    const adminDoc = await getDoc(doc(db, 'users', adminId));
+    if (!adminDoc.exists() || adminDoc.data().role !== 'admin') {
+        throw new Error("You do not have permission to perform this action.");
     }
 }
+
+
+export async function deleteUserAndContent(userId: string, adminId: string) {
+    await verifyAdmin(adminId);
+    
+    if (!userId) throw new Error("User ID is required.");
+    
+    try {
+        const batch = writeBatch(db);
+        
+        // 1. Delete user's posts
+        const postsQuery = query(collection(db, "posts"), where("uid", "==", userId));
+        const postsSnapshot = await getDocs(postsQuery);
+        postsSnapshot.forEach((doc) => batch.delete(doc.ref));
+        
+        // 2. Delete user's comments (This is slow, but necessary for now)
+        const commentsQuery = query(collectionGroup(db, "comments"), where("uid", "==", userId));
+        const commentsSnapshot = await getDocs(commentsQuery);
+        commentsSnapshot.forEach((doc) => batch.delete(doc.ref));
+        
+        // 3. Delete user's rooms
+        const roomsQuery = query(collection(db, 'rooms'), where('createdBy.uid', '==', userId));
+        const roomsSnapshot = await getDocs(roomsQuery);
+        const roomDeletePromises = roomsSnapshot.docs.map(roomDoc => deleteRoomWithSubcollections(roomDoc.id));
+        await Promise.all(roomDeletePromises);
+        
+        // 4. Delete user's main document
+        batch.delete(doc(db, "users", userId));
+        
+        // 5. Commit all Firestore writes
+        await batch.commit();
+
+        // 6. Delete user from Firebase Auth
+        const auth = getAuth();
+        await auth.deleteUser(userId);
+        
+        revalidatePath('/admin/users');
+        return { success: true };
+    } catch (error: any) {
+        console.error("Error deleting user and content:", error);
+        return { success: false, error: "Kullanıcı ve içeriği silinirken bir hata oluştu." };
+    }
+}
+
 
 /**
  * Bir kullanıcının rolünü günceller (admin veya user).

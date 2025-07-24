@@ -3,15 +3,14 @@
 
 import { db, storage } from '@/lib/firebase';
 import type { Report, UserProfile, Post, Comment } from '../types';
-import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, orderBy, setDoc, collectionGroup, deleteField, Transaction, WriteBatch } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, orderBy, setDoc, collectionGroup, deleteField } from 'firebase/firestore';
 import { ref, deleteObject } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
 import { getAuth } from '../firebaseAdmin';
 import { deleteRoomWithSubcollections } from '../firestoreUtils';
 
-// Helper function to process queries in batches to avoid Firestore limits
-async function processQueryInBatches(transaction: Transaction | WriteBatch, queryToProcess: any, updateData: any) {
+async function processQueryInBatches(transaction: WriteBatch, queryToProcess: any, updateData: any) {
     const snapshot = await getDocs(queryToProcess);
     if (snapshot.empty) return;
 
@@ -20,15 +19,14 @@ async function processQueryInBatches(transaction: Transaction | WriteBatch, quer
     });
 }
 
-// Propagates username/avatar changes to all posts
-async function updateUserPosts(transaction: Transaction | WriteBatch, uid: string, updates: { [key: string]: any }) {
+async function updateUserPosts(transaction: WriteBatch, uid: string, updates: { [key: string]: any }) {
     if (!uid || !updates || Object.keys(updates).length === 0) return;
     
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
     if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
-    if (updates.userAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.userAvatarFrame;
-    if (updates.profileEmoji) propagationUpdates.profileEmoji = updates.profileEmoji;
+    if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
+    if (updates.profileEmoji !== undefined) propagationUpdates.profileEmoji = updates.profileEmoji;
     
     if (Object.keys(propagationUpdates).length === 0) return;
 
@@ -36,15 +34,14 @@ async function updateUserPosts(transaction: Transaction | WriteBatch, uid: strin
     await processQueryInBatches(transaction, userPostsQuery, propagationUpdates);
 }
 
-// Propagates username/avatar changes to all comments
-async function updateUserComments(transaction: Transaction | WriteBatch, uid: string, updates: { [key: string]: any }) {
+async function updateUserComments(transaction: WriteBatch, uid: string, updates: { [key: string]: any }) {
     if (!uid || !updates || Object.keys(updates).length === 0) return;
 
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
     if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
-    if (updates.userAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.userAvatarFrame;
-    if (updates.profileEmoji) propagationUpdates.profileEmoji = updates.profileEmoji;
+    if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
+    if (updates.profileEmoji !== undefined) propagationUpdates.profileEmoji = updates.profileEmoji;
     
     if (Object.keys(propagationUpdates).length === 0) return;
 
@@ -56,7 +53,6 @@ async function updateUserComments(transaction: Transaction | WriteBatch, uid: st
 export async function findUserByUsername(username: string): Promise<UserProfile | null> {
     if (!username) return null;
     const usersRef = collection(db, 'users');
-    // Perform a case-insensitive search by querying on a lowercase version
     const q = query(usersRef, where('username', '==', username.toLowerCase()), limit(1));
     const snapshot = await getDocs(q);
     if (snapshot.empty) {
@@ -89,58 +85,64 @@ export async function updateUserProfile(updates: {
 
     const userRef = doc(db, 'users', userId);
     
-    await runTransaction(db, async (transaction) => {
-        const userDoc = await transaction.get(userRef);
-        if (!userDoc.exists()) throw new Error("Kullanıcı bulunamadı.");
-        const userData = userDoc.data();
+    const batch = writeBatch(db);
 
-        const updatesForDb: { [key: string]: any } = { ...otherUpdates };
-        
-        if (updates.age === '' || updates.age === undefined || updates.age === null) {
-            updatesForDb.age = deleteField();
-        } else if (updates.age !== undefined) {
-            updatesForDb.age = Number(updates.age);
-        }
-        
-        if (updates.username && userData.username !== updates.username) {
-            const newUsernameLower = updates.username.toLowerCase();
-            const existingUserQuery = query(collection(db, 'users'), where('username', '==', newUsernameLower), limit(1));
-            const existingUserSnapshot = await getDocs(existingUserQuery);
-            if (!existingUserSnapshot.empty && existingUserSnapshot.docs[0].id !== userId) {
-                 throw new Error("Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor.");
-            }
-            updatesForDb.username = updates.username;
-        }
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) throw new Error("Kullanıcı bulunamadı.");
+    const userData = userSnap.data();
 
-        if (Object.keys(updatesForDb).length > 0) {
-            transaction.update(userRef, updatesForDb);
+    const updatesForDb: { [key: string]: any } = { ...otherUpdates };
+    
+    if (updates.age === '' || updates.age === undefined || updates.age === null) {
+        updatesForDb.age = deleteField();
+    } else if (updates.age !== undefined) {
+        updatesForDb.age = Number(updates.age);
+    }
+    
+    if (updates.username && userData.username !== updates.username) {
+        const newUsernameLower = updates.username.toLowerCase();
+        const existingUserQuery = query(collection(db, 'users'), where('username_lowercase', '==', newUsernameLower), limit(1));
+        const existingUserSnapshot = await getDocs(existingUserQuery);
+        if (!existingUserSnapshot.empty && existingUserSnapshot.docs[0].id !== userId) {
+             throw new Error("Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor.");
         }
+        updatesForDb.username = updates.username;
+        updatesForDb.username_lowercase = newUsernameLower;
+    }
 
-        const auth = getAuth();
-        const authUpdates: { displayName?: string, photoURL?: string | null } = {};
-        if (updates.username) authUpdates.displayName = updates.username;
-        if (updates.photoURL !== undefined) authUpdates.photoURL = updates.photoURL;
+    if (Object.keys(updatesForDb).length > 0) {
+        batch.update(userRef, updatesForDb);
+    }
+    
+    await batch.commit();
 
-        if (Object.keys(authUpdates).length > 0) {
-            await auth.updateUser(userId, authUpdates);
-        }
+    // Propagate changes separately as they can be long-running
+    const propagationBatch = writeBatch(db);
+    const propagationUpdates: { [key: string]: any } = {};
+    if (updates.username) propagationUpdates.username = updates.username;
+    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
+    if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
+    if (updates.profileEmoji !== undefined) propagationUpdates.profileEmoji = updates.profileEmoji;
 
-        const propagationUpdates: { [key: string]: any } = {};
-        if (updates.username) propagationUpdates.username = updates.username;
-        if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
-        if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
-        if (updates.profileEmoji) propagationUpdates.profileEmoji = updates.profileEmoji;
-        
-        if (Object.keys(propagationUpdates).length > 0) {
-             await Promise.all([
-                updateUserPosts(transaction, userId, propagationUpdates),
-                updateUserComments(transaction, userId, propagationUpdates),
-            ]).catch(err => {
-                console.error("Propagasyon hatası (transaction içinde):", err);
-                // Don't rethrow, let the main transaction complete if possible
-            });
-        }
-    });
+    if (Object.keys(propagationUpdates).length > 0) {
+         await Promise.all([
+            updateUserPosts(propagationBatch, userId, propagationUpdates),
+            updateUserComments(propagationBatch, userId, propagationUpdates),
+        ]).catch(err => {
+            console.error("Propagasyon hatası:", err);
+        });
+        await propagationBatch.commit();
+    }
+
+    const auth = getAuth();
+    const authUpdates: { displayName?: string, photoURL?: string | null } = {};
+    if (updates.username) authUpdates.displayName = updates.username;
+    if (updates.photoURL !== undefined) authUpdates.photoURL = updates.photoURL;
+
+    if (Object.keys(authUpdates).length > 0) {
+        await auth.updateUser(userId, authUpdates);
+    }
+    
 
     revalidatePath(`/profile/${userId}`, 'layout');
     return { success: true };
@@ -151,11 +153,12 @@ export async function searchUsers(searchTerm: string, currentUserId: string): Pr
     if (!searchTerm.trim()) return [];
 
     const usersRef = collection(db, 'users');
+    const searchTermLower = searchTerm.toLowerCase();
     const q = query(
         usersRef,
-        orderBy('username'),
-        where('username', '>=', searchTerm.toLowerCase()),
-        where('username', '<=', searchTerm.toLowerCase() + '\uf8ff'),
+        orderBy('username_lowercase'),
+        where('username_lowercase', '>=', searchTermLower),
+        where('username_lowercase', '<=', searchTermLower + '\uf8ff'),
         limit(10)
     );
 
@@ -168,7 +171,22 @@ export async function searchUsers(searchTerm: string, currentUserId: string): Pr
     return deepSerialize(users);
 }
 
-// ... other actions
+
+export async function saveFCMToken(userId: string, token: string) {
+  if (!userId || !token) {
+    throw new Error('Kullanıcı ID ve jeton gereklidir.');
+  }
+  const userRef = doc(db, 'users', userId);
+  try {
+    await setDoc(userRef, {
+      fcmTokens: arrayUnion(token),
+    }, { merge: true });
+    return { success: true };
+  } catch (error: any) {
+    console.error('FCM jetonu kaydedilirken hata:', error);
+    return { success: false, error: error.message };
+  }
+}
 
 export async function submitReport(reportData: Omit<Report, 'id' | 'timestamp'>) {
     if (!reportData.reporterId || !reportData.reportedUserId) {
@@ -294,63 +312,4 @@ export async function getNearbyUsers(currentUid: string, latitude: number, longi
     });
 
     return deepSerialize(nearbyUsers);
-}
-
-
-export async function deleteUserAccount(userId: string) {
-    if (!userId) {
-        throw new Error("Kullanıcı ID'si gerekli.");
-    }
-    const auth = getAuth();
-    const userRef = doc(db, 'users', userId);
-
-    try {
-        // Delete user's avatar from Storage
-        const avatarRef = ref(storage, `upload/avatars/${userId}/avatar.jpg`);
-        await deleteObject(avatarRef).catch(error => {
-            if (error.code !== 'storage/object-not-found') {
-                console.error("Avatar silinirken hata:", error);
-            }
-        });
-        
-        // Delete user's posts and their images
-        const postsQuery = query(collection(db, 'posts'), where('uid', '==', userId));
-        const postsSnapshot = await getDocs(postsQuery);
-        const deletePromises: Promise<any>[] = [];
-        
-        const batch = writeBatch(db);
-        postsSnapshot.forEach(postDoc => {
-            const postData = postDoc.data() as Post;
-            if (postData.imageUrl) {
-                const postImageRef = ref(storage, postData.imageUrl);
-                deletePromises.push(deleteObject(postImageRef).catch(err => console.error(`Gönderi resmi silinemedi: ${postData.imageUrl}`, err)));
-            }
-            batch.delete(postDoc.ref);
-        });
-        await Promise.all(deletePromises);
-        
-        // Delete user's rooms (this is a more complex operation, assumes a utility function exists)
-        const roomsQuery = query(collection(db, 'rooms'), where('createdBy.uid', '==', userId));
-        const roomsSnapshot = await getDocs(roomsQuery);
-        await Promise.all(roomsSnapshot.docs.map(roomDoc => deleteRoomWithSubcollections(roomDoc.id)));
-        
-        // Remove user from other users' followers/following lists
-        // This is a very heavy operation and should be handled with care, possibly via a Cloud Function
-        // For now, we will skip this to avoid performance issues in a server action.
-        
-        // Delete the user's main document
-        batch.delete(userRef);
-        
-        // Commit all Firestore deletions
-        await batch.commit();
-        
-        // Finally, delete the user from Firebase Authentication
-        await auth.deleteUser(userId);
-
-        revalidatePath('/admin/users');
-        return { success: true };
-    } catch (error: any) {
-        console.error("Hesap silinirken hata:", error);
-        return { success: false, error: "Hesap silinirken bir hata oluştu. Lütfen tekrar deneyin." };
-    }
 }

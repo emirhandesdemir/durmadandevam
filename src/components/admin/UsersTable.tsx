@@ -6,7 +6,7 @@ import type { UserProfile } from "@/lib/types";
 import { format } from "date-fns";
 import { tr } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
-import { deleteUserFromFirestore, updateUserRole, banUser } from "@/lib/actions/adminActions";
+import { updateUserRole, banUser, deleteUserAndContent } from "@/lib/actions/adminActions";
 import { MoreHorizontal, Trash2, UserCheck, UserX, Loader2, ShieldCheck, Shield, Gem, Ban, Swords, Crown } from "lucide-react";
 
 import {
@@ -42,6 +42,8 @@ import { Button } from "@/components/ui/button";
 import ManageDiamondsDialog from "./ManageDiamondsDialog";
 import ManagePremiumDialog from "./ManagePremiumDialog";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+
 
 interface UsersTableProps {
   users: UserProfile[];
@@ -51,17 +53,19 @@ interface UsersTableProps {
  * Kullanıcıları listeleyen ve yönetme eylemlerini içeren tablo bileşeni.
  */
 export default function UsersTable({ users }: UsersTableProps) {
+    const { user: adminUser } = useAuth();
     const { toast } = useToast();
-    const [isProcessing, setIsProcessing] = useState<string | null>(null); // Hangi kullanıcının işlendiğini tutar
+    const [isProcessing, setIsProcessing] = useState<string | null>(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState<UserProfile | null>(null);
     const [showDiamondDialog, setShowDiamondDialog] = useState<UserProfile | null>(null);
-    const [showPremiumDialog, setShowPremiumDialog] = useState<UserProfile | null>(null); // State for the premium dialog
+    const [showPremiumDialog, setShowPremiumDialog] = useState<UserProfile | null>(null);
 
     const handleDeleteUser = async (user: UserProfile) => {
+        if (!adminUser) return;
         setIsProcessing(user.uid);
-        const result = await deleteUserFromFirestore(user.uid);
+        const result = await deleteUserAndContent(user.uid, adminUser.uid);
         if (result.success) {
-            toast({ title: "Başarılı", description: `${user.username} adlı kullanıcının Firestore kaydı silindi.` });
+            toast({ title: "Başarılı", description: `${user.username} adlı kullanıcının tüm verileri silindi.` });
         } else {
             toast({ title: "Hata", description: result.error, variant: "destructive" });
         }
@@ -71,7 +75,6 @@ export default function UsersTable({ users }: UsersTableProps) {
     
     const handleToggleAdmin = async (user: UserProfile) => {
         const newRole = user.role === 'admin' ? 'user' : 'admin';
-        // Son adminin yetkisinin alınmasını engelle
         if(user.role === 'admin' && users.filter(u => u.role === 'admin').length <= 1) {
             toast({ title: "İşlem Engellendi", description: "Sistemdeki son yöneticinin yetkisini kaldıramazsınız.", variant: "destructive" });
             return;
@@ -217,14 +220,14 @@ export default function UsersTable({ users }: UsersTableProps) {
                 <AlertDialogHeader>
                 <AlertDialogTitle>Emin misiniz?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    {showDeleteConfirm?.username} adlı kullanıcıyı kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem, kullanıcının sadece veritabanı kaydını siler, kimlik doğrulama hesabını silmez ve geri alınamaz.
+                    "{showDeleteConfirm?.username}" adlı kullanıcıyı ve tüm verilerini (gönderiler, yorumlar, vs.) kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
                 </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                 <AlertDialogCancel disabled={!!isProcessing}>İptal</AlertDialogCancel>
                 <AlertDialogAction onClick={() => handleDeleteUser(showDeleteConfirm!)} disabled={!!isProcessing} className="bg-destructive hover:bg-destructive/90">
                     {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Sil
+                    Evet, Sil
                 </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
