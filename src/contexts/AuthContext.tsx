@@ -6,7 +6,7 @@ import { onIdTokenChanged, User, signOut } from 'firebase/auth';
 import { doc, onSnapshot, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { FeatureFlags, UserProfile, ThemeSettings, DirectMessageMetadata } from '@/lib/types';
+import type { FeatureFlags, UserProfile, ThemeSettings } from '@/lib/types';
 import { triggerProfileCompletionNotification } from '@/lib/actions/notificationActions';
 import i18n from '@/lib/i18n';
 import AnimatedLogoLoader from '@/components/common/AnimatedLogoLoader';
@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [featureFlags, setFeatureFlags] = useState<FeatureFlags | null>(null);
   const [themeSettings, setThemeSettings] = useState<ThemeSettings | null>(null);
   const [totalUnreadDms, setTotalUnreadDms] = useState(0);
-  const [loading, setLoading] = useState(true); // Single loading state
+  const [loading, setLoading] = useState(true);
 
   const router = useRouter();
   const pathname = usePathname();
@@ -68,7 +68,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         await signOut(auth);
         await setSessionCookie(null);
-        // Toast is now shown in the effect below for consistency
     } catch (error) {
         console.error("Logout error", error);
         toast({
@@ -89,24 +88,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     const unsubscribeAuth = onIdTokenChanged(auth, async (currentUser) => {
-      setLoading(true); // Start loading when auth state changes
-      setUser(currentUser);
-      const idToken = await currentUser?.getIdToken() || null;
-      await setSessionCookie(idToken);
-
-      if (!currentUser) {
-          // USER IS LOGGED OUT
-          setUserData(null);
-          setTotalUnreadDms(0);
-          if (!pathname.startsWith('/login') && !pathname.startsWith('/signup')) {
-            router.replace('/login');
-            toast({
-              title: "Oturum Kapatıldı",
-              description: "Başarıyla çıkış yaptınız.",
-            });
-          }
-          setLoading(false);
-      }
+        setUser(currentUser);
+        const idToken = await currentUser?.getIdToken() || null;
+        await setSessionCookie(idToken);
+        
+        if (!currentUser) {
+            setUserData(null);
+            setTotalUnreadDms(0);
+            setLoading(false);
+        }
     });
 
     return () => {
@@ -114,15 +104,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubscribeFeatures();
       unsubscribeTheme();
     };
-  }, [router, toast]);
-
+  }, []);
 
   useEffect(() => {
     if (!user) {
-        setLoading(false); // No user, stop loading
+        setLoading(false);
+        const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
+        if (!isAuthPage) {
+            router.replace('/login');
+        }
         return;
-    };
+    }
 
+    setLoading(true);
     const userDocRef = doc(db, 'users', user.uid);
     const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
         if (docSnap.exists()) {
@@ -132,17 +126,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 return;
             }
 
-            const sanitizedData = {
-                ...data,
-                followers: data.followers || [],
-                following: data.following || [],
-                blockedUsers: data.blockedUsers || [],
-                hiddenPostIds: data.hiddenPostIds || [],
-                savedPosts: data.savedPosts || [],
-                interests: data.interests || [],
-            };
-
+            const sanitizedData = { ...data };
             setUserData(sanitizedData);
+            
             if (data.language && i18n.language !== data.language) {
                 i18n.changeLanguage(data.language);
             }
@@ -150,24 +136,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 triggerProfileCompletionNotification(user.uid);
             }
             
-            // Redirect after user data is loaded
-            if(pathname.startsWith('/login') || pathname.startsWith('/signup')) {
-              // Redirect to onboarding if profile is incomplete, otherwise home
-              if(!sanitizedData.bio) {
-                router.replace('/onboarding');
-              } else {
-                router.replace('/home');
-              }
+            if(pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname === '/') {
+                if(!sanitizedData.bio || !sanitizedData.age || !sanitizedData.gender) {
+                    router.replace('/onboarding');
+                } else {
+                    router.replace('/home');
+                }
             }
         } else { 
-            // This can happen briefly during signup.
             console.log("Waiting for user document to be created...");
         }
-        setLoading(false); // Stop loading after user data is processed
+        setLoading(false);
     }, (error) => {
         console.error("Firestore user listener error:", error);
         setUserData(null);
-        setLoading(false); // Stop loading on error
+        setLoading(false);
+        handleLogout();
     });
 
     const dmsQuery = query(collection(db, 'directMessagesMetadata'), where('participantUids', 'array-contains', user.uid));

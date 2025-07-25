@@ -93,8 +93,7 @@ export default function SignUpForm() {
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const user = userCredential.user;
             
-            const defaultEmoji = '🙂';
-            const defaultAvatarUrl = emojiToDataUrl(defaultEmoji);
+            const defaultAvatarUrl = emojiToDataUrl('🙂');
 
             await updateProfile(user, {
                 displayName: values.username,
@@ -121,9 +120,7 @@ export default function SignUpForm() {
                 uid: user.uid,
                 username: values.username,
                 username_lowercase: values.username.toLowerCase(),
-                email: values.email,
                 photoURL: defaultAvatarUrl,
-                profileEmoji: defaultEmoji, 
                 bio: null,
                 age: null,
                 city: null,
@@ -166,7 +163,7 @@ export default function SignUpForm() {
             }
 
             i18n.changeLanguage(preferredLanguage);
-
+            // SUCCESS: Let AuthProvider handle the redirect after userData is loaded.
         } catch (error: any) {
             console.error("Kayıt hatası", error);
             let errorMessage = "Hesap oluşturulurken bilinmeyen bir hata oluştu. Lütfen tekrar deneyin.";

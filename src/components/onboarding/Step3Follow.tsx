@@ -1,3 +1,3 @@
-// This file is no longer needed as the onboarding flow has been simplified
-// and following suggestions will be handled elsewhere.
-// It can be safely removed in a future cleanup.
+// This file has been removed as part of a major UI/UX refactoring.
+// The onboarding flow has been simplified.
+// This file can be safely deleted.

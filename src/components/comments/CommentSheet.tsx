@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { addComment } from "@/lib/actions/commentActions";
-import { getFollowingForSuggestions } from "@/lib/actions/userActions";
+import { getFollowingForSuggestions } from "@/lib/actions/suggestionActions";
 
 import {
   Sheet,
@@ -99,7 +99,7 @@ export default function CommentSheet({ open, onOpenChange, post }: CommentSheetP
 
         const prefix = value.substring(0, startIndex);
         const suffix = value.substring(cursorPos);
-        const newText = `${prefix}${username} ${suffix}`;
+        const newText = `${prefix}@${username} ${suffix}`;
         
         setNewCommentText(newText);
         setMentionQuery(null);
@@ -169,7 +169,6 @@ export default function CommentSheet({ open, onOpenChange, post }: CommentSheetP
                     uid: user.uid,
                     displayName: userData.username,
                     photoURL: userData.photoURL || null,
-                    profileEmoji: userData.profileEmoji || null,
                     userAvatarFrame: userData.selectedAvatarFrame || '',
                     role: userData.role,
                 },
@@ -189,6 +188,7 @@ export default function CommentSheet({ open, onOpenChange, post }: CommentSheetP
     // Cevaplama modunu başlatan fonksiyon
     const handleReply = (commentId: string, username: string) => {
         setReplyTo({ commentId, username });
+        setNewCommentText(prev => `@${username} ` + prev.replace(`@${username} `, ''));
         textareaRef.current?.focus();
     };
 
@@ -225,7 +225,7 @@ export default function CommentSheet({ open, onOpenChange, post }: CommentSheetP
                                 <div className={cn("avatar-frame-wrapper", userData?.selectedAvatarFrame)}>
                                     <Avatar className="relative z-[1] h-9 w-9">
                                         <AvatarImage src={userData?.photoURL || undefined} />
-                                        <AvatarFallback>{userData?.profileEmoji || userData?.username?.charAt(0)}</AvatarFallback>
+                                        <AvatarFallback>{userData?.username?.charAt(0)}</AvatarFallback>
                                     </Avatar>
                                 </div>
                                 <div className="flex-1 relative">

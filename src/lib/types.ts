@@ -1,6 +1,101 @@
-// src/types.ts
+// src/lib/types.ts
 import { Timestamp } from "firebase/firestore";
 
+export interface UserProfile {
+    uid: string;
+    username: string;
+    username_lowercase: string;
+    photoURL: string | null;
+    bio: string | null;
+    postCount: number;
+    role: 'admin' | 'user';
+    gender: 'male' | 'female' | null;
+    age: number | null;
+    city: string | null;
+    country: string | null;
+    interests: string[];
+    createdAt: Timestamp;
+    lastActionTimestamp?: Timestamp;
+    lastAdWatchedAt?: Timestamp;
+    privateProfile: boolean;
+    acceptsFollowRequests: boolean;
+    showOnlineStatus: boolean;
+    followers: string[];
+    following: string[];
+    followRequests: FollowRequest[];
+    diamonds: number;
+    referredBy: string | null;
+    referralCount: number;
+    hasUnreadNotifications: boolean;
+    fcmTokens?: string[];
+    blockedUsers: string[];
+    hiddenPostIds: string[];
+    savedPosts: string[];
+    isBanned: boolean;
+    reportCount: number;
+    isOnline: boolean;
+    lastSeen?: Timestamp;
+    premiumUntil: Timestamp | null;
+    isFirstPremium: boolean;
+    unlimitedRoomCreationUntil: Timestamp | null;
+    profileCompletionNotificationSent: boolean;
+    selectedBubble: string;
+    selectedAvatarFrame: string;
+    activeMatchmakingChatId: string | null;
+}
+
+export interface Post {
+    id: string;
+    uid: string;
+    username: string;
+    userPhotoURL: string | null;
+    userAvatarFrame?: string;
+    userRole?: 'admin' | 'user';
+    userGender?: 'male' | 'female';
+    text: string;
+    imageUrl?: string | null;
+    videoUrl?: string | null;
+    backgroundStyle?: string;
+    createdAt: Timestamp | { seconds: number; nanoseconds: number };
+    likes: string[];
+    likeCount: number;
+    commentCount: number;
+    saveCount?: number;
+    savedBy?: string[];
+    language?: string;
+    commentsDisabled?: boolean;
+    likesHidden?: boolean;
+    retweetOf?: {
+        postId: string;
+        uid: string;
+        username: string;
+        userPhotoURL: string | null;
+        userAvatarFrame?: string;
+        text: string;
+        imageUrl?: string;
+        videoUrl?: string;
+        createdAt: Timestamp | { seconds: number; nanoseconds: number };
+    }
+}
+
+
+export interface Comment {
+    id: string;
+    uid: string;
+    username: string;
+    photoURL: string | null;
+    userAvatarFrame?: string;
+    userRole?: 'admin' | 'user';
+    text: string;
+    createdAt: Timestamp;
+    replyTo?: {
+        commentId: string;
+        username: string;
+    } | null;
+}
+
+
+// Other types remain mostly the same, included for completeness
 export interface MatchmakingChat {
     id: string;
     participants: { [uid: string]: { username: string, photoURL: string | null, age?: number } };
@@ -10,9 +105,6 @@ export interface MatchmakingChat {
     reactions?: { [uid: string]: 'like' | 'pass' };
     permanentChatId?: string;
 }
-
-// Zihin Savaşları Oyunu Veri Yapıları
-// ===================================
 
 export interface MindWarPlayer {
   uid: string;
@@ -62,7 +154,6 @@ export interface MindWarSession {
   createdAt: Timestamp;
 }
 
-
 export interface LiveSession {
     id: string;
     hostId: string;
@@ -107,55 +198,11 @@ export interface ThemeSettings {
     defaultMode?: 'light' | 'dark' | 'system';
 }
 
-export interface UserProfile {
-    uid: string;
-    username: string;
-    username_lowercase: string;
-    photoURL: string | null;
-    bio: string | null;
-    postCount: number;
-    role: 'admin' | 'user';
-    gender?: 'male' | 'female';
-    age: number | null;
-    city: string | null;
-    country: string | null;
-    interests: string[];
-    createdAt: Timestamp;
-    lastActionTimestamp?: Timestamp;
-    lastAdWatchedAt?: Timestamp;
-    privateProfile: boolean;
-    acceptsFollowRequests: boolean;
-    showOnlineStatus: boolean;
-    followers: string[];
-    following: string[];
-    followRequests: FollowRequest[];
-    diamonds: number;
-    referredBy: string | null;
-    referralCount: number;
-    hasUnreadNotifications: boolean;
-    fcmTokens?: string[];
-    blockedUsers: string[];
-    hiddenPostIds: string[];
-    savedPosts: string[];
-    isBanned: boolean;
-    reportCount: number;
-    isOnline: boolean;
-    lastSeen?: Timestamp;
-    premiumUntil: Timestamp | null;
-    isFirstPremium: boolean;
-    unlimitedRoomCreationUntil: Timestamp | null;
-    profileCompletionNotificationSent: boolean;
-    selectedBubble: string;
-    selectedAvatarFrame: string;
-    activeMatchmakingChatId: string | null;
-}
-
 export interface ProfileViewer {
     uid: string;
     viewedAt: Timestamp;
     username?: string;
     photoURL: string | null;
-    profileEmoji: string | null;
     selectedAvatarFrame?: string;
 }
 
@@ -176,7 +223,6 @@ export interface FollowRequest {
     uid: string;
     username:string;
     photoURL: string | null;
-    profileEmoji: string | null;
     userAvatarFrame?: string;
     requestedAt: Timestamp;
 }
@@ -187,7 +233,6 @@ export interface Notification {
     senderId: string;
     senderUsername: string;
     photoURL: string | null;
-    profileEmoji?: string | null;
     senderAvatarFrame?: string;
     type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile';
     postId?: string | null;
@@ -204,63 +249,11 @@ export interface Notification {
     callType?: 'video' | 'audio';
 }
 
-export interface Post {
-    id: string;
-    uid: string;
-    username: string;
-    userPhotoURL: string | null;
-    userAvatarFrame?: string;
-    userRole?: 'admin' | 'user';
-    userGender?: 'male' | 'female';
-    text: string;
-    imageUrl?: string | null;
-    videoUrl?: string | null;
-    backgroundStyle?: string;
-    editedWithAI?: boolean;
-    createdAt: Timestamp | { seconds: number; nanoseconds: number };
-    likes: string[];
-    likeCount: number;
-    commentCount: number;
-    saveCount?: number;
-    savedBy?: string[];
-    language?: string;
-    commentsDisabled?: boolean;
-    likesHidden?: boolean;
-    retweetOf?: {
-        postId: string;
-        uid: string;
-        username: string;
-        userPhotoURL: string | null;
-        profileEmoji: string | null;
-        userAvatarFrame?: string;
-        text: string;
-        imageUrl?: string;
-        videoUrl?: string;
-        createdAt: Timestamp | { seconds: number; nanoseconds: number };
-    }
-}
-
-export interface Comment {
-    id: string;
-    uid: string;
-    username: string;
-    photoURL: string | null;
-    profileEmoji: string | null;
-    userAvatarFrame?: string;
-    userRole?: 'admin' | 'user';
-    text: string;
-    createdAt: Timestamp;
-    replyTo?: {
-        commentId: string;
-        username: string;
-    } | null;
-}
-
 export interface Giveaway {
     status: 'idle' | 'active' | 'finished';
     prize: string;
-    participants: { uid: string, username: string, photoURL: string | null, profileEmoji: string | null }[];
-    winner?: { uid: string, username: string, photoURL: string | null, profileEmoji: string | null };
+    participants: { uid: string, username: string, photoURL: string | null }[];
+    winner?: { uid: string, username: string, photoURL: string | null };
     startedAt?: Timestamp;
     endedAt?: Timestamp;
 }
@@ -280,7 +273,7 @@ export interface Room {
     createdAt: Timestamp;
     expiresAt?: Timestamp | null;
     portalExpiresAt?: Timestamp;
-    participants: { uid: string, username: string, photoURL?: string | null, profileEmoji?: string | null }[];
+    participants: { uid: string, username: string, photoURL?: string | null }[];
     maxParticipants: number;
     voiceParticipantsCount?: number;
     rules: string | null;
@@ -311,7 +304,6 @@ export interface VoiceParticipant {
     uid: string;
     username: string;
     photoURL?: string | null;
-    profileEmoji: string | null;
     role?: 'admin' | 'user';
     isSpeaker: boolean;
     isMuted: boolean;
@@ -395,7 +387,6 @@ export interface DirectMessageMetadata {
         [uid: string]: {
             username: string;
             photoURL: string | null;
-            profileEmoji: string | null;
             selectedAvatarFrame?: string;
             premiumUntil?: Timestamp;
         }
@@ -418,7 +409,6 @@ export interface Message {
   uid: string;
   username: string;
   photoURL?: string | null;
-  profileEmoji: string | null;
   text?: string;
   imageUrl?: string;
   videoUrl?: string;
@@ -487,7 +477,7 @@ export interface ActiveGameSession {
     gameType: 'dice' | 'rps' | 'bottle';
     gameName: string;
     hostId: string;
-    players: { uid: string, username: string, photoURL: string | null, profileEmoji: string | null }[];
+    players: { uid: string, username: string, photoURL: string | null }[];
     moves: { [key: string]: string | number };
     status: 'pending' | 'active' | 'finished';
     turn?: string;

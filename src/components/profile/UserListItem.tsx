@@ -19,7 +19,7 @@ export default function UserListItem({ user, currentUserData }: UserListItemProp
          <div className={cn("avatar-frame-wrapper", user.selectedAvatarFrame)}>
             <Avatar className="relative z-[1] h-10 w-10">
                 <AvatarImage src={user.photoURL || undefined} />
-                <AvatarFallback>{user.profileEmoji || user.username?.charAt(0).toUpperCase()}</AvatarFallback>
+                <AvatarFallback>{user.username?.charAt(0).toUpperCase()}</AvatarFallback>
             </Avatar>
         </div>
         <span className="font-semibold group-hover:underline">{user.username}</span>

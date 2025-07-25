@@ -70,7 +70,6 @@ export default function LoginForm() {
         } catch (error: any) {
             console.error("Giriş hatası", error);
             let errorMessage = "Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.";
-            // Firebase v9'dan beri hem kullanıcı bulunamadı hem de yanlış şifre 'auth/invalid-credential' kodunu döndürür.
             if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
                 errorMessage = "E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edip tekrar deneyin.";
             } else if (error.code === 'auth/too-many-requests') {
