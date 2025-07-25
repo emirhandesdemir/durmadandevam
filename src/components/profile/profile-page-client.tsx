@@ -24,6 +24,7 @@ import { updateUserProfile, findUserByUsername, deleteUserAccount } from "@/lib/
 import { Textarea } from "../ui/textarea";
 import BlockedUsersDialog from "./BlockedUsersDialog";
 import { sendPasswordResetEmail } from "firebase/auth";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 
 const bubbleOptions = [
     { id: "", name: "Yok" },

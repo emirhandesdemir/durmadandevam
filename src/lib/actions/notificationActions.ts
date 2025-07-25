@@ -89,6 +89,8 @@ export async function createNotification(data: CreateNotificationArgs) {
     // This document creation will trigger the `sendPushNotification` Cloud Function.
     await addDoc(notificationsColRef, {
       ...data,
+      photoURL: data.photoURL || null,
+      senderAvatarFrame: data.senderAvatarFrame || '',
       createdAt: serverTimestamp(),
       read: false,
     });
