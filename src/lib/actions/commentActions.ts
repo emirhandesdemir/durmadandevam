@@ -46,7 +46,7 @@ async function handleMentions(text: string, postId: string, sender: { uid: strin
                     recipientId: mentionedUser.uid,
                     senderId: sender.uid,
                     senderUsername: sender.displayName || "Biri",
-                    photoURL: sender.photoURL,
+                    photoURL: sender.photoURL || '',
                     senderAvatarFrame: sender.userAvatarFrame,
                     type: 'mention',
                     postId: postId,
@@ -73,7 +73,7 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
     batch.set(newCommentRef, {
         uid: user.uid,
         username: user.displayName || "Anonim Kullanıcı",
-        photoURL: user.photoURL || null,
+        photoURL: user.photoURL || '',
         userAvatarFrame: user.userAvatarFrame || '',
         userRole: user.role || 'user',
         text: text,
@@ -96,7 +96,7 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
             recipientId: postData.uid,
             senderId: user.uid,
             senderUsername: user.displayName || "Biri",
-            photoURL: user.photoURL,
+            photoURL: user.photoURL || '',
             senderAvatarFrame: user.userAvatarFrame,
             type: 'comment',
             postId: postId,
@@ -108,7 +108,7 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
     await handleMentions(text, postId, {
         uid: user.uid,
         displayName: user.displayName,
-        photoURL: user.photoURL,
+        photoURL: user.photoURL || '',
         userAvatarFrame: user.userAvatarFrame,
     });
 
