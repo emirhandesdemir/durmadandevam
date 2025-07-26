@@ -13,7 +13,7 @@ import {
     getDoc,
 } from "firebase/firestore";
 import { createNotification } from "./notificationActions";
-import { findUserByUsername } from "./userActions";
+import { findUserByUsername } from "../server-utils"; // Import from new location
 
 interface AddCommentArgs {
     postId: string;

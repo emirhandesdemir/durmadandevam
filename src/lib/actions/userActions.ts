@@ -3,67 +3,15 @@
 
 import { db, storage } from '@/lib/firebase';
 import type { Report, UserProfile } from '../types';
-import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, collectionGroup, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, collectionGroup, deleteDoc, setDoc } from 'firebase/firestore';
 import { ref as storageRef, deleteObject } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
 import { getAuth } from '../firebaseAdmin';
 import { deleteRoomWithSubcollections } from '../firestoreUtils';
+import { findUserByUsername } from '../server-utils'; // Import from new location
+import { updateUserPosts, updateUserComments } from './propagationActions';
 
-async function processQueryInBatches(queryToProcess: any, updates: any) {
-    const snapshot = await getDocs(queryToProcess);
-    if (snapshot.empty) return;
-
-    const batch = writeBatch(db);
-    snapshot.docs.forEach((doc) => {
-        batch.update(doc.ref, updates);
-    });
-    await batch.commit();
-}
-
-
-async function updateUserPosts(uid: string, updates: { [key: string]: any }) {
-    if (!uid || !updates || Object.keys(updates).length === 0) return;
-    
-    const propagationUpdates: { [key: string]: any } = {};
-    if (updates.username) propagationUpdates.username = updates.username;
-    if (updates.photoURL) propagationUpdates.userPhotoURL = updates.photoURL;
-    if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
-    
-    if (Object.keys(propagationUpdates).length === 0) return;
-
-    const userPostsQuery = query(collection(db, 'posts'), where('uid', '==', uid));
-    await processQueryInBatches(userPostsQuery, propagationUpdates);
-}
-
-async function updateUserComments(uid: string, updates: { [key: string]: any }) {
-    if (!uid || !updates || Object.keys(updates).length === 0) return;
-
-    const propagationUpdates: { [key: string]: any } = {};
-    if (updates.username) propagationUpdates.username = updates.username;
-    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
-    if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.userAvatarFrame;
-    
-    if (Object.keys(propagationUpdates).length === 0) return;
-
-    const commentsQuery = query(collectionGroup(db, 'comments'), where('uid', '==', uid));
-    await processQueryInBatches(commentsQuery, propagationUpdates);
-}
-
-
-export async function findUserByUsername(username: string): Promise<UserProfile | null> {
-    if (!username) return null;
-    const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('username_lowercase', '==', username.toLowerCase()), limit(1));
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) {
-        return null;
-    }
-    const userDoc = snapshot.docs[0];
-    // Return only non-sensitive data
-    const { email, fcmTokens, ...safeData } = userDoc.data();
-    return deepSerialize({ uid: userDoc.id, ...safeData }) as UserProfile;
-}
 
 export async function updateUserProfile(updates: {
     userId: string;

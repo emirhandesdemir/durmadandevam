@@ -18,7 +18,7 @@ import {
 } from "firebase/firestore";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
-import { findUserByUsername } from "./userActions";
+import { findUserByUsername } from "../server-utils"; // Import from new location
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
 
