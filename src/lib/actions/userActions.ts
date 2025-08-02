@@ -18,6 +18,8 @@ export async function updateUserProfile(updates: {
     username?: string;
     bio?: string;
     age?: number | string | null;
+    city?: string | null;
+    country?: string | null;
     privateProfile?: boolean;
     acceptsFollowRequests?: boolean;
     showOnlineStatus?: boolean;

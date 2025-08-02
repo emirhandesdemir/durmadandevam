@@ -20,11 +20,12 @@ import LanguageSwitcher from "../common/LanguageSwitcher";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from 'next/link';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
-import { updateUserProfile, findUserByUsername, deleteUserAccount } from "@/lib/actions/userActions";
+import { updateUserProfile } from "@/lib/actions/userActions";
 import { Textarea } from "../ui/textarea";
 import BlockedUsersDialog from "./BlockedUsersDialog";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
+import { deleteUserAccount } from "@/lib/actions/userActions";
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -104,19 +105,7 @@ export default function ProfilePageClient() {
         try {
             const updatesForDb: { [key: string]: any } = {};
             
-            if (username !== userData?.username) {
-                if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
-                    toast({ variant: "destructive", title: "Geçersiz Kullanıcı Adı", description: "Kullanıcı adı 3-20 karakter uzunluğunda olmalı ve sadece harf, rakam veya alt çizgi içermelidir." });
-                    setIsSaving(false); return;
-                }
-                const existingUser = await findUserByUsername(username);
-                if (existingUser && existingUser.uid !== user.uid) {
-                    toast({ variant: "destructive", title: "Kullanıcı Adı Alınmış", description: "Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor." });
-                    setIsSaving(false); return;
-                }
-                updatesForDb.username = username;
-            }
-            
+            // Note: username is handled separately in AuthProvider to check for uniqueness
             if (bio !== userData?.bio) updatesForDb.bio = bio;
             if (age !== userData?.age) updatesForDb.age = Number(age) || null;
             if (privateProfile !== userData?.privateProfile) updatesForDb.privateProfile = privateProfile;
@@ -217,7 +206,8 @@ export default function ProfilePageClient() {
 
                          <div className="space-y-2">
                             <Label htmlFor="username">Kullanıcı Adı</Label>
-                            <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} />
+                            <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} disabled />
+                            <p className="text-xs text-muted-foreground">Kullanıcı adınızı değiştirmek için destekle iletişime geçin.</p>
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="bio">Biyografi</Label>
