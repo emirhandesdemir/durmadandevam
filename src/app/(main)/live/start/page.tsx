@@ -7,11 +7,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Radio, Video, AlertTriangle, Mic, MicOff, Camera, CameraOff, SwitchCamera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { startLiveStream } from '@/lib/actions/liveActions';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function StartLivePage() {
   const router = useRouter();
@@ -26,62 +24,75 @@ export default function StartLivePage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
 
-  const getMedia = useCallback(async (audio = true, video = true, mode = 'user') => {
-    try {
-        const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: mode }, 
-            audio 
+  // This useEffect hook is now the single source of truth for managing the media stream.
+  useEffect(() => {
+    let currentStream: MediaStream | null = null;
+    
+    const getMedia = async () => {
+      // Clear previous error
+      setError(null);
+      
+      try {
+        const mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: facingMode },
+          audio: true,
         });
-        setError(null);
+
+        currentStream = mediaStream;
+        setStream(mediaStream);
+
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
         }
-        return mediaStream;
-    } catch (err: any) {
+
+        // Apply initial mute/camera state
+        mediaStream.getAudioTracks().forEach(track => track.enabled = !isMuted);
+        mediaStream.getVideoTracks().forEach(track => track.enabled = isCameraOn);
+        
+      } catch (err: any) {
         console.error('Error accessing media devices.', err);
         let message = 'Kamera ve mikrofon erişimi reddedildi. Canlı yayın başlatmak için tarayıcı ayarlarından izin vermeniz gerekir.';
-        if(err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-            message = 'Kamera veya mikrofon bulunamadı.';
+        if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+          message = 'Kamera veya mikrofon bulunamadı.';
         } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-             message = 'Canlı yayın başlatmak için kamera ve mikrofon erişimine izin vermelisiniz.';
+          message = 'Canlı yayın başlatmak için kamera ve mikrofon erişimine izin vermelisiniz.';
         }
         setError(message);
-        return null;
-    }
-  }, []);
+        setStream(null);
+      }
+    };
+    
+    getMedia();
 
-  useEffect(() => {
-    let currentStream: MediaStream | null = null;
-    const init = async () => {
-        const s = await getMedia(true, true, facingMode);
-        if (s) {
-            setStream(s);
-            currentStream = s;
-        }
-    }
-    init();
-
+    // Cleanup function: This will run when the component unmounts OR before the effect runs again.
     return () => {
-        currentStream?.getTracks().forEach(track => track.stop());
-    }
-  }, [getMedia, facingMode]);
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  // Rerun the effect whenever the facingMode changes.
+  }, [facingMode]);
 
   const toggleMute = () => {
     if (stream) {
-      stream.getAudioTracks().forEach(track => track.enabled = !track.enabled);
-      setIsMuted(p => !p);
+      const newState = !isMuted;
+      stream.getAudioTracks().forEach(track => track.enabled = !newState);
+      setIsMuted(newState);
     }
   };
 
   const toggleCamera = () => {
     if (stream) {
-      stream.getVideoTracks().forEach(track => track.enabled = !track.enabled);
-      setIsCameraOn(p => !p);
+        const newState = !isCameraOn;
+        stream.getVideoTracks().forEach(track => track.enabled = newState);
+        setIsCameraOn(newState);
     }
   };
   
   const switchCamera = () => {
-    setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+    if (isCameraOn) {
+        setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+    }
   };
 
   const handleStartStream = async () => {
@@ -107,6 +118,7 @@ export default function StartLivePage() {
       }, title);
 
       if (result.success && result.liveId) {
+        // Stop the local stream before navigating away
         stream.getTracks().forEach(track => track.stop());
         toast({ description: 'Canlı yayın başlatılıyor...' });
         router.replace(`/live/${result.liveId}`);
@@ -129,7 +141,7 @@ export default function StartLivePage() {
                   <CameraOff className="h-16 w-16 text-muted-foreground" />
                   <p className="mt-4 font-semibold text-lg">Kamera Erişimi Gerekli</p>
                   <p className="text-sm text-muted-foreground max-w-xs">{error}</p>
-                   <Button onClick={() => getMedia(true, true, facingMode)} className="mt-4">Tekrar Dene</Button>
+                   <Button onClick={() => setFacingMode(f => f)} className="mt-4">Tekrar Dene</Button>
               </div>
           ) : (
               <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
