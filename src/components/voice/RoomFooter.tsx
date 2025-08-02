@@ -9,7 +9,9 @@ import type { Room } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { useState } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
+import MusicPlayerDialog from '../voice/MusicPlayerDialog';
 import { useAuth } from '@/contexts/AuthContext';
+import GiftPanel from '../gifts/GiftPanel';
 
 
 interface RoomFooterProps {
@@ -35,6 +37,8 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
     } = useVoiceChat();
     const { user } = useAuth();
     const [showVideoConfirm, setShowVideoConfirm] = useState(false);
+    const [isMusicPlayerOpen, setIsMusicPlayerOpen] = useState(false);
+    const [isGiftPanelOpen, setIsGiftPanelOpen] = useState(false);
     
     const isHost = user?.uid === room?.createdBy.uid;
 
@@ -54,10 +58,23 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
         }
     }
 
+    const handleMusicButtonClick = () => {
+        setIsMusicPlayerOpen(true);
+    };
+
+    const handleStartMindWar = () => {
+        onGameLobbyOpen();
+    }
+
+
     return (
         <>
             <footer className="sticky bottom-0 left-0 right-0 z-10 bg-background/80 backdrop-blur-sm border-t p-2">
                 <div className="flex w-full items-center space-x-2">
+                    <Button variant="ghost" size="icon" className="rounded-full flex-shrink-0" onClick={() => setIsGiftPanelOpen(true)}>
+                        <Gift className="h-6 w-6 text-primary" />
+                    </Button>
+
                     <ChatMessageInput room={room} />
                     
                     {isConnected ? (
@@ -68,7 +85,7 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
                             <Popover>
                                 <PopoverTrigger asChild>
                                     <Button variant="secondary" size="icon" className="rounded-full flex-shrink-0">
-                                        <Settings className="h-5 w-5" />
+                                        <MoreHorizontal className="h-5 w-5" />
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent align="end" side="top" className="w-auto p-2">
@@ -82,11 +99,14 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
                                         <Button onClick={handleScreenShare} variant="ghost" size="icon" className="rounded-full">
                                             {isSharingScreen ? <ScreenShareOff className="text-destructive"/> : <ScreenShare />}
                                         </Button>
+                                        <Button onClick={handleMusicButtonClick} variant="ghost" size="icon" className="rounded-full">
+                                            <Music />
+                                        </Button>
                                         <Button onClick={onGameLobbyOpen} variant="ghost" size="icon" className="rounded-full">
                                             <BrainCircuit />
                                         </Button>
                                         {isHost && (
-                                            <Button onClick={onGiveawayOpen} variant="ghost" size="icon" className="rounded-full text-primary">
+                                            <Button onClick={onGiveawayOpen} variant="ghost" size="icon" className="rounded-full text-yellow-400">
                                                 <Gift />
                                             </Button>
                                         )}
@@ -102,6 +122,16 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
                     )}
                 </div>
             </footer>
+             <GiftPanel 
+                isOpen={isGiftPanelOpen}
+                onOpenChange={setIsGiftPanelOpen}
+                room={room}
+            />
+            <MusicPlayerDialog 
+                isOpen={isMusicPlayerOpen}
+                onOpenChange={setIsMusicPlayerOpen}
+                roomId={room.id}
+            />
             <AlertDialog open={showVideoConfirm} onOpenChange={setShowVideoConfirm}>
                 <AlertDialogContent>
                     <AlertDialogHeader>

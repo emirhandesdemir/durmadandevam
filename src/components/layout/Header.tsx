@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Send, Bell, Search, Compass, Map, LogOut, Settings, Store, Crown, User } from "lucide-react";
+import { Send, Bell, Search, Compass, LogOut, Settings, Store, Crown, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
 import UserSearchDialog from "../search/UserSearchDialog";
@@ -50,6 +50,12 @@ export default function Header({}: HeaderProps) {
                         <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setIsSearchOpen(true)}>
                             <Search className="h-5 w-5" />
                             <span className="sr-only">Kullanıcı Ara</span>
+                        </Button>
+                        <Button variant="ghost" size="icon" className="rounded-full" asChild>
+                            <Link href="/live">
+                                <Compass className="h-5 w-5" />
+                                <span className="sr-only">Canlı Yayınlar</span>
+                            </Link>
                         </Button>
                         <Button variant="ghost" size="icon" className="rounded-full" asChild>
                             <Link href="/dm">

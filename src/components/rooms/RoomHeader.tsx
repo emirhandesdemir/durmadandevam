@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft, MoreHorizontal, Users, UserPlus, Gift, Zap, ChevronUp, ChevronDown, Clock, LogOut, MicOff, Minimize2 } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Users, UserPlus, Gift, Zap, ChevronUp, ChevronDown, Clock, LogOut, MicOff, Minimize2, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Room } from '@/lib/types';
 import InviteDialog from './InviteDialog';
@@ -18,6 +18,7 @@ import { Timestamp } from 'firebase/firestore';
 import { addSystemMessage } from '@/lib/actions/roomActions';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
 import { useRouter } from 'next/navigation';
+import RoomManagementDialog from './RoomManagementDialog';
 
 interface RoomHeaderProps {
   room: Room;
@@ -37,6 +38,7 @@ const formatTime = (totalSeconds: number) => {
 export default function RoomHeader({ room, isHost, onParticipantListToggle, isSpeakerLayoutCollapsed, onToggleCollapse }: RoomHeaderProps) {
     const [isInviteOpen, setIsInviteOpen] = useState(false);
     const [isPortalDialogOpen, setIsPortalDialogOpen] = useState(false);
+    const [isManagementOpen, setIsManagementOpen] = useState(false);
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
     const [warningSent, setWarningSent] = useState(false);
     const { leaveRoom, leaveVoiceOnly } = useVoiceChat();
@@ -116,9 +118,6 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, isSp
                 </div>
 
                 <div className="flex items-center gap-1 sm:gap-2">
-                     <Button variant="ghost" size="icon" className="rounded-full">
-                        <Gift className="h-5 w-5" />
-                    </Button>
                     <Button variant="ghost" size="icon" className="rounded-full" onClick={onParticipantListToggle}>
                         <Users className="h-5 w-5" />
                     </Button>
@@ -137,6 +136,10 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, isSp
                                     <UserPlus className="mr-2 h-4 w-4" />
                                     Davet Et
                                 </DropdownMenuItem>
+                                 <DropdownMenuItem onClick={() => setIsManagementOpen(true)}>
+                                    <Settings className="mr-2 h-4 w-4" />
+                                    Oda Ayarları
+                                </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     )}
@@ -153,6 +156,11 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, isSp
                 onOpenChange={setIsPortalDialogOpen}
                 roomId={room.id}
                 roomName={room.name}
+            />
+             <RoomManagementDialog 
+                isOpen={isManagementOpen}
+                setIsOpen={setIsManagementOpen}
+                room={room}
             />
         </>
     );

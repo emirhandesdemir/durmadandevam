@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessagesSquare, Plus, Swords, Clapperboard, Map } from 'lucide-react';
+import { Home, MessagesSquare, Plus, Compass, Clapperboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMemo } from 'react';
@@ -20,7 +20,7 @@ export default function BottomNav() {
         { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
         { id: 'rooms', href: '/rooms', icon: MessagesSquare, label: 'Odalar' },
         { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
-        { id: 'nearby', href: '/nearby', icon: Map, label: 'Keşfet'},
+        { id: 'live', href: '/live', icon: Compass, label: 'Canlı'},
         { id: 'surf', href: '/surf', icon: Clapperboard, label: 'Surf' },
       ]
   }, [user]);
@@ -44,7 +44,7 @@ export default function BottomNav() {
           <nav className="mx-auto grid h-16 max-w-lg grid-cols-5 items-center">
               {navItems.map((item) => {
                   const Icon = item.icon;
-                  const isActive = (item.id === 'rooms' && pathname.startsWith('/rooms')) || pathname === item.href;
+                  const isActive = pathname.startsWith(item.href);
                   
                   const isCreateButton = item.id === 'create';
 
