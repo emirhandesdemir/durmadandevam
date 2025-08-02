@@ -11,6 +11,8 @@ import { Download, X } from 'lucide-react';
 import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from 'framer-motion';
+import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
+import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -141,8 +143,9 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
   const isHomePage = pathname === '/home';
   
   return (
-    <>
+    <VoiceChatProvider>
       <PremiumWelcomeManager />
+      <VoiceAudioPlayer />
       <div className="relative flex h-screen w-full flex-col bg-background overflow-hidden">
         <PwaInstallBar />
         
@@ -192,7 +195,7 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
           )}
         </AnimatePresence>
       </div>
-    </>
+    </VoiceChatProvider>
   );
 }
 
