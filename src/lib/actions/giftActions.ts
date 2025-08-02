@@ -13,6 +13,31 @@ interface SendGiftArgs {
   giftId: string;
 }
 
+const giftLevelThresholds = [
+    { level: 1, diamonds: 100 },
+    { level: 2, diamonds: 500 },
+    { level: 3, diamonds: 1000 },
+    { level: 4, diamonds: 2500 },
+    { level: 5, diamonds: 5000 },
+    { level: 6, diamonds: 10000 },
+    { level: 7, diamonds: 25000 },
+    { level: 8, diamonds: 50000 },
+    { level: 9, diamonds: 75000 },
+    { level: 10, diamonds: 100000 },
+];
+
+function getGiftLevel(totalDiamondsSent: number): number {
+    let level = 0;
+    for (const threshold of giftLevelThresholds) {
+        if (totalDiamondsSent >= threshold.diamonds) {
+            level = threshold.level;
+        } else {
+            break;
+        }
+    }
+    return level;
+}
+
 export async function sendGift({ roomId, senderId, senderName, receiverId, giftId }: SendGiftArgs) {
   if (!roomId || !senderId || !giftId) {
     throw new Error('Gerekli bilgiler eksik.');
@@ -25,7 +50,6 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
 
   const senderRef = doc(db, 'users', senderId);
   const receiverRef = receiverId ? doc(db, 'users', receiverId) : null;
-  const roomRef = doc(db, 'rooms', roomId);
   const messagesRef = collection(db, 'rooms', roomId, 'messages');
 
   return await runTransaction(db, async (transaction) => {
@@ -34,8 +58,20 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
       throw new Error('Yetersiz elmas bakiyesi.');
     }
 
-    // Deduct diamonds from sender
-    transaction.update(senderRef, { diamonds: increment(-gift.diamondCost) });
+    const senderData = senderDoc.data();
+    const newTotalDiamondsSent = (senderData.totalDiamondsSent || 0) + gift.diamondCost;
+    const newGiftLevel = getGiftLevel(newTotalDiamondsSent);
+    
+    // Deduct diamonds and update gift stats for sender
+    const senderUpdates: { [key: string]: any } = {
+        diamonds: increment(-gift.diamondCost),
+        totalDiamondsSent: newTotalDiamondsSent
+    };
+    if (newGiftLevel > (senderData.giftLevel || 0)) {
+        senderUpdates.giftLevel = newGiftLevel;
+    }
+    transaction.update(senderRef, senderUpdates);
+
 
     let receiverName: string | undefined;
 
@@ -57,6 +93,7 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
       createdAt: serverTimestamp(),
       giftData: {
         senderName: senderName,
+        senderLevel: newGiftLevel,
         receiverName: receiverName,
         giftId: giftId,
       },
@@ -65,4 +102,34 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
     
     return { success: true };
   });
+}
+
+export async function convertProfileValueToDiamonds(userId: string) {
+    if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
+
+    const userRef = doc(db, 'users', userId);
+    
+    return await runTransaction(db, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) {
+            throw new Error("Kullanıcı bulunamadı.");
+        }
+
+        const userData = userDoc.data();
+        const profileValue = userData.profileValue || 0;
+
+        if (profileValue <= 0) {
+            throw new Error("Dönüştürülecek hediye değeri yok.");
+        }
+        
+        // 70% conversion rate
+        const diamondsToAdd = Math.floor(profileValue * 0.7);
+        
+        transaction.update(userRef, {
+            profileValue: 0,
+            diamonds: increment(diamondsToAdd)
+        });
+
+        return { success: true, convertedAmount: diamondsToAdd };
+    });
 }

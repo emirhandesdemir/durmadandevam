@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2, Sliders } from "lucide-react";
+import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2, Sliders, Wallet } from "lucide-react";
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
@@ -26,6 +26,8 @@ import BlockedUsersDialog from "./BlockedUsersDialog";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { deleteUserAccount } from "@/lib/actions/userActions";
+import { convertProfileValueToDiamonds } from "@/lib/actions/giftActions";
+import { Gem } from "lucide-react";
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -53,6 +55,7 @@ export default function ProfilePageClient() {
     const [showOnlineStatus, setShowOnlineStatus] = useState(true);
     const [selectedBubble, setSelectedBubble] = useState("");
     const [isSaving, setIsSaving] = useState(false);
+    const [isConverting, setIsConverting] = useState(false);
     const [interests, setInterests] = useState<string[]>([]);
     const [currentInterest, setCurrentInterest] = useState("");
     const [inviteLink, setInviteLink] = useState("");
@@ -132,6 +135,23 @@ export default function ProfilePageClient() {
             setIsSaving(false);
         }
     };
+    
+    const handleConvertGifts = async () => {
+        if (!user) return;
+        setIsConverting(true);
+        try {
+            const result = await convertProfileValueToDiamonds(user.uid);
+            toast({
+                title: 'Dönüşüm Başarılı!',
+                description: `Hesabınıza ${result.convertedAmount} elmas eklendi.`,
+            });
+        } catch (error: any) {
+            toast({ title: "Hata", description: error.message, variant: "destructive" });
+        } finally {
+            setIsConverting(false);
+        }
+    }
+
 
     const handlePasswordReset = async () => {
         if (!user?.email) {
@@ -258,7 +278,39 @@ export default function ProfilePageClient() {
                     </CardContent>
                 </Card>
 
-                <Accordion type="multiple" className="w-full space-y-4">
+                 <Accordion type="multiple" className="w-full space-y-4">
+                     <AccordionItem value="item-3" asChild>
+                         <Card>
+                             <AccordionTrigger className="p-6">
+                                <CardHeader className="p-0 text-left">
+                                    <div className="flex items-center gap-3">
+                                        <Wallet className="h-6 w-6 text-primary" />
+                                        <CardTitle>Cüzdan</CardTitle>
+                                    </div>
+                                    <CardDescription>Bakiye durumunu görüntüle ve yönet.</CardDescription>
+                                </CardHeader>
+                            </AccordionTrigger>
+                             <AccordionContent className="p-6 pt-0 space-y-4">
+                                <div className="p-4 rounded-lg border bg-muted/50 flex justify-between items-center">
+                                    <p className="font-semibold">Mevcut Elmas Bakiyesi</p>
+                                    <div className="flex items-center gap-2 font-bold text-lg text-cyan-500">
+                                        <Gem className="h-5 w-5"/> {userData.diamonds}
+                                    </div>
+                                </div>
+                                <div className="p-4 rounded-lg border bg-muted/50 space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <p className="font-semibold">Alınan Hediye Değeri</p>
+                                        <p className="font-bold text-lg text-amber-500">{userData.profileValue || 0}</p>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">Bu değer, size gönderilen hediyelerin toplam elmas maliyetidir. %70 oranında elmasa dönüştürebilirsiniz.</p>
+                                    <Button className="w-full" onClick={handleConvertGifts} disabled={isConverting || (userData.profileValue || 0) <= 0}>
+                                        {isConverting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                        Elmasa Dönüştür
+                                    </Button>
+                                </div>
+                             </AccordionContent>
+                        </Card>
+                    </AccordionItem>
                     <AccordionItem value="item-1" asChild>
                         <Card>
                              <AccordionTrigger className="p-6">

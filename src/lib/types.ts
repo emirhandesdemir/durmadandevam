@@ -27,6 +27,8 @@ export interface UserProfile {
     followRequests: FollowRequest[];
     diamonds: number;
     profileValue: number; // For receiving gifts
+    giftLevel: number; // The user's gift-giving level
+    totalDiamondsSent: number; // Total diamonds spent on gifts
     referredBy: string | null;
     referralCount: number;
     hasUnreadNotifications: boolean;
@@ -433,6 +435,7 @@ export interface Message {
   gameInviteData?: GameInviteMessageData;
   giftData?: {
       senderName: string;
+      senderLevel?: number;
       receiverName?: string; // Optional for gifts to the room
       giftId: string;
   }

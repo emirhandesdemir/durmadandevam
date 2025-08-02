@@ -284,6 +284,8 @@ export async function joinRoom(roomId: string, userInfo: UserInfo) {
         throw new Error("Giriş yapmış bir kullanıcı gereklidir.");
     }
     const roomRef = doc(db, "rooms", roomId);
+    const userRef = doc(db, 'users', userInfo.uid);
+
     const roomSnap = await getDoc(roomRef);
     if (!roomSnap.exists()) throw new Error("Oda bulunamadı.");
     const roomData = roomSnap.data();
@@ -305,14 +307,18 @@ export async function joinRoom(roomId: string, userInfo: UserInfo) {
             photoURL: userInfo.photoURL || null
         })
     });
+    
+    const userSnap = await getDoc(userRef);
+    const userData = userSnap.data();
+    let welcomeMessage = `👋 Hoş geldin, ${userInfo.username}!`;
+    if(userData?.giftLevel && userData.giftLevel > 0) {
+        welcomeMessage = `🔥 Seviye ${userData.giftLevel} Hediye Lideri ${userInfo.username} odaya katıldı! 🔥`;
+    }
+
     const messagesRef = collection(db, "rooms", roomId, "messages");
     batch.set(doc(messagesRef), {
-        type: 'user',
-        uid: BOT_USER_INFO.uid,
-        username: BOT_USER_INFO.username,
-        photoURL: BOT_USER_INFO.photoURL,
-        selectedAvatarFrame: BOT_USER_INFO.selectedAvatarFrame,
-        text: `Hoş geldin, ${userInfo.username}!`,
+        type: 'system',
+        text: welcomeMessage,
         createdAt: serverTimestamp()
     });
     await batch.commit();
