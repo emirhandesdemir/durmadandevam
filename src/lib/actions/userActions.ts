@@ -2,7 +2,7 @@
 'use server';
 
 import { db, storage } from '@/lib/firebase';
-import type { Report, UserProfile } from '../types';
+import type { Post, Report, UserProfile } from '../types';
 import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, collectionGroup, deleteDoc, setDoc } from 'firebase/firestore';
 import { ref as storageRef, deleteObject } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
@@ -107,7 +107,6 @@ export async function searchUsers(searchTerm: string, currentUserId: string): Pr
     const searchTermLower = searchTerm.toLowerCase();
     const q = query(
         usersRef,
-        orderBy('username_lowercase'),
         where('username_lowercase', '>=', searchTermLower),
         where('username_lowercase', '<=', searchTermLower + '\uf8ff'),
         limit(10)

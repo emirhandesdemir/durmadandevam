@@ -17,7 +17,7 @@ interface CreateNotificationArgs {
   recipientId: string;
   senderId: string;
   senderUsername: string;
-  photoURL: string | null;
+  senderAvatar: string | null;
   senderAvatarFrame?: string;
   type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile';
   postId?: string | null;
@@ -68,7 +68,7 @@ export async function triggerProfileCompletionNotification(userId: string) {
                 recipientId: userId,
                 senderId: 'system-profile',
                 senderUsername: 'HiweWalk',
-                photoURL: 'https://placehold.co/100x100.png',
+                senderAvatar: 'https://placehold.co/100x100.png',
                 type: 'complete_profile',
             });
             await updateDoc(userRef, {
@@ -89,7 +89,7 @@ export async function createNotification(data: CreateNotificationArgs) {
     // This document creation will trigger the `sendPushNotification` Cloud Function.
     await addDoc(notificationsColRef, {
       ...data,
-      photoURL: data.photoURL || null,
+      photoURL: data.senderAvatar || null,
       senderAvatarFrame: data.senderAvatarFrame || '',
       createdAt: serverTimestamp(),
       read: false,

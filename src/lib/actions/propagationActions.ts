@@ -81,3 +81,17 @@ export async function updateUserComments(uid: string, updates: { [key: string]: 
     const commentsQuery = query(collectionGroup(db, 'comments'), where('uid', '==', uid));
     await processQueryInBatches(commentsQuery, propagationUpdates);
 }
+
+export async function updateUserDmMessages(uid: string, updates: { [key: string]: any }) {
+    if (!uid || !updates || Object.keys(updates).length === 0) return;
+
+    const propagationUpdates: { [key: string]: any } = {};
+    if (updates.username) propagationUpdates['participantInfo.' + uid + '.username'] = updates.username;
+    if (updates.photoURL !== undefined) propagationUpdates['participantInfo.' + uid + '.photoURL'] = updates.photoURL;
+    if (updates.selectedAvatarFrame !== undefined) propagationUpdates['participantInfo.' + uid + '.selectedAvatarFrame'] = updates.selectedAvatarFrame;
+
+    if (Object.keys(propagationUpdates).length === 0) return;
+    
+    const dmsQuery = query(collection(db, 'directMessagesMetadata'), where('participantUids', 'array-contains', uid));
+    await processQueryInBatches(dmsQuery, propagationUpdates);
+}

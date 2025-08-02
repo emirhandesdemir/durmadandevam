@@ -1,22 +1,31 @@
+// src/components/surf/SurfFeed.tsx
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { collection, query, where, orderBy, onSnapshot, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Post } from '@/lib/types';
-import { Loader2, VideoOff, Compass, ArrowLeft } from 'lucide-react';
+import { Loader2, Compass, ArrowLeft } from 'lucide-react';
 import SurfVideoCard from './SurfVideoCard';
 import { Button } from '../ui/button';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function SurfFeed() {
-  const [videoPosts, setVideoPosts] = useState<Post[]>([]);
+  const { userData } = useAuth();
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const router = useRouter();
+
+  const videoPosts = useMemo(() => {
+    if (!posts || !userData) return [];
+    return posts.filter(post => !userData.blockedUsers?.includes(post.uid));
+  }, [posts, userData]);
+
 
   useEffect(() => {
     const postsRef = collection(db, 'posts');
@@ -30,7 +39,7 @@ export default function SurfFeed() {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const postsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post));
-      setVideoPosts(postsData);
+      setPosts(postsData);
       setLoading(false);
     }, (error) => {
       console.error("Error fetching video posts:", error);

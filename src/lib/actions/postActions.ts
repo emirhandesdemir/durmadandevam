@@ -18,7 +18,7 @@ import {
 } from "firebase/firestore";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
-import { findUserByUsername } from "../server-utils"; // Import from new location
+import { findUserByUsername } from "../actions/userActions";
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -42,7 +42,7 @@ async function handlePostMentions(postId: string, text: string, sender: { uid: s
                         recipientId: mentionedUser.uid,
                         senderId: sender.uid,
                         senderUsername: sender.displayName || "Biri",
-                        photoURL: sender.photoURL,
+                        photoURL: sender.photoURL || '',
                         senderAvatarFrame: sender.userAvatarFrame,
                         type: 'mention',
                         postId: postId,
@@ -93,7 +93,7 @@ export const createPost = Object.assign(
             const newPostData = {
                 uid: postData.uid,
                 username: postData.username,
-                photoURL: postData.userPhotoURL,
+                userPhotoURL: postData.userPhotoURL,
                 userAvatarFrame: postData.userAvatarFrame || '',
                 userRole: postData.userRole,
                 userGender: postData.userGender,
@@ -128,7 +128,7 @@ export const createPost = Object.assign(
         await handlePostMentions(finalPostId, postData.text, {
             uid: postData.uid,
             displayName: postData.username,
-            photoURL: postData.userPhotoURL,
+            photoURL: postData.userPhotoURL || '',
             userAvatarFrame: postData.userAvatarFrame
         });
 
@@ -200,7 +200,7 @@ export async function updatePost(postId: string, updates: { text?: string; comme
 
 export async function likePost(
     postId: string,
-    currentUser: { uid: string, displayName: string, photoURL: string | null, profileEmoji: string | null, userAvatarFrame?: string }
+    currentUser: { uid: string, displayName: string, photoURL: string | null, userAvatarFrame?: string }
 ) {
     const postRef = doc(db, "posts", postId);
     
@@ -226,8 +226,7 @@ export async function likePost(
                     recipientId: postData.uid,
                     senderId: currentUser.uid,
                     senderUsername: currentUser.displayName || "Biri",
-                    photoURL: currentUser.photoURL,
-                    profileEmoji: currentUser.profileEmoji,
+                    photoURL: currentUser.photoURL || '',
                     senderAvatarFrame: currentUser.userAvatarFrame,
                     type: 'like',
                     postId: postId,
@@ -286,8 +285,7 @@ export async function retweetPost(
     retweeter: { 
         uid: string; 
         username: string; 
-        userPhotoURL: string | null;
-        profileEmoji: string | null;
+        photoURL: string | null;
         userAvatarFrame?: string;
         userRole?: 'admin' | 'user';
         userGender?: 'male' | 'female';
@@ -313,7 +311,6 @@ export async function retweetPost(
             uid: originalPostData.uid,
             username: originalPostData.username,
             userPhotoURL: originalPostData.userPhotoURL,
-            profileEmoji: originalPostData.profileEmoji,
             userAvatarFrame: originalPostData.userAvatarFrame,
             text: originalPostData.text,
             imageUrl: originalPostData.imageUrl,
@@ -324,8 +321,7 @@ export async function retweetPost(
         const newPostData = {
             uid: retweeter.uid,
             username: retweeter.username,
-            userPhotoURL: retweeter.photoURL,
-            profileEmoji: retweeter.profileEmoji,
+            userPhotoURL: retweeter.userPhotoURL,
             userAvatarFrame: retweeter.userAvatarFrame,
             userRole: retweeter.userRole,
             userGender: retweeter.userGender,
@@ -352,8 +348,7 @@ export async function retweetPost(
             recipientId: originalPostData.uid,
             senderId: retweeter.uid,
             senderUsername: retweeter.username,
-            photoURL: retweeter.photoURL,
-            profileEmoji: retweeter.profileEmoji,
+            photoURL: retweeter.userPhotoURL || '',
             senderAvatarFrame: retweeter.userAvatarFrame,
             type: 'retweet',
             postId: newPostRef.id,
