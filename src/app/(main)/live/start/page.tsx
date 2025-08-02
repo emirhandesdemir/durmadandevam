@@ -24,11 +24,12 @@ export default function StartLivePage() {
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
 
-  const getMedia = useCallback(async (audio = true, video = true) => {
+  const getMedia = useCallback(async (audio = true, video = true, mode = 'user') => {
     try {
         const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-            video, 
+            video: { facingMode: mode }, 
             audio 
         });
         setError(null);
@@ -41,6 +42,8 @@ export default function StartLivePage() {
         let message = 'Kamera ve mikrofon erişimi reddedildi. Canlı yayın başlatmak için tarayıcı ayarlarından izin vermeniz gerekir.';
         if(err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
             message = 'Kamera veya mikrofon bulunamadı.';
+        } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+             message = 'Canlı yayın başlatmak için kamera ve mikrofon erişimine izin vermelisiniz.';
         }
         setError(message);
         return null;
@@ -48,16 +51,20 @@ export default function StartLivePage() {
   }, []);
 
   useEffect(() => {
+    let currentStream: MediaStream | null = null;
     const init = async () => {
-        const s = await getMedia();
-        if (s) setStream(s);
+        const s = await getMedia(true, true, facingMode);
+        if (s) {
+            setStream(s);
+            currentStream = s;
+        }
     }
     init();
 
     return () => {
-        stream?.getTracks().forEach(track => track.stop());
+        currentStream?.getTracks().forEach(track => track.stop());
     }
-  }, [getMedia]);
+  }, [getMedia, facingMode]);
 
   const toggleMute = () => {
     if (stream) {
@@ -71,6 +78,10 @@ export default function StartLivePage() {
       stream.getVideoTracks().forEach(track => track.enabled = !track.enabled);
       setIsCameraOn(p => !p);
     }
+  };
+  
+  const switchCamera = () => {
+    setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
   };
 
   const handleStartStream = async () => {
@@ -109,26 +120,59 @@ export default function StartLivePage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-full p-4">
-      <Card className="w-full max-w-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Radio /> Canlı Yayın Başlat</CardTitle>
-          <CardDescription>Yayınınız için bir başlık belirleyin ve hemen başlayın.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-           <div className="aspect-video w-full bg-muted rounded-lg overflow-hidden flex items-center justify-center relative">
-            {error ? (
-                 <div className="text-center text-destructive p-4">
-                    <CameraOff className="h-10 w-10 mx-auto" />
-                    <p className="mt-2 font-semibold">Medya Erişimi Gerekli</p>
-                    <p className="text-xs max-w-xs">{error}</p>
-                </div>
-            ) : stream ? (
-                <>
-                    <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
-                    <div className="absolute bottom-2 left-2 right-2 flex justify-center gap-2">
-                        <Button onClick={toggleMute} variant="secondary" size="icon" className="rounded-full bg-black/40 text-white hover:bg-black/60"><_config>
-  <plugins>
-    <plugin name="langchain" />
-  </plugins>
-</config>
+    <div className="flex flex-col items-center justify-center min-h-full bg-black text-white">
+      <div className="relative w-full h-full flex flex-col justify-between p-4">
+        {/* Video Preview */}
+        <div className="absolute inset-0 w-full h-full -z-10">
+          {error ? (
+              <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900 text-center p-4">
+                  <CameraOff className="h-16 w-16 text-muted-foreground" />
+                  <p className="mt-4 font-semibold text-lg">Kamera Erişimi Gerekli</p>
+                  <p className="text-sm text-muted-foreground max-w-xs">{error}</p>
+                   <Button onClick={() => getMedia(true, true, facingMode)} className="mt-4">Tekrar Dene</Button>
+              </div>
+          ) : (
+              <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+          )}
+        </div>
+        
+        {/* Header - Empty for full screen video */}
+        <div></div>
+
+        {/* Footer Controls */}
+        <div className="z-10 space-y-4">
+           <div className="space-y-1">
+                <Label htmlFor="title" className="text-white/80 font-semibold">Yayın Başlığı</Label>
+                <Input
+                    id="title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Yayınınız için ilgi çekici bir başlık girin..."
+                    className="bg-black/50 border-white/30 text-white placeholder:text-white/50 h-12 text-base"
+                />
+            </div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex gap-2 p-1.5 rounded-full bg-black/40 backdrop-blur-sm">
+              <Button onClick={toggleMute} variant="ghost" size="icon" className="rounded-full h-12 w-12 text-white hover:bg-white/20">
+                {isMuted ? <MicOff /> : <Mic />}
+              </Button>
+              <Button onClick={toggleCamera} variant="ghost" size="icon" className="rounded-full h-12 w-12 text-white hover:bg-white/20">
+                {isCameraOn ? <Camera /> : <CameraOff />}
+              </Button>
+              <Button onClick={switchCamera} variant="ghost" size="icon" className="rounded-full h-12 w-12 text-white hover:bg-white/20" disabled={!isCameraOn}>
+                <SwitchCamera />
+              </Button>
+            </div>
+             <Button
+                onClick={handleStartStream}
+                disabled={isLoading || !!error || !title.trim()}
+                className="h-14 rounded-full font-bold px-8 text-lg bg-red-600 hover:bg-red-700 text-white shadow-lg"
+              >
+                {isLoading ? <Loader2 className="animate-spin" /> : 'Canlı Yayına Geç'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
