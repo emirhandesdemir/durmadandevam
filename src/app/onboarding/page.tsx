@@ -19,6 +19,38 @@ import multiavatar from '@multiavatar/multiavatar';
 import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
 
+// Helper function to convert SVG string to PNG data URL
+const svgToPngDataUrl = (svgString: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
+
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128; // Set desired output width
+            canvas.height = 128; // Set desired output height
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(img, 0, 0, 128, 128);
+                const pngDataUrl = canvas.toDataURL('image/png');
+                URL.revokeObjectURL(url);
+                resolve(pngDataUrl);
+            } else {
+                reject(new Error("Canvas context could not be created."));
+            }
+        };
+
+        img.onerror = (e) => {
+            URL.revokeObjectURL(url);
+            reject(new Error("Failed to load SVG image for conversion."));
+        };
+        
+        img.src = url;
+    });
+};
+
+
 export default function OnboardingPage() {
     const { user, userData, loading: authLoading } = useAuth();
     const router = useRouter();
@@ -40,6 +72,9 @@ export default function OnboardingPage() {
             setAge(userData.age || '');
             setGender(userData.gender || undefined);
             setInterests(userData.interests || []);
+        } else {
+            // Provide a default if userData is not available yet
+            setAvatarId(uuidv4());
         }
     }, [userData]);
 
@@ -78,11 +113,12 @@ export default function OnboardingPage() {
 
         setIsSaving(true);
         try {
-            const avatarDataUrl = `data:image/svg+xml;base64,${btoa(avatarSvg)}`;
+            // Convert SVG to PNG Data URL before saving
+            const pngDataUrl = await svgToPngDataUrl(avatarSvg);
             
             await updateUserProfile({
                 userId: user.uid,
-                photoURL: avatarDataUrl,
+                photoURL: pngDataUrl, // Send PNG data URL
                 bio,
                 age: Number(age),
                 gender,

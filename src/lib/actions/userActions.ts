@@ -61,12 +61,11 @@ export async function updateUserProfile(updates: {
     }
     
     // If the photoURL is a data URI, upload it to Storage first
-    if (updates.photoURL && updates.photoURL.startsWith('data:image/svg+xml')) {
-        const svgString = Buffer.from(updates.photoURL.split(',')[1], 'base64').toString('utf-8');
-        const svgPath = `avatars/${userId}/${uuidv4()}.svg`;
-        const svgStorageRef = storageRef(storage, svgPath);
-        await uploadString(svgStorageRef, svgString, 'raw', { contentType: 'image/svg+xml' });
-        updatesForDb.photoURL = await getDownloadURL(svgStorageRef);
+    if (updates.photoURL && updates.photoURL.startsWith('data:image/png')) {
+        const pngPath = `avatars/${userId}/${uuidv4()}.png`;
+        const pngStorageRef = storageRef(storage, pngPath);
+        await uploadString(pngStorageRef, updates.photoURL, 'data_url', { contentType: 'image/png' });
+        updatesForDb.photoURL = await getDownloadURL(pngStorageRef);
     }
 
 
