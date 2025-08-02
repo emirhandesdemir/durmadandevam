@@ -2,15 +2,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Loader2, MapPin, LocateFixed, ArrowLeft, ShieldOff, Frown } from 'lucide-react';
-import { getNearbyUsers } from '@/lib/actions/userActions';
+import { getNearbyUsers, updateUserLocation } from '@/lib/actions/userActions';
 import type { UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import NearbyUserCard from '@/components/nearby/NearbyUserCard';
+import Link from 'next/link';
 
 // NearbyUser arayüzünü UserProfile'dan genişletelim, konum zorunlu olsun.
 export interface NearbyUser extends UserProfile {
