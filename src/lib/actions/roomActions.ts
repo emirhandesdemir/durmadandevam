@@ -485,7 +485,7 @@ export async function increaseParticipantLimit(roomId: string, userId: string) {
 
 
 export async function openPortalForRoom(roomId: string, userId: string, externalTransaction?: Transaction) {
-    const cost = 100; // Şimdilik ücretsiz
+    const cost = 100;
 
     const userRef = doc(db, 'users', userId);
     const roomRef = doc(db, 'rooms', roomId);
@@ -505,9 +505,22 @@ export async function openPortalForRoom(roomId: string, userId: string, external
         if (portalDoc.exists() && (portalDoc.data().expiresAt as Timestamp).toMillis() > Date.now()) {
             throw new Error("Bu oda için zaten aktif bir portal var.");
         }
-        
+
+        if ((userData.diamonds || 0) < cost) {
+            throw new Error(`Portal açmak için ${cost} elmasa ihtiyacınız var.`);
+        }
+
         const fiveMinutesInMs = 5 * 60 * 1000;
         const newExpiresAt = Timestamp.fromMillis(Date.now() + fiveMinutesInMs);
+        
+        transaction.update(userRef, { diamonds: increment(-cost) });
+        
+        await logTransaction(transaction, userId, {
+            type: 'room_perk',
+            amount: -cost,
+            description: `${roomData.name} odası için portal açma`,
+            roomId: roomId,
+        });
         
         transaction.set(portalRef, {
             roomId: roomId,
@@ -821,4 +834,49 @@ export async function controlPlayback(roomId: string, userId: string, control: {
             currentTrackName: newTrack?.name || '',
         });
     });
+}
+
+
+export async function extendRoomFor30Days(roomId: string, userId: string) {
+    const roomRef = doc(db, 'rooms', roomId);
+    const userRef = doc(db, 'users', userId);
+    const cost = 500;
+
+    await runTransaction(db, async (transaction) => {
+        const [roomDoc, userDoc] = await Promise.all([
+            transaction.get(roomRef),
+            transaction.get(userRef)
+        ]);
+
+        if (!roomDoc.exists() || !userDoc.exists()) {
+            throw new Error("Oda veya kullanıcı bulunamadı.");
+        }
+
+        const roomData = roomDoc.data();
+        const userData = userDoc.data();
+
+        if (roomData.createdBy.uid !== userId) {
+            throw new Error("Sadece oda sahibi bu işlemi yapabilir.");
+        }
+
+        if ((userData.diamonds || 0) < cost) {
+            throw new Error(`Oda süresini uzatmak için ${cost} elmasa ihtiyacınız var.`);
+        }
+        
+        const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+        const newExpiresAt = Timestamp.fromMillis(Date.now() + thirtyDaysInMs);
+        
+        transaction.update(userRef, { diamonds: increment(-cost) });
+        transaction.update(roomRef, { expiresAt: newExpiresAt });
+
+        await logTransaction(transaction, userId, {
+            type: 'room_perk',
+            amount: -cost,
+            description: `${roomData.name} odası için 30 günlük süre uzatma`,
+            roomId: roomId
+        });
+    });
+
+    await addSystemMessage(roomId, `✨ Oda süresi 30 gün uzatıldı!`);
+    return { success: true };
 }
