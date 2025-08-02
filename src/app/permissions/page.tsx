@@ -4,71 +4,92 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { updateUserLocation } from '@/lib/actions/userActions';
+import { updateUserLocation, saveFCMToken } from '@/lib/actions/userActions';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Mic, MapPin, CheckCircle2 } from 'lucide-react';
+import { Loader2, Mic, MapPin, CheckCircle2, Bell } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { messaging } from '@/lib/firebase';
+import { getToken } from 'firebase/messaging';
 
 export default function PermissionsPage() {
-  const { user, userData } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   
   const [status, setStatus] = useState<'idle' | 'requesting' | 'done'>('idle');
   const [locationGranted, setLocationGranted] = useState(false);
   const [micGranted, setMicGranted] = useState(false);
+  const [notificationGranted, setNotificationGranted] = useState(false);
+
+  // VAPID anahtarını ortam değişkenlerinden almak en iyisidir, ancak burada doğrudan kullanıyoruz.
+  const vapidKey = "BEv3RhiBuZQ8cDg2SAQf41tY_ijOEBJyCDLUY648St78CRgE57v8HWYUDBu6huI_kxzF_gKyelZi3Qbfgs8PMaE";
 
   const handleRequestPermissions = async () => {
     setStatus('requesting');
-    
-    // Request Microphone
+    let allPermissionsHandled = true;
+
+    // 1. Request Microphone
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // We don't need to use the stream, just ask for permission. We should stop the tracks immediately.
       stream.getTracks().forEach(track => track.stop());
       setMicGranted(true);
     } catch (err) {
       console.warn('Microphone permission denied:', err);
-      // It's not a critical error if they deny, they can grant it later.
       setMicGranted(false);
     }
 
-    // Request Location
+    // 2. Request Notifications
+    if ('Notification' in window && messaging) {
+        try {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted' && user) {
+                const currentToken = await getToken(messaging, { vapidKey });
+                if (currentToken) {
+                    await saveFCMToken(user.uid, currentToken);
+                }
+                setNotificationGranted(true);
+            } else {
+                setNotificationGranted(false);
+            }
+        } catch (error) {
+            console.error('Notification permission error:', error);
+            setNotificationGranted(false);
+        }
+    }
+
+    // 3. Request Location
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           if (user) {
-            // Note: Reverse geocoding to get city/country would happen here
-            // if we had a geocoding API. We are skipping that for now
-            // and just storing lat/lon.
             await updateUserLocation(user.uid, position.coords.latitude, position.coords.longitude);
             setLocationGranted(true);
           }
-          setStatus('done');
-          router.push('/onboarding');
         },
         (error) => {
           console.warn('Location permission denied:', error);
+          setLocationGranted(false);
           toast({
             variant: 'destructive',
             title: 'Konum İzni Reddedildi',
             description: 'Yakındaki kişileri bulma özelliği çalışmayacak. Ayarlardan daha sonra izin verebilirsiniz.',
           });
-          setLocationGranted(false);
-          setStatus('done');
-          router.push('/onboarding');
-        }
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     } else {
-      toast({
-        variant: 'destructive',
-        title: 'Konum Desteklenmiyor',
-        description: 'Tarayıcınız konum servislerini desteklemiyor.',
-      });
-      setStatus('done');
-      router.push('/onboarding');
+        toast({
+            variant: 'destructive',
+            title: 'Konum Desteklenmiyor',
+            description: 'Tarayıcınız konum servislerini desteklemiyor.',
+        });
+        allPermissionsHandled = false;
     }
+    
+    // Always move to the next step
+    setStatus('done');
+    router.push('/onboarding');
   };
 
   return (
@@ -98,6 +119,16 @@ export default function PermissionsPage() {
                     </div>
                 </div>
                  {micGranted && <CheckCircle2 className="h-5 w-5 text-green-500" />}
+            </div>
+             <div className="flex items-center justify-between p-3 rounded-lg border">
+                <div className="flex items-center gap-3">
+                    <Bell className="h-6 w-6 text-primary" />
+                    <div>
+                        <p className="font-semibold">Bildirim İzni</p>
+                        <p className="text-xs text-muted-foreground">Mesajları ve önemli güncellemeleri kaçırmayın.</p>
+                    </div>
+                </div>
+                 {notificationGranted && <CheckCircle2 className="h-5 w-5 text-green-500" />}
             </div>
         </CardContent>
         <CardFooter>
