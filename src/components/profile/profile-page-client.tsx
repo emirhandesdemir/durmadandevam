@@ -26,8 +26,8 @@ import BlockedUsersDialog from "./BlockedUsersDialog";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { deleteUserAccount } from "@/lib/actions/userActions";
-import { convertProfileValueToDiamonds } from "@/lib/actions/giftActions";
 import { Gem } from "lucide-react";
+import { giftLevelThresholds } from "@/lib/gifts";
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
@@ -55,7 +55,6 @@ export default function ProfilePageClient() {
     const [showOnlineStatus, setShowOnlineStatus] = useState(true);
     const [selectedBubble, setSelectedBubble] = useState("");
     const [isSaving, setIsSaving] = useState(false);
-    const [isConverting, setIsConverting] = useState(false);
     const [interests, setInterests] = useState<string[]>([]);
     const [currentInterest, setCurrentInterest] = useState("");
     const [inviteLink, setInviteLink] = useState("");
@@ -135,23 +134,6 @@ export default function ProfilePageClient() {
             setIsSaving(false);
         }
     };
-    
-    const handleConvertGifts = async () => {
-        if (!user) return;
-        setIsConverting(true);
-        try {
-            const result = await convertProfileValueToDiamonds(user.uid);
-            toast({
-                title: 'Dönüşüm Başarılı!',
-                description: `Hesabınıza ${result.convertedAmount} elmas eklendi.`,
-            });
-        } catch (error: any) {
-            toast({ title: "Hata", description: error.message, variant: "destructive" });
-        } finally {
-            setIsConverting(false);
-        }
-    }
-
 
     const handlePasswordReset = async () => {
         if (!user?.email) {
@@ -287,7 +269,7 @@ export default function ProfilePageClient() {
                                         <Wallet className="h-6 w-6 text-primary" />
                                         <CardTitle>Cüzdan</CardTitle>
                                     </div>
-                                    <CardDescription>Bakiye durumunu görüntüle ve yönet.</CardDescription>
+                                    <CardDescription>Bakiye durumunu görüntüle ve mağazaya git.</CardDescription>
                                 </CardHeader>
                             </AccordionTrigger>
                              <AccordionContent className="p-6 pt-0 space-y-4">
@@ -297,20 +279,41 @@ export default function ProfilePageClient() {
                                         <Gem className="h-5 w-5"/> {userData.diamonds}
                                     </div>
                                 </div>
-                                <div className="p-4 rounded-lg border bg-muted/50 space-y-3">
-                                    <div className="flex justify-between items-center">
-                                        <p className="font-semibold">Alınan Hediye Değeri</p>
-                                        <p className="font-bold text-lg text-amber-500">{userData.profileValue || 0}</p>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">Bu değer, size gönderilen hediyelerin toplam elmas maliyetidir. %70 oranında elmasa dönüştürebilirsiniz.</p>
-                                    <Button className="w-full" onClick={handleConvertGifts} disabled={isConverting || (userData.profileValue || 0) <= 0}>
-                                        {isConverting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                        Elmasa Dönüştür
-                                    </Button>
-                                </div>
+                                <Button asChild className="w-full">
+                                    <Link href="/wallet">Cüzdanı Yönet</Link>
+                                </Button>
                              </AccordionContent>
                         </Card>
                     </AccordionItem>
+
+                     <AccordionItem value="item-4" asChild>
+                        <Card>
+                            <AccordionTrigger className="p-6">
+                                <CardHeader className="p-0 text-left">
+                                    <div className="flex items-center gap-3">
+                                        <Gift className="h-6 w-6 text-primary" />
+                                        <CardTitle>Hediye Seviyesi</CardTitle>
+                                    </div>
+                                    <CardDescription>Hediye göndererek seviye atla ve avantajlar kazan.</CardDescription>
+                                </CardHeader>
+                            </AccordionTrigger>
+                            <AccordionContent className="p-6 pt-0 space-y-4">
+                                <div className="text-center">
+                                    <p className="text-sm text-muted-foreground">Mevcut Seviyen</p>
+                                    <p className="text-4xl font-bold text-amber-500">SV {userData.giftLevel || 0}</p>
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold mb-2 text-sm">Seviye Atlama</h4>
+                                    <ul className="space-y-1 text-xs text-muted-foreground list-disc list-inside">
+                                        {giftLevelThresholds.map(t => (
+                                            <li key={t.level}><strong>Seviye {t.level}:</strong> {t.diamonds.toLocaleString('tr-TR')} elmas gönder</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </AccordionContent>
+                        </Card>
+                    </AccordionItem>
+
                     <AccordionItem value="item-1" asChild>
                         <Card>
                              <AccordionTrigger className="p-6">
@@ -417,7 +420,7 @@ export default function ProfilePageClient() {
                         </Card>
                     </AccordionItem>
                      
-                    <AccordionItem value="item-4" asChild>
+                    <AccordionItem value="item-5" asChild>
                         <Card>
                             <AccordionTrigger className="p-6">
                                 <CardHeader className="p-0 text-left">

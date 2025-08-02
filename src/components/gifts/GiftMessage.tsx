@@ -6,6 +6,7 @@ import { getGiftById } from '@/lib/gifts';
 import { motion } from 'framer-motion';
 import { Badge } from '../ui/badge';
 import { Sparkles, Star } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function GiftMessage({ message }: { message: Message }) {
   if (!message.giftData) return null;
@@ -26,23 +27,25 @@ export default function GiftMessage({ message }: { message: Message }) {
       initial={{ opacity: 0, y: 50, scale: 0.8 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-      className="flex flex-col items-center justify-center gap-2 my-4 p-4 rounded-xl bg-gradient-to-tr from-yellow-400/10 via-amber-500/10 to-red-500/10 border-2 border-amber-500/20 text-center"
+      className="flex flex-col items-center justify-center gap-2 my-4 p-4 rounded-xl bg-gradient-to-tr from-yellow-400/10 via-amber-500/10 to-red-500/10 border-2 border-amber-500/20 text-center relative overflow-hidden"
     >
-      <div className="flex items-center gap-2">
-        {senderLevel && senderLevel > 0 && (
-            <Badge variant="destructive" className="animate-pulse">
-                <Star className="h-3 w-3 mr-1"/> SV {senderLevel}
-            </Badge>
-        )}
-         <p className="text-sm font-medium">
-            <strong className="text-primary">{senderName}</strong>
+        <div className={cn("absolute inset-0 pointer-events-none", gift.animationClass)}>
+            <GiftIcon className="h-24 w-24 text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.9)] opacity-80" />
+        </div>
+        <div className="relative z-10 flex items-center gap-2">
+            {senderLevel && senderLevel > 0 && (
+                <Badge variant="destructive" className="animate-pulse">
+                    <Star className="h-3 w-3 mr-1"/> SV {senderLevel}
+                </Badge>
+            )}
+            <p className="text-sm font-medium">
+                <strong className="text-primary">{senderName}</strong>
+            </p>
+        </div>
+        
+        <p className="relative z-10 text-lg font-bold">
+            {receiverName ? <strong className="text-primary">{receiverName}</strong> : 'Odaya'} <strong className="text-amber-500">{gift.name}</strong> gönderdi!
         </p>
-      </div>
-
-      <GiftIcon className="h-16 w-16 text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)] my-2" />
-      <p className="text-lg font-bold">
-        {receiverName ? <strong className="text-primary">{receiverName}</strong> : 'Odaya'} <strong className="text-amber-500">{gift.name}</strong> gönderdi!
-      </p>
     </motion.div>
   );
 }
