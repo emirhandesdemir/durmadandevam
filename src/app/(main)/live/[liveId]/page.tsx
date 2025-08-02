@@ -4,7 +4,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { doc, onSnapshot, collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, orderBy, getDocs, where, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { LiveSession, Message, UserProfile } from '@/lib/types';
 import { Loader2, XCircle } from 'lucide-react';
@@ -121,7 +121,7 @@ export default function LiveStreamPage() {
         cleanup();
     };
 
-  }, [liveId, user, isHost]); // Re-run if isHost status changes
+  }, [liveId, user, isHost, cleanup, session]); // Re-run if isHost status changes
 
   // Control handlers
   const handleToggleMute = useCallback(() => {
