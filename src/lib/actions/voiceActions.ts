@@ -1,4 +1,3 @@
-
 // src/lib/actions/voiceActions.ts
 'use server';
 
@@ -67,8 +66,8 @@ export async function joinVoiceChat(roomId: string, user: UserInfo, options?: { 
             const participantData: Omit<VoiceParticipant, 'isSpeaker'> = {
                 uid: user.uid,
                 username: userData.username || 'Anonim',
-                photoURL: userData.photoURL,
-                profileEmoji: userData.profileEmoji,
+                photoURL: userData.photoURL || null,
+                profileEmoji: userData.profileEmoji || null,
                 role: userData.role || 'user',
                 isMuted: options?.initialMuteState ?? false,
                 isSharingScreen: false,
