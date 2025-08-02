@@ -1,4 +1,3 @@
-
 // src/components/rooms/CreateRoomForm.tsx
 "use client";
 
@@ -56,33 +55,31 @@ export default function CreateRoomForm() {
 
         setIsLoading(true);
 
-        // Optimistic UI: Redirect immediately
-        router.push('/rooms');
-        toast({
-            title: 'Oda Oluşturuluyor...',
-            description: `"${values.name}" odanız oluşturuluyor ve kısa süre içinde listede görünecektir.`,
-        });
-
         try {
-            await createRoom(user.uid, { ...values, language: i18n.language }, {
+            const result = await createRoom(user.uid, { ...values, language: i18n.language }, {
                 username: userData.username,
                 photoURL: userData.photoURL || null,
                 role: userData.role || 'user',
                 selectedAvatarFrame: userData.selectedAvatarFrame || '',
             });
-            // The user is already redirected, so no further action is needed on success.
+            
+            toast({
+                title: 'Oda Oluşturuldu!',
+                description: `"${values.name}" odanız oluşturuldu.`,
+            });
+            
+            // On success, navigate directly to the new room
+            router.push(`/rooms/${result.roomId}`);
+
         } catch (error: any) {
-            // If the background operation fails, navigate back (optional) or just show an error.
             console.error("Error creating community: ", error);
-            // We show a persistent error toast so the user knows something went wrong.
             toast({ 
                 title: "Oda Oluşturma Başarısız", 
                 description: `Odanız oluşturulurken bir hata oluştu: ${error.message}`, 
                 variant: "destructive",
-                duration: 9000
+                duration: 9000 
             });
-        } finally {
-            // Do not set isLoading to false, as we've already navigated away.
+            setIsLoading(false);
         }
     }
 

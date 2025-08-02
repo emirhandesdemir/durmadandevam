@@ -11,6 +11,7 @@ import { Timestamp } from "firebase/firestore";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 import { Button } from "../ui/button";
+import { motion } from "framer-motion";
 
 interface RoomListItemProps {
     room: Room;
@@ -63,7 +64,11 @@ export default function RoomListItem({ room }: RoomListItemProps) {
              <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>
 
              <CardContent className="relative z-10 p-4 flex flex-col flex-1">
-                <div className="flex-1 space-y-2">
+                <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="flex-1 space-y-2">
                      <div className="flex justify-between items-start">
                         {room.type === 'event' ? (
                             <div className="flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-full bg-yellow-400/20 text-yellow-300 border border-yellow-300/50">
@@ -74,18 +79,17 @@ export default function RoomListItem({ room }: RoomListItemProps) {
                                 <Zap className="h-3 w-3"/> PORTAL AÇIK
                             </div>
                         ) : <div></div>}
-                        
-                         <div className="flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full bg-black/30">
-                            <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse"></div>
-                            CANLI
-                        </div>
                     </div>
 
                     <p className="text-lg font-bold truncate pt-4">{room.name}</p>
                     <p className="text-xs opacity-80 line-clamp-2 min-h-[2.5rem]">{room.description}</p>
-                </div>
+                </motion.div>
 
-                 <div className="flex items-center justify-between mt-4 border-t border-white/10 pt-3">
+                 <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.1 }}
+                    className="flex items-center justify-between mt-4 border-t border-white/10 pt-3">
                     <div className="flex items-center -space-x-2">
                         {participants.slice(0, 3).map(p => (
                              <Avatar key={p.uid} className="h-7 w-7 border-2 border-black/30">
@@ -98,7 +102,7 @@ export default function RoomListItem({ room }: RoomListItemProps) {
                         <Users className="h-4 w-4"/>
                         <span>{participants.length} / {room.maxParticipants}</span>
                     </div>
-                 </div>
+                 </motion.div>
              </CardContent>
              <CardFooter className="relative z-10 p-2 bg-black/20">
                  <Button onClick={handleCardClick} variant="ghost" className="w-full text-white hover:bg-white/10 hover:text-white" disabled={isDisabled}>

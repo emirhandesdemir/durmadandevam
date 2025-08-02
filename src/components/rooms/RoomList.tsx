@@ -131,7 +131,7 @@ export default function RoomList({ searchTerm }: RoomListProps) {
   return (
     <div className="space-y-4">
         <h2 className="text-2xl font-bold tracking-tight">Aktif Odalar</h2>
-         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
             {sortedAndFilteredRooms.length > 0 ? (
                 sortedAndFilteredRooms.map((room) => (
                     <RoomListItem key={room.id} room={room} />
