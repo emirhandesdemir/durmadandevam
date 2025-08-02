@@ -17,12 +17,17 @@ export default function LiveStreamsPage() {
     const q = query(
       collection(db, 'lives'),
       where('status', '==', 'live'),
-      orderBy('viewerCount', 'desc')
+      orderBy('createdAt', 'desc')
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const streams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LiveSession));
+      // Sort by viewer count on the client side
+      streams.sort((a, b) => (b.viewerCount || 0) - (a.viewerCount || 0));
       setLiveStreams(streams);
       setLoading(false);
+    }, (error) => {
+        console.error("Canlı yayınlar getirilirken hata:", error);
+        setLoading(false);
     });
     return () => unsubscribe();
   }, []);
