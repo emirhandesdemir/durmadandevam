@@ -7,7 +7,8 @@ import type { LiveSession } from '@/lib/types';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Radio, Users, Loader2 } from 'lucide-react';
+import { Radio, Users, Loader2, PlusCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function LiveStreamsPage() {
   const [liveStreams, setLiveStreams] = useState<LiveSession[]>([]);
@@ -42,7 +43,15 @@ export default function LiveStreamsPage() {
 
   return (
     <div className="container mx-auto max-w-4xl py-6">
-      <h1 className="text-3xl font-bold tracking-tight mb-6">Canlı Yayınlar</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold tracking-tight">Canlı Yayınlar</h1>
+        <Button asChild>
+            <Link href="/live/start">
+                <PlusCircle className="mr-2 h-4 w-4"/>
+                Yayın Başlat
+            </Link>
+        </Button>
+      </div>
       {liveStreams.length === 0 ? (
         <p className="text-center text-muted-foreground">Şu anda aktif canlı yayın bulunmuyor.</p>
       ) : (
