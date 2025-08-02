@@ -4,7 +4,7 @@
 import { db, storage } from '@/lib/firebase';
 import type { Post, Report, UserProfile } from '../types';
 import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, collectionGroup, deleteDoc, setDoc } from 'firebase/firestore';
-import { ref as storageRef, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
+import { ref as storageRef, deleteObject, uploadString, getDownloadURL, uploadBytes } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
 import { getAuth } from '../firebaseAdmin';
@@ -25,12 +25,13 @@ export async function updateUserProfile(updates: {
     acceptsFollowRequests?: boolean;
     showOnlineStatus?: boolean;
     photoURL?: string | null;
+    photoBlob?: Blob; // Accept a Blob directly
     selectedBubble?: string;
     selectedAvatarFrame?: string;
     interests?: string[];
     location?: { latitude: number; longitude: number; city?: string | null; country?: string | null; } | null
 }) {
-    const { userId, ...otherUpdates } = updates;
+    const { userId, photoBlob, ...otherUpdates } = updates;
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
 
     const userRef = doc(db, 'users', userId);
@@ -60,11 +61,11 @@ export async function updateUserProfile(updates: {
         updatesForDb.username_lowercase = updates.username.toLowerCase();
     }
     
-    // If the photoURL is a data URI, upload it to Storage first
-    if (updates.photoURL && updates.photoURL.startsWith('data:image/png')) {
+    // If a photo blob is provided, upload it to Storage
+    if (photoBlob) {
         const pngPath = `avatars/${userId}/${uuidv4()}.png`;
         const pngStorageRef = storageRef(storage, pngPath);
-        await uploadString(pngStorageRef, updates.photoURL, 'data_url', { contentType: 'image/png' });
+        await uploadBytes(pngStorageRef, photoBlob, { contentType: 'image/png' });
         updatesForDb.photoURL = await getDownloadURL(pngStorageRef);
     }
 

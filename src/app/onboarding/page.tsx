@@ -19,8 +19,8 @@ import multiavatar from '@multiavatar/multiavatar';
 import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
 
-// Helper function to convert SVG string to PNG data URL
-const svgToPngDataUrl = (svgString: string): Promise<string> => {
+// Helper function to convert SVG string to PNG Blob
+const svgToPngBlob = (svgString: string): Promise<Blob> => {
     return new Promise((resolve, reject) => {
         const img = new Image();
         const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
@@ -28,14 +28,19 @@ const svgToPngDataUrl = (svgString: string): Promise<string> => {
 
         img.onload = () => {
             const canvas = document.createElement('canvas');
-            canvas.width = 128; // Set desired output width
-            canvas.height = 128; // Set desired output height
+            canvas.width = 128;
+            canvas.height = 128;
             const ctx = canvas.getContext('2d');
             if (ctx) {
                 ctx.drawImage(img, 0, 0, 128, 128);
-                const pngDataUrl = canvas.toDataURL('image/png');
-                URL.revokeObjectURL(url);
-                resolve(pngDataUrl);
+                canvas.toBlob((blob) => {
+                    URL.revokeObjectURL(url);
+                    if (blob) {
+                        resolve(blob);
+                    } else {
+                        reject(new Error("Canvas to Blob conversion failed."));
+                    }
+                }, 'image/png');
             } else {
                 reject(new Error("Canvas context could not be created."));
             }
@@ -113,12 +118,12 @@ export default function OnboardingPage() {
 
         setIsSaving(true);
         try {
-            // Convert SVG to PNG Data URL before saving
-            const pngDataUrl = await svgToPngDataUrl(avatarSvg);
+            // Convert SVG to PNG Blob before saving
+            const pngBlob = await svgToPngBlob(avatarSvg);
             
             await updateUserProfile({
                 userId: user.uid,
-                photoURL: pngDataUrl, // Send PNG data URL
+                photoBlob: pngBlob, // Send Blob
                 bio,
                 age: Number(age),
                 gender,
