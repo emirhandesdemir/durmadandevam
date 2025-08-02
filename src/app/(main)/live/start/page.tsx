@@ -29,7 +29,10 @@ export default function StartLivePage() {
     let currentStream: MediaStream | null = null;
     
     const getMedia = async () => {
-      // Clear previous error
+      // Stop previous tracks before getting a new one
+      if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+      }
       setError(null);
       
       try {
@@ -111,11 +114,15 @@ export default function StartLivePage() {
 
     setIsLoading(true);
     try {
-      const result = await startLiveStream({
-        uid: user.uid,
-        username: userData.username,
-        photoURL: userData.photoURL || null,
-      }, title);
+      const result = await startLiveStream(
+        {
+          uid: user.uid,
+          username: userData.username,
+          photoURL: userData.photoURL || null,
+        },
+        title
+      );
+
 
       if (result.success && result.liveId) {
         // Stop the local stream before navigating away
@@ -141,7 +148,7 @@ export default function StartLivePage() {
                   <CameraOff className="h-16 w-16 text-muted-foreground" />
                   <p className="mt-4 font-semibold text-lg">Kamera Erişimi Gerekli</p>
                   <p className="text-sm text-muted-foreground max-w-xs">{error}</p>
-                   <Button onClick={() => setFacingMode(f => f)} className="mt-4">Tekrar Dene</Button>
+                   <Button onClick={() => setFacingMode(f => f === 'user' ? 'user' : 'environment')} className="mt-4">Tekrar Dene</Button>
               </div>
           ) : (
               <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />

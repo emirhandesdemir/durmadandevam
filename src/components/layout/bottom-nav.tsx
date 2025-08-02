@@ -34,41 +34,38 @@ export default function BottomNav() {
                            (pathname.startsWith('/surf')) ||
                            (pathname.startsWith('/matchmaking/'));
 
-  if (isFullPageLayout) {
-    return null;
-  }
-  
-  return (
-    <>
-      <div className="fixed bottom-0 left-0 right-0 z-50 w-full border-t bg-background/95 backdrop-blur-sm">
-          <nav className="mx-auto grid h-16 max-w-lg grid-cols-5 items-center">
-              {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = pathname.startsWith(item.href);
-                  
-                  const isCreateButton = item.id === 'create';
+  // The logic for hiding the nav bar on /live pages is now handled in MainAppLayout
+  // This component will just render the bar.
 
-                  return (
-                    <Link
-                      key={item.id}
-                      href={item.href}
-                      className={cn(
-                        'flex h-full flex-col items-center justify-center gap-1 transition-colors',
-                        isCreateButton ? '' : (isActive ? 'text-primary' : 'text-muted-foreground hover:text-primary')
-                      )}
-                    >
-                        <div className={cn(
-                            "flex items-center justify-center h-10 w-10 rounded-full transition-all duration-300", 
-                            isCreateButton ? 'bg-primary text-primary-foreground rounded-xl h-9 w-9' : ''
-                        )}>
-                            <Icon className={cn("h-6 w-6 transition-transform")} />
-                        </div>
-                        {!isCreateButton && <span className="text-[10px] font-medium">{item.label}</span>}
-                    </Link>
-                  );
-              })}
-          </nav>
-      </div>
-    </>
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-50 w-full border-t bg-background/95 backdrop-blur-sm">
+        <nav className="mx-auto grid h-16 max-w-lg grid-cols-5 items-center">
+            {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname.startsWith(item.href);
+                
+                const isCreateButton = item.id === 'create';
+
+                return (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    className={cn(
+                      'flex h-full flex-col items-center justify-center gap-1 transition-colors',
+                      isCreateButton ? '' : (isActive ? 'text-primary' : 'text-muted-foreground hover:text-primary')
+                    )}
+                  >
+                      <div className={cn(
+                          "flex items-center justify-center h-10 w-10 rounded-full transition-all duration-300", 
+                          isCreateButton ? 'bg-primary text-primary-foreground rounded-xl h-9 w-9' : ''
+                      )}>
+                          <Icon className={cn("h-6 w-6 transition-transform")} />
+                      </div>
+                      {!isCreateButton && <span className="text-[10px] font-medium">{item.label}</span>}
+                  </Link>
+                );
+            })}
+        </nav>
+    </div>
   );
 }
