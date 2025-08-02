@@ -28,7 +28,7 @@ export default function RoomsPage() {
 
 
   return (
-    <div className="min-h-screen text-foreground rooms-page-bg">
+    <div className="min-h-screen text-foreground">
       <main className="container mx-auto max-w-7xl px-4 py-6 md:py-8">
         <div className="flex flex-col gap-6">
 

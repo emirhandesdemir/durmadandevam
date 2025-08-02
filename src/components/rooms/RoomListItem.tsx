@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { Room } from "@/lib/types";
 import { Timestamp } from "firebase/firestore";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 import { Button } from "../ui/button";
 
@@ -17,17 +17,18 @@ interface RoomListItemProps {
 }
 
 const gradientClasses = [
-    "from-pink-500 via-purple-500 to-indigo-500",
-    "from-green-400 via-cyan-500 to-blue-600",
-    "from-yellow-400 via-orange-500 to-red-500",
-    "from-teal-400 via-blue-500 to-purple-600",
-    "from-rose-400 via-fuchsia-500 to-indigo-500",
+    "from-pink-500/80 via-purple-500/80 to-indigo-500/80",
+    "from-green-400/80 via-cyan-500/80 to-blue-600/80",
+    "from-yellow-400/80 via-orange-500/80 to-red-500/80",
+    "from-teal-400/80 via-blue-500/80 to-purple-600/80",
+    "from-rose-400/80 via-fuchsia-500/80 to-indigo-500/80",
 ];
 
 export default function RoomListItem({ room }: RoomListItemProps) {
     const { user: currentUser } = useAuth();
     const router = useRouter();
     
+    // Her oda için ID'sine göre tutarlı bir gradyan seçimi yap
     const gradientIndex = room.id.charCodeAt(0) % gradientClasses.length;
     const gradient = gradientClasses[gradientIndex];
 
@@ -36,7 +37,7 @@ export default function RoomListItem({ room }: RoomListItemProps) {
     const isParticipant = participants.some(p => p.uid === currentUser?.uid);
     const isExpired = room.expiresAt && (room.expiresAt as Timestamp).toDate() < new Date() && room.type !== 'event';
 
-    const hasPortal = room.portalExpiresAt && (room.portalExpiresAt as Timestamp).toMillis() > new Date();
+    const hasPortal = room.portalExpiresAt && (room.portalExpiresAt as Timestamp).toMillis() > Date.now();
 
     if (isExpired) {
         return null;
