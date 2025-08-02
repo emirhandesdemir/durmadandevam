@@ -136,15 +136,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 triggerProfileCompletionNotification(user.uid);
             }
             
-            const isProfileComplete = !!data.age && !!data.gender;
+            const isProfileComplete = !!data.age && !!data.gender && data.age > 0;
             const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname === '/';
-
+            const isOnboardingFlow = pathname.startsWith('/permissions') || pathname.startsWith('/onboarding');
+            
             if (isAuthPage) {
-                router.replace(isProfileComplete ? '/home' : '/permissions');
-            } else if (pathname.startsWith('/permissions') && isProfileComplete) {
-                router.replace('/onboarding');
-            } else if (pathname.startsWith('/onboarding') && isProfileComplete) {
-                 router.replace('/home');
+                router.replace('/home');
+            } else if (!isProfileComplete && !isOnboardingFlow) {
+                router.replace('/permissions');
             }
 
         } else { 
@@ -175,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubscribeDms();
       window.removeEventListener("beforeunload", onbeforeunload);
     };
-  }, [user, handleLogout]);
+  }, [user, handleLogout, pathname, router]);
 
   const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms };
   
