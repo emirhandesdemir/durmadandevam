@@ -16,6 +16,7 @@ import {
     arrayUnion
 } from 'firebase/firestore';
 import type { Room, VoiceParticipant } from '../types';
+import { addSystemMessage } from './roomActions';
 
 interface UserInfo {
     uid: string;
@@ -91,13 +92,14 @@ export async function joinVoiceChat(roomId: string, user: UserInfo, options?: { 
                 });
 
                 const messagesRef = collection(db, "rooms", roomId, "messages");
+                let welcomeMessage = `👋 Hoş geldin, ${user.displayName}!`;
+                if(userData.giftLevel && userData.giftLevel > 0) {
+                    welcomeMessage = `🔥 Seviye ${userData.giftLevel} Hediye Lideri ${user.displayName} odaya katıldı! 🔥`;
+                }
+
                 transaction.set(doc(messagesRef), {
-                    type: 'user',
-                    uid: BOT_USER_INFO.uid,
-                    username: BOT_USER_INFO.username,
-                    photoURL: BOT_USER_INFO.photoURL,
-                    selectedAvatarFrame: BOT_USER_INFO.selectedAvatarFrame,
-                    text: `Hoş geldin, ${user.displayName}!`,
+                    type: 'system',
+                    text: welcomeMessage,
                     createdAt: serverTimestamp()
                 });
             }
@@ -197,3 +199,5 @@ export async function updateLastActive(roomId: string, userId: string) {
         await updateDoc(userVoiceRef, { lastActiveAt: serverTimestamp() });
     } catch (error) { console.error("Aktivite güncellenirken hata:", error); }
 }
+
+    

@@ -309,9 +309,13 @@ export async function joinRoom(roomId: string, userInfo: UserInfo) {
     });
     
     const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) throw new Error("Katılan kullanıcı verisi bulunamadı.");
+
     const userData = userSnap.data();
     let welcomeMessage = `👋 Hoş geldin, ${userInfo.username}!`;
-    if(userData?.giftLevel && userData.giftLevel > 0) {
+    
+    // Check giftLevel for special welcome message
+    if(userData.giftLevel && userData.giftLevel > 0) {
         welcomeMessage = `🔥 Seviye ${userData.giftLevel} Hediye Lideri ${userInfo.username} odaya katıldı! 🔥`;
     }
 
@@ -793,3 +797,5 @@ export async function controlPlayback(roomId: string, userId: string, control: {
         });
     });
 }
+
+    
