@@ -6,6 +6,7 @@ export interface UserProfile {
     username: string;
     username_lowercase: string;
     photoURL: string | null;
+    profileEmoji?: string | null;
     bio: string | null;
     postCount: number;
     role: 'admin' | 'user';
@@ -43,7 +44,10 @@ export interface UserProfile {
     selectedBubble: string;
     selectedAvatarFrame: string;
     activeMatchmakingChatId: string | null;
-    location?: { latitude: number; longitude: number; } | null
+    location?: {
+        latitude: number;
+        longitude: number;
+    }
 }
 
 export interface Post {
@@ -201,59 +205,12 @@ export interface ThemeSettings {
     defaultMode?: 'light' | 'dark' | 'system';
 }
 
-export interface UserProfile {
-    uid: string;
-    username: string;
-    username_lowercase?: string;
-    photoURL: string | null;
-    bio: string | null;
-    postCount: number;
-    role: 'admin' | 'user';
-    gender?: 'male' | 'female';
-    age: number | null;
-    city: string | null;
-    country: string | null;
-    interests: string[];
-    createdAt: Timestamp;
-    lastActionTimestamp?: Timestamp;
-    lastAdWatchedAt?: Timestamp;
-    privateProfile: boolean;
-    acceptsFollowRequests: boolean;
-    showOnlineStatus: boolean;
-    animatedNav?: boolean;
-    followers: string[];
-    following: string[];
-    followRequests: FollowRequest[];
-    diamonds: number;
-    referredBy: string | null;
-    referralCount: number;
-    hasUnreadNotifications: boolean;
-    fcmTokens?: string[];
-    blockedUsers: string[];
-    hiddenPostIds: string[];
-    savedPosts: string[];
-    isBanned: boolean;
-    reportCount: number;
-    isOnline: boolean;
-    lastSeen?: Timestamp;
-    premiumUntil: Timestamp | null;
-    isFirstPremium: boolean;
-    unlimitedRoomCreationUntil: Timestamp | null;
-    profileCompletionNotificationSent: boolean;
-    selectedBubble: string;
-    selectedAvatarFrame: string;
-    activeMatchmakingChatId: string | null;
-    location?: {
-        latitude: number;
-        longitude: number;
-    }
-}
-
 export interface ProfileViewer {
     uid: string;
     viewedAt: Timestamp;
     username?: string;
     photoURL: string | null;
+    profileEmoji?: string | null;
     selectedAvatarFrame?: string;
 }
 
@@ -274,6 +231,7 @@ export interface FollowRequest {
     uid: string;
     username:string;
     photoURL: string | null;
+    profileEmoji?: string | null;
     userAvatarFrame?: string;
     requestedAt: Timestamp;
 }
@@ -284,6 +242,7 @@ export interface Notification {
     senderId: string;
     senderUsername: string;
     photoURL: string | null;
+    profileEmoji?: string | null;
     senderAvatarFrame?: string;
     type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile';
     postId?: string | null;
@@ -355,6 +314,7 @@ export interface VoiceParticipant {
     uid: string;
     username: string;
     photoURL?: string | null;
+    profileEmoji?: string | null;
     role?: 'admin' | 'user';
     isSpeaker: boolean;
     isMuted: boolean;
@@ -467,6 +427,7 @@ export interface Message {
   createdAt: Timestamp;
   selectedBubble?: string;
   selectedAvatarFrame?: string;
+  role?: 'admin' | 'user';
   portalRoomId?: string;
   portalRoomName?: string;
   gameInviteData?: GameInviteMessageData;

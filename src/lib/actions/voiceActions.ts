@@ -54,7 +54,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo, options?: { 
             const userVoiceDoc = await transaction.get(userVoiceRef);
 
             const roomData = roomDoc.data() as Room;
-            const isExpired = roomData.expiresAt && (roomData.expiresAt as Timestamp).toDate() < new Date();
+            const isExpired = roomData.expiresAt && (roomData.expiresAt as Timestamp).toDate() < new Date() && roomData.type !== 'event';
             if(isExpired) throw new Error("Bu odanın süresi dolmuş.");
             
             const isAlreadyInVoice = userVoiceDoc.exists();
@@ -66,8 +66,9 @@ export async function joinVoiceChat(roomId: string, user: UserInfo, options?: { 
             
             const participantData: Omit<VoiceParticipant, 'isSpeaker'> = {
                 uid: user.uid,
-                username: user.displayName || 'Anonim',
-                photoURL: user.photoURL,
+                username: userData.username || 'Anonim',
+                photoURL: userData.photoURL,
+                profileEmoji: userData.profileEmoji,
                 role: userData.role || 'user',
                 isMuted: options?.initialMuteState ?? false,
                 isSharingScreen: false,

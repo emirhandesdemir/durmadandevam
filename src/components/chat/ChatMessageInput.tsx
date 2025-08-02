@@ -52,7 +52,7 @@ export default function ChatMessageInput({ room }: ChatMessageInputProps) {
   
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if ((!message.trim() && !file) || !currentUser || !isParticipant || isSending) return;
+    if ((!message.trim() && !file) || !currentUser || !userData || !isParticipant || isSending) return;
 
     setIsSending(true);
     let imageUrl: string | undefined;
@@ -70,11 +70,14 @@ export default function ChatMessageInput({ room }: ChatMessageInputProps) {
         
         const messageData: { [key: string]: any } = {
             uid: currentUser.uid,
-            username: currentUser.displayName || 'Anonim',
-            photoURL: currentUser.photoURL,
+            username: userData.username || 'Anonim',
+            photoURL: userData.photoURL,
             text: message || '',
             createdAt: serverTimestamp(),
             type: 'user',
+            selectedBubble: userData.selectedBubble || '',
+            selectedAvatarFrame: userData.selectedAvatarFrame || '',
+            role: userData.role || 'user',
         };
 
         if (imageUrl) {
