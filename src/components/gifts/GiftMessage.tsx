@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { Badge } from '../ui/badge';
 import { Sparkles, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Plane } from 'lucide-react';
 
 export default function GiftMessage({ message }: { message: Message }) {
   if (!message.giftData) return null;

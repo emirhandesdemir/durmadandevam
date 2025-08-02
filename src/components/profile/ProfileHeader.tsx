@@ -3,7 +3,7 @@
 
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff, UserCheck, Crown, Bookmark } from 'lucide-react';
+import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff, UserCheck, Crown, Bookmark, BadgeCheck } from 'lucide-react';
 import FollowButton from './FollowButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
@@ -47,6 +47,7 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
   const amIBlockedByThisUser = profileUser.blockedUsers?.includes(currentUserAuth?.uid || '');
   const haveIBlockedThisUser = currentUserData?.blockedUsers?.includes(profileUser.uid);
   const isPremium = isClient && profileUser.premiumUntil && new Date(profileUser.premiumUntil as any) > new Date();
+  const isJudge = profileUser.giftLevel === 10;
 
 
   const handleStatClick = (type: 'followers' | 'following') => {
@@ -92,7 +93,7 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
 
   return (
     <>
-      <div className="flex flex-col items-center text-center p-4">
+      <div className={cn("flex flex-col items-center text-center p-4", isJudge && "judge-profile-bg")}>
         {/* Avatar */}
          <div className={cn("avatar-frame-wrapper", profileUser.selectedAvatarFrame)}>
             <Avatar className="relative z-[1] h-24 w-24 md:h-28 md:w-28 border-4 border-background shadow-lg">
@@ -110,6 +111,14 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
                         <Tooltip>
                             <TooltipTrigger><Crown className="h-6 w-6 text-yellow-500" /></TooltipTrigger>
                             <TooltipContent><p>Premium Üye</p></TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                )}
+                 {isJudge && (
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger><BadgeCheck className="h-6 w-6 text-blue-500" /></TooltipTrigger>
+                            <TooltipContent><p>Yargıç</p></TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
                 )}

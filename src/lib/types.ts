@@ -7,6 +7,8 @@ export interface Transaction {
     amount: number;
     description: string;
     relatedUserId?: string | null;
+    roomId?: string | null;
+    giftId?: string | null;
     timestamp: Timestamp | { seconds: number; nanoseconds: number };
 }
 

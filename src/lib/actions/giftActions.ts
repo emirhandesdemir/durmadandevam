@@ -5,6 +5,7 @@ import { db } from '@/lib/firebase';
 import { doc, runTransaction, increment, serverTimestamp, collection, addDoc, getDoc } from 'firebase/firestore';
 import { getGiftById } from '../gifts';
 import { logTransaction } from './transactionActions';
+import { openPortalForRoom } from './roomActions';
 
 interface SendGiftArgs {
   roomId: string;
@@ -51,6 +52,7 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
 
   const senderRef = doc(db, 'users', senderId);
   const receiverRef = receiverId ? doc(db, 'users', receiverId) : null;
+  const roomRef = doc(db, 'rooms', roomId);
   const messagesRef = collection(db, 'rooms', roomId, 'messages');
 
   return await runTransaction(db, async (transaction) => {
@@ -90,8 +92,9 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
             type: 'gift_received',
             amount: gift.diamondCost,
             description: `${senderName} kullanıcısından ${gift.name} hediyesi`,
-            relatedUserId: senderId
-        });
+            relatedUserId: senderId,
+            giftId: giftId,
+       });
     }
 
     // Log transaction for sender
@@ -99,7 +102,9 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
         type: 'gift_sent',
         amount: -gift.diamondCost,
         description: `${receiverName || 'Odaya'} gönderilen ${gift.name} hediyesi`,
-        relatedUserId: receiverId
+        relatedUserId: receiverId,
+        roomId: roomId,
+        giftId: giftId,
     });
 
     // Create a system message in the chat to announce the gift
@@ -116,6 +121,14 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
       },
     };
     transaction.set(doc(messagesRef), giftMessageData);
+    
+    // If the gift is the 'plane', open a portal
+    if (gift.id === 'plane') {
+      const roomDoc = await transaction.get(roomRef);
+      if (roomDoc.exists()) {
+         await openPortalForRoom(roomId, senderId, transaction);
+      }
+    }
     
     return { success: true };
   });

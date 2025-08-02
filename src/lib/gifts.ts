@@ -1,6 +1,6 @@
 // src/lib/gifts.ts
 
-import { Rose, Heart, PartyPopper, Rocket, Castle } from "lucide-react";
+import { Rose, Heart, PartyPopper, Rocket, Castle, Plane } from "lucide-react";
 
 export interface Gift {
     id: string;
@@ -45,6 +45,13 @@ export const giftList: Gift[] = [
         icon: Castle,
         diamondCost: 100,
         animationClass: 'gift-animate-castle'
+    },
+    {
+        id: 'plane',
+        name: 'Uçak',
+        icon: Plane,
+        diamondCost: 1000,
+        animationClass: 'gift-animate-plane'
     },
 ];
 

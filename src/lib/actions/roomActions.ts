@@ -3,7 +3,7 @@
 
 import { db, storage } from '@/lib/firebase';
 import { deleteRoomWithSubcollections } from '@/lib/firestoreUtils';
-import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch, arrayUnion, arrayRemove, updateDoc, runTransaction, increment, setDoc, query, where, getDocs, orderBy, deleteField, limit } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch, arrayUnion, arrayRemove, updateDoc, runTransaction, increment, setDoc, query, where, getDocs, orderBy, deleteField, limit, Transaction } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { createNotification } from './notificationActions';
 import type { Room, Message, PlaylistTrack, UserProfile } from '../types';
@@ -191,7 +191,8 @@ export async function createRoom(
             await logTransaction(transaction, userId, {
                 type: 'room_creation',
                 amount: -roomCost,
-                description: `${roomData.name} odası oluşturma`
+                description: `${roomData.name} odası oluşturma`,
+                roomId: newRoomRef.id
             });
         }
         
@@ -426,7 +427,8 @@ export async function extendRoomTime(roomId: string, userId: string) {
         await logTransaction(transaction, userId, {
             type: 'room_perk',
             amount: -cost,
-            description: `${roomData.name} odası için süre uzatma`
+            description: `${roomData.name} odası için süre uzatma`,
+            roomId: roomId
         });
     });
     
@@ -468,7 +470,8 @@ export async function increaseParticipantLimit(roomId: string, userId: string) {
             await logTransaction(transaction, userId, {
                 type: 'room_perk',
                 amount: -cost,
-                description: `${roomData.name} odası için limit artırma`
+                description: `${roomData.name} odası için limit artırma`,
+                roomId: roomId,
             });
         }
         transaction.update(roomRef, { maxParticipants: increment(1) });
@@ -481,14 +484,15 @@ export async function increaseParticipantLimit(roomId: string, userId: string) {
 }
 
 
-export async function openPortalForRoom(roomId: string, userId: string) {
+export async function openPortalForRoom(roomId: string, userId: string, externalTransaction?: Transaction) {
     const cost = 100; // Şimdilik ücretsiz
 
     const userRef = doc(db, 'users', userId);
     const roomRef = doc(db, 'rooms', roomId);
+    
     const portalRef = doc(db, 'portals', roomId);
 
-    await runTransaction(db, async (transaction) => {
+    const processPortal = async (transaction: any) => {
         const userDoc = await transaction.get(userRef);
         const roomDoc = await transaction.get(roomRef);
         const portalDoc = await transaction.get(portalRef);
@@ -524,8 +528,13 @@ export async function openPortalForRoom(roomId: string, userId: string) {
             uid: 'system',
             username: 'System',
         });
-
-    });
+    };
+    
+    if (externalTransaction) {
+        await processPortal(externalTransaction);
+    } else {
+        await runTransaction(db, processPortal);
+    }
 
     return { success: true };
 }

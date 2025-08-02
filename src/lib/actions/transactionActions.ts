@@ -22,6 +22,8 @@ interface LogTransactionArgs {
     amount: number;
     description: string;
     relatedUserId?: string | null;
+    roomId?: string | null;
+    giftId?: string | null;
 }
 
 /**

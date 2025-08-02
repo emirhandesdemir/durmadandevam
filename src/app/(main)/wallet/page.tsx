@@ -4,11 +4,11 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Gem, Gift, Loader2, Store, Repeat, ShoppingCart, ArrowRightLeft, History } from "lucide-react";
+import { Gem, Gift, Loader2, Store, Repeat, ShoppingCart, ArrowRightLeft, History, Info } from "lucide-react";
 import { convertProfileValueToDiamonds } from "@/lib/actions/giftActions";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { giftList } from "@/lib/gifts";
+import { giftList, getGiftById } from "@/lib/gifts";
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
 import { giftLevelThresholds } from "@/lib/gifts";
@@ -42,21 +42,33 @@ function TransactionHistory() {
 
     return (
         <div className="space-y-3">
-            {transactions.map(tx => (
-                <div key={tx.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50">
-                    <div className="flex-1">
-                        <p className="font-semibold text-sm">{tx.description}</p>
-                        <p className="text-xs text-muted-foreground">{format(new Date(tx.timestamp as any), 'PPp', { locale: tr })}</p>
+            {transactions.map(tx => {
+                const gift = tx.giftId ? getGiftById(tx.giftId) : null;
+                const description = gift ? `${tx.description} (${gift.name})` : tx.description;
+                return (
+                     <div key={tx.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50">
+                        <div className="flex-1">
+                            <p className="font-semibold text-sm">{description}</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <span>{format(new Date(tx.timestamp as any), 'PPp', { locale: tr })}</span>
+                                {tx.roomId && (
+                                    <>
+                                        <span>·</span>
+                                        <Link href={`/rooms/${tx.roomId}`} className="hover:underline">Odaya Git</Link>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                        <div className={cn(
+                            "font-bold text-sm flex items-center gap-1",
+                            tx.amount > 0 ? "text-green-500" : "text-destructive"
+                        )}>
+                            {tx.amount > 0 ? '+' : ''}{tx.amount.toLocaleString('tr-TR')}
+                            <Gem className="h-3 w-3" />
+                        </div>
                     </div>
-                    <div className={cn(
-                        "font-bold text-sm flex items-center gap-1",
-                        tx.amount > 0 ? "text-green-500" : "text-destructive"
-                    )}>
-                        {tx.amount > 0 ? '+' : ''}{tx.amount.toLocaleString('tr-TR')}
-                        <Gem className="h-3 w-3" />
-                    </div>
-                </div>
-            ))}
+                )
+            })}
         </div>
     )
 }
@@ -123,6 +135,26 @@ export default function WalletPage() {
                         {isConverting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Repeat className="mr-2 h-4 w-4"/>}
                         Elmasa Dönüştür (%70)
                     </Button>
+                </CardContent>
+             </Card>
+
+              <Card>
+                 <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Info className="h-5 w-5"/> Hediyeler</CardTitle>
+                    <CardDescription>Uygulamada gönderebileceğin mevcut hediyeler ve maliyetleri.</CardDescription>
+                </CardHeader>
+                 <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {giftList.map(gift => (
+                             <div key={gift.id} className="flex flex-col items-center gap-2 p-2 rounded-lg border bg-muted/50">
+                                <gift.icon className="h-8 w-8 text-primary"/>
+                                <p className="font-semibold">{gift.name}</p>
+                                <div className="flex items-center text-sm font-bold text-cyan-500 gap-1">
+                                    <Gem className="h-4 w-4"/>{gift.diamondCost}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </CardContent>
              </Card>
 
