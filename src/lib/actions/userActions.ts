@@ -262,6 +262,10 @@ export async function getNearbyUsers(currentUid: string, latitude: number, longi
                 uid: user.uid,
                 username: user.username,
                 photoURL: user.photoURL,
+                bio: user.bio,
+                age: user.age,
+                city: user.city,
+                selectedAvatarFrame: user.selectedAvatarFrame,
                 position: [user.location.latitude, user.location.longitude],
             });
         }

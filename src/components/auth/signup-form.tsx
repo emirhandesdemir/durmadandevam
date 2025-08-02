@@ -11,7 +11,7 @@ import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { creditReferrer } from "@/lib/actions/diamondActions";
-import { findUserByUsername } from "@/lib/actions/userActions";
+import { findUserByUsername } from "@/lib/server-utils";
 import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
@@ -125,9 +125,9 @@ export default function SignUpForm() {
                 age: null,
                 city: null,
                 country: values.country,
+                gender: values.gender,
                 interests: [],
                 role: userRole,
-                gender: values.gender,
                 createdAt: serverTimestamp(),
                 lastActionTimestamp: serverTimestamp(),
                 diamonds: 10,
