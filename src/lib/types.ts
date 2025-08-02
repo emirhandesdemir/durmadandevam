@@ -42,6 +42,7 @@ export interface UserProfile {
     selectedBubble: string;
     selectedAvatarFrame: string;
     activeMatchmakingChatId: string | null;
+    location?: { latitude: number; longitude: number; } | null
 }
 
 export interface Post {
@@ -153,6 +154,7 @@ export interface MindWarSession {
   };
   createdAt: Timestamp;
 }
+
 
 export interface LiveSession {
     id: string;

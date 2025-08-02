@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert } from "lucide-react";
+import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
@@ -46,9 +46,6 @@ export default function ProfilePageClient() {
     const [username, setUsername] = useState("");
     const [bio, setBio] = useState("");
     const [age, setAge] = useState<number | string>("");
-    const [city, setCity] = useState("");
-    const [country, setCountry] = useState("");
-    const [gender, setGender] = useState<'male' | 'female' | undefined>(undefined);
     const [privateProfile, setPrivateProfile] = useState(false);
     const [acceptsFollowRequests, setAcceptsFollowRequests] = useState(true);
     const [showOnlineStatus, setShowOnlineStatus] = useState(true);
@@ -67,9 +64,6 @@ export default function ProfilePageClient() {
             setUsername(userData.username || "");
             setBio(userData.bio || "");
             setAge(userData.age || "");
-            setCity(userData.city || "");
-            setCountry(userData.country || "");
-            setGender(userData.gender);
             setPrivateProfile(userData.privateProfile || false);
             setAcceptsFollowRequests(userData.acceptsFollowRequests ?? true);
             setShowOnlineStatus(userData.showOnlineStatus ?? true);
@@ -90,9 +84,6 @@ export default function ProfilePageClient() {
         if (username.trim() !== (userData.username || '').trim()) return true;
         if (bio.trim() !== (userData.bio || '').trim()) return true;
         if (ageAsNumber !== userDataAge) return true;
-        if (city.trim() !== (userData.city || '').trim()) return true;
-        if (country.trim() !== (userData.country || '').trim()) return true;
-        if (gender !== (userData.gender || undefined)) return true;
         if (privateProfile !== (userData.privateProfile || false)) return true;
         if (acceptsFollowRequests !== (userData.acceptsFollowRequests ?? true)) return true;
         if (showOnlineStatus !== (userData.showOnlineStatus ?? true)) return true;
@@ -101,7 +92,7 @@ export default function ProfilePageClient() {
     
         return false;
     }, [
-        username, bio, age, city, country, gender, privateProfile, 
+        username, bio, age, privateProfile, 
         acceptsFollowRequests, showOnlineStatus, selectedBubble, 
         interests, userData
     ]);
@@ -128,9 +119,6 @@ export default function ProfilePageClient() {
             
             if (bio !== userData?.bio) updatesForDb.bio = bio;
             if (age !== userData?.age) updatesForDb.age = Number(age) || null;
-            if (city !== userData?.city) updatesForDb.city = city;
-            if (country !== userData?.country) updatesForDb.country = country;
-            if (gender !== userData?.gender) updatesForDb.gender = gender;
             if (privateProfile !== userData?.privateProfile) updatesForDb.privateProfile = privateProfile;
             if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) updatesForDb.acceptsFollowRequests = acceptsFollowRequests;
             if (showOnlineStatus !== (userData?.showOnlineStatus ?? true)) updatesForDb.showOnlineStatus = showOnlineStatus;
@@ -235,38 +223,9 @@ export default function ProfilePageClient() {
                             <Label htmlFor="bio">Biyografi</Label>
                             <Textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Kendini anlat..." className="rounded-xl" maxLength={150} />
                         </div>
-                         <div className="grid grid-cols-2 gap-4">
-                             <div className="space-y-2">
-                                <Label htmlFor="age">Yaş</Label>
-                                <Input id="age" type="number" value={age || ''} onChange={(e) => setAge(e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Cinsiyet</Label>
-                                <RadioGroup
-                                    value={gender}
-                                    onValueChange={(value: 'male' | 'female') => setGender(value)}
-                                    className="flex space-x-4 pt-2"
-                                >
-                                    <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="male" id="male" />
-                                        <Label htmlFor="male" className="font-normal cursor-pointer">Erkek</Label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="female" id="female" />
-                                        <Label htmlFor="female" className="font-normal cursor-pointer">Kadın</Label>
-                                    </div>
-                                </RadioGroup>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="city">Şehir</Label>
-                                <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="country">Ülke</Label>
-                                <Input id="country" value={country} onChange={(e) => setCountry(e.target.value)} />
-                            </div>
+                        <div className="space-y-2">
+                           <Label htmlFor="age">Yaş</Label>
+                           <Input id="age" type="number" value={age || ''} onChange={(e) => setAge(e.target.value)} />
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="interests">İlgi Alanlarım (Maks. 10)</Label>

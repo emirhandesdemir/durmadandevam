@@ -35,8 +35,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Checkbox } from "../ui/checkbox";
-import { countries } from "@/lib/countries";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { useTranslation } from "react-i18next";
 import { emojiToDataUrl } from "@/lib/utils";
 
@@ -48,7 +46,7 @@ const formSchema = z.object({
   email: z.string().email({ message: "Geçersiz e-posta adresi." }),
   password: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır." }),
   gender: z.enum(['male', 'female'], { required_error: "Cinsiyet seçimi zorunludur." }),
-  country: z.string({ required_error: "Ülke seçimi zorunludur." }),
+  age: z.coerce.number().min(13, { message: "En az 13 yaşında olmalısınız."}).max(99, { message: "Yaş geçerli değil."}),
   terms: z.literal<boolean>(true, {
     errorMap: () => ({ message: "Devam etmek için sözleşmeleri kabul etmelisiniz." }),
   }),
@@ -114,17 +112,15 @@ export default function SignUpForm() {
                 }
             }
 
-            const preferredLanguage = values.country === "TR" ? 'tr' : 'en';
-
             await setDoc(doc(db, "users", user.uid), {
                 uid: user.uid,
                 username: values.username,
                 username_lowercase: values.username.toLowerCase(),
                 photoURL: defaultAvatarUrl,
                 bio: null,
-                age: null,
-                city: null,
-                country: values.country,
+                age: values.age,
+                city: null, // To be filled by location service
+                country: null, // To be filled by location service
                 gender: values.gender,
                 interests: [],
                 role: userRole,
@@ -152,6 +148,7 @@ export default function SignUpForm() {
                 isFirstPremium: false,
                 unlimitedRoomCreationUntil: null,
                 profileCompletionNotificationSent: false,
+                location: null,
             });
 
             if (ref) {
@@ -161,9 +158,7 @@ export default function SignUpForm() {
                     console.error("Referrer credit failed, but signup continues:", e);
                 }
             }
-
-            i18n.changeLanguage(preferredLanguage);
-            // SUCCESS: Let AuthProvider handle the redirect after userData is loaded.
+            // SUCCESS: AuthProvider will handle redirecting to the permissions page.
         } catch (error: any) {
             console.error("Kayıt hatası", error);
             let errorMessage = "Hesap oluşturulurken bilinmeyen bir hata oluştu. Lütfen tekrar deneyin.";
@@ -255,30 +250,19 @@ export default function SignUpForm() {
                                 </FormItem>
                             )}
                         />
-
-                        <FormField
-                          control={form.control}
-                          name="country"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Ülke</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Bir ülke seçin" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {countries.map(country => (
-                                      <SelectItem key={country.code} value={country.code}>{country.name}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
+                         <FormField
+                            control={form.control}
+                            name="age"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Yaş</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" placeholder="Yaşınız" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
                         />
-
                         <FormField
                           control={form.control}
                           name="gender"

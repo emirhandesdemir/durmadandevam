@@ -109,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) {
         setLoading(false);
-        const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
+        const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/permissions') || pathname.startsWith('/onboarding');
         if (!isAuthPage) {
             router.replace('/login');
         }
@@ -136,9 +136,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 triggerProfileCompletionNotification(user.uid);
             }
             
-            if(pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname === '/') {
-                if(!sanitizedData.bio || !sanitizedData.age || !sanitizedData.gender) {
-                    router.replace('/onboarding');
+            if (pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname === '/') {
+                // If user is newly created (city is null), send to permissions, then onboarding
+                if (sanitizedData.city === null) {
+                    router.replace('/permissions');
+                } else if (!sanitizedData.bio || !sanitizedData.interests || sanitizedData.interests.length === 0) {
+                     router.replace('/onboarding');
                 } else {
                     router.replace('/home');
                 }

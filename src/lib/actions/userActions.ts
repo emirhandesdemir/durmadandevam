@@ -10,7 +10,7 @@ import { revalidatePath } from 'next/cache';
 import { getAuth } from '../firebaseAdmin';
 import { deleteRoomWithSubcollections } from '../firestoreUtils';
 import { findUserByUsername } from '../server-utils'; // Import from new location
-import { updateUserPosts, updateUserComments } from './propagationActions';
+import { updateUserPosts, updateUserComments, updateUserDmMessages } from './propagationActions';
 
 
 export async function updateUserProfile(updates: {
@@ -18,9 +18,6 @@ export async function updateUserProfile(updates: {
     username?: string;
     bio?: string;
     age?: number | string | null;
-    city?: string | null;
-    country?: string | null;
-    gender?: 'male' | 'female' | null;
     privateProfile?: boolean;
     acceptsFollowRequests?: boolean;
     showOnlineStatus?: boolean;
@@ -28,6 +25,7 @@ export async function updateUserProfile(updates: {
     selectedBubble?: string;
     selectedAvatarFrame?: string;
     interests?: string[];
+    location?: { latitude: number; longitude: number; city?: string | null; country?: string | null; } | null
 }) {
     const { userId, ...otherUpdates } = updates;
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
@@ -57,6 +55,16 @@ export async function updateUserProfile(updates: {
         }
         updatesForDb.username = updates.username;
         updatesForDb.username_lowercase = newUsernameLower;
+    }
+    
+    if (updates.location) {
+        updatesForDb.location = {
+            latitude: updates.location.latitude,
+            longitude: updates.location.longitude,
+        }
+        // These will be updated from a separate reverse geocoding call if available
+        if (updates.location.city) updatesForDb.city = updates.location.city;
+        if (updates.location.country) updatesForDb.country = updates.location.country;
     }
 
     if (Object.keys(updatesForDb).length > 0) {
@@ -88,6 +96,7 @@ export async function updateUserProfile(updates: {
             await Promise.all([
                 updateUserPosts(userId, propagationUpdates),
                 updateUserComments(userId, propagationUpdates),
+                updateUserDmMessages(userId, propagationUpdates),
             ]);
         } catch(err) {
             console.error("Propagasyon hatası:", err);
@@ -229,6 +238,8 @@ export async function updateUserLocation(uid: string, latitude: number, longitud
             latitude,
             longitude
         },
+        city: 'Bilinmeyen Şehir', // Placeholder until we have reverse geocoding
+        country: 'TR', // Placeholder
         lastSeen: serverTimestamp()
     });
 }
