@@ -101,21 +101,26 @@ function PwaInstallBar() {
 
 
 function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, userData, loading } = useAuth();
   const pathname = usePathname();
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const [isScrolling, setIsScrolling] = useState(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Default to true if userData is not loaded or the setting is undefined
+  const animatedNavEnabled = userData?.animatedNav ?? true;
+
   const handleScroll = useCallback(() => {
-      setIsScrolling(true);
-      if (scrollTimeoutRef.current) {
-          clearTimeout(scrollTimeoutRef.current);
-      }
-      scrollTimeoutRef.current = setTimeout(() => {
-          setIsScrolling(false);
-      }, 250); // Kaydırma durduktan 250ms sonra menüleri göster
-  }, []);
+    if (!animatedNavEnabled) return;
+    setIsScrolling(true);
+    if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+    }
+    scrollTimeoutRef.current = setTimeout(() => {
+        setIsScrolling(false);
+    }, 250);
+  }, [animatedNavEnabled]);
+
 
   useEffect(() => {
     const mainEl = mainScrollRef.current;
@@ -145,7 +150,7 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
           {!isFullPageLayout && (
             <motion.header
               initial={{ y: 0 }}
-              animate={{ y: isScrolling ? -100 : 0 }}
+              animate={{ y: animatedNavEnabled && isScrolling ? -100 : 0 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
               className="absolute top-0 left-0 right-0 z-40"
             >
@@ -178,7 +183,7 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
          {!isFullPageLayout && (
             <motion.div
               initial={{ y: 0 }}
-              animate={{ y: isScrolling ? 100 : 0 }}
+              animate={{ y: animatedNavEnabled && isScrolling ? 100 : 0 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
               className="absolute bottom-0 left-0 right-0 z-30"
             >

@@ -20,6 +20,7 @@ export interface UserProfile {
     privateProfile: boolean;
     acceptsFollowRequests: boolean;
     showOnlineStatus: boolean;
+    animatedNav?: boolean;
     followers: string[];
     following: string[];
     followRequests: FollowRequest[];
@@ -198,6 +199,54 @@ export interface ThemeSettings {
     appName?: string;
     appLogoUrl?: string;
     defaultMode?: 'light' | 'dark' | 'system';
+}
+
+export interface UserProfile {
+    uid: string;
+    username: string;
+    username_lowercase?: string;
+    photoURL: string | null;
+    bio: string | null;
+    postCount: number;
+    role: 'admin' | 'user';
+    gender?: 'male' | 'female';
+    age: number | null;
+    city: string | null;
+    country: string | null;
+    interests: string[];
+    createdAt: Timestamp;
+    lastActionTimestamp?: Timestamp;
+    lastAdWatchedAt?: Timestamp;
+    privateProfile: boolean;
+    acceptsFollowRequests: boolean;
+    showOnlineStatus: boolean;
+    animatedNav?: boolean;
+    followers: string[];
+    following: string[];
+    followRequests: FollowRequest[];
+    diamonds: number;
+    referredBy: string | null;
+    referralCount: number;
+    hasUnreadNotifications: boolean;
+    fcmTokens?: string[];
+    blockedUsers: string[];
+    hiddenPostIds: string[];
+    savedPosts: string[];
+    isBanned: boolean;
+    reportCount: number;
+    isOnline: boolean;
+    lastSeen?: Timestamp;
+    premiumUntil: Timestamp | null;
+    isFirstPremium: boolean;
+    unlimitedRoomCreationUntil: Timestamp | null;
+    profileCompletionNotificationSent: boolean;
+    selectedBubble: string;
+    selectedAvatarFrame: string;
+    activeMatchmakingChatId: string | null;
+    location?: {
+        latitude: number;
+        longitude: number;
+    }
 }
 
 export interface ProfileViewer {

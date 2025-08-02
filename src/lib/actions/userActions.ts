@@ -60,6 +60,7 @@ export async function updateUserProfile(updates: {
     privateProfile?: boolean;
     acceptsFollowRequests?: boolean;
     showOnlineStatus?: boolean;
+    animatedNav?: boolean;
     avatarId?: string; // Expect avatarId string
     selectedBubble?: string;
     selectedAvatarFrame?: string;

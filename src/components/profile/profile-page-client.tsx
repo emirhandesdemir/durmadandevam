@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2 } from "lucide-react";
+import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2, Sliders } from "lucide-react";
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
@@ -58,6 +58,7 @@ export default function ProfilePageClient() {
     const [inviteLink, setInviteLink] = useState("");
     const [isBlockedUsersOpen, setIsBlockedUsersOpen] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [animatedNav, setAnimatedNav] = useState(true);
         
     const isPremium = userData?.premiumUntil && userData.premiumUntil.toDate() > new Date();
     
@@ -72,6 +73,7 @@ export default function ProfilePageClient() {
             setShowOnlineStatus(userData.showOnlineStatus ?? true);
             setSelectedBubble(userData.selectedBubble || "");
             setInterests(userData.interests || []);
+            setAnimatedNav(userData.animatedNav ?? true);
         }
         if (user) {
             const encodedRef = btoa(user.uid);
@@ -93,12 +95,13 @@ export default function ProfilePageClient() {
         if (showOnlineStatus !== (userData.showOnlineStatus ?? true)) return true;
         if (selectedBubble !== (userData.selectedBubble || '')) return true;
         if (JSON.stringify(interests.map(i => i.trim()).sort()) !== JSON.stringify((userData.interests || []).map(i => i.trim()).sort())) return true;
+        if (animatedNav !== (userData.animatedNav ?? true)) return true;
     
         return false;
     }, [
         username, bio, age, gender, privateProfile, 
         acceptsFollowRequests, showOnlineStatus, selectedBubble, 
-        interests, userData
+        interests, animatedNav, userData
     ]);
 
     const handleSaveChanges = async () => {
@@ -116,6 +119,7 @@ export default function ProfilePageClient() {
             if (showOnlineStatus !== (userData?.showOnlineStatus ?? true)) updatesForDb.showOnlineStatus = showOnlineStatus;
             if (selectedBubble !== (userData?.selectedBubble || "")) updatesForDb.selectedBubble = selectedBubble;
             if (JSON.stringify(interests.sort()) !== JSON.stringify((userData?.interests || []).sort())) updatesForDb.interests = interests;
+            if (animatedNav !== (userData?.animatedNav ?? true)) updatesForDb.animatedNav = animatedNav;
             
             if (Object.keys(updatesForDb).length > 0) {
                  await updateUserProfile({ userId: user.uid, ...updatesForDb });
@@ -268,6 +272,13 @@ export default function ProfilePageClient() {
                             </AccordionTrigger>
                             <AccordionContent className="p-6 pt-0">
                                 <div className="space-y-6">
+                                    <div className="flex items-center justify-between rounded-lg border p-3">
+                                        <div>
+                                            <Label htmlFor="animated-nav" className="font-semibold flex items-center gap-2"><Sliders className="h-4 w-4"/> Kaydırmada Menüleri Gizle</Label>
+                                            <p className="text-xs text-muted-foreground pl-6">Kaydırma yaparken üst ve alt menü çubuklarını gizler.</p>
+                                        </div>
+                                        <Switch id="animated-nav" checked={animatedNav} onCheckedChange={setAnimatedNav} />
+                                    </div>
                                     <div>
                                         <Label className="text-base font-medium">Tema</Label>
                                         <RadioGroup value={theme} onValueChange={setTheme} className="grid grid-cols-3 gap-2 pt-2">
