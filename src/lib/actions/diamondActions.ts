@@ -1,4 +1,3 @@
-
 // src/lib/actions/diamondActions.ts
 'use server';
 
@@ -11,6 +10,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { createNotification } from './notificationActions';
+import { logTransaction } from './transactionActions';
 
 interface NewUserInfo {
     uid: string;
@@ -47,6 +47,12 @@ export async function getDiamondsForAd(userId: string) {
             diamonds: increment(adReward),
             lastAdWatchedAt: serverTimestamp()
         });
+
+        await logTransaction(transaction, userId, {
+            type: 'ad_reward',
+            amount: adReward,
+            description: 'Reklam izleme ödülü'
+        });
         
         return { success: true, reward: adReward };
     }).catch(e => {
@@ -68,6 +74,13 @@ export async function creditReferrer(referrerId: string, newUser: NewUserInfo) {
             transaction.update(userRef, {
                 diamonds: increment(10),
                 referralCount: increment(1)
+            });
+
+            await logTransaction(transaction, referrerId, {
+                type: 'referral_bonus',
+                amount: 10,
+                description: `${newUser.username} kullanıcısından davet bonusu`,
+                relatedUserId: newUser.uid
             });
         });
 
@@ -126,7 +139,22 @@ export async function sendDiamonds(senderId: string, receiverId: string, amount:
             transaction.update(senderRef, { diamonds: increment(-amount) });
             transaction.update(receiverRef, { diamonds: increment(amount) });
             
-             // Create notification for the receiver
+            // Log transactions for both users
+            await logTransaction(transaction, senderId, {
+                type: 'gift_sent',
+                amount: -amount,
+                description: `${receiverData.username} kullanıcısına gönderildi`,
+                relatedUserId: receiverId
+            });
+
+            await logTransaction(transaction, receiverId, {
+                type: 'gift_received',
+                amount: amount,
+                description: `${senderData.username} kullanıcısından geldi`,
+                relatedUserId: senderId
+            });
+             
+            // Create notification for the receiver
             await createNotification({
                 recipientId: receiverId,
                 senderId: senderId,

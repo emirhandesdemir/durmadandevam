@@ -10,6 +10,7 @@ import type { Room, Message, PlaylistTrack, UserProfile } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { revalidatePath } from 'next/cache';
 import { generateRoomResponse } from '@/ai/flows/roomChatFlow';
+import { logTransaction } from './transactionActions';
 
 const voiceStatsRef = doc(db, 'config', 'voiceStats');
 
@@ -135,7 +136,7 @@ export async function createRoom(
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
     
     const userRef = doc(db, 'users', userId);
-    const roomCost = 10; // Sabit maliyet
+    const roomCost = 10;
 
     return await runTransaction(db, async (transaction) => {
         const userDoc = await transaction.get(userRef);
@@ -186,11 +187,15 @@ export async function createRoom(
         if (!isUnlimited) {
             transaction.update(userRef, { 
                 diamonds: increment(-roomCost),
-                lastActionTimestamp: serverTimestamp()
             });
-        } else {
-            transaction.update(userRef, { lastActionTimestamp: serverTimestamp() });
+            await logTransaction(transaction, userId, {
+                type: 'room_creation',
+                amount: -roomCost,
+                description: `${roomData.name} odası oluşturma`
+            });
         }
+        
+        transaction.update(userRef, { lastActionTimestamp: serverTimestamp() });
         
         return { success: true, roomId: newRoomRef.id };
     });
@@ -417,6 +422,12 @@ export async function extendRoomTime(roomId: string, userId: string) {
         
         transaction.update(userRef, { diamonds: increment(-cost) });
         transaction.update(roomRef, { expiresAt: newExpiresAt });
+
+        await logTransaction(transaction, userId, {
+            type: 'room_perk',
+            amount: -cost,
+            description: `${roomData.name} odası için süre uzatma`
+        });
     });
     
     await addSystemMessage(roomId, `⏰ Oda süresi 20 dakika uzatıldı! Bu işlem ${cost} elmasa mal oldu.`);
@@ -453,7 +464,12 @@ export async function increaseParticipantLimit(roomId: string, userId: string) {
         }
         
         if (!isPremium) {
-             transaction.update(userRef, { diamonds: increment(-cost) });
+            transaction.update(userRef, { diamonds: increment(-cost) });
+            await logTransaction(transaction, userId, {
+                type: 'room_perk',
+                amount: -cost,
+                description: `${roomData.name} odası için limit artırma`
+            });
         }
         transaction.update(roomRef, { maxParticipants: increment(1) });
     });
@@ -797,5 +813,3 @@ export async function controlPlayback(roomId: string, userId: string, control: {
         });
     });
 }
-
-    

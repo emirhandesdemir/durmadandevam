@@ -1,110 +1,15 @@
 // src/lib/types.ts
 import { Timestamp } from "firebase/firestore";
 
-export interface UserProfile {
-    uid: string;
-    username: string;
-    username_lowercase: string;
-    photoURL: string | null;
-    profileEmoji?: string | null;
-    bio: string | null;
-    postCount: number;
-    role: 'admin' | 'user';
-    gender: 'male' | 'female' | null;
-    age: number | null;
-    city: string | null;
-    country: string | null;
-    interests: string[];
-    createdAt: Timestamp;
-    lastActionTimestamp?: Timestamp;
-    lastAdWatchedAt?: Timestamp;
-    privateProfile: boolean;
-    acceptsFollowRequests: boolean;
-    showOnlineStatus: boolean;
-    animatedNav?: boolean;
-    followers: string[];
-    following: string[];
-    followRequests: FollowRequest[];
-    diamonds: number;
-    profileValue: number; // For receiving gifts
-    giftLevel: number; // The user's gift-giving level
-    totalDiamondsSent: number; // Total diamonds spent on gifts
-    referredBy: string | null;
-    referralCount: number;
-    hasUnreadNotifications: boolean;
-    fcmTokens?: string[];
-    blockedUsers: string[];
-    hiddenPostIds: string[];
-    savedPosts: string[];
-    isBanned: boolean;
-    reportCount: number;
-    isOnline: boolean;
-    lastSeen?: Timestamp;
-    premiumUntil: Timestamp | null;
-    isFirstPremium: boolean;
-    unlimitedRoomCreationUntil: Timestamp | null;
-    profileCompletionNotificationSent: boolean;
-    selectedBubble: string;
-    selectedAvatarFrame: string;
-    activeMatchmakingChatId: string | null;
-    location?: {
-        latitude: number;
-        longitude: number;
-    }
-}
-
-export interface Post {
+export interface Transaction {
     id: string;
-    uid: string;
-    username: string;
-    userPhotoURL: string | null;
-    userAvatarFrame?: string;
-    userRole?: 'admin' | 'user';
-    userGender?: 'male' | 'female';
-    text: string;
-    imageUrl?: string | null;
-    videoUrl?: string | null;
-    backgroundStyle?: string;
-    createdAt: Timestamp | { seconds: number; nanoseconds: number };
-    likes: string[];
-    likeCount: number;
-    commentCount: number;
-    saveCount?: number;
-    savedBy?: string[];
-    language?: string;
-    commentsDisabled?: boolean;
-    likesHidden?: boolean;
-    retweetOf?: {
-        postId: string;
-        uid: string;
-        username: string;
-        userPhotoURL: string | null;
-        userAvatarFrame?: string;
-        text: string;
-        imageUrl?: string;
-        videoUrl?: string;
-        createdAt: Timestamp | { seconds: number; nanoseconds: number };
-    }
+    type: 'diamond_purchase' | 'gift_sent' | 'gift_received' | 'profile_value_conversion' | 'room_creation' | 'room_perk' | 'admin_grant' | 'ad_reward' | 'referral_bonus';
+    amount: number;
+    description: string;
+    relatedUserId?: string | null;
+    timestamp: Timestamp | { seconds: number; nanoseconds: number };
 }
 
-
-export interface Comment {
-    id: string;
-    uid: string;
-    username: string;
-    photoURL: string | null;
-    userAvatarFrame?: string;
-    userRole?: 'admin' | 'user';
-    text: string;
-    createdAt: Timestamp;
-    replyTo?: {
-        commentId: string;
-        username: string;
-    } | null;
-}
-
-
-// Other types remain mostly the same, included for completeness
 export interface MatchmakingChat {
     id: string;
     participants: { [uid: string]: { username: string, photoURL: string | null, age?: number } };
@@ -114,6 +19,9 @@ export interface MatchmakingChat {
     reactions?: { [uid: string]: 'like' | 'pass' };
     permanentChatId?: string;
 }
+
+// Zihin Savaşları Oyunu Veri Yapıları
+// ===================================
 
 export interface MindWarPlayer {
   uid: string;
@@ -208,6 +116,58 @@ export interface ThemeSettings {
     defaultMode?: 'light' | 'dark' | 'system';
 }
 
+export interface UserProfile {
+    uid: string;
+    username: string;
+    username_lowercase?: string;
+    photoURL: string | null;
+    profileEmoji?: string | null;
+    bio: string | null;
+    postCount: number;
+    role: 'admin' | 'user';
+    gender?: 'male' | 'female';
+    age: number | null;
+    city: string | null;
+    country: string | null;
+    interests: string[];
+    createdAt: Timestamp;
+    lastActionTimestamp?: Timestamp;
+    lastAdWatchedAt?: Timestamp;
+    privateProfile: boolean;
+    acceptsFollowRequests: boolean;
+    showOnlineStatus: boolean;
+    animatedNav?: boolean;
+    followers: string[];
+    following: string[];
+    followRequests: FollowRequest[];
+    diamonds: number;
+    profileValue: number; // For receiving gifts
+    giftLevel: number; // The user's gift-giving level
+    totalDiamondsSent: number; // Total diamonds spent on gifts
+    referredBy: string | null;
+    referralCount: number;
+    hasUnreadNotifications: boolean;
+    fcmTokens?: string[];
+    blockedUsers: string[];
+    hiddenPostIds: string[];
+    savedPosts: string[];
+    isBanned: boolean;
+    reportCount: number;
+    isOnline: boolean;
+    lastSeen?: Timestamp;
+    premiumUntil: Timestamp | null;
+    isFirstPremium: boolean;
+    unlimitedRoomCreationUntil: Timestamp | null;
+    profileCompletionNotificationSent: boolean;
+    selectedBubble: string;
+    selectedAvatarFrame: string;
+    activeMatchmakingChatId: string | null;
+    location?: {
+        latitude: number;
+        longitude: number;
+    }
+}
+
 export interface ProfileViewer {
     uid: string;
     viewedAt: Timestamp;
@@ -260,6 +220,56 @@ export interface Notification {
     read: boolean;
     callId?: string;
     callType?: 'video' | 'audio';
+}
+
+export interface Post {
+    id: string;
+    uid: string;
+    username: string;
+    userPhotoURL: string | null;
+    userAvatarFrame?: string;
+    userRole?: 'admin' | 'user';
+    userGender?: 'male' | 'female';
+    text: string;
+    imageUrl?: string | null;
+    videoUrl?: string | null;
+    backgroundStyle?: string;
+    createdAt: Timestamp | { seconds: number; nanoseconds: number };
+    likes: string[];
+    likeCount: number;
+    commentCount: number;
+    saveCount?: number;
+    savedBy?: string[];
+    language?: string;
+    commentsDisabled?: boolean;
+    likesHidden?: boolean;
+    retweetOf?: {
+        postId: string;
+        uid: string;
+        username: string;
+        userPhotoURL: string | null;
+        userAvatarFrame?: string;
+        text: string;
+        imageUrl?: string;
+        videoUrl?: string;
+        createdAt: Timestamp | { seconds: number; nanoseconds: number };
+    }
+}
+
+
+export interface Comment {
+    id: string;
+    uid: string;
+    username: string;
+    photoURL: string | null;
+    userAvatarFrame?: string;
+    userRole?: 'admin' | 'user';
+    text: string;
+    createdAt: Timestamp;
+    replyTo?: {
+        commentId: string;
+        username: string;
+    } | null;
 }
 
 export interface Giveaway {

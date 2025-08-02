@@ -4,6 +4,7 @@
 import { db } from '@/lib/firebase';
 import { doc, runTransaction, increment, serverTimestamp, collection, addDoc, getDoc } from 'firebase/firestore';
 import { getGiftById } from '../gifts';
+import { logTransaction } from './transactionActions';
 
 interface SendGiftArgs {
   roomId: string;
@@ -73,7 +74,7 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
     transaction.update(senderRef, senderUpdates);
 
 
-    let receiverName: string | null = null; // Changed to null
+    let receiverName: string | null = null;
 
     // If it's a gift to a specific user, increment their profile value
     if (receiverRef) {
@@ -83,7 +84,23 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
       }
       receiverName = receiverDoc.data().username;
       transaction.update(receiverRef, { profileValue: increment(gift.diamondCost) });
+
+      // Log transaction for receiver
+       await logTransaction(transaction, receiverId!, {
+            type: 'gift_received',
+            amount: gift.diamondCost,
+            description: `${senderName} kullanıcısından ${gift.name} hediyesi`,
+            relatedUserId: senderId
+        });
     }
+
+    // Log transaction for sender
+    await logTransaction(transaction, senderId, {
+        type: 'gift_sent',
+        amount: -gift.diamondCost,
+        description: `${receiverName || 'Odaya'} gönderilen ${gift.name} hediyesi`,
+        relatedUserId: receiverId
+    });
 
     // Create a system message in the chat to announce the gift
     const giftMessageData = {
@@ -94,7 +111,7 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
       giftData: {
         senderName: senderName,
         senderLevel: newGiftLevel,
-        receiverName: receiverName, // This will now be null for room gifts, which is valid.
+        receiverName: receiverName,
         giftId: giftId,
       },
     };
@@ -128,6 +145,12 @@ export async function convertProfileValueToDiamonds(userId: string) {
         transaction.update(userRef, {
             profileValue: 0,
             diamonds: increment(diamondsToAdd)
+        });
+
+        await logTransaction(transaction, userId, {
+            type: 'profile_value_conversion',
+            amount: diamondsToAdd,
+            description: 'Hediye değeri dönüştürme'
         });
 
         return { success: true, convertedAmount: diamondsToAdd };
