@@ -73,7 +73,7 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
     transaction.update(senderRef, senderUpdates);
 
 
-    let receiverName: string | undefined;
+    let receiverName: string | null = null; // Changed to null
 
     // If it's a gift to a specific user, increment their profile value
     if (receiverRef) {
@@ -94,7 +94,7 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
       giftData: {
         senderName: senderName,
         senderLevel: newGiftLevel,
-        receiverName: receiverName,
+        receiverName: receiverName, // This will now be null for room gifts, which is valid.
         giftId: giftId,
       },
     };
