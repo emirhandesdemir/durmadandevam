@@ -3,14 +3,14 @@
 
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/Header";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
 import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
 import { useAuth } from "@/contexts/AuthContext";
-import AnimatedLogoLoader from "@/components/common/AnimatedLogoLoader";
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -103,9 +103,20 @@ function PwaInstallBar() {
 function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const pathname = usePathname();
+  const mainScrollRef = useRef<HTMLDivElement>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
 
-  // AuthProvider now shows the loader, so we can just return null here
-  // to avoid layout shifts while waiting for auth state.
+  const handleScroll = useCallback(() => {
+    const offset = mainScrollRef.current?.scrollTop;
+    setIsScrolled(offset ? offset > 50 : false);
+  }, []);
+
+  useEffect(() => {
+    const mainEl = mainScrollRef.current;
+    mainEl?.addEventListener('scroll', handleScroll);
+    return () => mainEl?.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
+
   if (loading || !user) {
     return null;
   }
@@ -119,19 +130,28 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
       <div className="relative flex h-screen w-full flex-col bg-background overflow-hidden">
         <PwaInstallBar />
         
-        <main 
+        <AnimatePresence>
+          {!isFullPageLayout && (
+            <motion.header
+              initial={{ y: 0 }}
+              animate={{ y: isScrolled ? -100 : 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="absolute top-0 left-0 right-0 z-40"
+            >
+              <Header />
+            </motion.header>
+          )}
+        </AnimatePresence>
+        
+        <main
+            ref={mainScrollRef}
             className={cn(
-            "flex-1 flex flex-col hide-scrollbar",
-            isFullPageLayout ? "pb-0" : "pb-16",
-            isFullPageLayout ? "overflow-y-hidden" : "overflow-y-auto"
+              "flex-1 flex flex-col hide-scrollbar",
+              !isFullPageLayout ? "pt-14" : "", // Add padding top for header
+              isFullPageLayout ? "pb-0" : "pb-16", // Add padding bottom for nav
+              isFullPageLayout ? "overflow-y-hidden" : "overflow-y-auto"
             )}
         >
-            {!isFullPageLayout && (
-                <header className="sticky top-0 z-40">
-                    <Header />
-                </header>
-            )}
-            
              <div
                 className={cn(
                     "flex-1 flex flex-col",
@@ -143,7 +163,18 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
             </div>
         </main>
         
-        <BottomNav />
+        <AnimatePresence>
+         {!isFullPageLayout && (
+            <motion.div
+              initial={{ y: 0 }}
+              animate={{ y: isScrolled ? 100 : 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="absolute bottom-0 left-0 right-0 z-30"
+            >
+              <BottomNav />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </>
   );
