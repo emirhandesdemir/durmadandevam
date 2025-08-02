@@ -136,16 +136,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 triggerProfileCompletionNotification(user.uid);
             }
             
-            const isProfileComplete = !!data.age && !!data.gender && data.age > 0;
             const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname === '/';
-            const isOnboardingFlow = pathname.startsWith('/permissions') || pathname.startsWith('/onboarding');
-            
             if (isAuthPage) {
                 router.replace('/home');
-            } else if (!isProfileComplete && !isOnboardingFlow) {
-                router.replace('/permissions');
             }
-
         } else { 
             console.log("Waiting for user document to be created...");
         }
