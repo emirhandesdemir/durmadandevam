@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { doc, runTransaction, increment, serverTimestamp, collection, addDoc } from 'firebase/firestore';
+import { doc, runTransaction, increment, serverTimestamp, collection, addDoc, getDoc } from 'firebase/firestore';
 import { getGiftById } from '../gifts';
 
 interface SendGiftArgs {

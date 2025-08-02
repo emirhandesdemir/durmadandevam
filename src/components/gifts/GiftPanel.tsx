@@ -28,11 +28,12 @@ export default function GiftPanel({ isOpen, onOpenChange, room }: GiftPanelProps
   const [isSending, setIsSending] = useState(false);
   
   const selectedGift = giftList.find(g => g.id === selectedGiftId);
+  const canAfford = selectedGift ? (userData?.diamonds || 0) >= selectedGift.diamondCost : false;
 
   const handleSendGift = async () => {
     if (!user || !userData || !selectedGift) return;
     
-    if ((userData.diamonds || 0) < selectedGift.diamondCost) {
+    if (!canAfford) {
         toast({ variant: 'destructive', description: "Yetersiz elmas bakiyesi." });
         return;
     }
@@ -57,41 +58,39 @@ export default function GiftPanel({ isOpen, onOpenChange, room }: GiftPanelProps
   
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[75dvh] flex flex-col">
-        <SheetHeader>
+      <SheetContent side="bottom" className="h-[75dvh] flex flex-col p-0">
+        <SheetHeader className="p-4 border-b">
           <SheetTitle>Hediye Gönder</SheetTitle>
           <SheetDescription>
             Elmas bakiyen: <strong className="text-foreground">{userData?.diamonds || 0}</strong>
           </SheetDescription>
         </SheetHeader>
         
-        <div className="py-2">
-            <p className="text-sm font-medium mb-2">Kime Göndereceksin?</p>
-            <ScrollArea className="w-full whitespace-nowrap">
-                <div className="flex gap-3 pb-2">
-                    <button onClick={() => setSelectedReceiverId(null)} className={cn("flex flex-col items-center gap-1 p-2 rounded-lg border-2", !selectedReceiverId ? "border-primary bg-primary/10" : "border-transparent")}>
-                        <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center text-primary font-bold">Oda</div>
-                        <span className="text-xs font-semibold">Odaya</span>
-                    </button>
-                    {room.participants.filter(p => p.uid !== user?.uid).map(p => (
-                        <button key={p.uid} onClick={() => setSelectedReceiverId(p.uid)} className={cn("flex flex-col items-center gap-1 p-2 rounded-lg border-2", selectedReceiverId === p.uid ? "border-primary bg-primary/10" : "border-transparent")}>
-                            <Avatar className="h-14 w-14">
-                                <AvatarImage src={p.photoURL || undefined} />
-                                <AvatarFallback>{p.username.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <span className="text-xs font-semibold truncate max-w-[60px]">{p.username}</span>
+        <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="p-4 space-y-2">
+                <p className="text-sm font-medium">Kime Göndereceksin?</p>
+                <ScrollArea className="w-full whitespace-nowrap -mx-4 px-4">
+                    <div className="flex gap-3 pb-2">
+                        <button onClick={() => setSelectedReceiverId(null)} className={cn("flex flex-col items-center gap-1 p-2 rounded-lg border-2", !selectedReceiverId ? "border-primary bg-primary/10" : "border-transparent bg-muted/50")}>
+                            <div className="h-14 w-14 rounded-full bg-secondary flex items-center justify-center text-primary font-bold">Oda</div>
+                            <span className="text-xs font-semibold">Odaya</span>
                         </button>
-                    ))}
-                </div>
-            </ScrollArea>
-        </div>
+                        {room.participants.filter(p => p.uid !== user?.uid).map(p => (
+                            <button key={p.uid} onClick={() => setSelectedReceiverId(p.uid)} className={cn("flex flex-col items-center gap-1 p-2 rounded-lg border-2", selectedReceiverId === p.uid ? "border-primary bg-primary/10" : "border-transparent bg-muted/50")}>
+                                <Avatar className="h-14 w-14">
+                                    <AvatarImage src={p.photoURL || undefined} />
+                                    <AvatarFallback>{p.username.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-xs font-semibold truncate max-w-[60px]">{p.username}</span>
+                            </button>
+                        ))}
+                    </div>
+                </ScrollArea>
+            </div>
         
-        <div className="py-2 flex-1 flex flex-col">
-           <p className="text-sm font-medium mb-2">Ne Göndereceksin?</p>
-           <ScrollArea className="flex-1 -mx-6 px-6">
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
+           <ScrollArea className="flex-1 px-4">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 py-4">
                     {giftList.map(gift => {
-                        // CRITICAL FIX: Ensure the icon component exists before rendering
                         if (!gift.icon) return null;
                         const GiftIcon = gift.icon;
                         return (
@@ -109,10 +108,10 @@ export default function GiftPanel({ isOpen, onOpenChange, room }: GiftPanelProps
             </ScrollArea>
         </div>
         
-        <SheetFooter className="mt-auto pt-4 border-t">
-          <Button onClick={handleSendGift} disabled={!selectedGift || isSending} className="w-full">
+        <SheetFooter className="p-4 mt-auto border-t bg-background">
+          <Button onClick={handleSendGift} disabled={!selectedGift || isSending || !canAfford} className="w-full">
             {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4"/>}
-            {selectedGift ? `${selectedGift.diamondCost} Elmasa Gönder` : 'Hediye Seç'}
+            {selectedGift ? canAfford ? `${selectedGift.diamondCost} Elmasa Gönder` : 'Yetersiz Bakiye' : 'Hediye Seç'}
           </Button>
         </SheetFooter>
       </SheetContent>
