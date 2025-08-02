@@ -104,17 +104,28 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const pathname = usePathname();
   const mainScrollRef = useRef<HTMLDivElement>(null);
-  const [isScrolled, setIsScrolled] = useState(false);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleScroll = useCallback(() => {
-    const offset = mainScrollRef.current?.scrollTop;
-    setIsScrolled(offset ? offset > 50 : false);
+      setIsScrolling(true);
+      if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current);
+      }
+      scrollTimeoutRef.current = setTimeout(() => {
+          setIsScrolling(false);
+      }, 250); // Kaydırma durduktan 250ms sonra menüleri göster
   }, []);
 
   useEffect(() => {
     const mainEl = mainScrollRef.current;
     mainEl?.addEventListener('scroll', handleScroll);
-    return () => mainEl?.removeEventListener('scroll', handleScroll);
+    return () => {
+        mainEl?.removeEventListener('scroll', handleScroll);
+        if (scrollTimeoutRef.current) {
+            clearTimeout(scrollTimeoutRef.current);
+        }
+    };
   }, [handleScroll]);
 
   if (loading || !user) {
@@ -134,7 +145,7 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
           {!isFullPageLayout && (
             <motion.header
               initial={{ y: 0 }}
-              animate={{ y: isScrolled ? -100 : 0 }}
+              animate={{ y: isScrolling ? -100 : 0 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
               className="absolute top-0 left-0 right-0 z-40"
             >
@@ -167,7 +178,7 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
          {!isFullPageLayout && (
             <motion.div
               initial={{ y: 0 }}
-              animate={{ y: isScrolled ? 100 : 0 }}
+              animate={{ y: isScrolling ? 100 : 0 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
               className="absolute bottom-0 left-0 right-0 z-30"
             >
