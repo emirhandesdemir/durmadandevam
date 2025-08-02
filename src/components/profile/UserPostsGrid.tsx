@@ -37,11 +37,11 @@ export default function UserPostsGrid({ profileUser }: UserPostsGridProps) {
 
         setLoading(true);
         const postsRef = collection(db, 'posts');
+        // Corrected Query: Use '==' with null to correctly fetch non-video posts.
         const q = query(
             postsRef, 
             where('uid', '==', profileUser.uid), 
-            where('videoUrl', '==', null), // Sadece video olmayanları al
-            orderBy('videoUrl'),
+            where('videoUrl', '==', null),
             orderBy('createdAt', 'desc')
         );
         

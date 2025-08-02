@@ -36,10 +36,11 @@ export default function UserSurfGrid({ profileUser }: UserSurfGridProps) {
 
         setLoading(true);
         const postsRef = collection(db, 'posts');
+        // Corrected Query: Use '!=' to correctly fetch video posts.
         const q = query(
             postsRef, 
             where('uid', '==', profileUser.uid), 
-            where('videoUrl', '!=', null), // Sadece video içerenleri al
+            where('videoUrl', '!=', null),
             orderBy('videoUrl'),
             orderBy('createdAt', 'desc')
         );
