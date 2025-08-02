@@ -9,10 +9,11 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Loader2, ImagePlus, X } from 'lucide-react';
+import { Send, Loader2, ImagePlus, X, Camera, Timer } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Room, Message } from '@/lib/types';
 import { triggerBotResponse } from '@/lib/actions/roomActions';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 
 
 interface ChatMessageInputProps {
@@ -121,10 +122,21 @@ export default function ChatMessageInput({ room }: ChatMessageInputProps) {
             </div>
         )}
         <form onSubmit={handleSendMessage} className="flex w-full items-center space-x-2 bg-muted rounded-full p-1.5">
+             <Popover>
+                <PopoverTrigger asChild>
+                    <Button type="button" variant="ghost" size="icon" className="rounded-full flex-shrink-0" disabled={isSending}>
+                        <ImagePlus className='h-5 w-5 text-muted-foreground'/>
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-2" side="top" align="start">
+                    <div className="flex flex-col gap-1">
+                        <Button variant="ghost" className="justify-start" onClick={() => fileInputRef.current?.click()}>
+                            <Camera className="mr-2 h-4 w-4" /> Fotoğraf Gönder
+                        </Button>
+                    </div>
+                </PopoverContent>
+            </Popover>
             <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
-            <Button type="button" variant="ghost" size="icon" className="rounded-full flex-shrink-0" onClick={() => fileInputRef.current?.click()} disabled={isSending}>
-                <ImagePlus className='h-5 w-5 text-muted-foreground' />
-            </Button>
             <Input
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
