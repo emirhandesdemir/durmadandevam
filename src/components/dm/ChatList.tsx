@@ -29,7 +29,9 @@ export default function ChatList({ selectedChatId }: ChatListProps) {
   const isSelectionMode = selectedChatIds.length > 0;
 
   useEffect(() => {
-    if (!user) {
+    // ÖNEMLİ DÜZELTME: user nesnesinin yanı sıra user.uid'nin de mevcut olduğunu kontrol et.
+    // Bu, "undefined" hatasını önler.
+    if (!user?.uid) {
       setLoading(false);
       return;
     }
