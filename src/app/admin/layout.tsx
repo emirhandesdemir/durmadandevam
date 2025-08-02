@@ -16,14 +16,15 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Eğer yükleme bittiyse ve kullanıcı yoksa login sayfasına yönlendir.
+    // If loading is finished and there is no user, redirect to the login page.
+    // This is a safety net in case the user's session expires while on an admin page.
     if (!loading && !user) {
       router.replace('/login');
     }
   }, [user, loading, router]);
 
-  // Yükleme devam ediyorsa veya kullanıcı bilgileri henüz gelmediyse, tam ekran bir yükleyici göster.
-  // Bu, alt bileşenlerin eksik veriyle render olmasını engeller.
+  // Show a full-screen loader while auth data is being fetched.
+  // This is the primary fix: ensures we don't try to render anything until we have the data.
   if (loading || !user || !userData) {
     return (
         <div className="flex h-screen w-full flex-col items-center justify-center bg-background">
@@ -32,7 +33,8 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Veri yüklendikten sonra, kullanıcının rolünü kontrol et.
+  // Once loading is complete and we have user data, check the role.
+  // This check now only happens *after* we are sure `userData` is available.
   if (userData.role !== 'admin') {
       return (
           <div className="flex h-screen w-full flex-col items-center justify-center bg-background p-4 text-center">
@@ -50,7 +52,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
       )
   }
 
-  // Her şey yolundaysa, admin layout'unu render et.
+  // If all checks pass, render the admin layout.
   return (
     <div className="flex h-screen bg-muted/40">
       <Sidebar isSidebarOpen={isSidebarOpen} setSidebarOpen={setSidebarOpen} />
