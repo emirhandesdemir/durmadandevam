@@ -83,9 +83,12 @@ export interface LiveSession {
     title: string;
     status: 'live' | 'ended';
     viewerCount: number;
+    viewers: string[]; // List of unique viewer UIDs
+    peakViewerCount: number;
     createdAt: Timestamp;
     endedAt?: Timestamp;
     totalGiftValue?: number;
+    durationSeconds?: number;
 }
 
 export interface ColorTheme {

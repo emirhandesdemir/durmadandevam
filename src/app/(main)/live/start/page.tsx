@@ -1,14 +1,14 @@
 // src/app/(main)/live/start/page.tsx
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Radio, Camera, Video, AlertTriangle } from 'lucide-react';
+import { Loader2, Radio, Video, AlertTriangle, Mic, MicOff, Camera, CameraOff, SwitchCamera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { startLiveStream } from '@/lib/actions/liveActions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -19,28 +19,59 @@ export default function StartLivePage() {
   const { toast } = useToast();
   const [title, setTitle] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isCameraOn, setIsCameraOn] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  useEffect(() => {
-    const getCameraPermission = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        setHasCameraPermission(true);
-
+  const getMedia = useCallback(async (audio = true, video = true) => {
+    try {
+        const mediaStream = await navigator.mediaDevices.getUserMedia({ 
+            video, 
+            audio 
+        });
+        setError(null);
         if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+          videoRef.current.srcObject = mediaStream;
         }
-        // Stop tracks immediately after checking to free up camera
-        stream.getTracks().forEach(track => track.stop());
-      } catch (error) {
-        console.error('Error accessing camera:', error);
-        setHasCameraPermission(false);
-      }
-    };
-
-    getCameraPermission();
+        return mediaStream;
+    } catch (err: any) {
+        console.error('Error accessing media devices.', err);
+        let message = 'Kamera ve mikrofon erişimi reddedildi. Canlı yayın başlatmak için tarayıcı ayarlarından izin vermeniz gerekir.';
+        if(err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+            message = 'Kamera veya mikrofon bulunamadı.';
+        }
+        setError(message);
+        return null;
+    }
   }, []);
+
+  useEffect(() => {
+    const init = async () => {
+        const s = await getMedia();
+        if (s) setStream(s);
+    }
+    init();
+
+    return () => {
+        stream?.getTracks().forEach(track => track.stop());
+    }
+  }, [getMedia]);
+
+  const toggleMute = () => {
+    if (stream) {
+      stream.getAudioTracks().forEach(track => track.enabled = !track.enabled);
+      setIsMuted(p => !p);
+    }
+  };
+
+  const toggleCamera = () => {
+    if (stream) {
+      stream.getVideoTracks().forEach(track => track.enabled = !track.enabled);
+      setIsCameraOn(p => !p);
+    }
+  };
 
   const handleStartStream = async () => {
     if (!user || !userData) {
@@ -51,8 +82,8 @@ export default function StartLivePage() {
       toast({ variant: 'destructive', description: 'Lütfen bir başlık girin.' });
       return;
     }
-    if (!hasCameraPermission) {
-        toast({ variant: 'destructive', description: 'Canlı yayın için kamera izni gereklidir.' });
+    if (!stream) {
+        toast({ variant: 'destructive', description: 'Canlı yayın için medya erişimi gereklidir.' });
         return;
     }
 
@@ -65,6 +96,7 @@ export default function StartLivePage() {
       }, title);
 
       if (result.success && result.liveId) {
+        stream.getTracks().forEach(track => track.stop());
         toast({ description: 'Canlı yayın başlatılıyor...' });
         router.replace(`/live/${result.liveId}`);
       } else {
@@ -84,46 +116,19 @@ export default function StartLivePage() {
           <CardDescription>Yayınınız için bir başlık belirleyin ve hemen başlayın.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-           <div className="aspect-video w-full bg-muted rounded-lg overflow-hidden flex items-center justify-center">
-            {hasCameraPermission === null ? (
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            ) : hasCameraPermission === true ? (
-              <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
-            ) : (
-                <div className="text-center text-destructive p-4">
-                    <Camera className="h-10 w-10 mx-auto" />
-                    <p className="mt-2 font-semibold">Kamera Erişimi Gerekli</p>
-                    <p className="text-xs">Canlı yayın başlatmak için tarayıcı ayarlarından kamera izni vermeniz gerekir.</p>
+           <div className="aspect-video w-full bg-muted rounded-lg overflow-hidden flex items-center justify-center relative">
+            {error ? (
+                 <div className="text-center text-destructive p-4">
+                    <CameraOff className="h-10 w-10 mx-auto" />
+                    <p className="mt-2 font-semibold">Medya Erişimi Gerekli</p>
+                    <p className="text-xs max-w-xs">{error}</p>
                 </div>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="title">Yayın Başlığı</Label>
-            <Input 
-              id="title" 
-              value={title} 
-              onChange={(e) => setTitle(e.target.value)} 
-              placeholder="Örn: Soru-cevap yapıyoruz!" 
-              disabled={isLoading || !hasCameraPermission}
-            />
-          </div>
-            {hasCameraPermission === false && (
-                 <Alert variant="destructive">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>İzin Hatası</AlertTitle>
-                    <AlertDescription>
-                        Kamera ve mikrofon izni olmadan canlı yayın başlatamazsınız. Lütfen tarayıcı ayarlarınızı kontrol edin.
-                    </AlertDescription>
-                </Alert>
-            )}
-        </CardContent>
-        <CardFooter>
-          <Button className="w-full" onClick={handleStartStream} disabled={isLoading || !hasCameraPermission}>
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Radio className="mr-2 h-4 w-4" />}
-            Canlı Yayına Geç
-          </Button>
-        </CardFooter>
-      </Card>
-    </div>
-  );
-}
+            ) : stream ? (
+                <>
+                    <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+                    <div className="absolute bottom-2 left-2 right-2 flex justify-center gap-2">
+                        <Button onClick={toggleMute} variant="secondary" size="icon" className="rounded-full bg-black/40 text-white hover:bg-black/60"><_config>
+  <plugins>
+    <plugin name="langchain" />
+  </plugins>
+</config>

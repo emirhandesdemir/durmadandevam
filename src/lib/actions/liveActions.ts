@@ -1,7 +1,7 @@
 // src/lib/actions/liveActions.ts
 'use server';
 import { db } from '@/lib/firebase';
-import { doc, collection, addDoc, serverTimestamp, updateDoc, getDoc, deleteDoc, runTransaction, increment, DocumentReference } from 'firebase/firestore';
+import { doc, collection, addDoc, serverTimestamp, updateDoc, getDoc, deleteDoc, runTransaction, increment, DocumentReference, arrayUnion, Timestamp, setDoc } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
 import { getGiftById } from '../gifts';
 import { logTransaction } from './transactionActions';
@@ -26,6 +26,8 @@ export async function startLiveStream(host: HostInfo, title: string) {
     title,
     status: 'live',
     viewerCount: 0,
+    viewers: [], // List of unique viewer UIDs
+    peakViewerCount: 0,
     createdAt: serverTimestamp(),
     totalGiftValue: 0,
   });
@@ -38,25 +40,44 @@ export async function endLiveStream(liveId: string, hostId: string) {
   if (!liveId || !hostId) throw new Error("Live ID and Host ID are required.");
 
   const liveRef = doc(db, 'lives', liveId);
-  const liveDoc = await getDoc(liveRef);
-
-  if (!liveDoc.exists() || liveDoc.data().hostId !== hostId) {
-    throw new Error("Live stream not found or you do not have permission to end it.");
-  }
-
-  await updateDoc(liveRef, {
-    status: 'ended',
-    endedAt: serverTimestamp(),
-  });
   
-  revalidatePath('/live');
-  revalidatePath(`/live/${liveId}`);
-  return { success: true };
+  return await runTransaction(db, async (transaction) => {
+    const liveDoc = await transaction.get(liveRef);
+    if (!liveDoc.exists() || liveDoc.data().hostId !== hostId) {
+      throw new Error("Live stream not found or you do not have permission to end it.");
+    }
+    const liveData = liveDoc.data();
+    const startTime = (liveData.createdAt as Timestamp).toMillis();
+    const durationSeconds = Math.round((Date.now() - startTime) / 1000);
+
+    transaction.update(liveRef, {
+      status: 'ended',
+      endedAt: serverTimestamp(),
+      durationSeconds: durationSeconds,
+    });
+    
+    revalidatePath('/live');
+    revalidatePath(`/live/${liveId}`);
+    return { success: true, finalStats: { ...liveData, durationSeconds } };
+  });
 }
 
 export async function joinLiveStream(liveId: string, userId: string) {
     const liveRef = doc(db, 'lives', liveId);
-    await updateDoc(liveRef, { viewerCount: increment(1) });
+    await runTransaction(db, async (transaction) => {
+        const liveDoc = await transaction.get(liveRef);
+        if (liveDoc.exists()) {
+            const currentViewerCount = liveDoc.data().viewerCount || 0;
+            const newViewerCount = currentViewerCount + 1;
+            const peakViewerCount = Math.max(liveDoc.data().peakViewerCount || 0, newViewerCount);
+            
+            transaction.update(liveRef, {
+                 viewerCount: newViewerCount,
+                 peakViewerCount: peakViewerCount,
+                 viewers: arrayUnion(userId)
+            });
+        }
+    });
 }
 
 export async function leaveLiveStream(liveId: string, userId: string) {
