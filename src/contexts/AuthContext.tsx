@@ -165,9 +165,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     
     const userStatusRef = doc(db, 'users', user.uid);
-    updateDoc(userStatusRef, { isOnline: true });
+    setDoc(userStatusRef, { isOnline: true }, { merge: true });
     
-    const onbeforeunload = () => updateDoc(userStatusRef, { isOnline: false, lastSeen: serverTimestamp() });
+    const onbeforeunload = () => setDoc(userStatusRef, { isOnline: false, lastSeen: serverTimestamp() }, { merge: true });
     window.addEventListener("beforeunload", onbeforeunload);
     
     return () => {

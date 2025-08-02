@@ -235,7 +235,7 @@ export async function getSavedPosts(userId: string): Promise<Post[]> {
 
 export async function updateUserLocation(uid: string, latitude: number, longitude: number) {
     const userRef = doc(db, 'users', uid);
-    await updateDoc(userRef, {
+    await setDoc(userRef, {
         location: {
             latitude,
             longitude
@@ -243,7 +243,7 @@ export async function updateUserLocation(uid: string, latitude: number, longitud
         city: 'Bilinmeyen Şehir', // Placeholder until we have reverse geocoding
         country: 'TR', // Placeholder
         lastSeen: serverTimestamp()
-    });
+    }, { merge: true });
 }
 
 export async function getNearbyUsers(currentUid: string, latitude: number, longitude: number, radiusKm: number = 20): Promise<any[]> {
