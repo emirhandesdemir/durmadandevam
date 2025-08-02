@@ -26,9 +26,11 @@ interface OpenPortalDialogProps {
 }
 
 export default function OpenPortalDialog({ isOpen, onOpenChange, roomId, roomName }: OpenPortalDialogProps) {
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const isJudge = userData?.giftLevel === 10;
 
   const handleOpenPortal = async () => {
     if (!user) return;
@@ -66,7 +68,11 @@ export default function OpenPortalDialog({ isOpen, onOpenChange, roomId, roomNam
           <AlertDialogDescription>
             Bu işlem, odanızı 5 dakika boyunca diğer tüm aktif odalarda öne çıkarır ve duyurur. Kullanıcılar tek tıkla odanıza katılabilir.
             <br/><br/>
-            Maliyet: <strong className="text-foreground flex items-center gap-1">100 <Gem className="h-4 w-4 text-cyan-400"/></strong> (Şimdilik ücretsiz)
+            Maliyet: {isJudge ? (
+                <span className="font-bold text-green-500">Yargıç olduğunuz için ücretsiz!</span>
+            ) : (
+                <strong className="text-foreground flex items-center gap-1">100 <Gem className="h-4 w-4 text-cyan-400" /></strong>
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

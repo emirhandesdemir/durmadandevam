@@ -22,8 +22,8 @@ import {
   } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { deleteRoomAsOwner, extendRoomTime, increaseParticipantLimit } from "@/lib/actions/roomActions";
-import { Trash2, Loader2, ShieldAlert, Clock, UserPlus, Gem } from "lucide-react";
+import { deleteRoomAsOwner, extendRoomTime, increaseParticipantLimit, extendRoomFor30Days } from "@/lib/actions/roomActions";
+import { Trash2, Loader2, ShieldAlert, Clock, UserPlus, Gem, CalendarDays } from "lucide-react";
 import type { Room } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -40,6 +40,7 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isExtending, setIsExtending] = useState(false);
   const [isIncreasingLimit, setIsIncreasingLimit] = useState(false);
+  const [isExtending30Days, setIsExtending30Days] = useState(false);
   
   const handleDeleteRoom = async () => {
     if (!room || !user) return;
@@ -104,6 +105,28 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
     }
   }
 
+  const handleExtendFor30Days = async () => {
+    if (!room || !user) return;
+    setIsExtending30Days(true);
+    try {
+        await extendRoomFor30Days(room.id, user.uid);
+        toast({
+            title: "Oda Uzatıldı!",
+            description: "Odanızın süresi 30 gün olarak ayarlandı."
+        });
+        setIsOpen(false);
+    } catch (error: any) {
+        toast({
+            title: "Hata",
+            description: error.message || "Oda süresi uzatılırken bir hata oluştu.",
+            variant: "destructive",
+        });
+    } finally {
+        setIsExtending30Days(false);
+    }
+  }
+
+
   if (!room) return null;
 
   return (
@@ -118,7 +141,7 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
           </DialogHeader>
 
           <div className="py-4 space-y-4">
-            <div className="flex items-center justify-between rounded-lg border p-3">
+             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
                 <h4 className="font-bold text-foreground">Süreyi Uzat (+20 dk)</h4>
                 <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">Maliyet: <strong className="flex items-center gap-1">15 <Gem className="h-3 w-3 text-cyan-400" /></strong></p>
@@ -128,7 +151,7 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
                 Uzat
               </Button>
             </div>
-            
+
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
                 <h4 className="font-bold text-foreground">Katılımcı Artır (+1)</h4>
@@ -137,6 +160,17 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
               <Button variant="secondary" onClick={handleIncreaseLimit} disabled={isIncreasingLimit}>
                 {isIncreasingLimit ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
                 Artır
+              </Button>
+            </div>
+            
+             <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <h4 className="font-bold text-foreground">Odayı 30 Gün Açık Tut</h4>
+                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">Maliyet: <strong className="flex items-center gap-1">500 <Gem className="h-3 w-3 text-cyan-400" /></strong></p>
+              </div>
+              <Button variant="secondary" onClick={handleExtendFor30Days} disabled={isExtending30Days}>
+                {isExtending30Days ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CalendarDays className="mr-2 h-4 w-4" />}
+                Satın Al
               </Button>
             </div>
 

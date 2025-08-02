@@ -292,6 +292,7 @@ export interface Room {
         username: string;
         photoURL: string | null;
         role: string;
+        isPremium?: boolean;
         selectedAvatarFrame?: string;
     };
     moderators: string[];
@@ -312,6 +313,7 @@ export interface Room {
     currentTrackName?: string;
     giveaway?: Giveaway;
     activeMindWarSessionId?: string | null;
+    totalGiftValue?: number;
 }
 
 export interface PlaylistTrack {
@@ -449,7 +451,7 @@ export interface Message {
   giftData?: {
       senderName: string;
       senderLevel?: number;
-      receiverName?: string; // Optional for gifts to the room
+      receiverName?: string | null;
       giftId: string;
   }
 }
