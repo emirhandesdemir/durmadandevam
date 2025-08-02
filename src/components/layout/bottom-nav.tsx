@@ -3,11 +3,10 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessagesSquare, Plus, Swords, Clapperboard } from 'lucide-react';
+import { Home, MessagesSquare, Plus, Swords, Clapperboard, Map } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMemo } from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 
 export default function BottomNav() {
@@ -21,7 +20,7 @@ export default function BottomNav() {
         { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
         { id: 'rooms', href: '/rooms', icon: MessagesSquare, label: 'Odalar' },
         { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
-        { id: 'match', href: '#', icon: Swords, label: 'Eşleşme'},
+        { id: 'nearby', href: '/nearby', icon: Map, label: 'Keşfet'},
         { id: 'surf', href: '/surf', icon: Clapperboard, label: 'Surf' },
       ]
   }, [user]);
@@ -32,18 +31,11 @@ export default function BottomNav() {
   
   const isFullPageLayout = (pathname.startsWith('/rooms/') && pathname !== '/rooms') || 
                            (pathname.startsWith('/call/')) || 
-                           (pathname.startsWith('/surf'));
+                           (pathname.startsWith('/surf')) ||
+                           (pathname.startsWith('/matchmaking/'));
 
   if (isFullPageLayout) {
     return null;
-  }
-
-  const handleMatchClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault();
-    toast({
-      title: 'Çok Yakında!',
-      description: 'Hızlı Sohbet (Eşleşme) özelliği şu anda geliştirme aşamasındadır.',
-    });
   }
   
   return (
@@ -56,15 +48,10 @@ export default function BottomNav() {
                   
                   const isCreateButton = item.id === 'create';
 
-                  const linkProps = {
-                      href: item.href,
-                      onClick: item.id === 'match' ? handleMatchClick : undefined,
-                  };
-
                   return (
                     <Link
                       key={item.id}
-                      {...linkProps}
+                      href={item.href}
                       className={cn(
                         'flex h-full flex-col items-center justify-center gap-1 transition-colors',
                         isCreateButton ? '' : (isActive ? 'text-primary' : 'text-muted-foreground hover:text-primary')

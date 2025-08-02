@@ -1,30 +1,30 @@
 // src/app/(main)/nearby/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Loader2, MapPin, LocateFixed, ArrowLeft } from 'lucide-react';
-import { updateUserLocation, getNearbyUsers } from '@/lib/actions/userActions';
+import { Loader2, MapPin, LocateFixed, ArrowLeft, ShieldOff, Frown } from 'lucide-react';
+import { getNearbyUsers } from '@/lib/actions/userActions';
 import type { UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import NearbyUserCard from '@/components/nearby/NearbyUserCard';
 
-const NearbyMap = dynamic(() => import('@/components/nearby/NearbyMap'), {
-  ssr: false,
-  loading: () => <div className="flex h-full w-full items-center justify-center bg-muted"><Loader2 className="h-8 w-8 animate-spin" /></div>,
-});
-
-export interface NearbyUser extends Pick<UserProfile, 'uid' | 'username' | 'photoURL'> {
-  position: [number, number];
+// NearbyUser arayüzünü UserProfile'dan genişletelim, konum zorunlu olsun.
+export interface NearbyUser extends UserProfile {
+  location: {
+    latitude: number;
+    longitude: number;
+  };
 }
 
 export default function NearbyPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   const [status, setStatus] = useState<'idle' | 'requesting' | 'success' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [position, setPosition] = useState<[number, number] | null>(null);
   const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>([]);
 
   const handleAllowLocation = () => {
@@ -33,12 +33,11 @@ export default function NearbyPage() {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude, longitude } = pos.coords;
-        setPosition([latitude, longitude]);
         if (user) {
           try {
             await updateUserLocation(user.uid, latitude, longitude);
-            const users = await getNearbyUsers(user.uid, latitude, longitude);
-            setNearbyUsers(users);
+            const users = await getNearbyUsers(user.uid, latitude, longitude, 50); // 50km radius
+            setNearbyUsers(users as NearbyUser[]);
             setStatus('success');
           } catch (serverError: any) {
             setStatus('error');
@@ -57,16 +56,47 @@ export default function NearbyPage() {
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
+  
+    // Profil bilgileri eksikse bu sayfayı gösterme.
+  if (userData && (!userData.gender || !userData.age || !userData.city)) {
+     return (
+        <div className="flex h-full flex-col items-center justify-center text-center p-4">
+             <ShieldOff className="mx-auto h-12 w-12 text-destructive" />
+            <h2 className="mt-4 text-2xl font-bold">Profil Bilgileri Eksik</h2>
+            <p className="mt-2 text-muted-foreground max-w-sm">
+                "Yakınımdakiler" özelliğini kullanabilmek için profilinizde cinsiyet, yaş ve şehir bilgilerinizin eksiksiz olması gerekmektedir.
+            </p>
+             <Button asChild className="mt-6">
+                <Link href="/profile">Profili Düzenle</Link>
+            </Button>
+        </div>
+    )
+  }
+
 
   const renderContent = () => {
     switch (status) {
       case 'success':
-        return position ? <NearbyMap currentUserPosition={position} users={nearbyUsers} /> : null;
+        return (
+          <ScrollArea className="h-full w-full">
+            <div className="p-2 md:p-4 space-y-4">
+                {nearbyUsers.length > 0 ? (
+                    nearbyUsers.map(u => <NearbyUserCard key={u.uid} user={u} />)
+                ) : (
+                    <div className="text-center py-20 text-muted-foreground">
+                        <Frown className="h-12 w-12 mx-auto mb-2" />
+                        <p className="font-semibold">Yakınlarda kimse bulunamadı.</p>
+                        <p className="text-sm">Daha sonra tekrar kontrol et.</p>
+                    </div>
+                )}
+            </div>
+          </ScrollArea>
+        );
       case 'requesting':
         return (
           <div className="flex flex-col items-center justify-center text-center">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <p className="mt-4 text-muted-foreground">Konumunuz alınıyor...</p>
+            <p className="mt-4 text-muted-foreground">Konumunuz alınıyor ve yakınınızdaki kişiler aranıyor...</p>
           </div>
         );
       case 'error':
@@ -84,7 +114,7 @@ export default function NearbyPage() {
             <MapPin className="h-16 w-16 text-primary" />
             <h2 className="mt-4 text-2xl font-bold">Yakındaki Kişileri Keşfet</h2>
             <p className="mt-2 max-w-sm text-muted-foreground">
-              Konumunuzu paylaşarak yakınınızdaki diğer kullanıcıları haritada görün ve yeni insanlarla tanışın. Konumunuz sadece bu özellik için kullanılacaktır.
+              Konumunuzu paylaşarak yakınınızdaki diğer kullanıcıları keşfedin ve yeni insanlarla tanışın. Konumunuz sadece bu özellik için kullanılacaktır.
             </p>
             <Button onClick={handleAllowLocation} className="mt-6">
               <LocateFixed className="mr-2 h-4 w-4" />
@@ -97,12 +127,13 @@ export default function NearbyPage() {
 
   return (
     <div className="h-full w-full flex flex-col">
-        <header className="absolute top-0 left-0 z-10 p-4">
-            <Button variant="ghost" size="icon" className="rounded-full bg-background/60 backdrop-blur-sm" onClick={() => router.back()}>
+        <header className="flex items-center p-2 border-b shrink-0">
+            <Button variant="ghost" size="icon" className="rounded-full" onClick={() => router.back()}>
                 <ArrowLeft />
             </Button>
+            <h1 className="text-lg font-semibold ml-2">Yakınımdakiler</h1>
         </header>
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center bg-muted/20">
              {renderContent()}
         </div>
     </div>

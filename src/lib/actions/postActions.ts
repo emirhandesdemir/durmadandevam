@@ -14,11 +14,16 @@ import {
     arrayUnion,
     addDoc,
     collection,
-    writeBatch
+    writeBatch,
+    query,
+    where,
+    orderBy,
+    limit,
+    getDocs
 } from "firebase/firestore";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
-import { findUserByUsername } from "../actions/userActions";
+import { findUserByUsername } from "../server-utils";
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -357,4 +362,21 @@ export async function retweetPost(
 
     revalidatePath('/home');
     revalidatePath(`/profile/${retweeter.uid}`);
+}
+
+export async function getRecentImagePosts(userId: string, imageLimit: number = 3) {
+    if (!userId) return [];
+    
+    const postsRef = collection(db, "posts");
+    const q = query(
+        postsRef,
+        where('uid', '==', userId),
+        where('imageUrl', '!=', null),
+        orderBy('imageUrl'),
+        orderBy('createdAt', 'desc'),
+        limit(imageLimit)
+    );
+
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }

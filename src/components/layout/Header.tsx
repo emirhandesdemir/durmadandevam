@@ -47,20 +47,6 @@ export default function Header({}: HeaderProps) {
                     </Link>
                     
                     <div className="flex items-center gap-1">
-                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="rounded-full">
-                                    <Compass className="h-5 w-5" />
-                                    <span className="sr-only">Keşfet</span>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onSelect={() => handleNavigate('/nearby')}>
-                                    <Map className="mr-2 h-4 w-4"/>Yakınımdakiler
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-
                         <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setIsSearchOpen(true)}>
                             <Search className="h-5 w-5" />
                             <span className="sr-only">Kullanıcı Ara</span>
