@@ -6,6 +6,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   skipWaiting: true,
   disable: false,
   cacheOnFrontEndNav: true,
+  basePath: '/', // Explicitly set the base path to fix asset loading issues
   runtimeCaching: [
     {
       urlPattern: /^https:\/\/fonts\.(?:googleapis|gstatic)\.com\/.*/i,
