@@ -136,8 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 triggerProfileCompletionNotification(user.uid);
             }
             
-            // --- NEW REDIRECTION LOGIC ---
-            const isProfileComplete = !!data.city; // Use location as a proxy for completed permissions step
+            const isProfileComplete = !!data.age && !!data.gender;
             const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname === '/';
 
             if (isAuthPage) {
@@ -176,7 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubscribeDms();
       window.removeEventListener("beforeunload", onbeforeunload);
     };
-  }, [user, handleLogout, router, pathname]);
+  }, [user, handleLogout]);
 
   const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms };
   
