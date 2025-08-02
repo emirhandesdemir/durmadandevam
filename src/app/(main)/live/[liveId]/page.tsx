@@ -1,4 +1,3 @@
-
 // src/app/(main)/live/[liveId]/page.tsx
 'use client';
 
