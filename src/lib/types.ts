@@ -3,11 +3,12 @@ import { Timestamp } from "firebase/firestore";
 
 export interface Transaction {
     id: string;
-    type: 'diamond_purchase' | 'gift_sent' | 'gift_received' | 'profile_value_conversion' | 'room_creation' | 'room_perk' | 'admin_grant' | 'ad_reward' | 'referral_bonus';
+    type: 'diamond_purchase' | 'gift_sent' | 'gift_received' | 'profile_value_conversion' | 'room_creation' | 'room_perk' | 'admin_grant' | 'ad_reward' | 'referral_bonus' | 'live_gift';
     amount: number;
     description: string;
     relatedUserId?: string | null;
     roomId?: string | null;
+    liveId?: string | null;
     giftId?: string | null;
     timestamp: Timestamp | { seconds: number; nanoseconds: number };
 }
@@ -84,6 +85,7 @@ export interface LiveSession {
     viewerCount: number;
     createdAt: Timestamp;
     endedAt?: Timestamp;
+    totalGiftValue?: number;
 }
 
 export interface ColorTheme {
@@ -196,7 +198,6 @@ export interface FollowRequest {
     uid: string;
     username:string;
     photoURL: string | null;
-    profileEmoji?: string | null;
     userAvatarFrame?: string;
     requestedAt: Timestamp;
 }

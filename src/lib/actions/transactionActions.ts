@@ -23,6 +23,7 @@ interface LogTransactionArgs {
     description: string;
     relatedUserId?: string | null;
     roomId?: string | null;
+    liveId?: string | null;
     giftId?: string | null;
 }
 
