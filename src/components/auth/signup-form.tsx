@@ -33,7 +33,6 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
-import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Checkbox } from "../ui/checkbox";
 import { useTranslation } from "react-i18next";
 import { emojiToDataUrl } from "@/lib/utils";
@@ -45,8 +44,6 @@ const formSchema = z.object({
     .regex(/^[a-zA-Z0-9_]+$/, { message: "Kullanıcı adı sadece harf, rakam ve alt çizgi içerebilir." }),
   email: z.string().email({ message: "Geçersiz e-posta adresi." }),
   password: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır." }),
-  gender: z.enum(['male', 'female'], { required_error: "Cinsiyet seçimi zorunludur." }),
-  age: z.coerce.number().min(13, { message: "En az 13 yaşında olmalısınız."}).max(99, { message: "Yaş geçerli değil."}),
   terms: z.literal<boolean>(true, {
     errorMap: () => ({ message: "Devam etmek için sözleşmeleri kabul etmelisiniz." }),
   }),
@@ -73,7 +70,6 @@ export default function SignUpForm() {
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsLoading(true);
         try {
-            // Use the updated findUserByUsername which is case-insensitive
             const existingUser = await findUserByUsername(values.username);
             if (existingUser) {
                 toast({
@@ -119,10 +115,10 @@ export default function SignUpForm() {
                 username_lowercase: values.username.toLowerCase(),
                 photoURL: defaultAvatarUrl,
                 bio: null,
-                age: values.age,
+                age: null,
                 city: null, 
                 country: null,
-                gender: values.gender,
+                gender: null,
                 interests: [],
                 role: userRole,
                 createdAt: serverTimestamp(),
@@ -159,7 +155,6 @@ export default function SignUpForm() {
                     console.error("Referrer credit failed, but signup continues:", e);
                 }
             }
-            // SUCCESS: AuthProvider will handle redirecting to the permissions page.
         } catch (error: any) {
             console.error("Kayıt hatası", error);
             let errorMessage = "Hesap oluşturulurken bilinmeyen bir hata oluştu. Lütfen tekrar deneyin.";
@@ -251,54 +246,7 @@ export default function SignUpForm() {
                                 </FormItem>
                             )}
                         />
-                         <FormField
-                            control={form.control}
-                            name="age"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Yaş</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" placeholder="Yaşınız" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="gender"
-                          render={({ field }) => (
-                            <FormItem className="space-y-2">
-                              <FormLabel>Cinsiyet</FormLabel>
-                              <FormControl>
-                                <RadioGroup
-                                  onValueChange={field.onChange}
-                                  defaultValue={field.value}
-                                  className="flex space-x-4 pt-1"
-                                >
-                                  <FormItem className="flex items-center space-x-2 space-y-0">
-                                    <FormControl>
-                                      <RadioGroupItem value="male" />
-                                    </FormControl>
-                                    <FormLabel className="font-normal cursor-pointer">
-                                      Erkek
-                                    </FormLabel>
-                                  </FormItem>
-                                  <FormItem className="flex items-center space-x-2 space-y-0">
-                                    <FormControl>
-                                      <RadioGroupItem value="female" />
-                                    </FormControl>
-                                    <FormLabel className="font-normal cursor-pointer">
-                                      Kadın
-                                    </FormLabel>
-                                  </FormItem>
-                                </RadioGroup>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
+                        
                         <FormField
                           control={form.control}
                           name="terms"

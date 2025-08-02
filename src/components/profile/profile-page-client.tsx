@@ -47,6 +47,7 @@ export default function ProfilePageClient() {
     const [username, setUsername] = useState("");
     const [bio, setBio] = useState("");
     const [age, setAge] = useState<number | string>("");
+    const [gender, setGender] = useState<"male" | "female" | undefined>(undefined);
     const [privateProfile, setPrivateProfile] = useState(false);
     const [acceptsFollowRequests, setAcceptsFollowRequests] = useState(true);
     const [showOnlineStatus, setShowOnlineStatus] = useState(true);
@@ -65,6 +66,7 @@ export default function ProfilePageClient() {
             setUsername(userData.username || "");
             setBio(userData.bio || "");
             setAge(userData.age || "");
+            setGender(userData.gender || undefined);
             setPrivateProfile(userData.privateProfile || false);
             setAcceptsFollowRequests(userData.acceptsFollowRequests ?? true);
             setShowOnlineStatus(userData.showOnlineStatus ?? true);
@@ -85,6 +87,7 @@ export default function ProfilePageClient() {
         if (username.trim() !== (userData.username || '').trim()) return true;
         if (bio.trim() !== (userData.bio || '').trim()) return true;
         if (ageAsNumber !== userDataAge) return true;
+        if (gender !== userData.gender) return true;
         if (privateProfile !== (userData.privateProfile || false)) return true;
         if (acceptsFollowRequests !== (userData.acceptsFollowRequests ?? true)) return true;
         if (showOnlineStatus !== (userData.showOnlineStatus ?? true)) return true;
@@ -93,7 +96,7 @@ export default function ProfilePageClient() {
     
         return false;
     }, [
-        username, bio, age, privateProfile, 
+        username, bio, age, gender, privateProfile, 
         acceptsFollowRequests, showOnlineStatus, selectedBubble, 
         interests, userData
     ]);
@@ -105,9 +108,9 @@ export default function ProfilePageClient() {
         try {
             const updatesForDb: { [key: string]: any } = {};
             
-            // Note: username is handled separately in AuthProvider to check for uniqueness
             if (bio !== userData?.bio) updatesForDb.bio = bio;
             if (age !== userData?.age) updatesForDb.age = Number(age) || null;
+            if (gender !== userData?.gender) updatesForDb.gender = gender || null;
             if (privateProfile !== userData?.privateProfile) updatesForDb.privateProfile = privateProfile;
             if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) updatesForDb.acceptsFollowRequests = acceptsFollowRequests;
             if (showOnlineStatus !== (userData?.showOnlineStatus ?? true)) updatesForDb.showOnlineStatus = showOnlineStatus;
@@ -149,7 +152,6 @@ export default function ProfilePageClient() {
             const result = await deleteUserAccount(user.uid);
             if (result.success) {
                 toast({ title: "Hesabınız Silindi", description: "Tüm verileriniz kalıcı olarak silindi." });
-                // handleLogout will handle redirecting to /login
             } else {
                 throw new Error(result.error);
             }
@@ -213,9 +215,18 @@ export default function ProfilePageClient() {
                             <Label htmlFor="bio">Biyografi</Label>
                             <Textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Kendini anlat..." className="rounded-xl" maxLength={150} />
                         </div>
-                        <div className="space-y-2">
-                           <Label htmlFor="age">Yaş</Label>
-                           <Input id="age" type="number" value={age || ''} onChange={(e) => setAge(e.target.value)} />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                               <Label htmlFor="age">Yaş</Label>
+                               <Input id="age" type="number" value={age || ''} onChange={(e) => setAge(e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Cinsiyet</Label>
+                                <RadioGroup value={gender} onValueChange={(value: "male" | "female") => setGender(value)} className="flex space-x-4 pt-2">
+                                    <div className="flex items-center space-x-2"><RadioGroupItem value="male" id="male" /><Label htmlFor="male">Erkek</Label></div>
+                                    <div className="flex items-center space-x-2"><RadioGroupItem value="female" id="female" /><Label htmlFor="female">Kadın</Label></div>
+                                </RadioGroup>
+                            </div>
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="interests">İlgi Alanlarım (Maks. 10)</Label>
