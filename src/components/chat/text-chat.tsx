@@ -19,6 +19,7 @@ import { MoreHorizontal } from 'lucide-react';
 import { pinMessage, deleteMessageByHost } from '@/lib/actions/roomActions';
 import { useToast } from '@/hooks/use-toast';
 import GameInviteMessage from '../game/GameInviteMessage';
+import GiftMessage from '../gifts/GiftMessage';
 
 interface TextChatProps {
   messages: Message[];
@@ -83,6 +84,10 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
         
         if (msg.type === 'gameInvite') {
             return <GameInviteMessage key={msg.id} message={msg} roomId={room.id} />;
+        }
+        
+        if (msg.type === 'gift') {
+            return <GiftMessage key={msg.id} message={msg} />;
         }
 
         if (msg.type === 'portal') {

@@ -26,6 +26,7 @@ export interface UserProfile {
     following: string[];
     followRequests: FollowRequest[];
     diamonds: number;
+    profileValue: number; // For receiving gifts
     referredBy: string | null;
     referralCount: number;
     hasUnreadNotifications: boolean;
@@ -423,14 +424,18 @@ export interface Message {
   text?: string;
   imageUrl?: string;
   videoUrl?: string;
-  type?: 'system' | 'game' | 'portal' | 'user' | 'gameInvite';
+  type?: 'system' | 'game' | 'portal' | 'user' | 'gameInvite' | 'gift';
   createdAt: Timestamp;
   selectedBubble?: string;
   selectedAvatarFrame?: string;
-  role?: 'admin' | 'user';
   portalRoomId?: string;
   portalRoomName?: string;
   gameInviteData?: GameInviteMessageData;
+  giftData?: {
+      senderName: string;
+      receiverName?: string; // Optional for gifts to the room
+      giftId: string;
+  }
 }
 
 export interface Call {

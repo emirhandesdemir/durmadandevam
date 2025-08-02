@@ -11,7 +11,7 @@ import { useState } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import MusicPlayerDialog from '../voice/MusicPlayerDialog';
 import { useAuth } from '@/contexts/AuthContext';
-import { startMindWar } from '@/lib/actions/mindWarActions';
+import GiftPanel from '../gifts/GiftPanel';
 
 
 interface RoomFooterProps {
@@ -38,6 +38,7 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
     const { user } = useAuth();
     const [showVideoConfirm, setShowVideoConfirm] = useState(false);
     const [isMusicPlayerOpen, setIsMusicPlayerOpen] = useState(false);
+    const [isGiftPanelOpen, setIsGiftPanelOpen] = useState(false);
     
     const isHost = user?.uid === room?.createdBy.uid;
 
@@ -61,11 +62,7 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
         setIsMusicPlayerOpen(true);
     };
 
-    // Zihin Savaşları oyununu başlatmak için fonksiyon
-    const handleStartMindWar = async () => {
-        // Bu fonksiyon artık doğrudan lobi bileşeni tarafından yönetilecek,
-        // ancak bir kısayol olarak burada kalabilir veya kaldırılabilir.
-        // Şimdilik GameLobbyDialog'a yönlendirme yapıyoruz.
+    const handleStartMindWar = () => {
         onGameLobbyOpen();
     }
 
@@ -74,6 +71,10 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
         <>
             <footer className="sticky bottom-0 left-0 right-0 z-10 bg-background/80 backdrop-blur-sm border-t p-2">
                 <div className="flex w-full items-center space-x-2">
+                    <Button variant="ghost" size="icon" className="rounded-full flex-shrink-0" onClick={() => setIsGiftPanelOpen(true)}>
+                        <Gift className="h-6 w-6 text-primary" />
+                    </Button>
+
                     <ChatMessageInput room={room} />
                     
                     {isConnected ? (
@@ -105,7 +106,7 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
                                             <BrainCircuit />
                                         </Button>
                                         {isHost && (
-                                            <Button onClick={onGiveawayOpen} variant="ghost" size="icon" className="rounded-full text-primary">
+                                            <Button onClick={onGiveawayOpen} variant="ghost" size="icon" className="rounded-full text-yellow-400">
                                                 <Gift />
                                             </Button>
                                         )}
@@ -121,6 +122,11 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
                     )}
                 </div>
             </footer>
+             <GiftPanel 
+                isOpen={isGiftPanelOpen}
+                onOpenChange={setIsGiftPanelOpen}
+                room={room}
+            />
             <MusicPlayerDialog 
                 isOpen={isMusicPlayerOpen}
                 onOpenChange={setIsMusicPlayerOpen}
