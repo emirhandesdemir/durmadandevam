@@ -8,7 +8,7 @@ import { tr } from 'date-fns/locale';
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { deleteRoomWithSubcollections } from "@/lib/firestoreUtils";
-import { MoreHorizontal, Trash2, Eye, Loader2, Users } from "lucide-react";
+import { MoreHorizontal, Trash2, Eye, Loader2, Users, Gift } from "lucide-react";
 
 import {
   Table,
@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "../ui/badge";
 
 interface RoomsTableProps {
   rooms: AdminRoomData[];
@@ -82,8 +83,10 @@ export default function RoomsTable({ rooms }: RoomsTableProps) {
                     {rooms.map((room) => (
                         <TableRow key={room.id}>
                             <TableCell>
-                                <p className="font-medium">{room.name}</p>
-                                <p className="text-sm text-muted-foreground truncate max-w-xs">{room.description}</p>
+                                <div className="flex flex-col gap-1">
+                                    <p className="font-medium">{room.name}</p>
+                                    {room.type === 'event' && <Badge variant="secondary" className="w-fit"><Gift className="mr-1 h-3 w-3"/> Etkinlik</Badge>}
+                                </div>
                             </TableCell>
                             <TableCell>{room.createdBy.username}</TableCell>
                             <TableCell>

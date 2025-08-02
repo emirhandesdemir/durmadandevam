@@ -16,6 +16,7 @@ import { joinRoom } from "@/lib/actions/roomActions";
 import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import { ChevronRight, Swords } from "lucide-react";
+import CreateRoomCard from "./CreateRoomCard";
 
 interface RoomListProps {
   searchTerm: string;
@@ -37,7 +38,6 @@ export default function RoomList({ searchTerm }: RoomListProps) {
     }
     const q = query(
         collection(db, "rooms"), 
-        where('type', 'in', ['public', 'event']),
         orderBy("createdAt", "desc")
     );
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -56,7 +56,7 @@ export default function RoomList({ searchTerm }: RoomListProps) {
 
   const sortedAndFilteredRooms = useMemo(() => {
     return rooms
-      .filter(room => room.type === 'event' || !room.expiresAt || (room.expiresAt as Timestamp).toMillis() > new Date())
+      .filter(room => !room.expiresAt || (room.expiresAt as Timestamp).toMillis() > new Date())
       .sort((a, b) => {
           // 1. Events on top
           if (a.type === 'event' && b.type !== 'event') return -1;
@@ -130,14 +130,8 @@ export default function RoomList({ searchTerm }: RoomListProps) {
 
   return (
     <div className="space-y-4">
-        
-        <div className="flex justify-end">
-            <Button variant="outline" onClick={handleRandomJoin} disabled={isJoiningRandom}>
-                {isJoiningRandom ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Shuffle className="mr-2 h-4 w-4" />}
-                Rastgele Katıl
-            </Button>
-        </div>
-         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <CreateRoomCard />
+         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {sortedAndFilteredRooms.length > 0 ? (
                 sortedAndFilteredRooms.map((room) => (
                     <RoomListItem key={room.id} room={room} />

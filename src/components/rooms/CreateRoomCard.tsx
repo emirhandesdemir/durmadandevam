@@ -30,12 +30,14 @@ export default function CreateRoomCard() {
         const unsubscribe = onSnapshot(q, async (snapshot) => {
             if (!snapshot.empty) {
                 const roomDoc = snapshot.docs[0];
-                const roomData = { id: roomDoc.id, ...roomDoc.data() } as Room;
+                const roomData = { id: roomDoc.id, ...doc.data() } as Room;
                 
                 const isExpired = roomData.expiresAt && (roomData.expiresAt as Timestamp).toDate() < new Date();
                 
                 if (isExpired && roomData.type !== 'event') {
-                    await deleteRoomAsOwner(roomData.id, user.uid);
+                    // This logic can be moved to a backend function for better reliability
+                    // await deleteRoomAsOwner(roomData.id, user.uid);
+                    setUserRoom(null);
                 } else {
                     setUserRoom(roomData);
                 }
@@ -50,47 +52,31 @@ export default function CreateRoomCard() {
         return () => unsubscribe();
     }, [user]);
 
-    const renderContent = () => {
-        if (userRoom === 'loading') {
-            return <Skeleton className="h-24 w-full" />;
-        }
-        if (userRoom) {
-            return (
-                <div className="flex flex-col sm:flex-row gap-2 w-full">
-                    <Button asChild size="lg" className="w-full shrink-0 rounded-full text-base font-semibold">
-                        <Link href={`/rooms/${userRoom.id}`}>
-                            Odaya Gir <ChevronRight className="ml-2 h-5 w-5" />
-                        </Link>
-                    </Button>
-                     <Button onClick={() => setIsManagementOpen(true)} size="lg" variant="secondary" className="w-full shrink-0 rounded-full text-base font-semibold">
-                        <Settings className="mr-2 h-5 w-5" /> Yönet
-                    </Button>
-                </div>
-            );
-        }
-        return (
-            <Button asChild size="lg" className="w-full rounded-full text-lg font-semibold">
-                <Link href="/create-room">
-                    <PlusCircle className="mr-2 h-6 w-6" /> Oda Oluştur
-                </Link>
-            </Button>
-        );
+    // If there is no user room, don't render this card.
+    if (userRoom === 'loading' || !userRoom) {
+        return null;
     }
-
 
     return (
         <>
-            <Card className="bg-muted/50 border-dashed border-2">
-                <CardHeader className="p-4">
-                    <div className="space-y-2">
-                        <CardTitle className="text-xl font-bold">Yeni Bir Maceraya Atıl</CardTitle>
-                        <CardDescription className="text-base">
-                            {userRoom && userRoom !== 'loading' ? "Mevcut odanı yönet veya yeni odalara göz at." : "Kendi sohbet odanı oluştur veya diğer odalara katıl."}
+            <Card className="bg-muted/50">
+                <CardHeader className="flex-row items-center justify-between p-4">
+                    <div className="space-y-1">
+                        <CardTitle className="text-lg font-bold">Odanı Yönet</CardTitle>
+                        <CardDescription>
+                            Odan açık. Ayarları yönet veya hemen sohbete katıl.
                         </CardDescription>
                     </div>
-                     <div className="pt-4">
-                        {renderContent()}
-                     </div>
+                     <div className="flex items-center gap-2">
+                        <Button onClick={() => setIsManagementOpen(true)} size="icon" variant="secondary">
+                            <Settings className="h-5 w-5" />
+                        </Button>
+                        <Button asChild size="icon">
+                            <Link href={`/rooms/${userRoom.id}`}>
+                                <ChevronRight className="h-5 w-5" />
+                            </Link>
+                        </Button>
+                    </div>
                 </CardHeader>
             </Card>
             <RoomManagementDialog 

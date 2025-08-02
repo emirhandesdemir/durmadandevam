@@ -1,4 +1,3 @@
-
 // src/app/admin/rooms/page.tsx
 "use client";
 
@@ -20,6 +19,7 @@ export interface AdminRoomData {
     createdAt: Timestamp;
     participants: { uid: string, username: string }[];
     maxParticipants: number;
+    type?: 'public' | 'private' | 'event';
 }
 
 /**
