@@ -124,6 +124,7 @@ export default function WalletPage() {
                 </CardHeader>
                 <CardContent className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
                      {giftList.map(gift => {
+                        if (!gift.icon) return null; // Add this check to prevent crash
                         const GiftIcon = gift.icon;
                         return (
                             <div key={gift.id} className="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border bg-muted/50">
