@@ -90,16 +90,21 @@ export default function GiftPanel({ isOpen, onOpenChange, room }: GiftPanelProps
            <p className="text-sm font-medium mb-2">Ne Göndereceksin?</p>
            <ScrollArea className="flex-1 -mx-6 px-6">
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
-                    {giftList.map(gift => (
-                        <button key={gift.id} onClick={() => setSelectedGiftId(gift.id)} className={cn("flex flex-col items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all", selectedGiftId === gift.id ? "border-primary bg-primary/10 scale-105" : "bg-muted/50")}>
-                            <gift.icon className="h-10 w-10 text-primary" />
-                            <p className="text-sm font-semibold">{gift.name}</p>
-                            <div className="flex items-center gap-1 text-xs font-bold text-cyan-500">
-                                <Gem className="h-3 w-3" />
-                                {gift.diamondCost}
-                            </div>
-                        </button>
-                    ))}
+                    {giftList.map(gift => {
+                        // CRITICAL FIX: Ensure the icon component exists before rendering
+                        if (!gift.icon) return null;
+                        const GiftIcon = gift.icon;
+                        return (
+                            <button key={gift.id} onClick={() => setSelectedGiftId(gift.id)} className={cn("flex flex-col items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all", selectedGiftId === gift.id ? "border-primary bg-primary/10 scale-105" : "bg-muted/50")}>
+                                <GiftIcon className="h-10 w-10 text-primary" />
+                                <p className="text-sm font-semibold">{gift.name}</p>
+                                <div className="flex items-center gap-1 text-xs font-bold text-cyan-500">
+                                    <Gem className="h-3 w-3" />
+                                    {gift.diamondCost}
+                                </div>
+                            </button>
+                        )
+                    })}
                 </div>
             </ScrollArea>
         </div>

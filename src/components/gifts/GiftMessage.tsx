@@ -13,7 +13,11 @@ export default function GiftMessage({ message }: { message: Message }) {
   const { senderName, receiverName, giftId, senderLevel } = message.giftData;
   const gift = getGiftById(giftId);
 
-  if (!gift) return null;
+  // CRITICAL FIX: Ensure gift and gift.icon exist before rendering.
+  if (!gift || !gift.icon) {
+    console.error(`Gift or gift icon not found for id: ${giftId}`);
+    return null; // Render nothing if the gift or its icon is invalid
+  }
   
   const GiftIcon = gift.icon;
 
