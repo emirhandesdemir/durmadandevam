@@ -30,7 +30,7 @@ export default function CreateRoomCard() {
         const unsubscribe = onSnapshot(q, async (snapshot) => {
             if (!snapshot.empty) {
                 const roomDoc = snapshot.docs[0];
-                const roomData = { id: roomDoc.id, ...doc.data() } as Room;
+                const roomData = { id: roomDoc.id, ...roomDoc.data() } as Room;
                 
                 const isExpired = roomData.expiresAt && (roomData.expiresAt as Timestamp).toDate() < new Date();
                 
@@ -52,9 +52,27 @@ export default function CreateRoomCard() {
         return () => unsubscribe();
     }, [user]);
 
-    // If there is no user room, don't render this card.
-    if (userRoom === 'loading' || !userRoom) {
-        return null;
+    if (userRoom === 'loading') {
+        return <Skeleton className="h-24 w-full" />;
+    }
+
+    if (!userRoom) {
+         return (
+            <Card className="border-dashed border-primary/50 bg-primary/10 hover:border-primary transition-colors">
+                <CardHeader className="text-center">
+                    <CardTitle>Kendi Odanı Oluştur</CardTitle>
+                    <CardDescription>
+                        Yeni bir sohbet başlat ve arkadaşlarını davet et.
+                    </CardDescription>
+                    <Button asChild className="mt-2 w-fit mx-auto">
+                        <Link href="/create-room">
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Oda Oluştur
+                        </Link>
+                    </Button>
+                </CardHeader>
+            </Card>
+        );
     }
 
     return (
