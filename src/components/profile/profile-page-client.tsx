@@ -28,6 +28,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { deleteUserAccount } from "@/lib/actions/userActions";
 import { Gem } from "lucide-react";
 import { giftLevelThresholds } from "@/lib/gifts";
+import { Progress } from "@/components/ui/progress";
 
 const bubbleOptions = [
     { id: "", name: "Yok" },
