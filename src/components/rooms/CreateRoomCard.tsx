@@ -16,8 +16,6 @@ import { deleteRoomAsOwner } from '@/lib/actions/roomActions';
 
 export default function CreateRoomCard() {
     const { user } = useAuth();
-    const username = user?.displayName?.split(' ')[0] || 'Dostum';
-
     const [userRoom, setUserRoom] = useState<Room | null | 'loading'>('loading');
     const [isManagementOpen, setIsManagementOpen] = useState(false);
 
@@ -34,11 +32,9 @@ export default function CreateRoomCard() {
                 const roomDoc = snapshot.docs[0];
                 const roomData = { id: roomDoc.id, ...roomDoc.data() } as Room;
                 
-                // Oda sahibi bu kartı gördüğünde, odası süresi dolmuşsa otomatik olarak sil.
                 const isExpired = roomData.expiresAt && (roomData.expiresAt as Timestamp).toDate() < new Date();
                 
-                if (isExpired) {
-                    // Bu işlem, onSnapshot'ın tekrar tetiklenmesini sağlayacak ve userRoom'u null yapacaktır.
+                if (isExpired && roomData.type !== 'event') {
                     await deleteRoomAsOwner(roomData.id, user.uid);
                 } else {
                     setUserRoom(roomData);
@@ -54,44 +50,28 @@ export default function CreateRoomCard() {
         return () => unsubscribe();
     }, [user]);
 
-    const renderButton = () => {
+    const renderContent = () => {
         if (userRoom === 'loading') {
-            return <Skeleton className="h-16 w-full md:w-52 rounded-full" />;
+            return <Skeleton className="h-24 w-full" />;
         }
         if (userRoom) {
             return (
-                <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                    <Button
-                        asChild
-                        size="lg"
-                        className="w-full shrink-0 rounded-full bg-white/20 text-white backdrop-blur-sm border border-white/30 shadow-lg transition-transform hover:scale-105 active:scale-95 px-8 py-6 text-base font-semibold"
-                    >
+                <div className="flex flex-col sm:flex-row gap-2 w-full">
+                    <Button asChild size="lg" className="w-full shrink-0 rounded-full text-base font-semibold">
                         <Link href={`/rooms/${userRoom.id}`}>
-                            Odaya Gir
-                            <ChevronRight className="mr-2" />
+                            Odaya Gir <ChevronRight className="ml-2 h-5 w-5" />
                         </Link>
                     </Button>
-                     <Button
-                        onClick={() => setIsManagementOpen(true)}
-                        size="lg"
-                        variant="secondary"
-                        className="w-full shrink-0 rounded-full bg-white text-primary shadow-lg transition-transform hover:scale-105 hover:bg-white/90 active:scale-95 px-8 py-6 text-base font-semibold"
-                    >
-                        <Settings className="mr-2" />
-                        Odanı Yönet
+                     <Button onClick={() => setIsManagementOpen(true)} size="lg" variant="secondary" className="w-full shrink-0 rounded-full text-base font-semibold">
+                        <Settings className="mr-2 h-5 w-5" /> Yönet
                     </Button>
                 </div>
             );
         }
         return (
-            <Button
-                asChild
-                size="lg"
-                className="w-full shrink-0 md:w-auto rounded-full bg-white text-primary shadow-lg transition-transform hover:scale-105 hover:bg-white/90 active:scale-95 px-8 py-6 text-lg font-semibold"
-            >
+            <Button asChild size="lg" className="w-full rounded-full text-lg font-semibold">
                 <Link href="/create-room">
-                    <PlusCircle className="mr-2" />
-                    Oda Oluştur
+                    <PlusCircle className="mr-2 h-6 w-6" /> Oda Oluştur
                 </Link>
             </Button>
         );
@@ -100,15 +80,17 @@ export default function CreateRoomCard() {
 
     return (
         <>
-            <Card className="bg-gradient-to-br from-red-500 via-blue-500 to-sky-400 text-primary-foreground shadow-2xl shadow-primary/20 rounded-3xl">
-                <CardHeader className="flex flex-col items-center justify-between gap-4 text-center md:flex-row md:text-left p-8">
+            <Card className="bg-muted/50 border-dashed border-2">
+                <CardHeader className="p-4">
                     <div className="space-y-2">
-                        <CardTitle className="text-3xl font-bold">Hoş geldin, {username}!</CardTitle>
-                        <CardDescription className="text-primary-foreground/90 text-base">
-                            {userRoom && userRoom !== 'loading' ? "Mevcut odanı yönetebilir veya diğer odalara katılabilirsin." : "Kendi sohbet odanı oluştur veya mevcut odalara katıl."}
+                        <CardTitle className="text-xl font-bold">Yeni Bir Maceraya Atıl</CardTitle>
+                        <CardDescription className="text-base">
+                            {userRoom && userRoom !== 'loading' ? "Mevcut odanı yönet veya yeni odalara göz at." : "Kendi sohbet odanı oluştur veya diğer odalara katıl."}
                         </CardDescription>
                     </div>
-                    {renderButton()}
+                     <div className="pt-4">
+                        {renderContent()}
+                     </div>
                 </CardHeader>
             </Card>
             <RoomManagementDialog 

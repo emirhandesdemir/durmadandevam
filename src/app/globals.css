@@ -10,8 +10,8 @@
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 0 0% 100%;
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
     --muted: 240 4.8% 95.9%;
@@ -22,18 +22,18 @@
     --destructive-foreground: 0 0% 100%;
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
-    --ring: 221.2 83.2% 53.3%;
+    --ring: 262.1 83.3% 57.8%;
     --radius: 1rem;
   }
  
   .dark {
-    --background: 240 10% 3.9%;
+    --background: 245 42% 6%;
     --foreground: 210 40% 98%;
     --card: 240 4.8% 11.0%;
     --card-foreground: 210 40% 98%;
     --popover: 240 10% 3.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
+    --primary: 262.1 83.3% 57.8%;
     --primary-foreground: 210 40% 98%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
@@ -45,7 +45,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 217.2 91.2% 59.8%;
+    --ring: 262.1 83.3% 57.8%;
   }
 }
  
@@ -318,8 +318,8 @@
 
 @layer utilities {
   .rooms-page-bg {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3e%3ctext x='50%25' y='50%25' font-size='50' font-weight='bold' fill='hsl(var(--foreground))' fill-opacity='0.03' dominant-baseline='middle' text-anchor='middle' transform='rotate(-20 200 200)'%3eHiweWalk%3c/text%3e%3c/svg%3e");
-    background-size: 400px 400px;
-    background-repeat: repeat;
+    background: radial-gradient(circle at top left, hsl(var(--primary) / 0.5), transparent 40%),
+                radial-gradient(circle at bottom right, hsl(var(--primary)), transparent 40%),
+                hsl(var(--background));
   }
 }
