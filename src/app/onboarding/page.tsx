@@ -19,43 +19,6 @@ import multiavatar from '@multiavatar/multiavatar';
 import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
 
-// Helper function to convert SVG string to PNG Blob
-const svgToPngBlob = (svgString: string): Promise<Blob> => {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-        const url = URL.createObjectURL(svgBlob);
-
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 128;
-            canvas.height = 128;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-                ctx.drawImage(img, 0, 0, 128, 128);
-                canvas.toBlob((blob) => {
-                    URL.revokeObjectURL(url);
-                    if (blob) {
-                        resolve(blob);
-                    } else {
-                        reject(new Error("Canvas to Blob conversion failed."));
-                    }
-                }, 'image/png');
-            } else {
-                reject(new Error("Canvas context could not be created."));
-            }
-        };
-
-        img.onerror = (e) => {
-            URL.revokeObjectURL(url);
-            reject(new Error("Failed to load SVG image for conversion."));
-        };
-        
-        img.src = url;
-    });
-};
-
-
 export default function OnboardingPage() {
     const { user, userData, loading: authLoading } = useAuth();
     const router = useRouter();
@@ -107,7 +70,7 @@ export default function OnboardingPage() {
     const handleSaveAndContinue = async () => {
         if (!user) return;
         
-        if (!bio || !age || !gender || interests.length === 0) {
+        if (!bio || age === '' || age === undefined || !gender || interests.length === 0) {
              toast({
                 variant: 'destructive',
                 title: "Eksik Bilgiler",
@@ -118,17 +81,19 @@ export default function OnboardingPage() {
 
         setIsSaving(true);
         try {
-            // Convert SVG to PNG Blob before saving
-            const pngBlob = await svgToPngBlob(avatarSvg);
-            
-            await updateUserProfile({
+            const updates: any = {
                 userId: user.uid,
-                photoBlob: pngBlob, // Send Blob
+                avatarId: avatarId,
                 bio,
-                age: Number(age),
                 gender,
                 interests,
-            });
+            };
+
+            if (age !== '' && age !== undefined) {
+                updates.age = Number(age);
+            }
+
+            await updateUserProfile(updates);
 
             toast({
                 title: "Harika!",

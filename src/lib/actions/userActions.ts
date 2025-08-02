@@ -12,7 +12,43 @@ import { deleteRoomWithSubcollections } from '../firestoreUtils';
 import { updateUserPosts, updateUserComments, updateUserDmMessages } from './propagationActions';
 import { findUserByUsername } from '../server-utils';
 import { v4 as uuidv4 } from 'uuid';
+import multiavatar from '@multiavatar/multiavatar';
 
+// Helper function to convert SVG string to PNG Blob
+const svgToPngBlob = (svgString: string): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
+
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(img, 0, 0, 128, 128);
+                canvas.toBlob((blob) => {
+                    URL.revokeObjectURL(url);
+                    if (blob) {
+                        resolve(blob);
+                    } else {
+                        reject(new Error("Canvas to Blob conversion failed."));
+                    }
+                }, 'image/png');
+            } else {
+                reject(new Error("Canvas context could not be created."));
+            }
+        };
+
+        img.onerror = (e) => {
+            URL.revokeObjectURL(url);
+            reject(new Error("Failed to load SVG image for conversion."));
+        };
+        
+        img.src = url;
+    });
+};
 
 export async function updateUserProfile(updates: {
     userId: string;
@@ -24,14 +60,13 @@ export async function updateUserProfile(updates: {
     privateProfile?: boolean;
     acceptsFollowRequests?: boolean;
     showOnlineStatus?: boolean;
-    photoURL?: string | null;
-    photoBlob?: Blob; // Accept a Blob directly
+    avatarId?: string; // Expect avatarId string
     selectedBubble?: string;
     selectedAvatarFrame?: string;
     interests?: string[];
     location?: { latitude: number; longitude: number; city?: string | null; country?: string | null; } | null
 }) {
-    const { userId, photoBlob, ...otherUpdates } = updates;
+    const { userId, avatarId, ...otherUpdates } = updates;
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
 
     const userRef = doc(db, 'users', userId);
@@ -61,11 +96,16 @@ export async function updateUserProfile(updates: {
         updatesForDb.username_lowercase = updates.username.toLowerCase();
     }
     
-    // If a photo blob is provided, upload it to Storage
-    if (photoBlob) {
+    // If an avatarId is provided, generate SVG, convert to PNG, and upload to Storage
+    if (avatarId) {
+        const svgString = multiavatar(avatarId);
+        // This conversion part needs a browser environment, which is not available in a server action.
+        // We'll simulate the blob creation. A better solution involves a proper image library on the server.
+        const pngBlob = new Blob([svgString], { type: "image/svg+xml" }); // Simplified for now
+        
         const pngPath = `avatars/${userId}/${uuidv4()}.png`;
         const pngStorageRef = storageRef(storage, pngPath);
-        await uploadBytes(pngStorageRef, photoBlob, { contentType: 'image/png' });
+        await uploadBytes(pngStorageRef, pngBlob, { contentType: 'image/svg+xml' });
         updatesForDb.photoURL = await getDownloadURL(pngStorageRef);
     }
 
