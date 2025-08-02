@@ -21,17 +21,15 @@ export default function SavedPostsGrid({ userId }: SavedPostsGridProps) {
     const isOwnProfile = currentUserData?.uid === userId;
 
     useEffect(() => {
-        if (!isOwnProfile) {
+        if (!isOwnProfile || !userId) {
             setLoading(false);
             return;
         }
 
-        if (userId) {
-            setLoading(true);
-            getSavedPosts(userId)
-                .then(setSavedPosts)
-                .finally(() => setLoading(false));
-        }
+        setLoading(true);
+        getSavedPosts(userId)
+            .then(setSavedPosts)
+            .finally(() => setLoading(false));
     }, [userId, isOwnProfile]);
 
     if (authLoading || loading) {
