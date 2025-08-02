@@ -62,7 +62,7 @@ export default function LeadershipBoard() {
             <h2 className="text-2xl font-bold tracking-tight mb-4">Liderlik Tablosu</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {topRooms.map((room, index) => {
-                    const hasPortal = room.portalExpiresAt && (room.portalExpiresAt as Timestamp).toDate() > new Date();
+                    const hasPortal = room.portalExpiresAt && (room.portalExpiresAt as Timestamp).toMillis() > new Date();
                     return (
                         <Link href={`/rooms/${room.id}`} key={room.id}>
                             <Card className={`relative p-4 border-2 transition-all ${medalColors[index]}`}>

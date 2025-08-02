@@ -36,7 +36,7 @@ export default function RoomListItem({ room }: RoomListItemProps) {
     const isParticipant = participants.some(p => p.uid === currentUser?.uid);
     const isExpired = room.expiresAt && (room.expiresAt as Timestamp).toDate() < new Date() && room.type !== 'event';
 
-    const hasPortal = room.portalExpiresAt && (room.portalExpiresAt as Timestamp).toDate() > new Date();
+    const hasPortal = room.portalExpiresAt && (room.portalExpiresAt as Timestamp).toMillis() > new Date();
 
     if (isExpired) {
         return null;

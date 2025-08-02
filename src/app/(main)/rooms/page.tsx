@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import LeadershipBoard from "@/components/rooms/LeadershipBoard";
 
 /**
  * Odalar Sayfası
@@ -61,6 +62,9 @@ export default function RoomsPage() {
                  </Link>
                </Button>
             </div>
+
+            <LeadershipBoard />
+            <CreateRoomCard />
 
           {/* Aktif odaları listeleyen bileşen. Arama terimini prop olarak alır. */}
           <RoomList searchTerm={searchTerm} />
