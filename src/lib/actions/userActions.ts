@@ -4,13 +4,14 @@
 import { db, storage } from '@/lib/firebase';
 import type { Post, Report, UserProfile } from '../types';
 import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, collectionGroup, deleteDoc, setDoc } from 'firebase/firestore';
-import { ref as storageRef, deleteObject } from 'firebase/storage';
+import { ref as storageRef, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
 import { getAuth } from '../firebaseAdmin';
 import { deleteRoomWithSubcollections } from '../firestoreUtils';
 import { updateUserPosts, updateUserComments, updateUserDmMessages } from './propagationActions';
 import { findUserByUsername } from '../server-utils';
+import { v4 as uuidv4 } from 'uuid';
 
 
 export async function updateUserProfile(updates: {
@@ -59,6 +60,15 @@ export async function updateUserProfile(updates: {
         updatesForDb.username_lowercase = updates.username.toLowerCase();
     }
     
+    // If the photoURL is a data URI, upload it to Storage first
+    if (updates.photoURL && updates.photoURL.startsWith('data:image/svg+xml')) {
+        const svgPath = `avatars/${userId}/${uuidv4()}.svg`;
+        const svgStorageRef = storageRef(storage, svgPath);
+        await uploadString(svgStorageRef, updates.photoURL, 'data_url');
+        updatesForDb.photoURL = await getDownloadURL(svgStorageRef);
+    }
+
+
     if (updates.location) {
         updatesForDb.location = {
             latitude: updates.location.latitude,
@@ -77,8 +87,8 @@ export async function updateUserProfile(updates: {
     if(updates.username && updates.username !== userData.username) {
       authProfileUpdates.displayName = updates.username;
     }
-    if(updates.photoURL !== undefined && updates.photoURL !== userData.photoURL) {
-      authProfileUpdates.photoURL = updates.photoURL;
+    if(updatesForDb.photoURL !== undefined && updatesForDb.photoURL !== userData.photoURL) {
+      authProfileUpdates.photoURL = updatesForDb.photoURL;
     }
 
     if(Object.keys(authProfileUpdates).length > 0) {
@@ -90,7 +100,7 @@ export async function updateUserProfile(updates: {
 
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (updates.photoURL !== undefined) propagationUpdates.photoURL = updates.photoURL;
+    if (updatesForDb.photoURL !== undefined) propagationUpdates.photoURL = updatesForDb.photoURL;
     if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
 
     if (Object.keys(propagationUpdates).length > 0) {
