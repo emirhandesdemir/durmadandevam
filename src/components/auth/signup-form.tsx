@@ -120,8 +120,8 @@ export default function SignUpForm() {
                 photoURL: defaultAvatarUrl,
                 bio: null,
                 age: values.age,
-                city: null, // To be filled by location service
-                country: null, // To be filled by location service
+                city: null, 
+                country: null,
                 gender: values.gender,
                 interests: [],
                 role: userRole,

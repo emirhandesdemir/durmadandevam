@@ -5,11 +5,12 @@ import { db, storage } from '@/lib/firebase';
 import type { Post, Report, UserProfile } from '../types';
 import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, collectionGroup, deleteDoc, setDoc } from 'firebase/firestore';
 import { ref as storageRef, deleteObject } from 'firebase/storage';
-import { deepSerialize, findUserByUsername } from '../server-utils';
+import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
 import { getAuth } from '../firebaseAdmin';
 import { deleteRoomWithSubcollections } from '../firestoreUtils';
 import { updateUserPosts, updateUserComments, updateUserDmMessages } from './propagationActions';
+import { findUserByUsername } from '../server-utils';
 
 
 export async function updateUserProfile(updates: {
@@ -47,15 +48,15 @@ export async function updateUserProfile(updates: {
         updatesForDb.age = Number(updates.age);
     }
     
+    // Check for username change and uniqueness
     if (updates.username && userData.username_lowercase !== updates.username.toLowerCase()) {
-        const newUsernameLower = updates.username.toLowerCase();
-        const existingUserQuery = query(collection(db, 'users'), where('username_lowercase', '==', newUsernameLower), limit(1));
-        const existingUserSnapshot = await getDocs(existingUserQuery);
-        if (!existingUserSnapshot.empty && existingUserSnapshot.docs[0].id !== userId) {
-             throw new Error("Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor.");
+        const existingUser = await findUserByUsername(updates.username);
+        // Throw error only if the username is taken by a DIFFERENT user
+        if (existingUser && existingUser.uid !== userId) {
+            throw new Error("Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor.");
         }
         updatesForDb.username = updates.username;
-        updatesForDb.username_lowercase = newUsernameLower;
+        updatesForDb.username_lowercase = updates.username.toLowerCase();
     }
     
     if (updates.location) {
