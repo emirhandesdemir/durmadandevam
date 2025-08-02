@@ -15,7 +15,7 @@ import {
     setDoc,
     arrayUnion
 } from 'firebase/firestore';
-import type { Room, VoiceParticipant } from '../types';
+import type { Room, VoiceParticipant, PlaylistTrack } from '../types';
 import { addSystemMessage } from './roomActions';
 
 interface UserInfo {
@@ -70,6 +70,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo, options?: { 
                 photoURL: userData.photoURL || null,
                 profileEmoji: userData.profileEmoji || null,
                 role: userData.role || 'user',
+                giftLevel: userData.giftLevel || 0,
                 isMuted: options?.initialMuteState ?? false,
                 isSharingScreen: false,
                 isSharingVideo: false,
@@ -91,12 +92,13 @@ export async function joinVoiceChat(roomId: string, user: UserInfo, options?: { 
                     })
                 });
 
-                const messagesRef = collection(db, "rooms", roomId, "messages");
                 let welcomeMessage = `👋 Hoş geldin, ${user.displayName}!`;
+                // Check giftLevel for special welcome message
                 if(userData.giftLevel && userData.giftLevel > 0) {
                     welcomeMessage = `🔥 Seviye ${userData.giftLevel} Hediye Lideri ${user.displayName} odaya katıldı! 🔥`;
                 }
 
+                const messagesRef = collection(db, "rooms", roomId, "messages");
                 transaction.set(doc(messagesRef), {
                     type: 'system',
                     text: welcomeMessage,

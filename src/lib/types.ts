@@ -329,6 +329,7 @@ export interface VoiceParticipant {
     photoURL?: string | null;
     profileEmoji?: string | null;
     role?: 'admin' | 'user';
+    giftLevel: number;
     isSpeaker: boolean;
     isMuted: boolean;
     canSpeak: boolean;
