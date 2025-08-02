@@ -168,7 +168,11 @@ export async function createRoom(
                 selectedAvatarFrame: creatorInfo.selectedAvatarFrame || '',
             },
             moderators: [userId],
-            participants: [],
+            participants: [{
+                uid: userId,
+                username: creatorInfo.username,
+                photoURL: creatorInfo.photoURL
+            }],
             maxParticipants: 9,
             voiceParticipantsCount: 0,
             nextGameTimestamp: serverTimestamp() as Timestamp,
