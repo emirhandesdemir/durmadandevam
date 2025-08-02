@@ -5,11 +5,10 @@ import { db, storage } from '@/lib/firebase';
 import type { Post, Report, UserProfile } from '../types';
 import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, collectionGroup, deleteDoc, setDoc } from 'firebase/firestore';
 import { ref as storageRef, deleteObject } from 'firebase/storage';
-import { deepSerialize } from '../server-utils';
+import { deepSerialize, findUserByUsername } from '../server-utils';
 import { revalidatePath } from 'next/cache';
 import { getAuth } from '../firebaseAdmin';
 import { deleteRoomWithSubcollections } from '../firestoreUtils';
-import { findUserByUsername } from '../server-utils'; // Import from new location
 import { updateUserPosts, updateUserComments, updateUserDmMessages } from './propagationActions';
 
 

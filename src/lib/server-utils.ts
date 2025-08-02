@@ -1,7 +1,9 @@
 // src/lib/server-utils.ts
 
 // Bu dosya, sunucu tarafında kullanılan yardımcı fonksiyonları içerir.
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp, collection, getDocs, query, where, limit } from 'firebase/firestore';
+import { db } from './firebase';
+import type { UserProfile } from './types';
 
 
 /**
@@ -44,4 +46,22 @@ export function deepSerialize(obj: any): any {
   }
 
   return newObj;
+}
+
+
+/**
+ * Verilen kullanıcı adını (büyük/küçük harf duyarsız) veritabanında arar ve varsa kullanıcı profilini döndürür.
+ * @param username Aranacak kullanıcı adı.
+ * @returns Kullanıcı profili nesnesi veya kullanıcı bulunamazsa `null`.
+ */
+export async function findUserByUsername(username: string): Promise<UserProfile | null> {
+    if (!username) return null;
+    const usersRef = collection(db, 'users');
+    // Aramayı her zaman küçük harf üzerinden yap
+    const q = query(usersRef, where('username_lowercase', '==', username.toLowerCase()), limit(1));
+    const querySnapshot = await getDocs(q);
+    if (querySnapshot.empty) {
+        return null;
+    }
+    return querySnapshot.docs[0].data() as UserProfile;
 }

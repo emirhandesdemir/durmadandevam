@@ -34,12 +34,10 @@ async function handlePostMentions(postId: string, text: string, sender: { uid: s
     const mentions = text.match(mentionRegex);
 
     if (mentions) {
-        const mentionedUsernames = new Set(mentions);
-
-        for (const username of mentions) {
-            const cleanUsername = username.substring(1);
-            if (cleanUsername) {
-                const mentionedUser = await findUserByUsername(cleanUsername);
+        const mentionedUsernames = new Set(mentions.map(m => m.substring(1))); // Remove @ and get unique usernames
+        for (const username of mentionedUsernames) {
+            if (username) { // Ensure username is not empty
+                const mentionedUser = await findUserByUsername(username);
                 if (mentionedUser && mentionedUser.uid !== sender.uid) {
                     const postSnap = await getDoc(doc(db, "posts", postId));
                     const postData = postSnap.data();
@@ -48,7 +46,7 @@ async function handlePostMentions(postId: string, text: string, sender: { uid: s
                         senderId: sender.uid,
                         senderUsername: sender.displayName || "Biri",
                         photoURL: sender.photoURL || '',
-                        senderAvatarFrame: sender.userAvatarFrame,
+                        senderAvatarFrame: sender.userAvatarFrame || '',
                         type: 'mention',
                         postId: postId,
                         postImage: postData?.imageUrl || null,
@@ -232,7 +230,7 @@ export async function likePost(
                     senderId: currentUser.uid,
                     senderUsername: currentUser.displayName || "Biri",
                     photoURL: currentUser.photoURL || '',
-                    senderAvatarFrame: currentUser.userAvatarFrame,
+                    senderAvatarFrame: currentUser.userAvatarFrame || '',
                     type: 'like',
                     postId: postId,
                     postImage: postData.imageUrl || null,
@@ -354,7 +352,7 @@ export async function retweetPost(
             senderId: retweeter.uid,
             senderUsername: retweeter.username,
             photoURL: retweeter.userPhotoURL || '',
-            senderAvatarFrame: retweeter.userAvatarFrame,
+            senderAvatarFrame: retweeter.userAvatarFrame || '',
             type: 'retweet',
             postId: newPostRef.id,
         });

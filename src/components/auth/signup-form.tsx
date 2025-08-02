@@ -73,6 +73,7 @@ export default function SignUpForm() {
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsLoading(true);
         try {
+            // Use the updated findUserByUsername which is case-insensitive
             const existingUser = await findUserByUsername(values.username);
             if (existingUser) {
                 toast({

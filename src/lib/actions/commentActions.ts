@@ -13,7 +13,7 @@ import {
     getDoc,
 } from "firebase/firestore";
 import { createNotification } from "./notificationActions";
-import { findUserByUsername } from "../actions/userActions";
+import { findUserByUsername } from "../server-utils";
 
 interface AddCommentArgs {
     postId: string;
@@ -36,23 +36,25 @@ async function handleMentions(text: string, postId: string, sender: { uid: strin
     const mentions = text.match(mentionRegex);
 
     if (mentions) {
-        const usernames = new Set(mentions);
+        const usernames = new Set(mentions.map(m => m.substring(1))); // Remove @ and get unique usernames
         for (const username of usernames) {
-            const mentionedUser = await findUserByUsername(username.substring(1)); // Remove @
-            if (mentionedUser && mentionedUser.uid !== sender.uid) {
-                const postSnap = await getDoc(doc(db, "posts", postId));
-                const postData = postSnap.data();
-                await createNotification({
-                    recipientId: mentionedUser.uid,
-                    senderId: sender.uid,
-                    senderUsername: sender.displayName || "Biri",
-                    photoURL: sender.photoURL || '',
-                    senderAvatarFrame: sender.userAvatarFrame,
-                    type: 'mention',
-                    postId: postId,
-                    postImage: postData?.imageUrl || null,
-                    commentText: text,
-                });
+            if (username) { // Ensure username is not empty
+                const mentionedUser = await findUserByUsername(username);
+                if (mentionedUser && mentionedUser.uid !== sender.uid) {
+                    const postSnap = await getDoc(doc(db, "posts", postId));
+                    const postData = postSnap.data();
+                    await createNotification({
+                        recipientId: mentionedUser.uid,
+                        senderId: sender.uid,
+                        senderUsername: sender.displayName || "Biri",
+                        photoURL: sender.photoURL || '',
+                        senderAvatarFrame: sender.userAvatarFrame || '',
+                        type: 'mention',
+                        postId: postId,
+                        postImage: postData?.imageUrl || null,
+                        commentText: text,
+                    });
+                }
             }
         }
     }
@@ -97,7 +99,7 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
             senderId: user.uid,
             senderUsername: user.displayName || "Biri",
             photoURL: user.photoURL || '',
-            senderAvatarFrame: user.userAvatarFrame,
+            senderAvatarFrame: user.userAvatarFrame || '',
             type: 'comment',
             postId: postId,
             postImage: postData.imageUrl || null,
@@ -109,7 +111,7 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
         uid: user.uid,
         displayName: user.displayName,
         photoURL: user.photoURL || '',
-        userAvatarFrame: user.userAvatarFrame,
+        userAvatarFrame: user.userAvatarFrame || '',
     });
 
     await batch.commit();

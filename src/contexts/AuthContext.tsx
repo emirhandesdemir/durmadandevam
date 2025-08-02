@@ -109,8 +109,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) {
         setLoading(false);
-        const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/permissions') || pathname.startsWith('/onboarding');
-        if (!isAuthPage) {
+        const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/privacy') || pathname.startsWith('/terms');
+        const isAllowedWithoutAuth = isAuthPage || pathname === '/' || pathname === '/permissions' || pathname === '/onboarding';
+        if (!isAllowedWithoutAuth) {
             router.replace('/login');
         }
         return;
@@ -136,15 +137,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 triggerProfileCompletionNotification(user.uid);
             }
             
+            const isOnboardingIncomplete = !sanitizedData.bio || !sanitizedData.interests || sanitizedData.interests.length === 0;
+            
             if (pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname === '/') {
-                // If user is newly created (city is null), send to permissions, then onboarding
-                if (sanitizedData.city === null) {
-                    router.replace('/permissions');
-                } else if (!sanitizedData.bio || !sanitizedData.interests || sanitizedData.interests.length === 0) {
-                     router.replace('/onboarding');
-                } else {
-                    router.replace('/home');
-                }
+                 router.replace('/home');
+            } else if(pathname.startsWith('/permissions') && sanitizedData.city) {
+                 router.replace('/home');
+            } else if(pathname.startsWith('/onboarding') && !isOnboardingIncomplete) {
+                router.replace('/home');
             }
         } else { 
             console.log("Waiting for user document to be created...");
