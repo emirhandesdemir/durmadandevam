@@ -109,9 +109,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) {
         setLoading(false);
-        const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/privacy') || pathname.startsWith('/terms');
-        const isAllowedWithoutAuth = isAuthPage || pathname === '/';
-        if (!isAllowedWithoutAuth) {
+        // If not a protected route, allow access. Otherwise, redirect to login.
+        // The root page `/` is special and will handle its own redirect logic.
+        const isProtectedRoute = pathname.startsWith('/(main)') || pathname.startsWith('/wallet') || pathname.startsWith('/admin') || pathname.startsWith('/profile');
+        if (isProtectedRoute && pathname !== '/') {
             router.replace('/login');
         }
         return;

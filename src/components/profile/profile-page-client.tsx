@@ -184,6 +184,19 @@ export default function ProfilePageClient() {
         navigator.clipboard.writeText(inviteLink);
         toast({ description: "Davet linki kopyalandı!" });
     };
+    
+    const currentLevelInfo = giftLevelThresholds.find(t => t.level === (userData?.giftLevel || 0)) || { level: 0, diamonds: 0 };
+    const nextLevelInfo = giftLevelThresholds.find(t => t.level === (userData?.giftLevel || 0) + 1);
+    
+    let progress = 0;
+    if (nextLevelInfo && userData) {
+        const diamondsForCurrentLevel = currentLevelInfo.diamonds;
+        const diamondsForNextLevel = nextLevelInfo.diamonds - diamondsForCurrentLevel;
+        const progressInLevel = (userData.totalDiamondsSent || 0) - diamondsForCurrentLevel;
+        progress = (progressInLevel / diamondsForNextLevel) * 100;
+    } else {
+        progress = 100; // Max level
+    }
 
     if (loading || !user || !userData) {
         return <AnimatedLogoLoader fullscreen />;
@@ -298,18 +311,23 @@ export default function ProfilePageClient() {
                                 </CardHeader>
                             </AccordionTrigger>
                             <AccordionContent className="p-6 pt-0 space-y-4">
-                                <div className="text-center">
+                               <div className="text-center space-y-1">
                                     <p className="text-sm text-muted-foreground">Mevcut Seviyen</p>
-                                    <p className="text-4xl font-bold text-amber-500">SV {userData.giftLevel || 0}</p>
+                                    <p className="text-5xl font-bold text-amber-500 drop-shadow-lg">SV {userData.giftLevel || 0}</p>
                                 </div>
-                                <div>
-                                    <h4 className="font-semibold mb-2 text-sm">Seviye Atlama</h4>
-                                    <ul className="space-y-1 text-xs text-muted-foreground list-disc list-inside">
-                                        {giftLevelThresholds.map(t => (
-                                            <li key={t.level}><strong>Seviye {t.level}:</strong> {t.diamonds.toLocaleString('tr-TR')} elmas gönder</li>
-                                        ))}
-                                    </ul>
-                                </div>
+                                {nextLevelInfo ? (
+                                    <div>
+                                         <div className="flex justify-between items-end mb-1">
+                                            <p className="text-xs font-semibold">Seviye {nextLevelInfo.level} için ilerleme</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                <span className="font-bold text-foreground">{(userData.totalDiamondsSent || 0).toLocaleString('tr-TR')}</span> / {nextLevelInfo.diamonds.toLocaleString('tr-TR')}
+                                            </p>
+                                        </div>
+                                        <Progress value={progress} className="h-3"/>
+                                    </div>
+                                ) : (
+                                    <p className="text-center font-semibold text-green-500">Maksimum seviyeye ulaştın!</p>
+                                )}
                             </AccordionContent>
                         </Card>
                     </AccordionItem>
