@@ -110,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) {
         setLoading(false);
         const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/privacy') || pathname.startsWith('/terms');
-        const isAllowedWithoutAuth = isAuthPage || pathname === '/' || pathname === '/permissions' || pathname === '/onboarding';
+        const isAllowedWithoutAuth = isAuthPage || pathname === '/';
         if (!isAllowedWithoutAuth) {
             router.replace('/login');
         }
@@ -127,8 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 return;
             }
 
-            const sanitizedData = { ...data };
-            setUserData(sanitizedData);
+            setUserData(data);
             
             if (data.language && i18n.language !== data.language) {
                 i18n.changeLanguage(data.language);
@@ -137,15 +136,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 triggerProfileCompletionNotification(user.uid);
             }
             
-            const isOnboardingIncomplete = !sanitizedData.bio || !sanitizedData.interests || sanitizedData.interests.length === 0;
-            
-            if (pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname === '/') {
+            // --- NEW REDIRECTION LOGIC ---
+            const isProfileComplete = !!data.city; // Use location as a proxy for completed permissions step
+            const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname === '/';
+
+            if (isAuthPage) {
+                router.replace(isProfileComplete ? '/home' : '/permissions');
+            } else if (pathname.startsWith('/permissions') && isProfileComplete) {
+                router.replace('/onboarding');
+            } else if (pathname.startsWith('/onboarding') && isProfileComplete) {
                  router.replace('/home');
-            } else if(pathname.startsWith('/permissions') && sanitizedData.city) {
-                 router.replace('/home');
-            } else if(pathname.startsWith('/onboarding') && !isOnboardingIncomplete) {
-                router.replace('/home');
             }
+
         } else { 
             console.log("Waiting for user document to be created...");
         }
@@ -164,10 +166,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setTotalUnreadDms(total);
     });
     
-    const userStatusRef = doc(db, 'users', user.uid);
-    setDoc(userStatusRef, { isOnline: true }, { merge: true });
+    setDoc(userDocRef, { isOnline: true }, { merge: true });
     
-    const onbeforeunload = () => setDoc(userStatusRef, { isOnline: false, lastSeen: serverTimestamp() }, { merge: true });
+    const onbeforeunload = () => setDoc(userDocRef, { isOnline: false, lastSeen: serverTimestamp() }, { merge: true });
     window.addEventListener("beforeunload", onbeforeunload);
     
     return () => {
