@@ -184,7 +184,7 @@ export default function ProfilePageClient() {
     };
 
     if (loading || !user || !userData) {
-        return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+        return <AnimatedLogoLoader fullscreen />;
     }
 
     return (
@@ -274,8 +274,8 @@ export default function ProfilePageClient() {
                                 <div className="space-y-6">
                                     <div className="flex items-center justify-between rounded-lg border p-3">
                                         <div>
-                                            <Label htmlFor="animated-nav" className="font-semibold flex items-center gap-2"><Sliders className="h-4 w-4"/> Kaydırmada Menüleri Gizle</Label>
-                                            <p className="text-xs text-muted-foreground pl-6">Kaydırma yaparken üst ve alt menü çubuklarını gizler.</p>
+                                            <Label htmlFor="animated-nav" className="font-semibold flex items-center gap-2"><Sliders className="h-4 w-4"/> Arayüz Animasyonları</Label>
+                                            <p className="text-xs text-muted-foreground pl-6">Uygulama genelindeki arayüz geçişlerini ve efektleri etkinleştirir.</p>
                                         </div>
                                         <Switch id="animated-nav" checked={animatedNav} onCheckedChange={setAnimatedNav} />
                                     </div>
