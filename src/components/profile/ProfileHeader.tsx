@@ -187,11 +187,13 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
         userIds={userIdsToShow || []}
         type={dialogType}
       />
-      <ReportDialog 
-        isOpen={isReportOpen}
-        onOpenChange={setIsReportOpen}
-        target={{ type: 'user', id: profileUser.uid, name: profileUser.username }}
-      />
+      {isReportOpen && (
+          <ReportDialog 
+            isOpen={isReportOpen}
+            onOpenChange={setIsReportOpen}
+            target={{ type: 'user', id: profileUser.uid, name: profileUser.username }}
+          />
+      )}
        <BadgesDialog
         isOpen={isBadgesOpen}
         onOpenChange={setIsBadgesOpen}

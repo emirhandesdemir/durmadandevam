@@ -102,6 +102,9 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     const [editingCommentsDisabled, setEditingCommentsDisabled] = useState(post.commentsDisabled ?? false);
     const [editingLikesHidden, setEditingLikesHidden] = useState(post.likesHidden ?? false);
     
+    const isOwner = currentUser?.uid === post.uid;
+    const postUser = isOwner ? currentUserData : null;
+
     useEffect(() => {
         setOptimisticLiked(post.likes?.includes(currentUser?.uid || ''));
         setOptimisticLikeCount(post.likeCount);
@@ -111,7 +114,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     }, [post, currentUser, currentUserData]);
 
 
-    const isOwner = currentUser?.uid === post.uid;
+    
     const isAdmin = currentUserData?.role === 'admin';
     const createdAtDate = safeParseTimestamp(post.createdAt);
     const timeAgo = createdAtDate.getTime() !== 0 ? formatDistanceToNow(createdAtDate, { addSuffix: true, locale: tr }) : "az önce";
@@ -347,7 +350,9 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
             
             <CommentSheet open={showComments} onOpenChange={setShowComments} post={post} />
             <QuoteRetweetDialog isOpen={!!postToRetweet} onOpenChange={() => setPostToRetweet(null)} post={postToRetweet!} />
-            <ReportDialog isOpen={isReportOpen} onOpenChange={setIsReportOpen} target={{ type: 'post', id: post.id, user: { id: post.uid, name: post.username } }}/>
+            {isReportOpen && (
+              <ReportDialog isOpen={isReportOpen} onOpenChange={setIsReportOpen} target={{ type: 'post', id: post.id, user: { id: post.uid, name: post.username } }}/>
+            )}
         </>
     );
 }
