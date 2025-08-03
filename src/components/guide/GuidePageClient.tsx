@@ -7,6 +7,11 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, Compass, Diamond, Gift, HelpCircle, Palette, PenSquare, Shield, Users, Mic, MessageSquare, KeyRound, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+
+interface GuidePageClientProps {
+  isPublicPage: boolean;
+}
 
 const guideSections = [
     {
@@ -24,7 +29,6 @@ const guideSections = [
         items: [
             { title: "Gönderi Paylaşma", description: "Ana sayfada metin veya fotoğraf içeren gönderiler paylaşabilirsiniz. 'Oluştur' sekmesinden yeni gönderi oluşturma sayfasına gidebilirsiniz." },
             { title: "Sohbet Odaları", description: "Farklı konulardaki sohbet odalarına katılabilir veya kendi odanızı oluşturabilirsiniz. Odalar, belirli bir süre sonra otomatik olarak kapanır." },
-            { title: "Surf Akışı", description: "Kısa videolarınızı paylaşabileceğiniz ve diğer kullanıcıların videolarını keşfedebileceğiniz tam ekran bir video akışıdır." },
             { title: "Direkt Mesajlar", description: "Diğer kullanıcılarla özel olarak mesajlaşabilirsiniz. Profil sayfalarındaki 'Mesaj Gönder' butonu ile yeni bir sohbet başlatın." },
         ]
     },
@@ -80,14 +84,24 @@ const cardVariants = {
   }),
 };
 
-export default function GuidePageClient() {
+export default function GuidePageClient({ isPublicPage }: GuidePageClientProps) {
+  const router = useRouter();
+  
+  const handleBack = () => {
+    if (isPublicPage) {
+      router.back();
+    } else {
+      router.push('/profile');
+    }
+  }
+
   return (
     <div className="relative min-h-screen bg-background">
        <div className="absolute top-0 left-0 w-full h-48 bg-gradient-to-b from-primary/20 to-transparent -z-10" />
       <div className="container mx-auto max-w-4xl py-6 px-4">
         <div className="flex items-center gap-4 mb-8">
-            <Button asChild variant="outline" size="icon" className="h-9 w-9 rounded-full">
-                <Link href="/profile"><ChevronLeft className="h-5 w-5"/></Link>
+            <Button onClick={handleBack} variant="outline" size="icon" className="h-9 w-9 rounded-full">
+                <ChevronLeft className="h-5 w-5"/>
             </Button>
             <div className="flex items-center gap-3">
                 <HelpCircle className="h-8 w-8 text-primary" />
