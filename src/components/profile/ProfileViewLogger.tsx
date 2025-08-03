@@ -1,16 +1,3 @@
-// src/components/profile/ProfileViewLogger.tsx
-'use client';
-import { useAuth } from '@/contexts/AuthContext';
-import { logProfileView } from '@/lib/actions/profileActions';
-import { useEffect } from 'react';
-
-export default function ProfileViewLogger({ targetUserId }: { targetUserId: string }) {
-  const { user } = useAuth();
-  useEffect(() => {
-    if (user && user.uid !== targetUserId) {
-      logProfileView(targetUserId, user.uid);
-    }
-  }, [user, targetUserId]);
-
-  return null; // This component renders nothing.
-}
+// This component is obsolete and has been removed to fix a runtime error.
+// It was trying to call a function that no longer exists.
+// This file can be safely deleted in a future cleanup.
