@@ -143,6 +143,7 @@ export default function LoginForm() {
 
     return (
         <Card className="w-full max-w-sm mx-auto shadow-2xl rounded-2xl bg-card/80 backdrop-blur-lg border-white/20 relative">
+            <Form {...form}>
             <CardHeader className="text-center space-y-4 pt-10">
                  <Button asChild variant="outline" size="sm" className="absolute top-4 right-4 rounded-full">
                     <Link href="/guide">
@@ -165,7 +166,7 @@ export default function LoginForm() {
                         <Separator className="shrink-0" />
                         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-2 text-xs uppercase text-muted-foreground bg-card">Veya</div>
                     </div>
-                    <Form {...form}>
+                    
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                             <FormField
                                 control={form.control}
@@ -221,7 +222,7 @@ export default function LoginForm() {
                                 Giriş Yap
                             </Button>
                         </form>
-                    </Form>
+                    
                 </div>
                 <div className="mt-6 text-center text-sm">
                     Hesabınız yok mu?{" "}
@@ -230,6 +231,7 @@ export default function LoginForm() {
                     </Link>
                 </div>
             </CardContent>
+            </Form>
         </Card>
     );
 }
