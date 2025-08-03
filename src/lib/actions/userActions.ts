@@ -29,7 +29,7 @@ export async function sendVerificationEmail(userId: string) {
 export async function updateUserProfile(updates: {
     userId: string;
     isNewUser?: boolean;
-    email?: string;
+    email?: string | null;
     referredBy?: string | null;
     photoURL?: string | null;
     username?: string;
@@ -51,20 +51,12 @@ export async function updateUserProfile(updates: {
 
     const userRef = doc(db, 'users', userId);
     
-    let updatesForDb: { [key: string]: any } = { ...otherUpdates };
-    
-    // Convert age to number or null
-    if (updates.age === '' || updates.age === undefined || updates.age === null) {
-        updatesForDb.age = null;
-    } else if (updates.age !== undefined) {
-        updatesForDb.age = Number(updates.age);
-    }
-    
-    await runTransaction(db, async (transaction) => {
-        const userSnap = await transaction.get(userRef);
+    // This is the core fix. We separate the creation logic from the update logic.
+    if (isNewUser) {
+        // Create the document for a new user. This is called once on signup.
+        const counterRef = doc(db, 'config', 'counters');
         
-        if (!userSnap.exists()) {
-            const counterRef = doc(db, 'config', 'counters');
+        await runTransaction(db, async (transaction) => {
             const counterDoc = await transaction.get(counterRef);
             const currentTag = counterDoc.exists() ? counterDoc.data().userTag || 1000 : 1000;
             const newTag = currentTag + 1;
@@ -80,7 +72,7 @@ export async function updateUserProfile(updates: {
                 emailVerified: false,
                 username: updates.username,
                 username_lowercase: updates.username?.toLowerCase(), 
-                photoURL: updates.photoURL || null, bio: null, age: null, city: null, country: null,
+                photoURL: null, bio: null, age: null, city: null, country: null,
                 gender: null, interests: [], role: userRole,
                 createdAt: serverTimestamp(), lastActionTimestamp: serverTimestamp(),
                 diamonds: 10, profileValue: 0, giftLevel: 0, totalDiamondsSent: 0,
@@ -93,86 +85,50 @@ export async function updateUserProfile(updates: {
                 unlimitedRoomCreationUntil: null, profileCompletionNotificationSent: false,
                 profileCompletionAwarded: false, location: null,
              };
-            
-             delete updatesForDb.isNewUser;
-             delete updatesForDb.referredBy;
-             transaction.set(userRef, { ...initialData, ...updatesForDb });
-             
-        } else {
-            const userData = userSnap.data();
-            
-            if (!userData.uniqueTag) {
-                const counterRef = doc(db, 'config', 'counters');
-                const counterDoc = await transaction.get(counterRef);
-                const currentTag = counterDoc.exists() ? counterDoc.data().userTag || 1000 : 1000;
-                const newTag = currentTag + 1;
-                transaction.update(counterRef, { userTag: newTag });
-                updatesForDb.uniqueTag = newTag;
-            }
-
-            if (updates.email && updates.email !== userData.email) {
-                updatesForDb.email = updates.email;
-                updatesForDb.emailVerified = false;
-            }
-
-            if (updates.location) {
-                updatesForDb.location = { latitude: updates.location.latitude, longitude: updates.location.longitude };
-                if (updates.location.city) updatesForDb.city = updates.location.city;
-                if (updates.location.country) updatesForDb.country = updates.location.country;
-            }
-
-            if (!userData.profileCompletionAwarded) {
-                const hasBio = 'bio' in updatesForDb ? !!updatesForDb.bio?.trim() : !!userData.bio?.trim();
-                const hasAge = 'age' in updatesForDb ? !!updatesForDb.age : !!userData.age;
-                const hasGender = 'gender' in updatesForDb ? !!updatesForDb.gender : !!userData.gender;
-                const hasInterests = 'interests' in updatesForDb ? (updatesForDb.interests?.length > 0) : (userData.interests?.length > 0);
-                const isVerified = userData.emailVerified;
-
-                if (hasBio && hasAge && hasGender && hasInterests && isVerified) {
-                    updatesForDb.diamonds = increment(50);
-                    updatesForDb.profileCompletionAwarded = true;
-                }
-            }
-
-            if (Object.keys(updatesForDb).length > 0) {
-                 transaction.update(userRef, updatesForDb);
-            }
-        }
-    });
-
-    const propagationUpdates: { [key: string]: any } = {};
-    if (updates.username) propagationUpdates.username = updates.username;
-    if (updates.photoURL) propagationUpdates.userPhotoURL = updates.photoURL;
-    if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
-
-    if (Object.keys(propagationUpdates).length > 0) {
-        try {
-            await Promise.all([
-                updateUserPosts(userId, propagationUpdates),
-                updateUserComments(userId, propagationUpdates),
-                updateUserDmMessages(userId, propagationUpdates),
-            ]);
-        } catch(err) {
-            console.error("Propagation error:", err);
-        }
-    }
-
-    if (updates.photoURL) {
-      try {
-        const auth = getAuth();
-        await auth.updateUser(userId, { photoURL: updates.photoURL });
-      } catch (e) {
-        console.error("Auth profile photo update failed:", e);
-      }
-    }
-    
-    if (updatesForDb.profileCompletionAwarded) {
-         await createNotification({
-            recipientId: userId, senderId: 'system-reward',
-            senderUsername: 'HiweWalk', senderAvatar: null,
-            type: 'system',
-            messageText: 'Tebrikler! Profilini tamamladığın için 50 elmas kazandın! 💎',
+            transaction.set(userRef, initialData);
         });
+
+    } else {
+        // This is for updating an existing user.
+        let updatesForDb: { [key: string]: any } = { ...otherUpdates };
+        
+        if (updates.age === '' || updates.age === undefined || updates.age === null) {
+            updatesForDb.age = null;
+        } else if (updates.age !== undefined) {
+            updatesForDb.age = Number(updates.age);
+        }
+
+        if (Object.keys(updatesForDb).length > 0) {
+            await updateDoc(userRef, updatesForDb);
+        }
+
+        // Handle data propagation to other collections if needed.
+        const propagationUpdates: { [key: string]: any } = {};
+        if (updates.username) propagationUpdates.username = updates.username;
+        if (updates.photoURL) propagationUpdates.userPhotoURL = updates.photoURL;
+        if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
+
+        if (Object.keys(propagationUpdates).length > 0) {
+            try {
+                await Promise.all([
+                    updateUserPosts(userId, propagationUpdates),
+                    updateUserComments(userId, propagationUpdates),
+                    updateUserDmMessages(userId, propagationUpdates),
+                ]);
+            } catch(err) {
+                console.error("Propagation error:", err);
+            }
+        }
+
+        // Also update the photo in Firebase Auth if it changed
+        if (updates.photoURL) {
+          try {
+            const auth = getAuth();
+            await auth.updateUser(userId, { photoURL: updates.photoURL });
+          } catch (e) {
+            console.error("Auth profile photo update failed:", e);
+          }
+        }
     }
 
     revalidatePath(`/profile/${userId}`, 'layout');

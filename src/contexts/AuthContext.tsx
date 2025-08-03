@@ -140,6 +140,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 router.replace('/home');
             }
         }
+        // If the doc doesn't exist (e.g. for a new user), it will be created by the signup form.
+        // We just need to wait, so we still set loading to false.
         setLoading(false);
     }, (error) => {
         console.error("Firestore user listener error:", error);

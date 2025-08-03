@@ -86,8 +86,15 @@ export default function SignUpForm() {
                 }
             }
 
-            // Let AuthContext handle user document creation.
-            // This prevents race conditions.
+            // CRITICAL FIX: Create user document immediately on signup.
+            // This guarantees the document exists before the user is redirected to the profile page.
+            await updateUserProfile({
+                userId: user.uid,
+                isNewUser: true, // This flag tells the action to create the document.
+                username: values.username,
+                email: user.email,
+                referredBy: ref,
+            });
 
             if (ref) {
                 try {
