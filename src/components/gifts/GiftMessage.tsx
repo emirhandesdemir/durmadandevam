@@ -8,27 +8,27 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '../ui/badge';
 import { Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { 
-    AnimatedRose, AnimatedHeart, AnimatedPopper, 
-    AnimatedRocket, AnimatedCastle, AnimatedPlane 
-} from './GiftAnimations';
+import { Timestamp } from 'firebase/firestore';
 
-const giftComponentMap: { [key: string]: React.ElementType } = {
-  rose: AnimatedRose,
-  heart: AnimatedHeart,
-  popper: AnimatedPopper,
-  rocket: AnimatedRocket,
-  castle: AnimatedCastle,
-  plane: AnimatedPlane,
-};
+interface GiftMessageProps {
+  message: Message;
+}
 
 export default function GiftMessage({ message }: { message: Message }) {
-  const [showAnimation, setShowAnimation] = useState(true);
+  const [showAnimation, setShowAnimation] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowAnimation(false), 4000); // Animation duration
-    return () => clearTimeout(timer);
-  }, []);
+    if (message.createdAt) {
+      const messageTime = (message.createdAt as Timestamp).toMillis();
+      const currentTime = Date.now();
+      // Show animation only if the message is newer than 10 seconds
+      if (currentTime - messageTime < 10000) {
+        setShowAnimation(true);
+        const timer = setTimeout(() => setShowAnimation(false), 4000); // Animation duration
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [message.createdAt]);
 
   if (!message.giftData) return null;
 
@@ -40,7 +40,7 @@ export default function GiftMessage({ message }: { message: Message }) {
     return null;
   }
   
-  const GiftIcon = giftComponentMap[gift.id];
+  const GiftIcon = gift.icon;
   if (!GiftIcon) return null;
 
   const receiverText = receiverName ? (

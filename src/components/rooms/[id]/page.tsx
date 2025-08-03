@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, onSnapshot, collection, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, orderBy, limit, where, Timestamp, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -13,7 +13,7 @@ import TextChat from '@/components/chat/text-chat';
 import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
 import RoomHeader from '@/components/rooms/RoomHeader';
 
-import type { Room, Message, Giveaway, ActiveGame, GameSettings, ActiveGameSession, MindWarSession } from '@/lib/types';
+import type { Room, Message, Giveaway, ActiveGame, GameSettings, ActiveGameSession, MindWarSession, VoiceParticipant } from '@/lib/types';
 import RoomFooter from '@/components/rooms/RoomFooter';
 import SpeakerLayout from '@/components/rooms/SpeakerLayout';
 import RoomInfoCards from '@/components/rooms/RoomInfoCards';
@@ -30,6 +30,7 @@ import GameLobbyDialog from '@/components/game/GameLobbyDialog';
 import ActiveGameArea from '@/components/game/ActiveGameArea';
 import MindWarLobby from '@/components/games/mindwar/MindWarLobby';
 import MindWarMainUI from '@/components/games/mindwar/MindWarMainUI';
+import EntryEffectManager from '@/components/rooms/EntryEffectManager';
 
 
 export default function RoomPage() {
@@ -40,7 +41,7 @@ export default function RoomPage() {
     
     // --- Auth & Contexts ---
     const { user, userData, featureFlags, loading: authLoading } = useAuth();
-    const { setActiveRoomId } = useVoiceChat();
+    const { setActiveRoomId, participants } = useVoiceChat();
 
     // --- Component State ---
     const [room, setRoom] = useState<Room | null>(null);
@@ -221,6 +222,7 @@ export default function RoomPage() {
 
     return (
         <>
+            <EntryEffectManager participants={participants} />
             <div className={cn("flex flex-col h-full bg-background text-foreground", room.type === 'event' && 'event-room-bg')}>
                  <RoomHeader 
                     room={room} 
