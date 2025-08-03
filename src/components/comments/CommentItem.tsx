@@ -50,9 +50,25 @@ export default function CommentItem({ comment, postId, onReply }: CommentItemPro
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const isOwner = currentUser?.uid === comment.uid;
-    // Safely parse the timestamp string
-    const timeAgo = comment.createdAt
-        ? formatDistanceToNow(new Date(comment.createdAt as any), { addSuffix: true, locale: tr })
+
+    const parseTimestamp = (timestamp: any): Date | null => {
+        if (!timestamp) return null;
+        if (timestamp instanceof Date) return timestamp;
+        // Check for Firestore Timestamp object
+        if (typeof timestamp.toDate === 'function') {
+            return timestamp.toDate();
+        }
+        // Check for serialized string from server
+        if (typeof timestamp === 'string') {
+            const date = new Date(timestamp);
+            if (!isNaN(date.getTime())) return date;
+        }
+        return null;
+    };
+    
+    const createdAtDate = parseTimestamp(comment.createdAt);
+    const timeAgo = createdAtDate
+        ? formatDistanceToNow(createdAtDate, { addSuffix: true, locale: tr })
         : "şimdi";
     
     const sentGift = comment.giftId ? getGiftById(comment.giftId) : null;
