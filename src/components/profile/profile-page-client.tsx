@@ -31,7 +31,7 @@ import { giftLevelThresholds } from "@/lib/gifts";
 import { Progress } from "@/components/ui/progress";
 import ImageCropperDialog from "../common/ImageCropperDialog";
 import AnimatedLogoLoader from "../common/AnimatedLogoLoader";
-import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const bubbleOptions = [
     { id: "", name: "Varsayılan", isPremium: false },
