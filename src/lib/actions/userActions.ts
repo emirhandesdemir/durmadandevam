@@ -12,6 +12,7 @@ import { deleteRoomWithSubcollections } from '../firestoreUtils';
 import { updateUserPosts, updateUserComments, updateUserDmMessages } from './propagationActions';
 import { v4 as uuidv4 } from 'uuid';
 import { createNotification } from './notificationActions';
+import { updateEmail } from 'firebase/auth';
 
 export async function sendVerificationEmail(userId: string) {
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
@@ -97,12 +98,11 @@ export async function updateUserProfile(updates: {
         updatesForDb.username_lowercase = updates.username.toLowerCase();
     }
     
-    if (updates.avatarSvg) {
-        const svgPath = `avatars/${userId}/avatar.svg`;
-        const svgStorageRef = storageRef(storage, svgPath);
-        await uploadString(svgStorageRef, updates.avatarSvg, 'raw', { contentType: 'image/svg+xml' });
-        updatesForDb.photoURL = await getDownloadURL(svgStorageRef);
-        delete updatesForDb.avatarSvg;
+    if (updates.email && updates.email !== userData?.email) {
+        const auth = getAuth();
+        await auth.updateUser(userId, { email: updates.email });
+        updatesForDb.email = updates.email;
+        updatesForDb.emailVerified = false;
     }
 
 
@@ -137,9 +137,10 @@ export async function updateUserProfile(updates: {
          const initialData = {
             uid: userId,
             email: updates.email,
+            emailVerified: false,
             username: updates.username,
             username_lowercase: updates.username?.toLowerCase(),
-            photoURL: updatesForDb.photoURL || null,
+            photoURL: null,
             bio: null,
             age: null,
             city: null, 
@@ -174,11 +175,10 @@ export async function updateUserProfile(updates: {
             isFirstPremium: false,
             unlimitedRoomCreationUntil: null,
             profileCompletionNotificationSent: false,
-            profileCompletionAwarded: false, // New field
+            profileCompletionAwarded: false, 
             location: null,
          };
          delete updatesForDb.isNewUser;
-         delete updatesForDb.email;
          delete updatesForDb.referredBy;
          batch.set(userRef, { ...initialData, ...updatesForDb });
     } else if (Object.keys(updatesForDb).length > 0) {
@@ -210,7 +210,7 @@ export async function updateUserProfile(updates: {
 
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (updatesForDb.photoURL) propagationUpdates.photoURL = updatesForDb.photoURL;
+    if (updatesForDb.photoURL) propagationUpdates.userPhotoURL = updatesForDb.photoURL;
     if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
 
     if (Object.keys(propagationUpdates).length > 0) {

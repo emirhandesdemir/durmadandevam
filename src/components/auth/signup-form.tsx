@@ -12,7 +12,6 @@ import { auth } from "@/lib/firebase";
 import { creditReferrer } from "@/lib/actions/diamondActions";
 import { checkUsernameExists, updateUserProfile } from "@/lib/actions/userActions";
 import Image from "next/image";
-import multiavatar from '@multiavatar/multiavatar';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -88,10 +87,7 @@ export default function SignUpForm() {
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const user = userCredential.user;
             
-            // Generate avatar on the client
-            const avatarSvgString = multiavatar(user.uid);
-
-            // Update Firebase Auth profile immediately
+            // Update Firebase Auth profile immediately with username. photoURL is set via server action.
             await updateProfile(user, {
                 displayName: values.username,
             });
@@ -113,7 +109,6 @@ export default function SignUpForm() {
                 isNewUser: true, // Flag to set initial data
                 username: values.username,
                 email: values.email,
-                avatarSvg: avatarSvgString, // Pass SVG string to server action
                 referredBy: ref,
             });
 
