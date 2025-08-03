@@ -68,10 +68,7 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
         throw new Error('Oda bulunamadı.');
     }
     const roomData = roomDoc.data();
-    if(roomData.createdBy.uid === senderId && !receiverId) {
-        throw new Error("Oda sahibi kendi odasına hediye gönderemez.");
-    }
-
+    
     const senderData = senderDoc.data();
     const newTotalDiamondsSent = (senderData.totalDiamondsSent || 0) + gift.diamondCost;
     const newGiftLevel = getGiftLevel(newTotalDiamondsSent);

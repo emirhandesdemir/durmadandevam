@@ -327,6 +327,7 @@ export interface Room {
     level: number;
     xp: number;
     xpToNextLevel: number;
+    lastXpGainTimestamp: Timestamp | null;
 }
 
 export interface PlaylistTrack {

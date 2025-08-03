@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { revalidatePath } from 'next/cache';
 import { generateRoomResponse } from '@/ai/flows/roomChatFlow';
 import { logTransaction } from './transactionActions';
+import { getRoomLevelInfo } from '../gifts';
 
 const voiceStatsRef = doc(db, 'config', 'voiceStats');
 
@@ -26,6 +27,48 @@ const BOT_USER_INFO = {
 // This function is not awaited in the main flow to avoid blocking UI.
 export async function triggerBotResponse(roomId: string, messageAuthorId: string, messageText: string) {
     if (messageAuthorId === BOT_USER_INFO.uid) return;
+
+    // --- Passive XP Gain Logic ---
+    const roomRef = doc(db, 'rooms', roomId);
+    try {
+        const roomDoc = await getDoc(roomRef);
+        if (roomDoc.exists()) {
+            const roomData = roomDoc.data() as Room;
+            const lastGain = (roomData.lastXpGainTimestamp as Timestamp)?.toMillis() || 0;
+            const now = Date.now();
+            const fiveMinutes = 5 * 60 * 1000;
+            
+            // Grant XP if more than 5 minutes have passed since last gain
+            if (now - lastGain > fiveMinutes) {
+                const voiceCount = roomData.voiceParticipantsCount || 0;
+                if (voiceCount > 0) {
+                    const xpGained = voiceCount; // 1 XP per voice participant
+                    
+                    const currentXp = roomData.xp || 0;
+                    const newXp = currentXp + xpGained;
+                    const oldLevelInfo = getRoomLevelInfo(currentXp);
+                    const newLevelInfo = getRoomLevelInfo(newXp);
+                    
+                    const roomUpdates: { [key: string]: any } = {
+                        xp: newXp,
+                        lastXpGainTimestamp: serverTimestamp()
+                    };
+
+                    if (newLevelInfo.level > oldLevelInfo.level) {
+                        roomUpdates.level = newLevelInfo.level;
+                        roomUpdates.xpToNextLevel = newLevelInfo.xpToNextLevel;
+                        await addSystemMessage(roomId, `🎉 Oda aktivite ile seviye atladı! Yeni Seviye: ${newLevelInfo.level}`);
+                    }
+                    
+                    await updateDoc(roomRef, roomUpdates);
+                }
+            }
+        }
+    } catch (error) {
+        console.error("Error during passive XP gain check:", error);
+    }
+    // --- End Passive XP Gain Logic ---
+
 
     // Determine if the bot should respond
     const isMentioned = messageText.toLowerCase().includes('@walk');
@@ -109,6 +152,10 @@ export async function createEventRoom(
         rules: null,
         welcomeMessage: null,
         pinnedMessageId: null,
+        level: 1,
+        xp: 0,
+        xpToNextLevel: getRoomLevelInfo(0).xpToNextLevel,
+        lastXpGainTimestamp: null
     };
 
     await setDoc(newRoomRef, newRoom);
@@ -180,6 +227,10 @@ export async function createRoom(
             rules: null,
             welcomeMessage: null,
             pinnedMessageId: null,
+            level: 1,
+            xp: 0,
+            xpToNextLevel: getRoomLevelInfo(0).xpToNextLevel,
+            lastXpGainTimestamp: null,
         };
 
         transaction.set(newRoomRef, newRoom);
@@ -209,21 +260,24 @@ interface UserInfo {
 }
 
 
-export async function addSystemMessage(roomId: string, text: string) {
+export async function addSystemMessage(roomId: string, text: string, transaction?: FirestoreTransaction) {
     if (!roomId || !text) throw new Error("Oda ID'si ve mesaj metni gereklidir.");
 
     try {
         const messagesRef = collection(db, 'rooms', roomId, 'messages');
-        const batch = writeBatch(db);
-        batch.set(doc(messagesRef), {
-            type: 'system',
+        const messageData = {
+            type: 'system' as const,
             text,
             createdAt: serverTimestamp(),
             uid: 'system',
             username: 'System',
-        });
-        
-        await batch.commit();
+        };
+
+        if (transaction) {
+            transaction.set(doc(messagesRef), messageData);
+        } else {
+            await addDoc(messagesRef, messageData);
+        }
 
         return { success: true };
     } catch (error: any) {
@@ -231,6 +285,7 @@ export async function addSystemMessage(roomId: string, text: string) {
         return { success: false, error: error.message };
     }
 }
+
 
 export async function deleteRoomAsOwner(roomId: string, userId: string) {
     if (!roomId || !userId) throw new Error("Oda ID'si ve kullanıcı ID'si gereklidir.");

@@ -74,9 +74,7 @@ export default function GiftPanel({ isOpen, onOpenChange, room }: GiftPanelProps
                     <div className="flex gap-3 pb-2">
                         <button 
                             onClick={() => setSelectedReceiverId(null)} 
-                            className={cn("flex flex-col items-center gap-1 p-2 rounded-lg border-2", !selectedReceiverId ? "border-primary bg-primary/10" : "border-transparent bg-muted/50", isHost && "opacity-50 cursor-not-allowed")}
-                            disabled={isHost}
-                            title={isHost ? "Oda sahibi kendi odasına hediye gönderemez" : "Odaya Gönder"}
+                            className={cn("flex flex-col items-center gap-1 p-2 rounded-lg border-2", !selectedReceiverId ? "border-primary bg-primary/10" : "border-transparent bg-muted/50")}
                         >
                             <div className="h-14 w-14 rounded-full bg-secondary flex items-center justify-center text-primary font-bold">Oda</div>
                             <span className="text-xs font-semibold">Odaya</span>
