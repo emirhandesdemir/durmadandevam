@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft, MoreHorizontal, Users, UserPlus, Gift, Zap, ChevronUp, ChevronDown, Clock, LogOut, MicOff, Minimize2, Settings } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Users, UserPlus, Gift, Zap, ChevronUp, ChevronDown, Clock, LogOut, MicOff, Minimize2, Settings, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Room } from '@/lib/types';
 import InviteDialog from './InviteDialog';
@@ -19,6 +19,8 @@ import { addSystemMessage } from '@/lib/actions/roomActions';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
 import { useRouter } from 'next/navigation';
 import RoomManagementDialog from './RoomManagementDialog';
+import { Progress } from '../ui/progress';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 interface RoomHeaderProps {
   room: Room;
@@ -66,6 +68,11 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, isSp
 
 
     const hasActivePortal = room.portalExpiresAt && (room.portalExpiresAt as Timestamp).toMillis() > Date.now();
+    
+    const xpPercentage = room.level > 0 && room.xpToNextLevel > 0 
+        ? Math.max(0, Math.min(100, (room.xp / room.xpToNextLevel) * 100))
+        : 0;
+
 
     return (
         <>
@@ -100,10 +107,24 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, isSp
                         </div>
                     )}
 
-                    <div>
+                    <div className="flex-1">
                         <h1 className="text-md font-bold truncate max-w-[120px] sm:max-w-[180px] text-primary shadow-primary/50 [text-shadow:_0_0_8px_var(--tw-shadow-color)]">{room.name}</h1>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span>ID: {room.id.substring(0, 10)}</span>
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div className='flex items-center gap-1.5 cursor-pointer'>
+                                            <Star className="h-3 w-3 text-yellow-500" />
+                                            <span className='font-bold'>SV {room.level || 0}</span>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p className='text-xs'>Oda Seviyesi</p>
+                                        <Progress value={xpPercentage} className="w-20 h-1 mt-1" />
+                                        <p className='text-xs text-center mt-1'>{room.xp} / {room.xpToNextLevel}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
                              {timeLeft !== null && room.expiresAt && (
                                 <>
                                     <span>·</span>

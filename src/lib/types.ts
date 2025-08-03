@@ -3,7 +3,7 @@ import { Timestamp } from "firebase/firestore";
 
 export interface Transaction {
     id: string;
-    type: 'diamond_purchase' | 'gift_sent' | 'gift_received' | 'profile_value_conversion' | 'room_creation' | 'room_perk' | 'admin_grant' | 'ad_reward' | 'referral_bonus' | 'live_gift' | 'profile_completion_reward';
+    type: 'diamond_purchase' | 'gift_sent' | 'gift_received' | 'profile_value_conversion' | 'room_creation' | 'room_perk' | 'admin_grant' | 'ad_reward' | 'referral_bonus' | 'live_gift';
     amount: number;
     description: string;
     relatedUserId?: string | null;
@@ -125,11 +125,10 @@ export interface ThemeSettings {
 
 export interface UserProfile {
     uid: string;
-    uniqueTag: number;
     email: string;
     emailVerified: boolean;
-    username: string; 
-    username_lowercase: string;
+    username: string;
+    username_lowercase?: string;
     photoURL: string | null;
     profileEmoji?: string | null;
     bio: string | null;
@@ -218,7 +217,7 @@ export interface Notification {
     photoURL: string | null;
     profileEmoji?: string | null;
     senderAvatarFrame?: string;
-    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile' | 'system';
+    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile';
     postId?: string | null;
     postImage?: string | null;
     commentText?: string;
@@ -325,6 +324,9 @@ export interface Room {
     giveaway?: Giveaway;
     activeMindWarSessionId?: string | null;
     totalGiftValue?: number;
+    level: number;
+    xp: number;
+    xpToNextLevel: number;
 }
 
 export interface PlaylistTrack {

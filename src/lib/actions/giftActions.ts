@@ -3,9 +3,11 @@
 
 import { db } from '@/lib/firebase';
 import { doc, runTransaction, increment, serverTimestamp, collection, addDoc, getDoc } from 'firebase/firestore';
-import { getGiftById } from '../gifts';
+import { getGiftById, getRoomLevelInfo } from '../gifts';
 import { logTransaction } from './transactionActions';
 import { openPortalForRoom } from './roomActions';
+import { addSystemMessage } from './roomActions';
+
 
 interface SendGiftArgs {
   roomId: string;
@@ -60,6 +62,15 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
     if (!senderDoc.exists() || (senderDoc.data().diamonds || 0) < gift.diamondCost) {
       throw new Error('Yetersiz elmas bakiyesi.');
     }
+    
+    const roomDoc = await transaction.get(roomRef);
+    if (!roomDoc.exists()) {
+        throw new Error('Oda bulunamadı.');
+    }
+    const roomData = roomDoc.data();
+    if(roomData.createdBy.uid === senderId && !receiverId) {
+        throw new Error("Oda sahibi kendi odasına hediye gönderemez.");
+    }
 
     const senderData = senderDoc.data();
     const newTotalDiamondsSent = (senderData.totalDiamondsSent || 0) + gift.diamondCost;
@@ -77,6 +88,7 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
 
 
     let receiverName: string | null = null;
+    let leveledUp = false;
 
     // If it's a gift to a specific user, increment their profile value
     if (receiverRef) {
@@ -95,6 +107,21 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
             relatedUserId: senderId,
             giftId: giftId,
        });
+    } else {
+        // Gift to the room, update room XP
+        const currentXp = roomData.xp || 0;
+        const newXp = currentXp + gift.diamondCost;
+        const oldLevelInfo = getRoomLevelInfo(currentXp);
+        const newLevelInfo = getRoomLevelInfo(newXp);
+        
+        const roomUpdates: { [key: string]: any } = { xp: newXp };
+
+        if (newLevelInfo.level > oldLevelInfo.level) {
+            leveledUp = true;
+            roomUpdates.level = newLevelInfo.level;
+            roomUpdates.xpToNextLevel = newLevelInfo.xpToNextLevel;
+        }
+        transaction.update(roomRef, roomUpdates);
     }
 
     // Log transaction for sender
@@ -124,10 +151,16 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
     
     // If the gift is the 'plane', open a portal
     if (gift.id === 'plane') {
-      const roomDoc = await transaction.get(roomRef);
-      if (roomDoc.exists()) {
+      const currentRoomDoc = await transaction.get(roomRef); // re-get to have latest data
+      if (currentRoomDoc.exists()) {
          await openPortalForRoom(roomId, senderId, transaction);
       }
+    }
+    
+    // If room leveled up, add a system message
+    if (leveledUp) {
+        const newLevel = getRoomLevelInfo(roomData.xp + gift.diamondCost).level;
+        await addSystemMessage(roomId, `🎉 Oda seviye atladı! Yeni Seviye: ${newLevel}`, transaction);
     }
     
     return { success: true };

@@ -61,6 +61,7 @@ export const getGiftById = (id: string): Gift | undefined => {
     return giftList.find(g => g.id === id);
 }
 
+// For user gift levels
 export const giftLevelThresholds = [
     { level: 0, diamonds: 0 },
     { level: 1, diamonds: 100 },
@@ -74,3 +75,36 @@ export const giftLevelThresholds = [
     { level: 9, diamonds: 75000 },
     { level: 10, diamonds: 100000 },
 ];
+
+// For room levels
+export const roomLevelThresholds = [
+    { level: 1, xp: 0 },
+    { level: 2, xp: 100 },
+    { level: 3, xp: 300 },
+    { level: 4, xp: 700 },
+    { level: 5, xp: 1500 },
+    { level: 6, xp: 3000 },
+    { level: 7, xp: 6000 },
+    { level: 8, xp: 10000 },
+    { level: 9, xp: 15000 },
+    { level: 10, xp: 25000 },
+];
+
+export const getRoomLevelInfo = (xp: number) => {
+    let currentLevel = 0;
+    let nextLevelXp = roomLevelThresholds[0].xp;
+
+    for (let i = roomLevelThresholds.length - 1; i >= 0; i--) {
+        if (xp >= roomLevelThresholds[i].xp) {
+            currentLevel = roomLevelThresholds[i].level;
+            const nextLevel = roomLevelThresholds.find(l => l.level === currentLevel + 1);
+            nextLevelXp = nextLevel ? nextLevel.xp : Infinity;
+            break;
+        }
+    }
+    
+    return {
+        level: currentLevel,
+        xpToNextLevel: nextLevelXp,
+    };
+};

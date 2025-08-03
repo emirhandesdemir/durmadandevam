@@ -29,6 +29,7 @@ export default function GiftPanel({ isOpen, onOpenChange, room }: GiftPanelProps
   
   const selectedGift = giftList.find(g => g.id === selectedGiftId);
   const canAfford = selectedGift ? (userData?.diamonds || 0) >= selectedGift.diamondCost : false;
+  const isHost = user?.uid === room.createdBy.uid;
 
   const handleSendGift = async () => {
     if (!user || !userData || !selectedGift) return;
@@ -71,7 +72,12 @@ export default function GiftPanel({ isOpen, onOpenChange, room }: GiftPanelProps
                 <p className="text-sm font-medium">Kime Göndereceksin?</p>
                 <ScrollArea className="w-full whitespace-nowrap -mx-4 px-4">
                     <div className="flex gap-3 pb-2">
-                        <button onClick={() => setSelectedReceiverId(null)} className={cn("flex flex-col items-center gap-1 p-2 rounded-lg border-2", !selectedReceiverId ? "border-primary bg-primary/10" : "border-transparent bg-muted/50")}>
+                        <button 
+                            onClick={() => setSelectedReceiverId(null)} 
+                            className={cn("flex flex-col items-center gap-1 p-2 rounded-lg border-2", !selectedReceiverId ? "border-primary bg-primary/10" : "border-transparent bg-muted/50", isHost && "opacity-50 cursor-not-allowed")}
+                            disabled={isHost}
+                            title={isHost ? "Oda sahibi kendi odasına hediye gönderemez" : "Odaya Gönder"}
+                        >
                             <div className="h-14 w-14 rounded-full bg-secondary flex items-center justify-center text-primary font-bold">Oda</div>
                             <span className="text-xs font-semibold">Odaya</span>
                         </button>
