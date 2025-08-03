@@ -110,10 +110,23 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, isSp
                     <div className="flex-1">
                         <h1 className="text-md font-bold truncate max-w-[120px] sm:max-w-[180px] text-primary shadow-primary/50 [text-shadow:_0_0_8px_var(--tw-shadow-color)]">{room.name}</h1>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <div className='flex items-center gap-1.5 cursor-pointer'>
-                                <Star className="h-3 w-3 text-yellow-500" />
-                                <span className='font-bold'>SV {room.level || 0}</span>
-                            </div>
+                            <TooltipProvider delayDuration={0}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div className='flex items-center gap-1.5 cursor-pointer'>
+                                            <Star className="h-3 w-3 text-yellow-500" />
+                                            <span className='font-bold'>SV {room.level || 0}</span>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <div className="flex flex-col gap-1 text-center">
+                                            <p className="font-semibold">Seviye İlerlemesi</p>
+                                            <Progress value={xpPercentage} className="h-1.5 w-24" />
+                                            <p className="text-xs">{room.xp} / {room.xpToNextLevel} XP</p>
+                                        </div>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
                              {timeLeft !== null && room.expiresAt && (
                                 <>
                                     <span>·</span>
@@ -123,18 +136,6 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, isSp
                                     </div>
                                 </>
                             )}
-                        </div>
-                         <div className="w-24 mt-1">
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Progress value={xpPercentage} className="h-1" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p className="text-xs">{room.xp} / {room.xpToNextLevel} XP</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
                         </div>
                     </div>
                 </div>

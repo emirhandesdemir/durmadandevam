@@ -4,7 +4,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { memo } from 'react';
-import { getAvatarById, type AvatarInfo } from "./CustomAvatars";
+import { getAvatarById } from "./CustomAvatars";
 
 interface AvatarWithFrameProps {
   photoURL: string | null | undefined;

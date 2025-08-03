@@ -20,6 +20,7 @@ import { pinMessage, deleteMessageByHost } from '@/lib/actions/roomActions';
 import { useToast } from '@/hooks/use-toast';
 import GameInviteMessage from '../game/GameInviteMessage';
 import GiftMessage from '../gifts/GiftMessage';
+import AvatarWithFrame from '../common/AvatarWithFrame';
 
 interface TextChatProps {
   messages: Message[];
@@ -31,8 +32,8 @@ const BOT_UID = "ai-bot-walk";
 
 function AnnouncementMessageCard({ message }: { message: Message }) {
     return (
-        <div className="relative my-4 p-4 text-center rounded-lg border-2 border-amber-400/50 bg-amber-400/10 text-amber-100 shadow-lg shadow-amber-500/10">
-             <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-amber-400 text-amber-900 text-xs font-bold rounded-full flex items-center gap-1.5">
+        <div className="relative my-4 p-4 text-center rounded-lg border-2 border-amber-500/50 bg-amber-500/10 text-amber-200 shadow-lg shadow-amber-500/10">
+             <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-amber-500 text-amber-900 text-xs font-bold rounded-full flex items-center gap-1.5">
                 <Bell size={12} /> DUYURU
             </div>
             <p className="font-semibold">{message.text}</p>
@@ -119,12 +120,12 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
         return (
           <div key={msg.id} className={cn("flex items-end gap-3 w-full animate-in fade-in slide-in-from-bottom-4 duration-500 group", isCurrentUser && "flex-row-reverse")}>
              <Link href={!isBot ? `/profile/${msg.uid}` : '#'}>
-                <div className={cn("avatar-frame-wrapper", msg.selectedAvatarFrame)}>
-                    <Avatar className="relative z-[1] h-8 w-8">
-                        <AvatarImage src={msg.photoURL || undefined} />
-                        <AvatarFallback>{msg.username?.charAt(0).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                </div>
+                <AvatarWithFrame
+                    photoURL={msg.photoURL}
+                    selectedAvatarFrame={msg.selectedAvatarFrame}
+                    className="h-8 w-8"
+                    fallback={msg.username?.charAt(0).toUpperCase()}
+                />
             </Link>
 
             <div className={cn("flex flex-col gap-1 max-w-[70%]", isCurrentUser && "items-end")}>

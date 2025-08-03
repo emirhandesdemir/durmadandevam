@@ -12,6 +12,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 import { Button } from "../ui/button";
 import { motion } from "framer-motion";
+import AvatarWithFrame from "../common/AvatarWithFrame";
 
 interface RoomListItemProps {
     room: Room;
@@ -90,10 +91,13 @@ export default function RoomListItem({ room }: RoomListItemProps) {
                     <div className="flex items-center justify-between mt-4 border-t border-white/10 pt-3">
                         <div className="flex items-center -space-x-2">
                             {participants.slice(0, 3).map(p => (
-                                <Avatar key={p.uid} className="h-7 w-7 border-2 border-black/30">
-                                    <AvatarImage src={p.photoURL || undefined} />
-                                    <AvatarFallback className="text-xs bg-black/20">{p.username?.charAt(0)}</AvatarFallback>
-                                </Avatar>
+                                <AvatarWithFrame 
+                                    key={p.uid}
+                                    photoURL={p.photoURL}
+                                    className="h-7 w-7 border-2 border-black/30"
+                                    fallbackClassName="text-xs bg-black/20"
+                                    fallback={p.username?.charAt(0)}
+                                />
                             ))}
                         </div>
                         <div className="flex items-center gap-1.5 text-xs opacity-80">
