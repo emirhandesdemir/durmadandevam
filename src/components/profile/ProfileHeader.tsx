@@ -51,7 +51,7 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
   const amIBlockedByThisUser = profileUser.blockedUsers?.includes(currentUserAuth?.uid || '');
   const haveIBlockedThisUser = currentUserData?.blockedUsers?.includes(profileUser.uid);
   // Safely parse timestamp string from server component
-  const isPremium = isClient && profileUser.premiumUntil && new Date(profileUser.premiumUntil as any) > new Date();
+  const isPremium = isClient && profileUser.premiumUntil && new Date((profileUser.premiumUntil as any)?.seconds * 1000 || profileUser.premiumUntil) > new Date();
   
   const isVerified = isClient && (profileUser.emailVerified);
 

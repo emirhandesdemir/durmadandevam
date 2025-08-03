@@ -16,9 +16,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
+import AvatarWithFrame from "../common/AvatarWithFrame";
 
 
 interface HeaderProps {}
@@ -77,10 +77,13 @@ export default function Header({}: HeaderProps) {
                          <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="rounded-full">
-                                    <Avatar className="h-7 w-7">
-                                        <AvatarImage src={userData?.photoURL || undefined} />
-                                        <AvatarFallback>{userData?.profileEmoji || userData?.username?.charAt(0)}</AvatarFallback>
-                                    </Avatar>
+                                    <AvatarWithFrame
+                                        photoURL={userData?.photoURL}
+                                        selectedAvatarFrame={userData?.selectedAvatarFrame}
+                                        className="h-7 w-7"
+                                        fallback={userData?.username?.charAt(0).toUpperCase()}
+                                        fallbackClassName="text-xs"
+                                     />
                                     <span className="sr-only">Ana Menü</span>
                                 </Button>
                             </DropdownMenuTrigger>

@@ -71,8 +71,8 @@
   
   .judge-profile-bg {
     background:
-        radial-gradient(ellipse 80% 80% at 50% -20%,rgba(52, 211, 153, 0.3), transparent),
-        radial-gradient(ellipse 80% 80% at 50% 120%,rgba(99, 102, 241, 0.3), transparent);
+        radial-gradient(ellipse 80% 80% at 50% -20%,rgba(220, 38, 38, 0.4), transparent),
+        radial-gradient(ellipse 80% 80% at 50% 120%,rgba(251, 191, 36, 0.3), transparent);
   }
 
   @keyframes gradientBG {
@@ -378,4 +378,12 @@
 }
 .animate-like-pop {
   animation: like-pop 0.6s ease-in-out forwards;
+}
+
+@layer utilities {
+  .rooms-page-bg {
+    background: radial-gradient(circle at top left, hsl(var(--primary) / 0.5), transparent 40%),
+                radial-gradient(circle at bottom right, hsl(var(--primary)), transparent 40%),
+                hsl(var(--background));
+  }
 }
