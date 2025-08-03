@@ -142,32 +142,31 @@ export default function RoomPage() {
 
     // Handle game state transitions (countdown -> active)
     useEffect(() => {
-      if (activeQuiz?.status !== 'countdown' || !isHost) return;
-
-      const countdownEnd = (activeQuiz.countdownStartTime as Timestamp).toMillis() + 60000;
-      const now = Date.now();
-
-      const triggerGameStart = () => {
-        // Double check status before firing to prevent race conditions
-        const gameDocRef = doc(db, 'rooms', roomId, 'games', activeQuiz.id);
-        getDoc(gameDocRef).then(docSnap => {
-            if (docSnap.exists() && docSnap.data().status === 'countdown') {
-                generateQuestionsForGame(roomId, activeQuiz.id);
+        if (activeQuiz?.status !== 'countdown' || !isHost) return;
+    
+        const countdownEnd = (activeQuiz.countdownStartTime as Timestamp).toMillis() + 60000;
+        const now = Date.now();
+    
+        const triggerGameStart = async () => {
+            try {
+                // The action is now idempotent, so no need to check status here again.
+                await generateQuestionsForGame(roomId, activeQuiz.id);
+            } catch (e) {
+                console.error("Failed to start game from client", e);
             }
-        });
-      };
-
-      if (now >= countdownEnd) {
-        triggerGameStart();
-      } else {
-        const timer = setTimeout(triggerGameStart, countdownEnd - now);
-        return () => clearTimeout(timer);
-      }
-    }, [activeQuiz, isHost, roomId]);
+        };
+    
+        if (now >= countdownEnd) {
+            triggerGameStart();
+        } else {
+            const timer = setTimeout(triggerGameStart, countdownEnd - now);
+            return () => clearTimeout(timer);
+        }
+    }, [activeQuiz?.id, activeQuiz?.status, activeQuiz?.countdownStartTime, isHost, roomId]);
 
 
      // Handle question timer and auto-advance
-    useEffect(() => {
+     useEffect(() => {
         if (activeQuiz?.status !== 'active' || !gameSettings || !isHost) return;
 
         const startTime = (activeQuiz.startTime as Timestamp).toMillis();
@@ -176,16 +175,22 @@ export default function RoomPage() {
         
         const now = Date.now();
 
+        const triggerAdvance = async () => {
+             try {
+                await advanceToNextQuestion(roomId, activeQuiz.id);
+            } catch (e) {
+                console.error("Failed to advance question from client", e);
+            }
+        }
+
         if (now >= timeUp) {
-            advanceToNextQuestion(roomId, activeQuiz.id);
+            triggerAdvance();
         } else {
-            const timer = setTimeout(() => {
-                advanceToNextQuestion(roomId, activeQuiz.id);
-            }, timeUp - now);
+            const timer = setTimeout(triggerAdvance, timeUp - now);
             return () => clearTimeout(timer);
         }
 
-    }, [activeQuiz, gameSettings, isHost, roomId]);
+    }, [activeQuiz?.id, activeQuiz?.status, activeQuiz?.startTime, activeQuiz?.currentQuestionIndex, gameSettings, isHost, roomId]);
 
     const handleAnswerSubmit = useCallback(async (answerIndex: number) => {
         if (!activeQuiz || !user) return;
@@ -223,7 +228,7 @@ export default function RoomPage() {
     return (
         <>
             <EntryEffectManager participants={participants} />
-            <div className={cn("flex flex-col h-full bg-background text-foreground", room.type === 'event' && 'event-room-bg')}>
+            <div className="flex flex-col h-full bg-background text-foreground">
                  <RoomHeader 
                     room={room} 
                     isHost={isHost} 

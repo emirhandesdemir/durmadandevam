@@ -31,13 +31,6 @@ interface RoomHeaderProps {
   onToggleCollapse: () => void;
 }
 
-const formatTime = (totalSeconds: number) => {
-    if (totalSeconds < 0) return "00:00";
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-};
-
 export default function RoomHeader({ room, isHost, onParticipantListToggle, isSpeakerLayoutCollapsed, onToggleCollapse }: RoomHeaderProps) {
     const [isInviteOpen, setIsInviteOpen] = useState(false);
     const [isPortalDialogOpen, setIsPortalDialogOpen] = useState(false);
@@ -89,54 +82,61 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, isSp
 
     return (
         <>
-            <header className="absolute top-0 left-0 right-0 z-10 p-3 bg-gradient-to-b from-black/50 to-transparent text-white">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 p-1.5 rounded-full bg-black/30 backdrop-blur-sm">
-                        <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 hover:bg-white/10" onClick={() => router.back()}>
-                          <ChevronLeft />
-                        </Button>
-                        <div>
-                            <h1 className="font-bold text-sm truncate">{room.name}</h1>
-                            <p className="text-xs opacity-70">ID: {room.id}</p>
+            <header className="flex items-center justify-between border-b p-3 bg-card/80 backdrop-blur-sm sticky top-0 z-20">
+                <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" className="rounded-full" onClick={() => router.back()}>
+                    <ChevronLeft />
+                    </Button>
+                    <div className="flex flex-col">
+                        <h1 className="font-bold text-lg leading-tight">{room.name}</h1>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <button onClick={onParticipantListToggle} className="hover:underline flex items-center gap-1"><Users className="h-3 w-3" />{room.participants?.length || 0} Katılımcı</button>
+                            {timeLeft !== null && room.type !== 'event' && (
+                                <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{Math.ceil(timeLeft / 60)} dk kaldı</span>
+                            )}
+                             <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div className='flex items-center gap-1 cursor-pointer'>
+                                            <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                                            <span>SV {room.level || 0}</span>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <div className="flex flex-col gap-1 text-center">
+                                            <p className="font-semibold">Seviye İlerlemesi</p>
+                                            <Progress value={(room.xp / room.xpToNextLevel) * 100} className="h-1.5 w-24" />
+                                            <p className="text-xs">{room.xp} / {room.xpToNextLevel} XP</p>
+                                        </div>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
                         </div>
                     </div>
-
-                    <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="rounded-full hover:bg-white/10" onClick={onParticipantListToggle}>
-                           <Users className="h-5 w-5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="rounded-full hover:bg-white/10" onClick={handleShare}>
-                           <Share2 className="h-5 w-5" />
-                        </Button>
-                         <Button variant="ghost" size="icon" className="rounded-full hover:bg-white/10" onClick={leaveRoom}>
-                           <LogOut className="h-5 w-5" />
-                        </Button>
-                    </div>
                 </div>
-                 <div className="flex items-center justify-between mt-3 px-2">
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <div className='flex items-center gap-2 cursor-pointer bg-black/30 p-1.5 pr-3 rounded-full'>
-                                    <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-                                    <span className='font-bold text-sm'>SV {room.level || 0}</span>
-                                </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <div className="flex flex-col gap-1 text-center">
-                                    <p className="font-semibold">Seviye İlerlemesi</p>
-                                    <Progress value={(room.xp / room.xpToNextLevel) * 100} className="h-1.5 w-24" />
-                                    <p className="text-xs">{room.xp} / {room.xpToNextLevel} XP</p>
-                                </div>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                    {isHost && (
-                        <Button variant="ghost" size="icon" className="rounded-full hover:bg-white/10" onClick={() => setIsManagementOpen(true)}>
-                           <Settings className="h-5 w-5" />
-                        </Button>
-                    )}
-                 </div>
+
+                <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" className="rounded-full" onClick={onToggleCollapse}>
+                        {isSpeakerLayoutCollapsed ? <ChevronDown /> : <ChevronUp />}
+                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="rounded-full"><MoreHorizontal /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => setIsInviteOpen(true)}><UserPlus className="mr-2 h-4 w-4" /> Davet Et</DropdownMenuItem>
+                             <DropdownMenuItem onSelect={handleShare}><Share2 className="mr-2 h-4 w-4" /> Paylaş</DropdownMenuItem>
+                            {isHost && (
+                                <>
+                                 <DropdownMenuItem onSelect={() => setIsManagementOpen(true)}><Settings className="mr-2 h-4 w-4" /> Odanı Yönet</DropdownMenuItem>
+                                 <DropdownMenuItem onSelect={() => setIsPortalDialogOpen(true)} className="text-primary focus:text-primary"><Zap className="mr-2 h-4 w-4"/> Portal Aç</DropdownMenuItem>
+                                </>
+                            )}
+                            <DropdownMenuSeparator/>
+                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={leaveRoom}><LogOut className="mr-2 h-4 w-4"/> Sesten Ayrıl</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
             </header>
             <InviteDialog
                 isOpen={isInviteOpen}

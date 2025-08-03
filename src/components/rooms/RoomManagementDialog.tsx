@@ -47,7 +47,6 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   
   const [autoQuizEnabled, setAutoQuizEnabled] = useState(room?.autoQuizEnabled ?? true);
-  const [backgroundUrl, setBackgroundUrl] = useState(room?.backgroundUrl || '');
 
 
   if (!room) return null;
@@ -141,7 +140,7 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
       if (!room || !user || !isHost) return;
       setIsSavingSettings(true);
       try {
-          await updateRoomSettings(room.id, { autoQuizEnabled, backgroundUrl });
+          await updateRoomSettings(room.id, { autoQuizEnabled });
           toast({ description: "Oda ayarları kaydedildi."})
       } catch (error: any) {
            toast({ variant: 'destructive', description: "Ayarlar kaydedilirken hata." });
@@ -173,18 +172,6 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
                         id="auto-quiz"
                         checked={autoQuizEnabled}
                         onCheckedChange={setAutoQuizEnabled}
-                    />
-                </div>
-                 <div className="space-y-1">
-                    <Label htmlFor="bg-url" className="font-semibold flex items-center gap-2">
-                        <Image className="h-4 w-4 text-muted-foreground"/>
-                        Arka Plan URL'si
-                    </Label>
-                    <Input
-                        id="bg-url"
-                        value={backgroundUrl}
-                        onChange={(e) => setBackgroundUrl(e.target.value)}
-                        placeholder="Bir resim linki yapıştırın..."
                     />
                 </div>
                  <Button size="sm" onClick={handleSettingsSave} disabled={isSavingSettings} className="w-full">

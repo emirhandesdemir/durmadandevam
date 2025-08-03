@@ -78,7 +78,7 @@ export default function RoomInfoCards({ room, isOwner }: RoomInfoCardsProps) {
                 </Card>
             )}
             {room.rules && (
-                <Card className="bg-card/30">
+                <Card className="bg-card">
                     <CardHeader className="flex-row items-center justify-between p-3">
                         <CardTitle className="text-sm">Parti Kuralları</CardTitle>
                         {isOwner && <Button variant="ghost" size="icon" className="h-7 w-7"><Edit2 className="h-4 w-4" /></Button>}
@@ -89,7 +89,7 @@ export default function RoomInfoCards({ room, isOwner }: RoomInfoCardsProps) {
                 </Card>
             )}
             {room.welcomeMessage && (
-                 <Card className="bg-card/30">
+                 <Card className="bg-card">
                     <CardHeader className="flex-row items-center justify-between p-3">
                         <CardTitle className="text-sm">Otomatik Hoşgeldin Mesajı</CardTitle>
                         {isOwner && <Button variant="ghost" size="icon" className="h-7 w-7"><Edit2 className="h-4 w-4" /></Button>}

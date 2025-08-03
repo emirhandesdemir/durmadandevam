@@ -4,7 +4,6 @@ import { useVoiceChat } from '@/contexts/VoiceChatContext';
 import VoiceUserIcon from '../voice/VoiceUserIcon';
 import type { Room } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { cn } from '@/lib/utils';
 
 interface SpeakerLayoutProps {
     room: Room;
@@ -24,18 +23,10 @@ export default function SpeakerLayout({ room }: SpeakerLayoutProps) {
         ...moderators,
         ...otherParticipants
     ];
-    
-    // Dynamically adjust grid columns based on participant count
-    const getGridColsClass = () => {
-        const count = sortedParticipants.length;
-        if (count <= 4) return 'grid-cols-4';
-        if (count <= 6) return 'grid-cols-6';
-        return 'grid-cols-8'; // Max 8 on one row, will wrap if more
-    }
 
     return (
-        <div className="flex justify-center p-3 relative z-10">
-             <div className={cn("grid gap-2", getGridColsClass())}>
+        <div className="flex justify-center p-3">
+             <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2">
                 {sortedParticipants.map((participant) => (
                     <VoiceUserIcon
                         key={participant.uid}

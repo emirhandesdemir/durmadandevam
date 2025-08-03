@@ -70,23 +70,23 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
   if (!currentUser) return null;
 
   return (
-    <div className="space-y-6 p-4 text-white">
+    <div className="space-y-4 p-4">
       {loading && (
         <div className="flex justify-center py-10">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       )}
       {!loading && messages.length === 0 && (
-        <div className="text-center text-gray-400 py-8">
+        <div className="text-center text-gray-500 py-8">
           Sohbeti başlatmak için bir mesaj gönderin!
         </div>
       )}
       {messages.map((msg) => {
         if (msg.type === 'system' || msg.type === 'game') {
           return (
-            <div key={msg.id} className="text-center text-xs text-white/70 italic my-4 animate-in fade-in">
+            <div key={msg.id} className="text-center text-xs text-muted-foreground italic my-4 animate-in fade-in">
               <p className={cn(
-                  "inline-block px-3 py-1.5 rounded-full bg-black/20 backdrop-blur-sm",
+                  "inline-block px-3 py-1.5 rounded-full bg-muted",
                   msg.type === 'game' ? 'text-primary font-semibold' : ''
               )}>
                 {msg.text}
@@ -130,8 +130,8 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
 
             <div className={cn("flex flex-col gap-1 max-w-[70%]", isCurrentUser && "items-end")}>
                 <div className={cn("flex items-center gap-2", isCurrentUser && "flex-row-reverse")}>
-                   <p className={cn("font-bold text-sm", isPrivileged && !isCurrentUser ? "text-amber-400" : "text-white", isBot && "text-blue-400")}>{isCurrentUser ? "Siz" : msg.username}</p>
-                   <p className="text-xs text-white/60">
+                   <p className={cn("font-bold text-sm", isPrivileged && !isCurrentUser ? "text-amber-500" : "text-foreground", isBot && "text-blue-500")}>{isCurrentUser ? "Siz" : msg.username}</p>
+                   <p className="text-xs text-muted-foreground">
                      {msg.createdAt ? format((msg.createdAt as Timestamp).toDate(), 'p', { locale: tr }) : ''}
                    </p>
                 </div>
@@ -143,16 +143,16 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
                         </div>
                     )}
                     <div className={cn(
-                        "p-2 rounded-2xl relative text-sm", 
+                        "p-3 rounded-2xl relative", 
                         isCurrentUser 
                             ? "bg-primary text-primary-foreground rounded-br-none" 
                             : (isPrivileged
-                                ? "bg-black/20 border-2 border-amber-400/50 rounded-bl-none text-white"
+                                ? "bg-card border-2 border-amber-500/50 rounded-bl-none"
                                 : isBot
-                                    ? "bg-blue-500/20 border border-blue-500/30 rounded-bl-none text-white"
-                                    : "bg-black/30 rounded-bl-none text-white")
+                                    ? "bg-blue-500/10 border border-blue-500/30 rounded-bl-none"
+                                    : "bg-muted rounded-bl-none")
                     )}>
-                        {isBot && <Bot className="absolute -top-2 -left-2 h-5 w-5 text-blue-400 p-1 bg-background rounded-full" />}
+                        {isBot && <Bot className="absolute -top-2 -left-2 h-5 w-5 text-blue-500 p-1 bg-background rounded-full" />}
                         {msg.imageUrl && (
                             <Image 
                                 src={msg.imageUrl} 
@@ -166,14 +166,14 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
                             <video src={msg.videoUrl} controls className="w-full max-w-xs rounded-md" />
                         )}
                         {msg.text && (
-                            <p className="break-words whitespace-pre-wrap mt-1 px-1">{msg.text}</p>
+                            <p className="text-sm break-words whitespace-pre-wrap">{msg.text}</p>
                         )}
                     </div>
                      {isHost && !isBot && (
                         <div className={cn("absolute top-0 opacity-0 group-hover/message:opacity-100 transition-opacity", isCurrentUser ? "-left-8" : "-right-8")}>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-white hover:bg-white/10 hover:text-white">
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full">
                                         <MoreHorizontal className="h-4 w-4" />
                                     </Button>
                                 </DropdownMenuTrigger>
