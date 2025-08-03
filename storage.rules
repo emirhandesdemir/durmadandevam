@@ -1,35 +1,36 @@
-
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // Genel okuma izni: Kullanıcı profili, gönderi resimleri gibi herkese açık
-    // olması gereken içeriklerin sorunsuzca görüntülenebilmesi için gereklidir.
+    // Allow public read access to all files. This is generally safe for profile
+    // pictures, post images, etc., as the URLs are not guessable.
     match /{allPaths=**} {
       allow read;
     }
 
-    // PROFİL FOTOĞRAFLARI: Kullanıcılar sadece kendi profil fotoğraflarını güncelleyebilir.
-    match /avatars/{userId}/{allPaths=**} {
+    // Allow users to write to their own avatar directory.
+    match /avatars/{userId}/{fileName} {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // GÖNDERİLER: Kullanıcılar sadece kendi gönderileri için medya yükleyebilir.
-    match /upload/posts/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
+    // Allow users to write to their own post upload directory.
+    match /upload/posts/{userId}/{fileName} {
+        allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // DİREKT MESAJLAR: Kullanıcılar sadece parçası oldukları sohbetlere medya yükleyebilir.
-    // Sohbet ID'si (chatId), iki kullanıcının UID'sinin birleşiminden oluşur.
-    // Bu kural, kullanıcının UID'sinin bu sohbet ID'si içinde yer alıp almadığını kontrol eder.
+    // Allow users to write to a DM chat's storage if they are a participant.
+    // The {chatId} is a combination of two user UIDs, e.g., "uid1_uid2".
+    // This rule checks if the authenticated user's UID is part of the chatId string.
     match /dms/{chatId}/{allPaths=**} {
-      allow write: if request.auth != null && chatId.matches(request.auth.uid);
+        allow write: if request.auth != null && request.auth.uid in chatId.split('_');
     }
-    
-    // MÜZİK: Kullanıcılar sadece bulundukları odalara müzik yükleyebilir.
-    match /music/{roomId}/{allPaths=**} {
-      allow write: if request.auth != null;
-    }
+
+     // Allow users to upload music to a room's storage.
+     // For simplicity, allowing any authenticated user to upload.
+     // In a production app, you might restrict this to room participants.
+     match /music/{roomId}/{fileName} {
+        allow write: if request.auth != null;
+     }
   }
 }
