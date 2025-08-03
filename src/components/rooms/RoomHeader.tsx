@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft, MoreHorizontal, Users, UserPlus, Gift, Zap, ChevronUp, ChevronDown, Clock, LogOut, MicOff, Minimize2, Settings, Star, Share2 } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Users, UserPlus, Gift, Zap, ChevronUp, ChevronDown, Clock, LogOut, MicOff, Minimize2, Settings, Star, Share2, ArrowDownLeft, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Room } from '@/lib/types';
 import InviteDialog from './InviteDialog';
@@ -37,7 +37,7 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, isSp
     const [isManagementOpen, setIsManagementOpen] = useState(false);
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
     const [warningSent, setWarningSent] = useState(false);
-    const { leaveRoom } = useVoiceChat();
+    const { leaveRoom, minimizeRoom } = useVoiceChat();
     const router = useRouter();
     const { toast } = useToast();
 
@@ -84,8 +84,8 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, isSp
         <>
             <header className="flex items-center justify-between border-b p-3 bg-card/80 backdrop-blur-sm sticky top-0 z-20">
                 <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="rounded-full" onClick={() => router.back()}>
-                    <ChevronLeft />
+                    <Button variant="ghost" size="icon" className="rounded-full" onClick={minimizeRoom}>
+                        <ArrowDownLeft />
                     </Button>
                     <div className="flex flex-col">
                         <h1 className="font-bold text-lg leading-tight">{room.name}</h1>
@@ -119,23 +119,9 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, isSp
                     <Button variant="ghost" size="icon" className="rounded-full" onClick={onToggleCollapse}>
                         {isSpeakerLayoutCollapsed ? <ChevronDown /> : <ChevronUp />}
                     </Button>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="rounded-full"><MoreHorizontal /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => setIsInviteOpen(true)}><UserPlus className="mr-2 h-4 w-4" /> Davet Et</DropdownMenuItem>
-                             <DropdownMenuItem onSelect={handleShare}><Share2 className="mr-2 h-4 w-4" /> Paylaş</DropdownMenuItem>
-                            {isHost && (
-                                <>
-                                 <DropdownMenuItem onSelect={() => setIsManagementOpen(true)}><Settings className="mr-2 h-4 w-4" /> Odanı Yönet</DropdownMenuItem>
-                                 <DropdownMenuItem onSelect={() => setIsPortalDialogOpen(true)} className="text-primary focus:text-primary"><Zap className="mr-2 h-4 w-4"/> Portal Aç</DropdownMenuItem>
-                                </>
-                            )}
-                            <DropdownMenuSeparator/>
-                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={leaveRoom}><LogOut className="mr-2 h-4 w-4"/> Sesten Ayrıl</DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                     <Button variant="ghost" size="icon" className="rounded-full" onClick={leaveRoom}>
+                        <X />
+                    </Button>
                 </div>
             </header>
             <InviteDialog

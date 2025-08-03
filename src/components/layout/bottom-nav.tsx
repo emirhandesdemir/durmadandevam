@@ -9,12 +9,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useMemo, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import ExploreDialog from '../search/ExploreDialog';
+import { useVoiceChat } from '@/contexts/VoiceChatContext';
 
 export default function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
   const { toast } = useToast();
   const [isExploreOpen, setIsExploreOpen] = useState(false);
+  const { isMinimized } = useVoiceChat();
   
   const navItems = useMemo(() => {
     if (!user) return [];
@@ -26,7 +28,7 @@ export default function BottomNav() {
       ]
   }, [user]);
 
-  if (!user) {
+  if (!user || isMinimized) {
     return null;
   }
   

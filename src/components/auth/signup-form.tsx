@@ -7,7 +7,7 @@ import * as z from "zod";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { creditReferrer } from "@/lib/actions/diamondActions";
 import { updateUserProfile } from "@/lib/actions/userActions";
@@ -34,6 +34,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff, HelpCircle } from "lucide-react";
 import { Checkbox } from "../ui/checkbox";
 import { useTranslation } from "react-i18next";
+import { Separator } from "../ui/separator";
 
 const formSchema = z.object({
   username: z.string()
@@ -51,6 +52,7 @@ export default function SignUpForm() {
     const { toast } = useToast();
     const searchParams = useSearchParams();
     const [isLoading, setIsLoading] = useState(false);
+    const [isGoogleLoading, setIsGoogleLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const { i18n } = useTranslation();
 
@@ -63,8 +65,26 @@ export default function SignUpForm() {
             terms: false,
         },
     });
+    
+    const handleGoogleSignIn = async () => {
+        setIsGoogleLoading(true);
+        const provider = new GoogleAuthProvider();
+        try {
+            await signInWithPopup(auth, provider);
+            // SUCCESS: Let AuthProvider handle the redirect after userData is loaded.
+        } catch (error: any) {
+             console.error("Google ile giriş hatası", error);
+             let errorMessage = "Google ile giriş yapılırken bir hata oluştu.";
+             if (error.code === 'auth/account-exists-with-different-credential') {
+                errorMessage = "Bu e-posta ile daha önce başka bir yöntemle kayıt olunmuş."
+             }
+             toast({ title: "Giriş Başarısız", description: errorMessage, variant: "destructive" });
+        } finally {
+            setIsGoogleLoading(false);
+        }
+    }
 
-    async function onSubmit(values: z.infer<typeof formSchema>) {
+    async function onSubmit(values: z.infer<typeof formSchema>>) {
         setIsLoading(true);
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
@@ -156,6 +176,15 @@ export default function SignUpForm() {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
+                            <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading || isGoogleLoading}>
+                                {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 126 21.2 172.9 61.9l-76.4 64.5c-24.1-22.6-56.3-36.6-96.5-36.6-69.8 0-129.2 53.4-148.9 124.7H99.4v-45.9h.2c22.8-51.1 76.3-86.4 138.6-86.4 53.6 0 98.4 22.2 130.6 54.9l-65.7 64.3H488V261.8z"></path></svg>}
+                                Google ile Devam Et
+                            </Button>
+                             <div className="relative">
+                                <Separator className="shrink-0" />
+                                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-2 text-xs uppercase text-muted-foreground bg-card">Veya</div>
+                            </div>
+
                             <FormField
                                 control={form.control}
                                 name="username"
