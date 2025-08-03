@@ -1,3 +1,4 @@
+
 // src/components/profile/profile-page-client.tsx
 "use client";
 
@@ -8,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2, Sliders, Wallet, BadgeCheck, Mail, Pencil } from "lucide-react";
+import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2, Sliders, Wallet, BadgeCheck, Mail, Pencil, MoreHorizontal } from "lucide-react";
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
@@ -31,6 +32,16 @@ import { giftLevelThresholds } from "@/lib/gifts";
 import { Progress } from "@/components/ui/progress";
 import ImageCropperDialog from "../common/ImageCropperDialog";
 import { Toaster as HotToaster, toast as hotToast } from 'react-hot-toast';
+import AnimatedLogoLoader from "../common/AnimatedLogoLoader";
+
+const bubbleOptions = [
+    { id: "", name: "Varsayılan", isPremium: false },
+    { id: "bubble-style-1", name: "Neon Parti", isPremium: false },
+    { id: "bubble-style-2", name: "Okyanus", isPremium: false },
+    { id: "bubble-style-3", name: "Gün Batımı", isPremium: false },
+    { id: "bubble-style-4", name: "Orman", isPremium: false },
+    { id: "bubble-style-premium", name: "Altın", isPremium: true },
+];
 
 export default function ProfilePageClient() {
     const { user, userData, loading, handleLogout } = useAuth();
@@ -141,7 +152,10 @@ export default function ProfilePageClient() {
         try {
             const updatesForDb: { [key: string]: any } = {};
             
-            if(username.trim() !== (userData?.username || '').trim()) updatesForDb.username = username;
+            if(username.trim() !== (userData?.username || '').trim()) {
+                const usernameExists = await updateUserProfile({userId: user.uid, username});
+                if(usernameExists.error) throw new Error(usernameExists.error);
+            }
             if (bio !== userData?.bio) updatesForDb.bio = bio;
             if (age !== userData?.age) updatesForDb.age = Number(age) || null;
             if (gender !== userData?.gender) updatesForDb.gender = gender || null;
@@ -182,20 +196,21 @@ export default function ProfilePageClient() {
         if (!user || !newEmail || newEmail === user.email) return;
         setIsUpdatingEmail(true);
         try {
-            if (user.emailVerified) {
-                // Verified users need to re-authenticate or verify via old email.
-                // Sending a verification link to the old email is the most common and secure web flow.
-                await verifyBeforeUpdateEmail(user, newEmail);
+            await updateUserProfile({ userId: user.uid, email: newEmail });
+            
+            // Re-fetch user to get the latest email verification status
+            await user.reload(); 
+            const latestUser = auth.currentUser;
+
+            if (latestUser?.emailVerified) {
+                await verifyBeforeUpdateEmail(latestUser, newEmail);
                 toast({
                     title: "Doğrulama Gerekli",
                     description: `E-posta adresinizi güncellemek için mevcut adresinize (${user.email}) bir doğrulama linki gönderdik.`,
                     duration: 8000
                 });
             } else {
-                // Unverified users can change their email directly, but they will need to verify the new one.
-                // Note: This action might require recent login. If it fails, prompt user to re-login.
-                await updateUserProfile({ userId: user.uid, email: newEmail });
-                await sendEmailVerification(user); // Send verification to the new email
+                 await sendEmailVerification(latestUser!); // Send verification to the new email
                 toast({
                     title: "E-posta Güncellendi",
                     description: `Yeni e-posta adresinize (${newEmail}) bir doğrulama linki gönderdik.`
@@ -315,6 +330,11 @@ export default function ProfilePageClient() {
                                     <Pencil className="h-8 w-8" />
                                 </div>
                             </button>
+                            <Button variant="outline" asChild>
+                                <Link href="/avatar-studio">
+                                    <Sparkles className="mr-2 h-4 w-4"/> AI Avatar Stüdyosu
+                                </Link>
+                            </Button>
                         </div>
 
                          <div className="space-y-2">
