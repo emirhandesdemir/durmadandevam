@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2, Sliders, Wallet, BadgeCheck, Mail, Pencil, MoreHorizontal } from "lucide-react";
+import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2, Sliders, Wallet } from "lucide-react";
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
@@ -26,12 +26,6 @@ import BlockedUsersDialog from "./BlockedUsersDialog";
 import { sendPasswordResetEmail, verifyBeforeUpdateEmail, updateEmail } from "firebase/auth";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { deleteUserAccount } from "@/lib/actions/userActions";
-import { Gem } from "lucide-react";
-import { giftLevelThresholds } from "@/lib/gifts";
-import { Progress } from "@/components/ui/progress";
-import AnimatedLogoLoader from "../common/AnimatedLogoLoader";
-import { useRouter } from 'next/navigation';
-import AvatarWithFrame from "../common/AvatarWithFrame";
 
 const bubbleOptions = [
     { id: "", name: "Varsayılan", isPremium: false },
@@ -44,7 +38,6 @@ const bubbleOptions = [
 
 export default function ProfilePageClient() {
     const { user, userData, loading, handleLogout, refreshUserData } = useAuth();
-    const router = useRouter();
     const { toast } = useToast();
     const { theme, setTheme } = useTheme();
     const { t } = useTranslation();
@@ -228,22 +221,13 @@ export default function ProfilePageClient() {
         navigator.clipboard.writeText(inviteLink);
         toast({ description: "Davet linki kopyalandı!" });
     };
-    
-    const currentLevelInfo = giftLevelThresholds.find(t => t.level === (userData?.giftLevel || 0)) || { level: 0, diamonds: 0 };
-    const nextLevelInfo = giftLevelThresholds.find(t => t.level === (userData?.giftLevel || 0) + 1);
-    
-    let progress = 0;
-    if (nextLevelInfo && userData) {
-        const diamondsForCurrentLevel = currentLevelInfo.diamonds;
-        const diamondsForNextLevel = nextLevelInfo.diamonds - diamondsForCurrentLevel;
-        const progressInLevel = (userData.totalDiamondsSent || 0) - diamondsForCurrentLevel;
-        progress = (progressInLevel / diamondsForNextLevel) * 100;
-    } else {
-        progress = 100; // Max level
-    }
 
     if (loading || !user || !userData) {
-        return <AnimatedLogoLoader fullscreen />;
+        return (
+            <div className="flex h-screen w-full items-center justify-center">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            </div>
+        )
     }
 
     return (
@@ -256,7 +240,7 @@ export default function ProfilePageClient() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="flex flex-col items-center gap-4">
-                           <button onClick={() => router.push('/avatar-studio')} className="relative group rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
+                           <Link href="/avatar-studio" className="relative group rounded-full">
                                 <AvatarWithFrame
                                     photoURL={userData.photoURL}
                                     selectedAvatarFrame={userData.selectedAvatarFrame}
@@ -264,10 +248,10 @@ export default function ProfilePageClient() {
                                     fallback={userData.username?.charAt(0).toUpperCase()}
                                     fallbackClassName="text-4xl bg-primary/20"
                                 />
-                                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200">
+                                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                     <Pencil className="h-8 w-8" />
                                 </div>
-                            </button>
+                            </Link>
                         </div>
 
                          <div className="space-y-2">
@@ -342,40 +326,7 @@ export default function ProfilePageClient() {
                              </AccordionContent>
                         </Card>
                     </AccordionItem>
-
-                     <AccordionItem value="item-4" asChild>
-                        <Card>
-                            <AccordionTrigger className="p-6">
-                                <CardHeader className="p-0 text-left">
-                                    <div className="flex items-center gap-3">
-                                        <Gift className="h-6 w-6 text-primary" />
-                                        <CardTitle>Hediye Seviyesi</CardTitle>
-                                    </div>
-                                    <CardDescription>Hediye göndererek seviye atla ve avantajlar kazan.</CardDescription>
-                                </CardHeader>
-                            </AccordionTrigger>
-                            <AccordionContent className="p-6 pt-0 space-y-4">
-                               <div className="text-center space-y-1">
-                                    <p className="text-sm text-muted-foreground">Mevcut Seviyen</p>
-                                    <p className="text-5xl font-bold text-amber-500 drop-shadow-lg">SV {userData.giftLevel || 0}</p>
-                                </div>
-                                {nextLevelInfo ? (
-                                    <div>
-                                         <div className="flex justify-between items-end mb-1">
-                                            <p className="text-xs font-semibold">Seviye {nextLevelInfo.level} için ilerleme</p>
-                                            <p className="text-xs text-muted-foreground">
-                                                <span className="font-bold text-foreground">{(userData.totalDiamondsSent || 0).toLocaleString('tr-TR')}</span> / {nextLevelInfo.diamonds.toLocaleString('tr-TR')}
-                                            </p>
-                                        </div>
-                                        <Progress value={progress} className="h-3"/>
-                                    </div>
-                                ) : (
-                                    <p className="text-center font-semibold text-green-500">Maksimum seviyeye ulaştın!</p>
-                                )}
-                            </AccordionContent>
-                        </Card>
-                    </AccordionItem>
-
+                    
                     <AccordionItem value="item-1" asChild>
                         <Card>
                              <AccordionTrigger className="p-6">
