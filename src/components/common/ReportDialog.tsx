@@ -51,11 +51,15 @@ const reasonOptions = [
     { value: 'other', label: 'Diğer' },
 ];
 
-export default function ReportDialog({ isOpen, onOpenChange, target }: ReportDialogProps) {
+function ReportDialog({ isOpen, onOpenChange, target }: ReportDialogProps) {
   const { user, userData } = useAuth();
   const { toast } = useToast();
   const form = useForm<ReportFormValues>({
     resolver: zodResolver(reportSchema),
+    defaultValues: {
+      reason: '',
+      details: '',
+    }
   });
 
   const onSubmit: SubmitHandler<ReportFormValues> = async (data) => {
@@ -101,6 +105,8 @@ export default function ReportDialog({ isOpen, onOpenChange, target }: ReportDia
         if (!open) {
             form.reset();
             onOpenChange(false);
+        } else {
+            onOpenChange(true);
         }
     }}>
       <DialogContent>
@@ -170,3 +176,4 @@ export default function ReportDialog({ isOpen, onOpenChange, target }: ReportDia
     </Dialog>
   );
 }
+export default ReportDialog;
