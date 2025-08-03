@@ -28,7 +28,7 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
     
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (updates.userPhotoURL) propagationUpdates.userPhotoURL = updates.userPhotoURL;
+    if (updates.userPhotoURL !== undefined) propagationUpdates.userPhotoURL = updates.userPhotoURL;
     if (updates.userAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.userAvatarFrame;
     
     if (Object.keys(propagationUpdates).length === 0) return;
@@ -62,7 +62,7 @@ export async function updateUserComments(uid: string, updates: { [key: string]: 
 
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (updates.userPhotoURL) propagationUpdates.photoURL = updates.userPhotoURL;
+    if (updates.userPhotoURL !== undefined) propagationUpdates.photoURL = updates.userPhotoURL;
     if (updates.userAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.userAvatarFrame;
     
     if (Object.keys(propagationUpdates).length === 0) return;

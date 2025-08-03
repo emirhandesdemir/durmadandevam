@@ -40,6 +40,7 @@ import QuoteRetweetDialog from "./QuoteRetweetDialog";
 import ReportDialog from '../common/ReportDialog';
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
+import AvatarWithFrame from "../common/AvatarWithFrame";
 
 interface PostCardProps {
     post: Post;
@@ -142,6 +143,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                     uid: currentUser.uid,
                     displayName: currentUserData.username || 'Biri',
                     photoURL: currentUserData.photoURL || null,
+                    profileEmoji: currentUserData.profileEmoji || null,
                     userAvatarFrame: currentUserData.selectedAvatarFrame || '',
                 }
             );
@@ -235,12 +237,12 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                 )}
                 <div className="flex items-center gap-3 p-4">
                      <Link href={`/profile/${post.uid}`}>
-                        <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
-                            <Avatar className="relative z-[1] h-10 w-10">
-                                <AvatarImage src={post.userPhotoURL || undefined} />
-                                <AvatarFallback>{currentUserData?.profileEmoji || post.username?.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                        </div>
+                        <AvatarWithFrame
+                            photoURL={post.userPhotoURL}
+                            selectedAvatarFrame={post.userAvatarFrame}
+                            className="h-10 w-10"
+                            fallback={post.username?.charAt(0).toUpperCase()}
+                        />
                     </Link>
                     <div className="flex-1">
                         <div className="flex items-center gap-1.5">
@@ -248,7 +250,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                             {post.emailVerified && (
                                 <TooltipProvider>
                                     <Tooltip>
-                                        <TooltipTrigger><BadgeCheck className="h-4 w-4 text-blue-500" /></TooltipTrigger>
+                                        <TooltipTrigger><BadgeCheck className="h-4 w-4 text-blue-500 fill-blue-500/20" /></TooltipTrigger>
                                         <TooltipContent><p>Onaylanmış Hesap</p></TooltipContent>
                                     </Tooltip>
                                 </TooltipProvider>

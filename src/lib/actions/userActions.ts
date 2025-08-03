@@ -4,7 +4,7 @@
 import { db, storage } from '@/lib/firebase';
 import type { Post, Report, UserProfile } from '../types';
 import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, collectionGroup, deleteDoc, setDoc, runTransaction } from 'firebase/firestore';
-import { ref as storageRef, deleteObject } from 'firebase/storage';
+import { ref as storageRef, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
 import { getAuth } from '../firebaseAdmin';
@@ -45,16 +45,17 @@ export async function updateUserProfile(updates: {
     interests?: string[];
     location?: { latitude: number; longitude: number; city?: string | null; country?: string | null; } | null;
 }) {
-    const { userId, isNewUser, photoURL: photoUrl, ...otherUpdates } = updates;
+    const { userId, isNewUser, ...otherUpdates } = updates;
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
 
     const userRef = doc(db, 'users', userId);
     
-    const updatesForDb: { [key: string]: any } = { ...otherUpdates };
-    if (photoUrl) {
-        updatesForDb.photoURL = photoUrl;
-    }
-
+    // Separate photoURL to handle propagation logic correctly
+    const { photoURL, username, ...restOfUpdates } = otherUpdates;
+    const updatesForDb: { [key: string]: any } = { ...restOfUpdates };
+    
+    if (photoURL !== undefined) updatesForDb.photoURL = photoURL;
+    if (username !== undefined) updatesForDb.username = username;
 
     await runTransaction(db, async (transaction) => {
         const userDoc = await transaction.get(userRef);
@@ -101,6 +102,9 @@ export async function updateUserProfile(updates: {
             } else if (updatesForDb.age !== undefined) {
                 updatesForDb.age = Number(updatesForDb.age);
             }
+             if (updatesForDb.username) {
+                updatesForDb.username_lowercase = updatesForDb.username.toLowerCase();
+            }
 
             if (Object.keys(updatesForDb).length > 0) {
                  transaction.update(userRef, updatesForDb);
@@ -110,8 +114,8 @@ export async function updateUserProfile(updates: {
 
     // --- Post-Transaction Operations ---
     const propagationUpdates: { [key: string]: any } = {};
-    if (updates.username) propagationUpdates.username = updates.username;
-    if (photoUrl) propagationUpdates.userPhotoURL = photoUrl;
+    if (username) propagationUpdates.username = username;
+    if (photoURL !== undefined) propagationUpdates.userPhotoURL = photoURL;
     if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
 
     if (Object.keys(propagationUpdates).length > 0) {
@@ -126,20 +130,22 @@ export async function updateUserProfile(updates: {
         }
     }
 
-    if (photoUrl || updates.username) {
+    if (photoURL || username) {
       try {
         const auth = getAuth();
         const authUpdates: { photoURL?: string; displayName?: string } = {};
-        if (photoUrl) authUpdates.photoURL = photoUrl;
-        if (updates.username) authUpdates.displayName = updates.username;
-        await auth.updateUser(userId, authUpdates);
+        if (photoURL) authUpdates.photoURL = photoURL;
+        if (username) authUpdates.displayName = username;
+        if (Object.keys(authUpdates).length > 0) {
+            await auth.updateUser(userId, authUpdates);
+        }
       } catch (e) {
         console.error("Auth profile update failed:", e);
       }
     }
 
     revalidatePath(`/profile/${userId}`, 'layout');
-    return { success: true, newPhotoURL: photoUrl };
+    return { success: true };
 }
 
 

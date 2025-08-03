@@ -12,7 +12,7 @@ import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, Use
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { auth, db } from "@/lib/firebase";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -113,20 +113,15 @@ export default function ProfilePageClient() {
         interests, animatedNav, userData
     ]);
     
-
-    const handleSaveChanges = async () => {
+    const handleSaveChanges = useCallback(async () => {
         if (!user || !hasChanges) return;
     
         setIsSaving(true);
         try {
             const updatesForDb: { [key: string]: any } = {};
-            
-            if(username.trim() !== (userData?.username || '').trim()) {
-                const usernameResult = await updateUserProfile({userId: user.uid, username});
-                if(usernameResult.error) throw new Error(usernameResult.error);
-            }
+            if (username.trim() !== (userData?.username || '').trim()) updatesForDb.username = username.trim();
             if (bio !== userData?.bio) updatesForDb.bio = bio;
-            if (age !== userData?.age) updatesForDb.age = Number(age) || null;
+            if (Number(age) !== userData?.age) updatesForDb.age = Number(age) || null;
             if (gender !== userData?.gender) updatesForDb.gender = gender || null;
             if (privateProfile !== userData?.privateProfile) updatesForDb.privateProfile = privateProfile;
             if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) updatesForDb.acceptsFollowRequests = acceptsFollowRequests;
@@ -139,16 +134,16 @@ export default function ProfilePageClient() {
                  await updateUserProfile({ userId: user.uid, ...updatesForDb });
             }
             
+            await refreshUserData(); // Refresh data in context after saving
             toast({ title: "Başarılı!", description: "Profiliniz başarıyla güncellendi." });
-            await refreshUserData();
 
         } catch (error: any) {
             toast({ title: "Hata", description: error.message || "Profil güncellenirken bir hata oluştu.", variant: "destructive" });
         } finally {
             setIsSaving(false);
         }
-    };
-    
+    }, [user, userData, hasChanges, username, bio, age, gender, privateProfile, acceptsFollowRequests, showOnlineStatus, selectedBubble, interests, animatedNav, toast, refreshUserData]);
+
     const handleChangeEmail = async () => {
         if (!user || !newEmail || !user.email) return;
         setIsSaving(true);
@@ -183,7 +178,7 @@ export default function ProfilePageClient() {
             setIsSaving(false);
         }
     };
-
+    
     const handlePasswordReset = async () => {
         if (!user?.email) {
             toast({ variant: 'destructive', description: "E-posta adresiniz bulunamadı."});
