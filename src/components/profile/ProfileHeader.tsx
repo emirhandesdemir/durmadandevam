@@ -3,7 +3,7 @@
 
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff, UserCheck, Crown, Bookmark, BadgeCheck, Award, At } from 'lucide-react';
+import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff, UserCheck, Crown, Bookmark, BadgeCheck, Award, At, Star } from 'lucide-react';
 import FollowButton from './FollowButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
@@ -23,6 +23,8 @@ import type { UserProfile } from '@/lib/types';
 import { Timestamp } from 'firebase/firestore';
 import BadgesDialog from './BadgesDialog';
 import AvatarWithFrame from '../common/AvatarWithFrame';
+import { Progress } from '../ui/progress';
+import { giftLevelThresholds } from '@/lib/gifts';
 
 
 interface ProfileHeaderProps {
@@ -47,14 +49,10 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
   }, []);
 
   const isOwnProfile = currentUserAuth?.uid === profileUser.uid;
-  const areMutuals = currentUserData?.following?.includes(profileUser.uid) && profileUser.following?.includes(currentUserAuth?.uid || '');
   const amIBlockedByThisUser = profileUser.blockedUsers?.includes(currentUserAuth?.uid || '');
   const haveIBlockedThisUser = currentUserData?.blockedUsers?.includes(profileUser.uid);
-  // Safely parse timestamp string from server component
   const isPremium = isClient && profileUser.premiumUntil && new Date((profileUser.premiumUntil as any)?.seconds * 1000 || profileUser.premiumUntil) > new Date();
-  
   const isVerified = isClient && (profileUser.emailVerified);
-
 
   const handleStatClick = (type: 'followers' | 'following') => {
     setDialogType(type);
@@ -87,6 +85,18 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
   
   const userIdsToShow = dialogType === 'followers' ? profileUser.followers : profileUser.following;
   
+  const currentLevelInfo = giftLevelThresholds.find(t => t.level === (profileUser.giftLevel || 0)) || { level: 0, diamonds: 0 };
+  const nextLevelInfo = giftLevelThresholds.find(t => t.level === (profileUser.giftLevel || 0) + 1);
+  let progress = 0;
+  if (nextLevelInfo) {
+      const diamondsForCurrentLevel = currentLevelInfo.diamonds;
+      const diamondsForNextLevel = nextLevelInfo.diamonds - diamondsForCurrentLevel;
+      const progressInLevel = (profileUser.totalDiamondsSent || 0) - diamondsForCurrentLevel;
+      progress = (progressInLevel / diamondsForNextLevel) * 100;
+  } else {
+      progress = 100; // Max level
+  }
+  
   if (amIBlockedByThisUser) {
     return (
         <div className="flex flex-col items-center justify-center text-center p-8 h-64">
@@ -99,117 +109,80 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
 
   return (
     <>
-      <div className={cn("flex flex-col items-center text-center p-4", isPremium && "judge-profile-bg")}>
-        {/* Avatar */}
-        <AvatarWithFrame 
-            photoURL={profileUser.photoURL}
-            selectedAvatarFrame={profileUser.selectedAvatarFrame}
-            className="h-24 w-24 md:h-28 md:w-28 border-4 border-background shadow-lg"
-            fallback={profileUser.username?.charAt(0).toUpperCase()}
-            fallbackClassName="text-5xl"
-        />
-
-        {/* User Info */}
-        <div className="mt-4">
-            <div className="flex items-center justify-center gap-2">
-                <h1 className="text-2xl font-bold">{profileUser.username}</h1>
-                <h2 className="text-lg text-muted-foreground font-semibold">@{profileUser.uniqueTag}</h2>
-                {isPremium && (
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger><Crown className="h-6 w-6 text-yellow-500" /></TooltipTrigger>
-                            <TooltipContent><p>Premium Üye</p></TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                )}
-                 {isVerified && (
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger><BadgeCheck className="h-6 w-6 text-blue-500" /></TooltipTrigger>
-                            <TooltipContent><p>Onaylanmış Hesap</p></TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                )}
+      <div className={cn("p-4 space-y-4", isPremium && "judge-profile-bg")}>
+        <div className="flex items-start gap-4">
+            <AvatarWithFrame 
+                photoURL={profileUser.photoURL}
+                selectedAvatarFrame={profileUser.selectedAvatarFrame}
+                className="h-20 w-20 border-4 border-background shadow-lg"
+                fallback={profileUser.username?.charAt(0).toUpperCase()}
+                fallbackClassName="text-3xl"
+            />
+            <div className="flex-1 space-y-1">
+                <div className="flex items-center gap-2">
+                    <h1 className="text-2xl font-bold">{profileUser.username}</h1>
+                    {isPremium && (
+                        <TooltipProvider><Tooltip><TooltipTrigger><Crown className="h-5 w-5 text-yellow-500" /></TooltipTrigger><TooltipContent><p>Premium Üye</p></TooltipContent></Tooltip></TooltipProvider>
+                    )}
+                     {isVerified && (
+                        <TooltipProvider><Tooltip><TooltipTrigger><BadgeCheck className="h-5 w-5 text-blue-500" /></TooltipTrigger><TooltipContent><p>Onaylanmış Hesap</p></TooltipContent></Tooltip></TooltipProvider>
+                    )}
+                </div>
+                 <h2 className="text-sm text-muted-foreground font-semibold flex items-center gap-1"><At size={14}/>{profileUser.uniqueTag}</h2>
+                 {profileUser.bio && <p className="text-sm text-muted-foreground max-w-md">{profileUser.bio}</p>}
             </div>
-          {isOwnProfile && (
-             <Button variant="link" asChild className="text-cyan-400 font-bold p-0 h-auto">
-                <Link href="/wallet">
-                    <Gem className="h-5 w-5 mr-1"/>
-                    <span>{profileUser.diamonds || 0}</span>
-                </Link>
-            </Button>
-          )}
-          {profileUser.bio && <p className="text-sm text-muted-foreground max-w-md mt-2">{profileUser.bio}</p>}
-        </div>
-
-        {/* Stats */}
-        <div className="mt-6 w-full max-w-sm grid grid-cols-3 gap-2">
-            <div className="text-center p-2 rounded-lg">
-                <p className="font-bold text-lg">{profileUser.postCount || 0}</p>
-                <p className="text-xs text-muted-foreground">Gönderi</p>
-            </div>
-            <button onClick={() => handleStatClick('followers')} className="text-center p-2 rounded-lg hover:bg-muted transition-colors">
-                <p className="font-bold text-lg">{(profileUser.followers || []).length}</p>
-                <p className="text-xs text-muted-foreground">Takipçi</p>
-            </button>
-            <button onClick={() => handleStatClick('following')} className="text-center p-2 rounded-lg hover:bg-muted transition-colors">
-                <p className="font-bold text-lg">{(profileUser.following || []).length}</p>
-                <p className="text-xs text-muted-foreground">Takip</p>
-            </button>
-        </div>
-        
-        {/* Action Buttons */}
-        <div className={cn(
-            "mt-4 w-full max-w-sm flex justify-center items-center gap-2"
-        )}>
-           {isOwnProfile ? (
-              <>
-                <Button asChild variant="secondary" className="flex-1">
-                    <Link href="/profile">
-                      <Settings className="mr-2 h-4 w-4"/>
-                      Profili ve Ayarları Düzenle
-                    </Link>
-                </Button>
-                 <Button variant="outline" size="icon" onClick={() => setIsBadgesOpen(true)}>
-                    <Award />
-                </Button>
-              </>
-            ) : haveIBlockedThisUser ? (
-                 <Button onClick={handleUnblockUser} variant="destructive" className="w-full" disabled={isBlocking}>
-                    {isBlocking ? <Loader2 className="animate-spin mr-2"/> : <UserCheck className="mr-2 h-4 w-4"/>}
-                    Engeli Kaldır
+             {isOwnProfile ? (
+                 <Button asChild variant="secondary" size="icon">
+                    <Link href="/profile"><Settings className="h-5 w-5"/></Link>
                 </Button>
             ) : (
-                <>
-                    <FollowButton currentUserData={currentUserData} targetUser={profileUser} />
-                    <Button asChild className="flex-1">
-                        <Link href={`/dm/${getChatId(currentUserAuth!.uid, profileUser.uid)}`}>
-                           <MessageCircle className="mr-2 h-4 w-4"/> Mesaj
-                        </Link>
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="icon"><MoreHorizontal /></Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onSelect={() => setIsBadgesOpen(true)}>
-                          <Award className="mr-2 h-4 w-4"/>Rozetler
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setSendDiamondOpen(true)} disabled={!areMutuals}>
-                          <Gem className="mr-2 h-4 w-4"/>Elmas Gönder
-                        </DropdownMenuItem>
-                         <DropdownMenuItem onSelect={() => setIsReportOpen(true)}>
-                            Şikayet Et
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={handleBlockUser} className="text-destructive focus:text-destructive">
-                           <ShieldOff className="mr-2 h-4 w-4"/> Engelle
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                </>
+                 <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon"><MoreHorizontal /></Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onSelect={() => handleStatClick('followers')}>Takipçiler</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => handleStatClick('following')}>Takip Edilenler</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setIsReportOpen(true)}>Şikayet Et</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={haveIBlockedThisUser ? handleUnblockUser : handleBlockUser} className="text-destructive focus:text-destructive">
+                       {isBlocking ? <Loader2 className="animate-spin mr-2"/> : <ShieldOff className="mr-2 h-4 w-4"/>}
+                       {haveIBlockedThisUser ? 'Engeli Kaldır' : 'Engelle'}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
             )}
         </div>
+        
+         <div className="space-y-2">
+            <div className="flex justify-between items-end">
+                <div className="flex items-center gap-2">
+                    <Star className="h-5 w-5 text-amber-400 fill-current" />
+                    <span className="font-bold text-lg">Hediye Seviyesi {profileUser.giftLevel || 0}</span>
+                </div>
+                 {nextLevelInfo && <span className="text-xs text-muted-foreground">Sonraki Seviye: {nextLevelInfo.diamonds.toLocaleString('tr-TR')}</span>}
+            </div>
+            <Progress value={progress} className="h-3" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+             <Button asChild variant="outline">
+                <Link href={`/wallet`}><Gem className="mr-2 h-4 w-4"/>Hediye Değeri: {profileUser.profileValue || 0}</Link>
+            </Button>
+            <Button variant="outline" onClick={() => setIsBadgesOpen(true)}>
+                <Award className="mr-2 h-4 w-4"/> Rozetler
+            </Button>
+        </div>
+
+        {!isOwnProfile && !haveIBlockedThisUser && (
+            <div className="flex w-full gap-2">
+                <FollowButton currentUserData={currentUserData} targetUser={profileUser} />
+                <Button asChild className="flex-1">
+                    <Link href={`/dm/${getChatId(currentUserAuth!.uid, profileUser.uid)}`}><MessageCircle className="mr-2 h-4 w-4"/> Mesaj</Link>
+                </Button>
+            </div>
+        )}
       </div>
+
       <FollowListDialog
         isOpen={dialogOpen}
         onOpenChange={setDialogOpen}

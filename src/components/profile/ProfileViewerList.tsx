@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import AvatarWithFrame from '../common/AvatarWithFrame';
 
 export default function ProfileViewerList() {
     const { user } = useAuth();
@@ -43,12 +44,12 @@ export default function ProfileViewerList() {
             {viewers.map((viewer) => (
                 <div key={viewer.uid} className="flex items-center gap-4 p-2 rounded-lg hover:bg-muted">
                     <Link href={`/profile/${viewer.uid}`} className="flex items-center gap-3 group flex-1">
-                        <div>
-                            <Avatar className="relative z-[1] h-11 w-11">
-                                <AvatarImage src={viewer.photoURL || undefined} />
-                                <AvatarFallback>{viewer.username?.charAt(0).toUpperCase()}</AvatarFallback>
-                            </Avatar>
-                        </div>
+                        <AvatarWithFrame 
+                            photoURL={viewer.photoURL}
+                            selectedAvatarFrame={viewer.selectedAvatarFrame}
+                            className="h-11 w-11"
+                            fallback={viewer.username?.charAt(0).toUpperCase()}
+                        />
                         <div className="flex-1">
                              <p className="font-semibold group-hover:underline">{viewer.username}</p>
                              <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(viewer.viewedAt as any), { addSuffix: true, locale: tr })}</p>

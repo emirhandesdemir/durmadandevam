@@ -7,7 +7,7 @@ import { notFound } from 'next/navigation';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import { Separator } from '@/components/ui/separator';
 import { deepSerialize } from '@/lib/server-utils';
-import { Grid3x3, Bookmark, Clapperboard } from 'lucide-react';
+import { Grid3x3, Bookmark, Clapperboard, Eye } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getAuth } from '@/lib/firebaseAdmin';
 import SavedPostsGrid from '@/components/profile/SavedPostsGrid';
@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import UserPostsGrid from '@/components/profile/UserPostsGrid';
 import UserSurfGrid from '@/components/profile/UserSurfGrid';
 import ProfileViewLogger from '@/components/profile/ProfileViewLogger';
+import ProfileViewerList from '@/components/profile/ProfileViewerList';
 
 interface UserProfilePageProps {
   params: { uid: string };
@@ -78,7 +79,7 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
 
         {/* Sekmeli İçerik Bölümü */}
         <Tabs defaultValue="posts" className="w-full">
-            <TabsList className={cn("grid w-full", isOwnProfile ? "grid-cols-3" : "grid-cols-2")}>
+            <TabsList className={cn("grid w-full", isOwnProfile ? "grid-cols-4" : "grid-cols-3")}>
                 <TabsTrigger value="posts">
                     <Grid3x3 className="h-5 w-5 mr-2" />
                     Gönderiler
@@ -87,6 +88,12 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
                     <Clapperboard className="h-5 w-5 mr-2" />
                     Surf
                 </TabsTrigger>
+                 {isOwnProfile && (
+                    <TabsTrigger value="viewers">
+                        <Eye className="h-5 w-5 mr-2" />
+                        Bakanlar
+                    </TabsTrigger>
+                )}
                 {isOwnProfile && (
                     <TabsTrigger value="saved">
                         <Bookmark className="h-5 w-5 mr-2" />
@@ -100,6 +107,11 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
             <TabsContent value="surf" className="mt-4">
                 <UserSurfGrid profileUser={serializableProfileUser} />
             </TabsContent>
+            {isOwnProfile && (
+                <TabsContent value="viewers" className="mt-4">
+                   <ProfileViewerList />
+                </TabsContent>
+            )}
             {isOwnProfile && (
                 <TabsContent value="saved" className="mt-4">
                     <SavedPostsGrid userId={uid} />

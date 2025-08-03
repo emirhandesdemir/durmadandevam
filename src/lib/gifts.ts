@@ -60,6 +60,7 @@ export const getGiftById = (id: string): Gift | undefined => {
 }
 
 export const giftLevelThresholds = [
+    { level: 0, diamonds: 0 },
     { level: 1, diamonds: 100 },
     { level: 2, diamonds: 500 },
     { level: 3, diamonds: 1000 },
