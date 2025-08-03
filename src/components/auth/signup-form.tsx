@@ -108,6 +108,7 @@ export default function SignUpForm() {
                     console.error("Referrer credit failed, but signup continues:", e);
                 }
             }
+             // Let the AuthProvider handle the redirect. No more manual push.
         } catch (error: any) {
             console.error("Kayıt hatası", error);
             let errorMessage = "Hesap oluşturulurken bilinmeyen bir hata oluştu. Lütfen tekrar deneyin.";
@@ -240,5 +241,4 @@ export default function SignUpForm() {
                 </div>
             </CardContent>
         </Card>
-    );
-}
+    

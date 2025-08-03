@@ -11,15 +11,9 @@ function PageContent() {
     const { user, loading } = useAuth();
     const router = useRouter();
 
-    useEffect(() => {
-        if (!loading) {
-            if (user) {
-                router.replace('/home');
-            } else {
-                router.replace('/login');
-            }
-        }
-    }, [user, loading, router]);
+    // The logic to redirect is now fully handled by AuthContext.
+    // This component's only job is to show a loader until the context
+    // determines where to send the user.
 
     return <AnimatedLogoLoader fullscreen />;
 }

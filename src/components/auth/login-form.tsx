@@ -201,5 +201,4 @@ export default function LoginForm() {
                 </div>
             </CardContent>
         </Card>
-    );
-}
+    
