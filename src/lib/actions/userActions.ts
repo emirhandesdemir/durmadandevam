@@ -79,7 +79,8 @@ export async function updateUserProfile(updates: {
                     bio: null, age: null, city: null, country: null,
                     gender: null, interests: [], role: userRole,
                     createdAt: serverTimestamp(), lastActionTimestamp: serverTimestamp(),
-                    diamonds: 10, profileValue: 0, giftLevel: 0, totalDiamondsSent: 0,
+                    diamonds: 50, // Initial diamond reward
+                    profileValue: 0, giftLevel: 0, totalDiamondsSent: 0,
                     referredBy: updates.referredBy || null, referralCount: 0, postCount: 0,
                     followers: [], following: [], blockedUsers: [], savedPosts: [],
                     hiddenPostIds: [], privateProfile: false, acceptsFollowRequests: true,

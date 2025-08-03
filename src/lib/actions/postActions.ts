@@ -115,7 +115,7 @@ export async function createPost(postData: {
         };
 
         if (postCount === 0 && !postData.videoUrl) {
-            userUpdates.diamonds = increment(90);
+            userUpdates.diamonds = increment(50);
         }
         
         transaction.update(userRef, userUpdates);
@@ -344,7 +344,7 @@ export async function retweetPost(
             recipientId: originalPostData.uid,
             senderId: retweeter.uid,
             senderUsername: retweeter.username,
-            photoURL: retweeter.userPhotoURL || '',
+            senderAvatar: retweeter.photoURL || '',
             senderAvatarFrame: retweeter.userAvatarFrame || '',
             type: 'retweet',
             postId: newPostRef.id,

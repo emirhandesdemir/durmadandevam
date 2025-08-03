@@ -17,7 +17,7 @@ export default function FirstPostRewardCard() {
                 <div>
                     <CardTitle>İlk Gönderi Ödülü!</CardTitle>
                     <CardDescription className="flex items-center gap-1.5">
-                        İlk gönderini paylaş, <strong className="flex items-center gap-1">90 <Gem className="h-4 w-4 text-cyan-400"/></strong> daha kazan!
+                        İlk gönderini paylaş, <strong className="flex items-center gap-1">50 <Gem className="h-4 w-4 text-cyan-400"/></strong> kazan!
                     </CardDescription>
                 </div>
             </CardHeader>
