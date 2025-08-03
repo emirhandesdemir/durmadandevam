@@ -1,7 +1,3 @@
-// src/app/(main)/guide/page.tsx
-import GuidePageClient from "@/components/guide/GuidePageClient";
-
-// This is the in-app guide page, for logged-in users.
-export default function GuidePage() {
-    return <GuidePageClient isPublicPage={false} />;
-}
+// This file has been removed to resolve a routing conflict with src/app/guide/page.tsx
+// The new guide page is now the single source of truth and can handle both
+// authenticated and unauthenticated users. This file can be safely deleted.
