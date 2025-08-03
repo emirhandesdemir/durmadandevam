@@ -240,4 +240,5 @@ export default function SignUpForm() {
                 </div>
             </CardContent>
         </Card>
-    
+    );
+}

@@ -41,10 +41,12 @@ interface ProfileHeaderProps {
   profileUser: UserProfile;
 }
 
-const BadgeItem = ({ icon: Icon, label }: { icon: React.ElementType, label: string }) => (
-    <div className="flex flex-col items-center gap-2 p-3 rounded-lg bg-muted/50 border w-24 h-24 justify-center">
-        <Icon className="h-7 w-7 text-primary" />
-        <span className="text-xs font-semibold text-center">{label}</span>
+const BadgeItem = ({ icon: Icon, label, color }: { icon: React.ElementType, label: string, color?: string }) => (
+    <div className="flex items-center gap-1.5 p-1.5 pr-2.5 rounded-full bg-muted border">
+        <div className={cn("p-1.5 bg-background rounded-full", color)}>
+             <Icon className="h-4 w-4" />
+        </div>
+        <span className="text-xs font-semibold">{label}</span>
     </div>
 );
 
@@ -137,11 +139,11 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
         
         <div className="space-y-2">
             <p className="text-sm font-semibold text-muted-foreground">Rozetler</p>
-            <div className="flex flex-wrap gap-2">
-                <BadgeItem icon={Star} label={`Seviye ${profileUser.giftLevel || 0}`} />
-                {isPremium && <BadgeItem icon={Crown} label="Premium" />}
-                {profileUser.role === 'admin' && <BadgeItem icon={Shield} label="Yönetici" />}
-                {profileUser.emailVerified && <BadgeItem icon={BadgeCheck} label="Onaylı Hesap" />}
+             <div className="flex flex-wrap gap-2">
+                <BadgeItem icon={Star} label={`Seviye ${profileUser.giftLevel || 0}`} color="text-yellow-500" />
+                {isPremium && <BadgeItem icon={Crown} label="Premium" color="text-amber-500" />}
+                {profileUser.role === 'admin' && <BadgeItem icon={Shield} label="Yönetici" color="text-destructive" />}
+                {profileUser.emailVerified && <BadgeItem icon={BadgeCheck} label="Onaylı" color="text-blue-500" />}
             </div>
         </div>
 
