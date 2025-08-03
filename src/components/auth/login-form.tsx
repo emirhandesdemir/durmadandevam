@@ -80,7 +80,7 @@ export default function LoginForm() {
         } finally {
             setIsGoogleLoading(false);
         }
-    }
+    };
 
     async function onSubmit(values: z.infer<typeof formSchema>>) {
         setIsLoading(true);
