@@ -67,7 +67,7 @@ export async function createPost(postData: {
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
     text: string;
-    imageUrl: string | null; // This will now be a base64 data URI or null
+    imageUrl: string | null; // This will now be a public URL
     videoUrl: string | null;
     language: string;
     commentsDisabled?: boolean;
@@ -77,16 +77,6 @@ export async function createPost(postData: {
     const newPostRef = doc(collection(db, 'posts'));
     const userRef = doc(db, 'users', postData.uid);
     let finalPostId = newPostRef.id;
-    let finalImageUrl: string | null = null;
-    
-    // If an image data URI is provided, upload it to Storage
-    if (postData.imageUrl) {
-        const imagePath = `upload/posts/${uuidv4()}.jpg`;
-        const imageStorageRef = storageRef(storage, imagePath);
-        
-        const response = await uploadString(imageStorageRef, postData.imageUrl, 'data_url');
-        finalImageUrl = await getDownloadURL(response.ref);
-    }
 
     await runTransaction(db, async (transaction) => {
         const userSnap = await transaction.get(userRef);
@@ -103,7 +93,7 @@ export async function createPost(postData: {
             userRole: postData.userRole,
             userGender: postData.userGender,
             text: postData.text,
-            imageUrl: finalImageUrl, // Use the public download URL
+            imageUrl: postData.imageUrl, // Use the public download URL
             videoUrl: postData.videoUrl,
             backgroundStyle: postData.backgroundStyle || '',
             editedWithAI: false,

@@ -10,6 +10,10 @@ import { createPost } from "@/lib/actions/postActions";
 import { getFollowingForSuggestions } from "@/lib/actions/suggestionActions";
 import type { UserProfile, Post } from "@/lib/types";
 import { checkImageSafety } from "@/lib/actions/moderationActions";
+import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
+import { storage } from '@/lib/firebase';
+import { v4 as uuidv4 } from 'uuid';
+
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -186,45 +190,63 @@ export default function NewPostForm() {
       toast({ variant: 'destructive', description: 'Paylaşmak için bir metin yazın veya resim seçin.' });
       return;
     }
-
+  
     setIsSubmitting(true);
-    
-    toast({ title: "Paylaşılıyor...", description: "Gönderiniz hazırlanıyor ve yakında akışta görünecek." });
-    router.push('/home');
-
+  
     try {
-        if (croppedImage && featureFlags?.contentModerationEnabled) {
-            const safetyResult = await checkImageSafety({ photoDataUri: croppedImage });
-            if (!safetyResult.success || !safetyResult.data?.isSafe) {
-                throw new Error(safetyResult.error || safetyResult.data?.reason || "Resim güvenlik kontrolünden geçemedi.");
-            }
+      let finalImageUrl: string | null = null;
+  
+      if (croppedImage) {
+        // First, check image safety
+        if (featureFlags?.contentModerationEnabled) {
+          const safetyResult = await checkImageSafety({ photoDataUri: croppedImage });
+          if (!safetyResult.success || !safetyResult.data?.isSafe) {
+            throw new Error(safetyResult.error || safetyResult.data?.reason || "Resim güvenlik kontrolünden geçemedi.");
+          }
         }
-
-        await createPost({
-            uid: user.uid,
-            username: userData.username,
-            userPhotoURL: userData.photoURL || null,
-            userAvatarFrame: userData.selectedAvatarFrame || '',
-            userRole: userData.role || 'user',
-            userGender: userData.gender,
-            text: text,
-            imageUrl: croppedImage, // Pass the base64 data URI
-            videoUrl: null,
-            language: i18n.language,
-            commentsDisabled: commentsDisabled,
-            likesHidden: likesHidden,
-            backgroundStyle: croppedImage ? '' : backgroundStyle,
-        });
+  
+        // Upload the image from the client
+        const imageRef = storageRef(storage, `upload/posts/${user.uid}/${uuidv4()}.jpg`);
+        const response = await fetch(croppedImage);
+        const blob = await response.blob();
+        await uploadString(imageRef, croppedImage, 'data_url');
+        finalImageUrl = await getDownloadURL(imageRef);
+      }
+      
+      toast({ title: "Paylaşılıyor...", description: "Gönderiniz hazırlanıyor ve yakında akışta görünecek." });
+      router.push('/home');
+  
+      await createPost({
+        uid: user.uid,
+        username: userData.username,
+        userPhotoURL: userData.photoURL || null,
+        userAvatarFrame: userData.selectedAvatarFrame || '',
+        userRole: userData.role || 'user',
+        userGender: userData.gender,
+        text: text,
+        imageUrl: finalImageUrl,
+        videoUrl: null,
+        language: i18n.language,
+        commentsDisabled: commentsDisabled,
+        likesHidden: likesHidden,
+        backgroundStyle: croppedImage ? '' : backgroundStyle,
+      });
+  
     } catch (error: any) {
-        console.error("Gönderi paylaşılırken hata:", error);
-        toast({ 
-            variant: 'destructive', 
-            title: 'Bir Hata Oluştu', 
-            description: error.message || 'Gönderiniz paylaşılamadı. Lütfen tekrar deneyin.', 
-            duration: 9000 
-        });
+      console.error("Gönderi paylaşılırken hata:", error);
+      toast({ 
+        variant: 'destructive', 
+        title: 'Bir Hata Oluştu', 
+        description: error.message || 'Gönderiniz paylaşılamadı. Lütfen tekrar deneyin.', 
+        duration: 9000 
+      });
+      // Important: Push back to the create page on error so the user doesn't lose their post
+      router.push('/create-post');
     } finally {
-        // Do not set isSubmitting to false, as we are navigating away
+        // Only set submitting to false if we are NOT navigating away on success
+        if (router.pathname !== '/home') {
+            setIsSubmitting(false);
+        }
     }
   };
 

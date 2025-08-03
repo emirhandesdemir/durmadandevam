@@ -40,7 +40,7 @@ export async function updateUserProfile(updates: {
     isNewUser?: boolean;
     email?: string;
     referredBy?: string | null;
-    photoURL?: string | null; // Can be a public URL or a data URI for new uploads
+    photoURL?: string | null; // This will now always be a public URL
     username?: string;
     bio?: string;
     age?: number | string | null;
@@ -62,15 +62,6 @@ export async function updateUserProfile(updates: {
     const batch = writeBatch(db);
 
     let updatesForDb: { [key: string]: any } = { ...otherUpdates };
-    let finalPhotoURL = updates.photoURL;
-
-    // Handle profile picture upload if photoURL is a data URI
-    if (updates.photoURL && updates.photoURL.startsWith('data:image')) {
-        const imageRef = storageRef(storage, `avatars/${userId}/profile.png`);
-        const response = await uploadString(imageRef, updates.photoURL, 'data_url');
-        finalPhotoURL = await getDownloadURL(response.ref);
-        updatesForDb.photoURL = finalPhotoURL;
-    }
     
     if (updates.age === '' || updates.age === undefined || updates.age === null) {
         updatesForDb.age = null;
@@ -123,7 +114,7 @@ export async function updateUserProfile(updates: {
          const initialData = {
             uid: userId, email: updates.email, emailVerified: false,
             username: updates.username, username_lowercase: updates.username?.toLowerCase(),
-            photoURL: finalPhotoURL || null, bio: null, age: null, city: null, country: null,
+            photoURL: updates.photoURL || null, bio: null, age: null, city: null, country: null,
             gender: null, interests: [], role: userRole,
             createdAt: serverTimestamp(), lastActionTimestamp: serverTimestamp(),
             diamonds: 10, profileValue: 0, giftLevel: 0, totalDiamondsSent: 0,
@@ -143,12 +134,12 @@ export async function updateUserProfile(updates: {
         batch.update(userRef, updatesForDb);
     }
     
-    if (updates.username || finalPhotoURL) {
+    if (updates.username || updates.photoURL) {
         try {
             const auth = getAuth();
             const authUpdates: { displayName?: string, photoURL?: string } = {};
             if(updates.username) authUpdates.displayName = updates.username;
-            if(finalPhotoURL) authUpdates.photoURL = finalPhotoURL;
+            if(updates.photoURL) authUpdates.photoURL = updates.photoURL;
             await auth.updateUser(userId, authUpdates);
         } catch (e) {
             console.error("Auth profile update failed:", e);
@@ -168,7 +159,7 @@ export async function updateUserProfile(updates: {
 
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (finalPhotoURL) propagationUpdates.userPhotoURL = finalPhotoURL;
+    if (updates.photoURL) propagationUpdates.userPhotoURL = updates.photoURL;
     if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
 
     if (Object.keys(propagationUpdates).length > 0) {

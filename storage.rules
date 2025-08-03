@@ -2,29 +2,43 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Genel okuma izni: Herkes, herkese açık dosyaları okuyabilir.
+    
+    // Allow public read access to all files
     match /{allPaths=**} {
       allow read;
     }
 
-    // Avatar Yükleme Kuralları:
-    // Kullanıcıların sadece kendi avatar klasörlerine yazmasına izin ver.
-    match /avatars/{userId}/{fileName} {
-      // 1. Kullanıcı giriş yapmış olmalı.
-      // 2. Kullanıcı sadece kendi klasörüne (userId) yazabilir.
-      // 3. Yüklenen dosya bir resim olmalı ('image/jpeg', 'image/png', vb.).
-      // 4. Dosya boyutu 5MB'dan küçük olmalı.
-      allow write: if request.auth != null && 
-                      request.auth.uid == userId &&
-                      request.resource.contentType.matches('image/.*') &&
-                      request.resource.size < 5 * 1024 * 1024;
+    // --- AVATARS ---
+    // Allow a user to only write (create, update, delete) to their own avatar folder.
+    // The filename must be 'profile.png'.
+    match /avatars/{userId}/profile.png {
+      allow write: if request.auth != null && request.auth.uid == userId
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
     }
     
-    // Oda Dosyaları (Resimler, vb.)
-    match /upload/rooms/{roomId}/{allPaths=**} {
-      // Oda katılımcıları (veya daha spesifik kurallar) dosya yükleyebilir.
-      // Şimdilik sadece giriş yapmış kullanıcılar için izin verelim.
-      allow write: if request.auth != null;
+    // --- POSTS ---
+    // Allow an authenticated user to write to a folder matching their UID inside 'upload/posts'.
+    match /upload/posts/{userId}/{allPaths=**} {
+       allow write: if request.auth != null && request.auth.uid == userId
+                   && request.resource.size < 10 * 1024 * 1024 // 10MB limit
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // --- VIDEOS ---
+    // Allow an authenticated user to write to a folder matching their UID inside 'upload/videos'.
+    match /upload/videos/{userId}/{allPaths=**} {
+       allow write: if request.auth != null && request.auth.uid == userId
+                   && request.resource.size < 50 * 1024 * 1024 // 50MB limit
+                   && request.resource.contentType.matches('video/.*');
+    }
+    
+    // --- DIRECT MESSAGES ---
+    // Allow an authenticated user to write to a DM folder they are a part of.
+    match /dms/{chatId}/{allPaths=**} {
+      allow write: if request.auth != null && chatId.split('_').includes(request.auth.uid)
+                   && request.resource.size < 10 * 1024 * 1024 // 10MB limit
+                   && (request.resource.contentType.matches('image/.*') || request.resource.contentType.matches('audio/.*'));
     }
   }
 }

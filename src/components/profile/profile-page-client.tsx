@@ -23,7 +23,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "..
 import { updateUserProfile } from "@/lib/actions/userActions";
 import { Textarea } from "../ui/textarea";
 import BlockedUsersDialog from "./BlockedUsersDialog";
-import { sendPasswordResetEmail, sendEmailVerification, verifyBeforeUpdateEmail } from "firebase/auth";
+import { sendPasswordResetEmail, sendEmailVerification, verifyBeforeUpdateEmail, updateEmail } from "firebase/auth";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { deleteUserAccount } from "@/lib/actions/userActions";
 import { Gem } from "lucide-react";
@@ -31,7 +31,7 @@ import { giftLevelThresholds } from "@/lib/gifts";
 import { Progress } from "@/components/ui/progress";
 import ImageCropperDialog from "../common/ImageCropperDialog";
 import AnimatedLogoLoader from "../common/AnimatedLogoLoader";
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
 
 const bubbleOptions = [
     { id: "", name: "Varsayılan", isPremium: false },
@@ -66,6 +66,9 @@ export default function ProfilePageClient() {
     const [animatedNav, setAnimatedNav] = useState(true);
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [newEmail, setNewEmail] = useState("");
+    const [showEmailChange, setShowEmailChange] = useState(false);
+
 
     const isPremium = userData?.premiumUntil && userData.premiumUntil.toDate() > new Date();
     
@@ -131,12 +134,22 @@ export default function ProfilePageClient() {
         toast({ title: "Yükleniyor...", description: "Profil fotoğrafınız güncelleniyor..." });
         
         try {
+            const imageRef = storageRef(storage, `avatars/${user.uid}/profile.png`);
+            
+            // Convert data URL to blob for upload
+            const response = await fetch(croppedDataUrl);
+            const blob = await response.blob();
+    
+            await uploadBytes(imageRef, blob);
+            const downloadURL = await getDownloadURL(imageRef);
+
             await updateUserProfile({
                 userId: user.uid,
-                photoURL: croppedDataUrl,
+                photoURL: downloadURL,
             });
             toast({ title: "Başarılı!", description: "Profil fotoğrafınız güncellendi." });
         } catch(error: any) {
+            console.error("Profile picture upload error:", error);
             toast({ variant: 'destructive', title: "Hata", description: `Fotoğraf yüklenemedi: ${error.message}` });
         } finally {
             setIsSaving(false);
@@ -191,6 +204,42 @@ export default function ProfilePageClient() {
         }
     }
     
+    const handleChangeEmail = async () => {
+        if (!user || !newEmail || !user.email) return;
+        setIsSaving(true);
+        try {
+            if (user.emailVerified) {
+                // Secure way for verified users
+                await verifyBeforeUpdateEmail(user, newEmail);
+                toast({
+                    title: 'Onay Gerekli',
+                    description: `E-posta adresinizi güncellemek için ${user.email} adresine gönderilen linke tıklayın.`
+                });
+            } else {
+                // Direct update for unverified users
+                await updateEmail(user, newEmail);
+                 await updateUserProfile({ userId: user.uid, email: newEmail });
+                toast({
+                    title: 'E-posta Güncellendi',
+                    description: 'E-posta adresiniz başarıyla değiştirildi. Lütfen yeni adresinizi doğrulayın.'
+                });
+            }
+            setShowEmailChange(false);
+            setNewEmail("");
+        } catch (error: any) {
+            console.error("Email change error:", error);
+            let desc = "E-posta adresi güncellenirken bir hata oluştu.";
+            if (error.code === 'auth/email-already-in-use') {
+                desc = "Bu e-posta adresi zaten başka bir hesap tarafından kullanılıyor.";
+            } else if (error.code === 'auth/requires-recent-login') {
+                desc = "Bu hassas bir işlem. Lütfen çıkış yapıp tekrar giriş yaptıktan sonra deneyin.";
+            }
+            toast({ variant: 'destructive', description: desc });
+        } finally {
+            setIsSaving(false);
+        }
+    }
+
     const handlePasswordReset = async () => {
         if (!user?.email) {
             toast({ variant: 'destructive', description: "E-posta adresiniz bulunamadı."});
@@ -285,14 +334,9 @@ export default function ProfilePageClient() {
                                     </Avatar>
                                 </div>
                                 <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200">
-                                    <Pencil className="h-8 w-8" />
+                                    <Camera className="h-8 w-8" />
                                 </div>
                             </button>
-                             <Button asChild variant="secondary">
-                                <Link href="/avatar-studio">
-                                    <Sparkles className="mr-2 h-4 w-4" /> Avatar Stüdyosu
-                                </Link>
-                            </Button>
                         </div>
 
                          <div className="space-y-2">
@@ -478,12 +522,23 @@ export default function ProfilePageClient() {
                                             <Label className="font-semibold">E-posta</Label>
                                             <p className="text-xs text-muted-foreground">{user.email}</p>
                                         </div>
-                                        {user.emailVerified ? (
-                                            <span className="flex items-center text-sm font-semibold text-green-600"><BadgeCheck className="mr-2 h-4 w-4"/>Doğrulandı</span>
-                                        ) : (
-                                            <Button size="sm" variant="secondary" onClick={handleSendVerificationEmail}>Doğrulama E-postası Gönder</Button>
-                                        )}
+                                        <div className="flex items-center gap-2">
+                                            {user.emailVerified ? (
+                                                <span className="flex items-center text-sm font-semibold text-green-600"><BadgeCheck className="mr-2 h-4 w-4"/>Doğrulandı</span>
+                                            ) : (
+                                                <Button size="sm" variant="secondary" onClick={handleSendVerificationEmail}>Doğrula</Button>
+                                            )}
+                                            <Button size="sm" variant="outline" onClick={() => setShowEmailChange(p => !p)}>Değiştir</Button>
+                                        </div>
                                     </div>
+                                     {showEmailChange && (
+                                        <div className="pt-2 space-y-2">
+                                            <Input value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="Yeni e-posta adresiniz" type="email" />
+                                            <Button size="sm" onClick={handleChangeEmail} disabled={isSaving || !newEmail}>
+                                                {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-2"/>} Onayla
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <div>
