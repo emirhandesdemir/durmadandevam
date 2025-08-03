@@ -4,13 +4,12 @@
 import { db, storage } from '@/lib/firebase';
 import type { Post, Report, UserProfile } from '../types';
 import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, collectionGroup, deleteDoc, setDoc, runTransaction } from 'firebase/firestore';
-import { ref as storageRef, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
+import { ref as storageRef, deleteObject } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
 import { getAuth } from '../firebaseAdmin';
 import { deleteRoomWithSubcollections } from '../firestoreUtils';
 import { updateUserPosts, updateUserComments, updateUserDmMessages } from './propagationActions';
-import { v4 as uuidv4 } from 'uuid';
 import { createNotification } from './notificationActions';
 
 
@@ -31,7 +30,7 @@ export async function updateUserProfile(updates: {
     isNewUser?: boolean;
     email?: string | null;
     referredBy?: string | null;
-    photoURL?: string | null; // Can now be a Data URL
+    photoURL?: string | null;
     username?: string;
     bio?: string;
     age?: number | string | null;
@@ -75,7 +74,8 @@ export async function updateUserProfile(updates: {
                 const initialData = {
                     uid: userId, uniqueTag: newTag, email: updates.email, emailVerified: false,
                     username: updates.username, username_lowercase: updates.username?.toLowerCase(), 
-                    photoURL: updates.photoURL || null, bio: null, age: null, city: null, country: null,
+                    photoURL: updates.photoURL || `https://api.dicebear.com/8.x/initials/svg?seed=${updates.username}`, 
+                    bio: null, age: null, city: null, country: null,
                     gender: null, interests: [], role: userRole,
                     createdAt: serverTimestamp(), lastActionTimestamp: serverTimestamp(),
                     diamonds: 10, profileValue: 0, giftLevel: 0, totalDiamondsSent: 0,
@@ -366,8 +366,11 @@ export async function deleteUserAccount(userId: string) {
     const userSnap = await getDoc(userRef);
     if (userSnap.exists() && userSnap.data().photoURL) {
         try {
-            const avatarRef = storageRef(storage, `avatars/${userId}/profile.png`);
-            await deleteObject(avatarRef);
+            // Dicebear URLs are not in storage, so we skip deletion.
+            if (userSnap.data().photoURL.includes('firebasestorage')) {
+               const avatarRef = storageRef(storage, `avatars/${userId}/profile.png`);
+               await deleteObject(avatarRef);
+            }
         } catch (e) {
             if ((e as any).code !== 'storage/object-not-found') {
                  console.error("Avatar deletion error:", e);

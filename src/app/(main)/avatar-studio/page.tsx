@@ -1,105 +1,75 @@
 // src/app/(main)/avatar-studio/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { generateAvatar } from '@/ai/flows/generateAvatarFlow';
-import { photoToAvatar } from '@/ai/flows/photoToAvatarFlow';
 import { updateUserProfile } from '@/lib/actions/userActions';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Wand2, Upload, Camera, Sparkles, User } from 'lucide-react';
+import { Loader2, Wand2, User, RefreshCw, Sparkles, Image as ImageIcon } from 'lucide-react';
 import Image from 'next/image';
-import ImageCropperDialog from '@/components/common/ImageCropperDialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+
+// List of available Dicebear styles
+const avatarStyles = [
+  { id: 'adventurer', name: 'Macera' },
+  { id: 'pixel-art', name: 'Piksel' },
+  { id: 'initials', name: 'İlk Harfler' },
+  { id: 'bottts', name: 'Botlar' },
+  { id: 'micah', name: 'Micah' },
+  { id: 'fun-emoji', name: 'Emoji' },
+  { id: 'lorelei', name: 'Çizgi' },
+  { id: 'identicon', name: 'Geo' },
+  { id: 'notionists', name: 'Notion' },
+  { id: 'miniavs', name: 'Minimalist' },
+];
 
 export default function AvatarStudioPage() {
-  const { user, userData, loading: authLoading } = useAuth();
+  const { user, userData, loading: authLoading, refreshUserData } = useAuth();
   const { toast } = useToast();
 
-  const [description, setDescription] = useState('');
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [selectedStyle, setSelectedStyle] = useState('adventurer');
+  const [seed, setSeed] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    // Set initial seed from username when data is available
+    if (userData?.username) {
+        setSeed(userData.username);
+    }
+  }, [userData]);
+
+
+  const generatedAvatarUrl = useMemo(() => {
+    if (!seed) return '';
+    return `https://api.dicebear.com/8.x/${selectedStyle}/svg?seed=${encodeURIComponent(seed)}`;
+  }, [selectedStyle, seed]);
   
-  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
-  const [croppedImage, setCroppedImage] = useState<string | null>(null);
-  const [photoAvatar, setPhotoAvatar] = useState<string | null>(null);
-  const fileInputRef = useState<React.RefObject<HTMLInputElement>>(null);
+  const handleRandomize = () => {
+    setSeed(Math.random().toString(36).substring(7));
+  };
 
 
-  const handleGenerate = async () => {
-    if (!user || !userData) return;
-    if (!description.trim()) {
-      toast({ variant: 'destructive', description: 'Lütfen bir avatar açıklaması girin.' });
-      return;
-    }
-    setIsGenerating(true);
-    setGeneratedImage(null);
+  const handleSetAvatar = async () => {
+    if (!user || !generatedAvatarUrl) return;
+    setIsSaving(true);
     try {
-      const result = await generateAvatar({
-        description: description,
-        gender: userData.gender || 'neutral',
-      });
-      if (!result.photoDataUri) throw new Error("Yapay zeka bir resim oluşturamadı.");
-      setGeneratedImage(result.photoDataUri);
+        await updateUserProfile({
+            userId: user.uid,
+            photoURL: generatedAvatarUrl,
+        });
+        await refreshUserData();
+        toast({ title: "Başarılı!", description: "Yeni avatarınız ayarlandı." });
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Hata', description: error.message });
+        toast({ variant: 'destructive', title: 'Hata', description: "Avatar ayarlanırken bir hata oluştu." });
     } finally {
-      setIsGenerating(false);
+        setIsSaving(false);
     }
   };
-
-  const handlePhotoToAvatar = async () => {
-    if (!user || !croppedImage) return;
-    setIsGenerating(true);
-    setPhotoAvatar(null);
-    try {
-        const result = await photoToAvatar({photoDataUri: croppedImage});
-        if (!result.photoDataUri) throw new Error("Yapay zeka bir avatar oluşturamadı.");
-        setPhotoAvatar(result.photoDataUri);
-    } catch(e: any) {
-        toast({variant: "destructive", title: "Hata", description: e.message});
-    } finally {
-        setIsGenerating(false);
-    }
-  }
-
-  const handleSetAvatar = async (imageDataUrl: string) => {
-    if (!user || !imageDataUrl) return;
-    setIsUploading(true);
-    try {
-      await updateUserProfile({
-        userId: user.uid,
-        avatarSvg: null, // Clear old SVG if exists
-        photoURL: imageDataUrl, // Pass data URL to be uploaded by server action
-      });
-      toast({ title: "Başarılı!", description: "Yeni avatarınız ayarlandı." });
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Hata', description: "Avatar ayarlanırken bir hata oluştu." });
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (file.size > 10 * 1024 * 1024) { 
-          toast({ variant: "destructive", title: "Dosya Çok Büyük", description: "Resim boyutu 10MB'dan büyük olamaz." });
-          return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => {
-          setImageToCrop(reader.result as string);
-      };
-      reader.readAsDataURL(e.target.files[0]);
-    }
-  };
-
 
   if (authLoading) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-10 w-10 animate-spin"/></div>;
@@ -107,101 +77,76 @@ export default function AvatarStudioPage() {
 
   return (
     <div className="container mx-auto max-w-2xl py-6">
-      <div className="flex items-center gap-3 mb-6">
-        <Sparkles className="h-8 w-8 text-primary" />
-        <h1 className="text-3xl font-bold tracking-tight">Avatar Stüdyosu</h1>
-      </div>
+        <div className="flex items-center gap-3 mb-6">
+            <Sparkles className="h-8 w-8 text-primary" />
+            <h1 className="text-3xl font-bold tracking-tight">Avatar Stüdyosu</h1>
+        </div>
 
-      <Tabs defaultValue="generate" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="generate"><Wand2 className="mr-2 h-4 w-4"/> Metinden Oluştur</TabsTrigger>
-          <TabsTrigger value="transform"><Camera className="mr-2 h-4 w-4"/> Fotoğraftan Dönüştür</TabsTrigger>
-        </TabsList>
-        <TabsContent value="generate" className="mt-4">
-          <Card>
+        <Card>
             <CardHeader>
-              <CardTitle>Avatarını Tarif Et</CardTitle>
-              <CardDescription>Hayalindeki avatarı birkaç kelimeyle anlat, yapay zeka senin için çizsin.</CardDescription>
+                <CardTitle>Avatarını Oluştur</CardTitle>
+                <CardDescription>Tarzını seç, anında avatarını oluştur ve profil fotoğrafı olarak ayarla.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Örn: Mavi saçlı, gözlüklü, gülümseyen bir astronot kedi."
-                disabled={isGenerating}
-              />
-              {generatedImage && (
-                <div className="p-2 border rounded-lg bg-muted flex justify-center">
-                    <Image src={generatedImage} alt="Oluşturulan Avatar" width={256} height={256} className="rounded-md" />
+            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                {/* Preview Section */}
+                <div className="md:col-span-1 flex flex-col items-center gap-4">
+                    <p className="text-sm font-medium text-muted-foreground">Önizleme</p>
+                    <div className="p-4 border-2 border-dashed rounded-full bg-muted">
+                       {generatedAvatarUrl ? (
+                            <Image 
+                                key={generatedAvatarUrl} // Force re-render on URL change
+                                src={generatedAvatarUrl} 
+                                alt="Oluşturulan Avatar" 
+                                width={128} 
+                                height={128} 
+                                className="rounded-full bg-background" 
+                            />
+                       ) : (
+                           <div className="h-32 w-32 rounded-full bg-background flex items-center justify-center">
+                               <ImageIcon className="h-12 w-12 text-muted-foreground"/>
+                           </div>
+                       )}
+                    </div>
+                    <Button variant="outline" size="sm" onClick={handleRandomize}>
+                        <RefreshCw className="mr-2 h-4 w-4"/>
+                        Zarları Tekrar At
+                    </Button>
                 </div>
-              )}
+
+                {/* Style Selection */}
+                <div className="md:col-span-2">
+                    <p className="text-sm font-medium text-muted-foreground mb-3">Stil Seç</p>
+                    <RadioGroup value={selectedStyle} onValueChange={setSelectedStyle}>
+                        <ScrollArea className="h-64">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pr-4">
+                                {avatarStyles.map((style) => (
+                                    <RadioGroupItem key={style.id} value={style.id} id={style.id} className="sr-only" />
+                                ))}
+                                {avatarStyles.map((style) => (
+                                    <Label
+                                        key={style.id}
+                                        htmlFor={style.id}
+                                        className={cn(
+                                            "flex flex-col items-center justify-center gap-2 rounded-lg border-2 p-3 cursor-pointer hover:bg-accent hover:border-primary/50 transition-all",
+                                            selectedStyle === style.id ? "border-primary bg-primary/10" : "border-muted"
+                                        )}
+                                    >
+                                        <Image src={`https://api.dicebear.com/8.x/${style.id}/svg?seed=example`} alt={style.name} width={48} height={48} className="rounded-full bg-background" />
+                                        <span className="text-xs font-semibold text-center">{style.name}</span>
+                                    </Label>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                    </RadioGroup>
+                </div>
             </CardContent>
-            <CardFooter className="justify-between">
-              <Button onClick={handleGenerate} disabled={isGenerating}>
-                {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4"/>}
-                Oluştur
-              </Button>
-              {generatedImage && (
-                <Button onClick={() => handleSetAvatar(generatedImage)} disabled={isUploading}>
-                  {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <User className="mr-2 h-4 w-4"/>}
+            <CardFooter className="justify-end">
+                <Button onClick={handleSetAvatar} disabled={isSaving}>
+                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <User className="mr-2 h-4 w-4"/>}
                   Avatar Olarak Ayarla
                 </Button>
-              )}
             </CardFooter>
-          </Card>
-        </TabsContent>
-        <TabsContent value="transform" className="mt-4">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Fotoğrafını Dönüştür</CardTitle>
-                    <CardDescription>Bir fotoğrafını yükle, yapay zeka onu sanatsal bir avatara çevirsin.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" className="hidden" />
-                    {!croppedImage && (
-                        <Button variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()}>
-                           <Upload className="mr-2 h-4 w-4"/> Fotoğraf Yükle
-                        </Button>
-                    )}
-                    
-                    {croppedImage && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                             <div className="p-2 border rounded-lg bg-muted flex justify-center">
-                                <Image src={croppedImage} alt="Kırpılmış Fotoğraf" width={256} height={256} className="rounded-md" />
-                            </div>
-                            <div className="p-2 border rounded-lg bg-muted flex justify-center items-center h-[272px]">
-                                {isGenerating ? <Loader2 className="h-8 w-8 animate-spin"/> : photoAvatar ? <Image src={photoAvatar} alt="Dönüştürülmüş Avatar" width={256} height={256} className="rounded-md" /> : <p className="text-sm text-muted-foreground">Sonuç burada görünecek</p>}
-                            </div>
-                        </div>
-                    )}
-                </CardContent>
-                <CardFooter className="justify-between">
-                    <div>
-                         {croppedImage && (
-                            <Button onClick={handlePhotoToAvatar} disabled={isGenerating}>
-                                {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4"/>}
-                                Dönüştür
-                            </Button>
-                        )}
-                    </div>
-                     {photoAvatar && (
-                        <Button onClick={() => handleSetAvatar(photoAvatar)} disabled={isUploading}>
-                        {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <User className="mr-2 h-4 w-4"/>}
-                        Avatar Olarak Ayarla
-                        </Button>
-                    )}
-                </CardFooter>
-            </Card>
-        </TabsContent>
-      </Tabs>
-      <ImageCropperDialog
-        isOpen={!!imageToCrop}
-        setIsOpen={setImageToCrop}
-        imageSrc={imageToCrop}
-        onCropComplete={setCroppedImage}
-        aspectRatio={1}
-        circularCrop={true}
-       />
+        </Card>
     </div>
   );
 }

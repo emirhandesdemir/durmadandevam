@@ -13,7 +13,7 @@ import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
 import { useState, useRef, useEffect, useMemo } from "react";
-import { auth, db, storage } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../common/LanguageSwitcher";
@@ -23,15 +23,14 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "..
 import { updateUserProfile } from "@/lib/actions/userActions";
 import { Textarea } from "../ui/textarea";
 import BlockedUsersDialog from "./BlockedUsersDialog";
-import { sendPasswordResetEmail, sendEmailVerification, verifyBeforeUpdateEmail, updateEmail } from "firebase/auth";
+import { sendPasswordResetEmail, verifyBeforeUpdateEmail, updateEmail } from "firebase/auth";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { deleteUserAccount } from "@/lib/actions/userActions";
 import { Gem } from "lucide-react";
 import { giftLevelThresholds } from "@/lib/gifts";
 import { Progress } from "@/components/ui/progress";
-import ImageCropperDialog from "../common/ImageCropperDialog";
 import AnimatedLogoLoader from "../common/AnimatedLogoLoader";
-import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
+import { useRouter } from 'next/navigation';
 
 const bubbleOptions = [
     { id: "", name: "Varsayılan", isPremium: false },
@@ -44,6 +43,7 @@ const bubbleOptions = [
 
 export default function ProfilePageClient() {
     const { user, userData, loading, handleLogout, refreshUserData } = useAuth();
+    const router = useRouter();
     const { toast } = useToast();
     const { theme, setTheme } = useTheme();
     const { t } = useTranslation();
@@ -64,8 +64,6 @@ export default function ProfilePageClient() {
     const [isBlockedUsersOpen, setIsBlockedUsersOpen] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [animatedNav, setAnimatedNav] = useState(true);
-    const [imageToCrop, setImageToCrop] = useState<string | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
     const [newEmail, setNewEmail] = useState("");
     const [showEmailChange, setShowEmailChange] = useState(false);
 
@@ -114,51 +112,6 @@ export default function ProfilePageClient() {
         interests, animatedNav, userData
     ]);
     
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                toast({ variant: "destructive", title: "Dosya Çok Büyük", description: "Resim boyutu 5MB'dan büyük olamaz." });
-                return;
-            }
-            const reader = new FileReader();
-            reader.onload = () => setImageToCrop(reader.result as string);
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const handleCropComplete = async (croppedDataUrl: string) => {
-        if (!user) return;
-        setImageToCrop(null);
-        setIsSaving(true);
-        toast({ title: "Yükleniyor...", description: "Profil fotoğrafınız güncelleniyor..." });
-        
-        try {
-            // Step 1: Upload the image directly from the client
-            const imageRef = storageRef(storage, `avatars/${user.uid}/profile.png`);
-            await uploadString(imageRef, croppedDataUrl, 'data_url');
-            const downloadURL = await getDownloadURL(imageRef);
-
-            // Step 2: Call the server action with the new public URL
-            const result = await updateUserProfile({
-                userId: user.uid,
-                photoURL: downloadURL,
-            });
-
-            if (result.success) {
-                toast({ title: "Başarılı!", description: "Profil fotoğrafınız güncellendi." });
-                // The onIdTokenChanged listener in AuthContext will handle the refresh automatically.
-            } else {
-                throw new Error(result.error || "Bilinmeyen bir hata oluştu.");
-            }
-        } catch(error: any) {
-            console.error("Profile picture upload error:", error);
-            toast({ variant: 'destructive', title: "Hata", description: `Fotoğraf yüklenemedi: ${error.message}` });
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
 
     const handleSaveChanges = async () => {
         if (!user || !hasChanges) return;
@@ -186,43 +139,28 @@ export default function ProfilePageClient() {
             }
             
             toast({ title: "Başarılı!", description: "Profiliniz başarıyla güncellendi." });
-            // The onIdTokenChanged listener in AuthContext will handle refreshing the data.
+            await refreshUserData();
+
         } catch (error: any) {
             toast({ title: "Hata", description: error.message || "Profil güncellenirken bir hata oluştu.", variant: "destructive" });
         } finally {
             setIsSaving(false);
         }
     };
-
-    const handleSendVerificationEmail = async () => {
-        if (!user) return;
-        try {
-            await sendEmailVerification(user);
-            toast({
-                title: 'E-posta Gönderildi',
-                description: 'Hesabınızı doğrulamak için lütfen e-posta kutunuzu kontrol edin.'
-            });
-        } catch (error: any) {
-            console.error("Verification email error:", error);
-            toast({ variant: 'destructive', description: "Doğrulama e-postası gönderilirken bir hata oluştu." });
-        }
-    }
     
     const handleChangeEmail = async () => {
         if (!user || !newEmail || !user.email) return;
         setIsSaving(true);
         try {
             if (user.emailVerified) {
-                // Secure way for verified users
                 await verifyBeforeUpdateEmail(user, newEmail);
                 toast({
                     title: 'Onay Gerekli',
                     description: `E-posta adresinizi güncellemek için ${user.email} adresine gönderilen linke tıklayın.`
                 });
             } else {
-                // Direct update for unverified users
                 await updateEmail(user, newEmail);
-                 await updateUserProfile({ userId: user.uid, email: newEmail });
+                await updateUserProfile({ userId: user.uid, email: newEmail });
                 toast({
                     title: 'E-posta Güncellendi',
                     description: 'E-posta adresiniz başarıyla değiştirildi. Lütfen yeni adresinizi doğrulayın.'
@@ -230,6 +168,7 @@ export default function ProfilePageClient() {
             }
             setShowEmailChange(false);
             setNewEmail("");
+            await refreshUserData();
         } catch (error: any) {
             console.error("Email change error:", error);
             let desc = "E-posta adresi güncellenirken bir hata oluştu.";
@@ -242,7 +181,7 @@ export default function ProfilePageClient() {
         } finally {
             setIsSaving(false);
         }
-    }
+    };
 
     const handlePasswordReset = async () => {
         if (!user?.email) {
@@ -313,14 +252,6 @@ export default function ProfilePageClient() {
 
     return (
         <>
-            <ImageCropperDialog
-                isOpen={!!imageToCrop}
-                setIsOpen={setImageToCrop}
-                imageSrc={imageToCrop}
-                onCropComplete={handleCropComplete}
-                aspectRatio={1}
-                circularCrop={true}
-            />
             <div className="space-y-6 pb-24">
                 <Card>
                     <CardHeader>
@@ -329,8 +260,7 @@ export default function ProfilePageClient() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="flex flex-col items-center gap-4">
-                           <button onClick={() => fileInputRef.current?.click()} className="relative group rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-                               <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" className="hidden" />
+                           <button onClick={() => router.push('/avatar-studio')} className="relative group rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
                                <div className={cn("avatar-frame-wrapper", userData.selectedAvatarFrame)}>
                                     <Avatar className="relative z-[1] h-24 w-24 border-2 shadow-sm">
                                         <AvatarImage src={userData.photoURL || undefined} />
@@ -338,7 +268,7 @@ export default function ProfilePageClient() {
                                     </Avatar>
                                 </div>
                                 <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200">
-                                    <Camera className="h-8 w-8" />
+                                    <Pencil className="h-8 w-8" />
                                 </div>
                             </button>
                         </div>
@@ -530,7 +460,7 @@ export default function ProfilePageClient() {
                                             {user.emailVerified ? (
                                                 <span className="flex items-center text-sm font-semibold text-green-600"><BadgeCheck className="mr-2 h-4 w-4"/>Doğrulandı</span>
                                             ) : (
-                                                <Button size="sm" variant="secondary" onClick={handleSendVerificationEmail}>Doğrula</Button>
+                                                <Button size="sm" variant="secondary" onClick={() => {}}>Doğrula</Button>
                                             )}
                                             <Button size="sm" variant="outline" onClick={() => setShowEmailChange(p => !p)}>Değiştir</Button>
                                         </div>
@@ -661,7 +591,7 @@ export default function ProfilePageClient() {
                     animate={{ y: 0 }}
                     exit={{ y: 100 }}
                     transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                    className="fixed bottom-20 left-4 z-[60]"
+                    className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[60]"
                 >
                     <Button onClick={handleSaveChanges} disabled={isSaving} size="lg" className="shadow-lg">
                         {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
