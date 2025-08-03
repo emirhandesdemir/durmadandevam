@@ -2,7 +2,7 @@
 'use client';
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowRight, Users, XCircle, Zap, Gift, Crown, Info } from "lucide-react";
+import { ArrowRight, Users, XCircle, Zap, Gift, Crown, Info, Star } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -82,6 +82,10 @@ export default function RoomListItem({ room }: RoomListItemProps) {
                                     <Zap className="h-3 w-3"/> PORTAL AÇIK
                                 </div>
                             ) : <div></div>}
+                            
+                            <div className="flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-full bg-black/20 text-yellow-300">
+                                <Star className="h-3 w-3 fill-current"/> SV {room.level || 0}
+                            </div>
                         </div>
 
                         <p className="text-lg font-bold truncate pt-4">{room.name}</p>

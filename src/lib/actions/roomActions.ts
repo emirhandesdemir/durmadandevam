@@ -57,14 +57,14 @@ export async function sendRoomMessage(roomId: string, user: { uid: string; displ
         if (command === '+duyuru') {
             if (!content) throw new Error("Duyuru içeriği boş olamaz.");
             const messagesRef = collection(db, 'rooms', roomId, 'messages');
-            await addDoc(messagesRef, {
+            const newDocRef = await addDoc(messagesRef, {
                 type: 'announcement',
                 uid: user.uid,
                 username: user.displayName,
                 text: content,
                 createdAt: serverTimestamp(),
             });
-            await pinMessage(roomId, (await getDocs(query(messagesRef, orderBy('createdAt', 'desc'), limit(1)))).docs[0].id, user.uid);
+            await pinMessage(roomId, newDocRef.id, user.uid);
             return { success: true };
         }
     }
@@ -291,7 +291,8 @@ export async function createRoom(
             }],
             maxParticipants: 9,
             voiceParticipantsCount: 0,
-            nextGameTimestamp: serverTimestamp() as Timestamp,
+            autoQuizEnabled: true,
+            nextGameTimestamp: Timestamp.fromMillis(Date.now() + 5 * 60 * 1000), // Start first game in 5 mins
             rules: null,
             welcomeMessage: null,
             pinnedMessageId: null,
@@ -607,7 +608,7 @@ export async function increaseParticipantLimit(roomId: string, userId: string) {
 }
 
 
-export async function openPortalForRoom(roomId: string, userId: string, externalTransaction?: Transaction) {
+export async function openPortalForRoom(roomId: string, userId: string, externalTransaction?: FirestoreTransaction) {
     const cost = 100;
 
     const userRef = doc(db, 'users', userId);

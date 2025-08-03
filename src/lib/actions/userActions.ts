@@ -44,6 +44,7 @@ export async function updateUserProfile(updates: {
     selectedAvatarFrame?: string;
     interests?: string[];
     location?: { latitude: number; longitude: number; city?: string | null; country?: string | null; } | null;
+    profileCompletionAwarded?: boolean;
 }) {
     const { userId, isNewUser, ...otherUpdates } = updates;
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
