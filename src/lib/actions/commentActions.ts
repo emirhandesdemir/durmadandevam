@@ -14,10 +14,14 @@ import {
 } from "firebase/firestore";
 import { createNotification } from "./notificationActions";
 import { findUserByUsername } from "../server-utils";
+import { logTransaction } from "./transactionActions";
 
 interface AddCommentArgs {
     postId: string;
+    postOwnerId: string;
     text: string;
+    giftId: string | null;
+    giftCost: number;
     user: {
         uid: string;
         displayName: string | null;
@@ -61,16 +65,40 @@ async function handleMentions(text: string, postId: string, sender: { uid: strin
 }
 
 
-export async function addComment({ postId, text, user, replyTo }: AddCommentArgs) {
+export async function addComment({ postId, postOwnerId, text, giftId, giftCost, user, replyTo }: AddCommentArgs) {
     if (!user || !user.uid) throw new Error("Yetkilendirme hatası.");
     if (!text.trim()) throw new Error("Yorum metni boş olamaz.");
 
+    const senderRef = doc(db, 'users', user.uid);
     const postRef = doc(db, "posts", postId);
-    const userRef = doc(db, "users", user.uid);
+    const postOwnerRef = doc(db, 'users', postOwnerId);
     const commentsColRef = collection(postRef, "comments");
-
     const batch = writeBatch(db);
-    
+
+    // Handle gift cost deduction
+    if (giftId && giftCost > 0) {
+        const senderSnap = await getDoc(senderRef);
+        if (!senderSnap.exists() || (senderSnap.data().diamonds || 0) < giftCost) {
+            throw new Error("Hediye göndermek için yeterli elmas yok.");
+        }
+        batch.update(senderRef, { diamonds: increment(-giftCost) });
+        batch.update(postOwnerRef, { profileValue: increment(giftCost) });
+        
+        await logTransaction(null, senderId, {
+            type: 'gift_sent',
+            amount: -giftCost,
+            description: `Yoruma hediye: ${giftId}`,
+            relatedUserId: postOwnerId,
+        }, batch);
+
+        await logTransaction(null, postOwnerId, {
+            type: 'gift_received',
+            amount: giftCost,
+            description: `${user.displayName} kullanıcısından yoruma hediye`,
+            relatedUserId: user.uid,
+        }, batch);
+    }
+
     const newCommentRef = doc(commentsColRef); 
     batch.set(newCommentRef, {
         uid: user.uid,
@@ -79,6 +107,7 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
         userAvatarFrame: user.userAvatarFrame || '',
         userRole: user.role || 'user',
         text: text,
+        giftId: giftId || null,
         createdAt: serverTimestamp(),
         replyTo: replyTo || null,
     });
@@ -88,21 +117,20 @@ export async function addComment({ postId, text, user, replyTo }: AddCommentArgs
     });
     
     // Set last action timestamp for rate limiting
-    batch.update(userRef, { lastActionTimestamp: serverTimestamp() });
+    batch.update(senderRef, { lastActionTimestamp: serverTimestamp() });
 
-    const postSnap = await getDoc(postRef);
-    const postData = postSnap.data();
-
-    if (postData && postData.uid !== user.uid) {
+    if (postOwnerId !== user.uid) {
+        const postSnap = await getDoc(postRef);
+        const postData = postSnap.data();
         await createNotification({
-            recipientId: postData.uid,
+            recipientId: postOwnerId,
             senderId: user.uid,
             senderUsername: user.displayName || "Biri",
             photoURL: user.photoURL || '',
             senderAvatarFrame: user.userAvatarFrame || '',
             type: 'comment',
             postId: postId,
-            postImage: postData.imageUrl || null,
+            postImage: postData?.imageUrl || null,
             commentText: text,
         });
     }

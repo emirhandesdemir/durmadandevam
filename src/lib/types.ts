@@ -240,7 +240,7 @@ export interface Post {
     imageUrl?: string | null;
     videoUrl?: string | null;
     backgroundStyle?: string;
-    createdAt: Timestamp | { seconds: number; nanoseconds: number };
+    createdAt: Timestamp | { seconds: number; nanoseconds: number } | string;
     likes: string[];
     likeCount: number;
     commentCount: number;
@@ -258,7 +258,7 @@ export interface Post {
         text: string;
         imageUrl?: string;
         videoUrl?: string;
-        createdAt: Timestamp | { seconds: number; nanoseconds: number };
+        createdAt: Timestamp | { seconds: number; nanoseconds: number } | string;
     }
 }
 
@@ -271,11 +271,12 @@ export interface Comment {
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     text: string;
-    createdAt: Timestamp;
+    createdAt: Timestamp | { seconds: number; nanoseconds: number } | string;
     replyTo?: {
         commentId: string;
         username: string;
     } | null;
+    giftId?: string | null;
 }
 
 export interface Giveaway {
@@ -502,7 +503,7 @@ export interface RoomActivityDataPoint {
 export interface AuditLog {
     id: string;
     type: 'user_created' | 'user_deleted';
-    timestamp: Timestamp;
+    timestamp: Timestamp | string;
     actor: {
         uid: string;
         email?: string;

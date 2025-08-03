@@ -11,7 +11,8 @@ import {
   query,
   orderBy,
   limit,
-  getDocs
+  getDocs,
+  WriteBatch
 } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
 import { deepSerialize } from '../server-utils';
@@ -28,25 +29,35 @@ interface LogTransactionArgs {
 }
 
 /**
- * Logs a financial transaction for a user within a Firestore transaction.
- * @param transaction The Firestore transaction object.
+ * Logs a financial transaction for a user within a Firestore transaction or batch.
+ * @param transaction The Firestore transaction or WriteBatch object. Can be null if not in a transaction.
  * @param userId The ID of the user for whom the transaction is being logged.
  * @param data The transaction data.
+ * @param batch Optional. If provided, the operation will be added to this batch instead of running on the transaction.
  */
 export async function logTransaction(
-    transaction: FirestoreTransaction,
+    transaction: FirestoreTransaction | null,
     userId: string,
-    data: LogTransactionArgs
+    data: LogTransactionArgs,
+    batch?: WriteBatch
 ) {
   if (!userId) return;
 
   const transactionsRef = collection(db, 'users', userId, 'transactions');
   const newTxRef = doc(transactionsRef);
 
-  transaction.set(newTxRef, {
+  const transactionData = {
     ...data,
     timestamp: serverTimestamp(),
-  });
+  };
+
+  if (batch) {
+      batch.set(newTxRef, transactionData);
+  } else if (transaction) {
+      transaction.set(newTxRef, transactionData);
+  } else {
+      await addDoc(transactionsRef, transactionData);
+  }
 }
 
 /**

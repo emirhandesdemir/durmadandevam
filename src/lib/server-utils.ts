@@ -27,8 +27,13 @@ export function deepSerialize(obj: any): any {
   
   // Bazen Timestamp'lar `toJSON` ile `{seconds, nanoseconds}` yapısındaki
   // düz objelere dönüşebilir. Bu durumu da yakala ve string'e çevir.
-  if (obj.seconds !== undefined && obj.nanoseconds !== undefined) {
-    return new Timestamp(obj.seconds, obj.nanoseconds).toDate().toISOString();
+  if (typeof obj.seconds === 'number' && typeof obj.nanoseconds === 'number') {
+    try {
+       return new Timestamp(obj.seconds, obj.nanoseconds).toDate().toISOString();
+    } catch(e) {
+      // Fallback if it's not a valid timestamp structure
+      return obj;
+    }
   }
   
   // Eğer bir dizi (array) ise, her elemanını özyineli (recursive) olarak işle.
@@ -46,4 +51,23 @@ export function deepSerialize(obj: any): any {
   }
 
   return newObj;
+}
+
+/**
+ * Kullanıcı adına göre bir kullanıcıyı bulur.
+ * Bu fonksiyon, sunucu tarafında çalışmalıdır.
+ * @param username Aranacak kullanıcı adı.
+ * @returns UserProfile nesnesi veya null.
+ */
+export async function findUserByUsername(username: string): Promise<UserProfile | null> {
+    if (!username) return null;
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('username_lowercase', '==', username.toLowerCase()), limit(1));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+        return null;
+    }
+    
+    return { uid: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as UserProfile;
 }

@@ -29,10 +29,12 @@ interface LogsTableProps {
 const parseTimestamp = (timestamp: any): Date | null => {
     if (!timestamp) return null;
     if (timestamp instanceof Date) return timestamp;
+    // Check if it's an ISO string from deepSerialize
     if (typeof timestamp === 'string') {
         const date = new Date(timestamp);
         if (!isNaN(date.getTime())) return date;
     }
+    // Check if it's a Firestore-like object from a direct server pass (less likely but safe)
     if (typeof timestamp === 'object' && typeof timestamp.seconds === 'number') {
         return new Date(timestamp.seconds * 1000);
     }

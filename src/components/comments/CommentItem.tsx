@@ -8,12 +8,11 @@ import { MoreHorizontal, Trash2, Reply, Loader2, BadgeCheck } from "lucide-react
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
 import { useState } from "react";
-import { Timestamp } from "firebase/firestore";
-import { useToast } from "@/hooks/use-toast";
 import { deleteComment } from "@/lib/actions/commentActions";
 import Link from 'next/link';
 import type { Comment } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 
 import {
   DropdownMenu,
@@ -32,6 +31,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { getGiftById } from "@/lib/gifts";
+import { Gem } from "lucide-react";
 
 interface CommentItemProps {
     comment: Comment;
@@ -49,9 +50,13 @@ export default function CommentItem({ comment, postId, onReply }: CommentItemPro
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const isOwner = currentUser?.uid === comment.uid;
+    // Safely parse the timestamp string
     const timeAgo = comment.createdAt
-        ? formatDistanceToNow((comment.createdAt as Timestamp).toDate(), { addSuffix: true, locale: tr })
+        ? formatDistanceToNow(new Date(comment.createdAt as any), { addSuffix: true, locale: tr })
         : "şimdi";
+    
+    const sentGift = comment.giftId ? getGiftById(comment.giftId) : null;
+    const GiftIcon = sentGift?.icon;
     
     // Yorumu silme fonksiyonu
     const handleDelete = async () => {
@@ -115,7 +120,17 @@ export default function CommentItem({ comment, postId, onReply }: CommentItemPro
                         </DropdownMenu>
                     )}
                 </div>
-                <div className={cn("p-3 rounded-xl bg-muted text-sm", comment.replyTo ? "mt-1" : "")}>
+                <div className={cn(
+                    "p-3 rounded-xl bg-muted text-sm", 
+                    comment.replyTo ? "mt-1" : "",
+                    sentGift ? "bg-gradient-to-tr from-yellow-400/10 to-amber-500/10 border-2 border-amber-500/20" : ""
+                )}>
+                    {sentGift && GiftIcon && (
+                        <div className="flex items-center gap-2 mb-2 pb-2 border-b border-amber-500/20">
+                            <GiftIcon className="h-6 w-6 text-amber-500"/>
+                            <p className="text-amber-600 font-bold">{sentGift.name} gönderdi</p>
+                        </div>
+                    )}
                     {comment.replyTo && (
                         <p className="text-xs text-muted-foreground italic border-l-2 border-primary pl-2 mb-2">
                            @{comment.replyTo.username} adlı kullanıcıya yanıt olarak
