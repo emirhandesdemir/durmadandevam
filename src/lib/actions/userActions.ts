@@ -11,6 +11,7 @@ import { getAuth } from '../firebaseAdmin';
 import { deleteRoomWithSubcollections } from '../firestoreUtils';
 import { updateUserPosts, updateUserComments, updateUserDmMessages } from './propagationActions';
 import { createNotification } from './notificationActions';
+import { logTransaction } from './transactionActions';
 
 
 export async function sendVerificationEmail(userId: string) {
@@ -24,6 +25,50 @@ export async function sendVerificationEmail(userId: string) {
     console.log(`Verification email request for user: ${userId}`);
     return { success: true };
 }
+
+export async function changeUniqueTag(userId: string, newTag: number) {
+    if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
+    if (!newTag || typeof newTag !== 'number' || newTag < 1000) {
+        throw new Error("Geçersiz ID formatı.");
+    }
+
+    const userRef = doc(db, 'users', userId);
+    const usersRef = collection(db, 'users');
+    const cost = 1000;
+
+    // Check for uniqueness
+    const q = query(usersRef, where('uniqueTag', '==', newTag));
+    const snapshot = await getDocs(q);
+    if (!snapshot.empty) {
+        throw new Error("Bu ID zaten başka bir kullanıcı tarafından alınmış.");
+    }
+
+    return await runTransaction(db, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) {
+            throw new Error("Kullanıcı bulunamadı.");
+        }
+
+        const userData = userDoc.data();
+        if ((userData.diamonds || 0) < cost) {
+            throw new Error(`ID değiştirmek için ${cost} elmasa ihtiyacınız var.`);
+        }
+        
+        transaction.update(userRef, { 
+            diamonds: increment(-cost),
+            uniqueTag: newTag
+        });
+
+        await logTransaction(transaction, userId, {
+            type: 'user_perk', // A new transaction type
+            amount: -cost,
+            description: `Kullanıcı ID'si değiştirildi: @${newTag}`
+        });
+
+        return { success: true };
+    });
+}
+
 
 export async function updateUserProfile(updates: {
     userId: string;

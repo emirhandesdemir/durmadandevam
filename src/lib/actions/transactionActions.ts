@@ -36,10 +36,9 @@ interface LogTransactionArgs {
  * @param batch Optional. If provided, the operation will be added to this batch instead of running on the transaction.
  */
 export async function logTransaction(
-    transaction: FirestoreTransaction | null,
+    transaction: FirestoreTransaction | WriteBatch | null,
     userId: string,
     data: LogTransactionArgs,
-    batch?: WriteBatch
 ) {
   if (!userId) return;
 
@@ -51,9 +50,7 @@ export async function logTransaction(
     timestamp: serverTimestamp(),
   };
 
-  if (batch) {
-      batch.set(newTxRef, transactionData);
-  } else if (transaction) {
+  if (transaction) {
       transaction.set(newTxRef, transactionData);
   } else {
       await addDoc(transactionsRef, transactionData);

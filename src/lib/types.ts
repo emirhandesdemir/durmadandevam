@@ -3,7 +3,7 @@ import { Timestamp } from "firebase/firestore";
 
 export interface Transaction {
     id: string;
-    type: 'diamond_purchase' | 'gift_sent' | 'gift_received' | 'profile_value_conversion' | 'room_creation' | 'room_perk' | 'admin_grant' | 'ad_reward' | 'referral_bonus' | 'live_gift';
+    type: 'diamond_purchase' | 'gift_sent' | 'gift_received' | 'profile_value_conversion' | 'room_creation' | 'room_perk' | 'admin_grant' | 'ad_reward' | 'referral_bonus' | 'live_gift' | 'user_perk';
     amount: number;
     description: string;
     relatedUserId?: string | null;
