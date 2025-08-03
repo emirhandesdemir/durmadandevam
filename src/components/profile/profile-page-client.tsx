@@ -4,7 +4,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Palette, Loader2, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2, Sliders, Wallet, HelpCircle, EyeOff, Bookmark, History, Bell, Globe, ChevronRight, Lock, KeyRound } from "lucide-react";
+import { LogOut, Palette, Loader2, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2, Sliders, Wallet, HelpCircle, EyeOff, Bookmark, History, Bell, Globe, ChevronRight, Lock, KeyRound, Store } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { auth, db } from "@/lib/firebase";
@@ -53,6 +53,8 @@ export default function ProfilePageClient() {
 
     const [isSaving, setIsSaving] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    const isPremium = userData?.premiumUntil && userData.premiumUntil.toDate() > new Date();
 
     const handleSaveChanges = useCallback(async () => {
         if (!user) return;
@@ -116,6 +118,10 @@ export default function ProfilePageClient() {
                 <div className="border-b">
                     <SettingsHeader title="Hesap" />
                     <SettingsLink href="/profile/edit" icon={UserIcon} title="Profili Düzenle" />
+                    {isPremium && (
+                        <SettingsLink href="/premium" icon={Crown} title="Premium Durumu" />
+                    )}
+                    <SettingsLink href="/store" icon={Store} title="Mağaza" />
                     <SettingsLink href="/profile/saved" icon={Bookmark} title="Kaydedilenler" />
                     <SettingsLink href="/wallet" icon={Wallet} title="Cüzdanım" />
                 </div>

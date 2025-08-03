@@ -3,40 +3,23 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Send, Bell, Search, Compass, LogOut, Settings, Store, Crown, User } from "lucide-react";
+import { Send, Bell, Search, Compass } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
 import UserSearchDialog from "../search/UserSearchDialog";
 import { useState } from "react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import { useTranslation } from "react-i18next";
-import { useRouter } from "next/navigation";
 import AvatarWithFrame from "../common/AvatarWithFrame";
 
 
 interface HeaderProps {}
 
 export default function Header({}: HeaderProps) {
-    const { themeSettings, user, userData, totalUnreadDms, handleLogout } = useAuth();
+    const { themeSettings, user, userData, totalUnreadDms } = useAuth();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
-    const { t } = useTranslation();
-    const router = useRouter();
 
     const appName = themeSettings?.appName || 'HiweWalk';
     const hasUnreadNotifications = userData?.hasUnreadNotifications;
-    const isPremium = userData?.premiumUntil && userData.premiumUntil.toDate() > new Date();
-
-    const handleNavigate = (path: string) => {
-      router.push(path);
-    };
-
+    
     return (
         <>
             <header className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -74,47 +57,18 @@ export default function Header({}: HeaderProps) {
                             </Link>
                         </Button>
 
-                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="rounded-full">
-                                    <AvatarWithFrame
-                                        photoURL={userData?.photoURL}
-                                        selectedAvatarFrame={userData?.selectedAvatarFrame}
-                                        className="h-7 w-7"
-                                        fallback={userData?.username?.charAt(0).toUpperCase()}
-                                        fallbackClassName="text-xs"
-                                     />
-                                    <span className="sr-only">Ana Menü</span>
-                                </Button>
-                            </DropdownMenuTrigger>
-                             <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>{userData?.username}</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onSelect={() => handleNavigate(`/profile/${user?.uid}`)}>
-                                    <User className="mr-2 h-4 w-4" />
-                                    <span>Profil</span>
-                                </DropdownMenuItem>
-                                {isPremium && (
-                                     <DropdownMenuItem onSelect={() => handleNavigate('/premium')}>
-                                        <Crown className="mr-2 h-4 w-4 text-yellow-500" />
-                                        <span>{t('premium_status')}</span>
-                                    </DropdownMenuItem>
-                                )}
-                                <DropdownMenuItem onSelect={() => handleNavigate('/store')}>
-                                    <Store className="mr-2 h-4 w-4" />
-                                    <span>{t('store')}</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => handleNavigate('/profile')}>
-                                    <Settings className="mr-2 h-4 w-4" />
-                                    <span>{t('settings')}</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => handleLogout()} className="text-destructive focus:text-destructive">
-                                    <LogOut className="mr-2 h-4 w-4" />
-                                    <span>{t('logout')}</span>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                         <Button variant="ghost" size="icon" className="rounded-full" asChild>
+                           <Link href={`/profile/${user?.uid}`}>
+                                <AvatarWithFrame
+                                    photoURL={userData?.photoURL}
+                                    selectedAvatarFrame={userData?.selectedAvatarFrame}
+                                    className="h-7 w-7"
+                                    fallback={userData?.username?.charAt(0).toUpperCase()}
+                                    fallbackClassName="text-xs"
+                                 />
+                                <span className="sr-only">Profil</span>
+                            </Link>
+                        </Button>
                     </div>
                 </div>
             </header>
