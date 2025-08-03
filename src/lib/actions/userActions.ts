@@ -46,29 +46,14 @@ export async function updateUserProfile(updates: {
     interests?: string[];
     location?: { latitude: number; longitude: number; city?: string | null; country?: string | null; } | null;
 }) {
-    const { userId, isNewUser, photoURL: photoDataUrl, ...otherUpdates } = updates;
+    const { userId, isNewUser, photoURL: photoUrl, ...otherUpdates } = updates;
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
 
     const userRef = doc(db, 'users', userId);
-    let finalPhotoURL: string | null | undefined = undefined;
-
-    // Handle photo upload first if it exists
-    if (photoDataUrl) {
-        try {
-            const imageRef = storageRef(storage, `avatars/${userId}/profile.png`);
-            // The Firebase SDK for JS (v9+) correctly handles data URLs with uploadString.
-            await uploadString(imageRef, photoDataUrl, 'data_url');
-            finalPhotoURL = await getDownloadURL(imageRef);
-        } catch (error) {
-            console.error("Firebase Storage upload failed:", error);
-            // Provide a more user-friendly error message
-            throw new Error("Profil fotoğrafı yüklenemedi.");
-        }
-    }
     
     const updatesForDb: { [key: string]: any } = { ...otherUpdates };
-    if (finalPhotoURL !== undefined) {
-        updatesForDb.photoURL = finalPhotoURL;
+    if (photoUrl) {
+        updatesForDb.photoURL = photoUrl;
     }
 
 
@@ -126,7 +111,7 @@ export async function updateUserProfile(updates: {
     // --- Post-Transaction Operations ---
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (finalPhotoURL !== undefined) propagationUpdates.userPhotoURL = finalPhotoURL;
+    if (photoUrl) propagationUpdates.userPhotoURL = photoUrl;
     if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
 
     if (Object.keys(propagationUpdates).length > 0) {
@@ -141,11 +126,11 @@ export async function updateUserProfile(updates: {
         }
     }
 
-    if (finalPhotoURL !== undefined || updates.username) {
+    if (photoUrl || updates.username) {
       try {
         const auth = getAuth();
         const authUpdates: { photoURL?: string; displayName?: string } = {};
-        if (finalPhotoURL !== undefined) authUpdates.photoURL = finalPhotoURL;
+        if (photoUrl) authUpdates.photoURL = photoUrl;
         if (updates.username) authUpdates.displayName = updates.username;
         await auth.updateUser(userId, authUpdates);
       } catch (e) {
@@ -154,7 +139,7 @@ export async function updateUserProfile(updates: {
     }
 
     revalidatePath(`/profile/${userId}`, 'layout');
-    return { success: true, newPhotoURL: finalPhotoURL };
+    return { success: true, newPhotoURL: photoUrl };
 }
 
 

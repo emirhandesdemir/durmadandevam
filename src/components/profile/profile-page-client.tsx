@@ -134,9 +134,15 @@ export default function ProfilePageClient() {
         toast({ title: "Yükleniyor...", description: "Profil fotoğrafınız güncelleniyor..." });
         
         try {
+            // Step 1: Upload the image directly from the client
+            const imageRef = storageRef(storage, `avatars/${user.uid}/profile.png`);
+            await uploadString(imageRef, croppedDataUrl, 'data_url');
+            const downloadURL = await getDownloadURL(imageRef);
+
+            // Step 2: Call the server action with the new public URL
             const result = await updateUserProfile({
                 userId: user.uid,
-                photoURL: croppedDataUrl,
+                photoURL: downloadURL,
             });
 
             if (result.success) {
