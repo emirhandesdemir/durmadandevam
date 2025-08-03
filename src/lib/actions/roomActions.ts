@@ -3,7 +3,8 @@
 
 import { db, storage } from '@/lib/firebase';
 import { deleteRoomWithSubcollections, deleteCollection } from '@/lib/firestoreUtils';
-import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch, arrayUnion, arrayRemove, updateDoc, runTransaction, increment, setDoc, query, where, getDocs, orderBy, deleteField, limit, Transaction } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch, arrayUnion, arrayRemove, updateDoc, runTransaction, increment, setDoc, query, where, getDocs, orderBy, deleteField, limit } from 'firebase/firestore';
+import type { FirestoreTransaction } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { createNotification } from './notificationActions';
 import type { Room, Message, PlaylistTrack, UserProfile } from '../types';
@@ -220,7 +221,9 @@ export async function createEventRoom(
         level: 1,
         xp: 0,
         xpToNextLevel: getRoomLevelInfo(0).xpToNextLevel,
-        lastXpGainTimestamp: null
+        lastXpGainTimestamp: null,
+        autoQuizEnabled: true,
+        nextGameTimestamp: Timestamp.fromMillis(Date.now() + 5 * 60 * 1000), // Start first game in 5 mins
     };
 
     await setDoc(newRoomRef, newRoom);
@@ -306,7 +309,7 @@ export async function createRoom(
             });
             await logTransaction(transaction, userId, {
                 type: 'room_creation',
-                amount: -cost,
+                amount: -roomCost,
                 description: `${roomData.name} odası oluşturma`,
                 roomId: newRoomRef.id
             });
@@ -715,7 +718,7 @@ export async function unpinMessage(roomId: string, userId: string) {
     return { success: true };
 }
 
-export async function updateRoomSettings(roomId: string, settings: { requestToSpeakEnabled: boolean }) {
+export async function updateRoomSettings(roomId: string, settings: { autoQuizEnabled: boolean }) {
     if (!roomId) throw new Error("Oda ID'si gerekli.");
     const roomRef = doc(db, 'rooms', roomId);
     await updateDoc(roomRef, settings);
