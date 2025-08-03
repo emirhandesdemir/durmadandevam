@@ -69,5 +69,6 @@ export async function findUserByUsername(username: string): Promise<UserProfile 
         return null;
     }
     
-    return { uid: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as UserProfile;
+    const userDoc = querySnapshot.docs[0];
+    return deepSerialize({ uid: userDoc.id, ...userDoc.data() } as UserProfile);
 }

@@ -81,6 +81,7 @@ export const createPost = Object.assign(
         language: string;
         commentsDisabled?: boolean;
         likesHidden?: boolean;
+        backgroundStyle?: string;
     }) => {
         const newPostRef = doc(collection(db, 'posts'));
         const userRef = doc(db, 'users', postData.uid);
@@ -103,6 +104,7 @@ export const createPost = Object.assign(
                 text: postData.text,
                 imageUrl: postData.imageUrl,
                 videoUrl: postData.videoUrl,
+                backgroundStyle: postData.backgroundStyle || '',
                 editedWithAI: false, // This feature was removed
                 language: postData.language,
                 commentsDisabled: postData.commentsDisabled,

@@ -23,6 +23,7 @@ import { Label } from "../ui/label";
 import Link from "next/link";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 import ImageCropperDialog from "../common/ImageCropperDialog";
+import TextPostBackgroundSelector from "./TextPostBackgroundSelector";
 
 async function dataUriToBlob(dataUri: string): Promise<Blob> {
     const response = await fetch(dataUri);
@@ -51,6 +52,7 @@ export default function NewPostForm() {
 
   const [commentsDisabled, setCommentsDisabled] = useState(false);
   const [likesHidden, setLikesHidden] = useState(false);
+  const [backgroundStyle, setBackgroundStyle] = useState("");
 
   useEffect(() => {
     const sharedTitle = searchParams.get('title');
@@ -223,6 +225,7 @@ export default function NewPostForm() {
             language: i18n.language,
             commentsDisabled: commentsDisabled,
             likesHidden: likesHidden,
+            backgroundStyle: croppedImage ? '' : backgroundStyle,
         });
     } catch (error: any) {
         console.error("Gönderi paylaşılırken hata:", error);
@@ -298,6 +301,11 @@ export default function NewPostForm() {
                     <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-7 w-7 rounded-full" onClick={removeImage} disabled={isSubmitting}>
                         <X className="h-4 w-4" />
                     </Button>
+                </div>
+            )}
+             {!croppedImage && (
+                <div className="ml-12">
+                     <TextPostBackgroundSelector selectedStyle={backgroundStyle} onSelectStyle={setBackgroundStyle} />
                 </div>
             )}
           </div>
