@@ -269,16 +269,20 @@ export async function getSavedPosts(userId: string): Promise<Post[]> {
     }
 
     const savedPosts: Post[] = [];
+    // Firestore 'in' query has a limit of 30 items. We batch the requests.
     for (let i = 0; i < savedPostIds.length; i += 30) {
         const batchIds = savedPostIds.slice(i, i + 30);
-        if (batchIds.length === 0) continue;
-        const postsQuery = query(collection(db, 'posts'), where('__name__', 'in', batchIds));
-        const postsSnapshot = await getDocs(postsQuery);
-        postsSnapshot.forEach(doc => {
-            savedPosts.push({ id: doc.id, ...doc.data() } as Post);
-        });
+        // CRITICAL FIX: Ensure batchIds is not empty before querying
+        if (batchIds.length > 0) {
+            const postsQuery = query(collection(db, 'posts'), where('__name__', 'in', batchIds));
+            const postsSnapshot = await getDocs(postsQuery);
+            postsSnapshot.forEach(doc => {
+                savedPosts.push({ id: doc.id, ...doc.data() } as Post);
+            });
+        }
     }
 
+    // Sort the fetched posts to match the order in the user's savedPosts array
     const sortedPosts = savedPosts.sort((a, b) => {
         return savedPostIds.indexOf(b.id) - savedPostIds.indexOf(a.id);
     });
