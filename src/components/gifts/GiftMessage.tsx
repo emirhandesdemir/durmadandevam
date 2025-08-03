@@ -1,38 +1,90 @@
 // src/components/gifts/GiftMessage.tsx
 'use client';
 
+import { useState, useEffect } from 'react';
 import type { Message } from '@/lib/types';
 import { getGiftById } from '@/lib/gifts';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '../ui/badge';
-import { Sparkles, Star } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Plane } from 'lucide-react';
+import { 
+    AnimatedRose, AnimatedHeart, AnimatedPopper, 
+    AnimatedRocket, AnimatedCastle, AnimatedPlane 
+} from './GiftAnimations';
+
+const giftComponentMap: { [key: string]: React.ElementType } = {
+  rose: AnimatedRose,
+  heart: AnimatedHeart,
+  popper: AnimatedPopper,
+  rocket: AnimatedRocket,
+  castle: AnimatedCastle,
+  plane: AnimatedPlane,
+};
 
 export default function GiftMessage({ message }: { message: Message }) {
+  const [showAnimation, setShowAnimation] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowAnimation(false), 4000); // Animation duration
+    return () => clearTimeout(timer);
+  }, []);
+
   if (!message.giftData) return null;
 
   const { senderName, receiverName, giftId, senderLevel } = message.giftData;
   const gift = getGiftById(giftId);
 
-  // CRITICAL FIX: Ensure gift and gift.icon exist before rendering.
-  if (!gift || !gift.icon) {
+  if (!gift) {
     console.error(`Gift or gift icon not found for id: ${giftId}`);
-    return null; // Render nothing if the gift or its icon is invalid
+    return null;
   }
   
-  const GiftIcon = gift.icon;
+  const GiftIcon = giftComponentMap[gift.id];
+  if (!GiftIcon) return null;
+
+  const receiverText = receiverName ? (
+    <>
+        <strong className="text-primary">{receiverName}</strong> adlı kullanıcıya
+    </>
+    ) : (
+    'odaya'
+    );
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 50, scale: 0.8 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-      className="flex flex-col items-center justify-center gap-2 my-4 p-4 rounded-xl bg-gradient-to-tr from-yellow-400/10 via-amber-500/10 to-red-500/10 border-2 border-amber-500/20 text-center relative overflow-hidden"
-    >
-        <div className={cn("absolute inset-0 pointer-events-none flex items-center justify-center", gift.animationClass)}>
-            <GiftIcon className="h-24 w-24 text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.9)] opacity-80" />
-        </div>
+    <>
+      {/* Fullscreen Animation Overlay */}
+      <AnimatePresence>
+        {showAnimation && (
+          <motion.div
+            key="gift-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 1 } }}
+            className={cn(
+              "fixed inset-0 z-[200] pointer-events-none flex items-center justify-center overflow-hidden",
+              gift.animationClass
+            )}
+          >
+            <GiftIcon className="fullscreen-gift-icon" />
+            {/* Particle effects for certain gifts */}
+            {gift.id === 'rose' && Array.from({ length: 10 }).map((_, i) => (
+              <div key={i} className="particle rose" style={{ left: `${Math.random() * 100}%`, animationDelay: `${Math.random() * 2}s` }} />
+            ))}
+            {gift.id === 'popper' && Array.from({ length: 20 }).map((_, i) => (
+              <div key={i} className="particle confetti" style={{ left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`, animationDelay: `${Math.random() * 0.5}s`, background: `hsl(${Math.random() * 360}, 70%, 50%)` }} />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Chat Message Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 50, scale: 0.8 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+        className="flex flex-col items-center justify-center gap-2 my-4 p-4 rounded-xl bg-gradient-to-tr from-yellow-400/10 via-amber-500/10 to-red-500/10 border-2 border-amber-500/20 text-center relative overflow-hidden"
+      >
         <div className="relative z-10 flex items-center gap-2">
             {senderLevel && senderLevel > 0 && (
                 <Badge variant="destructive" className="animate-pulse">
@@ -45,8 +97,9 @@ export default function GiftMessage({ message }: { message: Message }) {
         </div>
         
         <p className="relative z-10 text-lg font-bold">
-            {receiverName ? <strong className="text-primary">{receiverName}</strong> : 'Odaya'} <strong className="text-amber-500">{gift.name}</strong> gönderdi!
+            {receiverText} <strong className="text-amber-500">{gift.name}</strong> gönderdi!
         </p>
     </motion.div>
+    </>
   );
 }

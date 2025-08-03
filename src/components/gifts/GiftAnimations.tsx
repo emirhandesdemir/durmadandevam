@@ -25,9 +25,6 @@ export const AnimatedPopper = ({ className }: { className?: string }) => (
     <svg viewBox="0 0 100 100" className={cn(className)}>
         <path d="M20,80 L40,20 H60 L80,80 Z" fill="#3b82f6" />
         <rect x="35" y="10" width="30" height="10" fill="#2563eb" />
-        <circle cx="30" cy="25" r="5" fill="#facc15" />
-        <circle cx="70" cy="45" r="7" fill="#84cc16" />
-        <path d="M50 20 L 55 5 L 45 5 Z" fill="#ef4444" />
     </svg>
 );
 

@@ -1,22 +1,15 @@
 // src/lib/gifts.ts
-
-import { Rose, Heart, PartyPopper, Rocket, Castle, Plane } from "lucide-react";
 import { 
-    AnimatedRose, 
-    AnimatedHeart, 
-    AnimatedPopper, 
-    AnimatedRocket, 
-    AnimatedCastle, 
-    AnimatedPlane 
+    AnimatedRose, AnimatedHeart, AnimatedPopper, 
+    AnimatedRocket, AnimatedCastle, AnimatedPlane 
 } from "@/components/gifts/GiftAnimations";
-
 
 export interface Gift {
     id: string;
     name: string;
-    icon: React.ElementType;
+    icon: React.ElementType; // The component for the animation
     diamondCost: number;
-    animationClass?: string;
+    animationClass?: string; // CSS class to trigger the fullscreen animation
 }
 
 export const giftList: Gift[] = [
