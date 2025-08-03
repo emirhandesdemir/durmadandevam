@@ -117,6 +117,9 @@ export default function ProfilePageClient() {
             <div className="space-y-2 pb-24">
                 <div className="border-b">
                     <SettingsHeader title="Hesap" />
+                    {userData.role === 'admin' && (
+                       <SettingsLink href="/admin" icon={Shield} title="Yönetim Paneli" />
+                    )}
                     <SettingsLink href="/profile/edit" icon={UserIcon} title="Profili Düzenle" />
                     {isPremium && (
                         <SettingsLink href="/premium" icon={Crown} title="Premium Durumu" />
