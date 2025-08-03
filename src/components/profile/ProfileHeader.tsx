@@ -45,13 +45,13 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
   }, []);
 
   const isOwnProfile = currentUserAuth?.uid === profileUser.uid;
-  const areMutuals = currentUserData?.following?.includes(profileUser.uid) && profileUser.following?.includes(currentUserAuth?.uid);
+  const areMutuals = currentUserData?.following?.includes(profileUser.uid) && profileUser.following?.includes(currentUserAuth?.uid || '');
   const amIBlockedByThisUser = profileUser.blockedUsers?.includes(currentUserAuth?.uid || '');
   const haveIBlockedThisUser = currentUserData?.blockedUsers?.includes(profileUser.uid);
   // Safely parse timestamp string from server component
   const isPremium = isClient && profileUser.premiumUntil && new Date(profileUser.premiumUntil as any) > new Date();
   
-  const isVerified = isClient && (profileUser.emailVerified || (currentUserAuth?.emailVerified && isOwnProfile));
+  const isVerified = isClient && (profileUser.emailVerified);
 
 
   const handleStatClick = (type: 'followers' | 'following') => {

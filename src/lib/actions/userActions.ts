@@ -11,6 +11,7 @@ import { getAuth } from '../firebaseAdmin';
 import { deleteRoomWithSubcollections } from '../firestoreUtils';
 import { updateUserPosts, updateUserComments, updateUserDmMessages } from './propagationActions';
 import { v4 as uuidv4 } from 'uuid';
+import { createNotification } from './notificationActions';
 
 export async function sendVerificationEmail(userId: string) {
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
@@ -38,7 +39,8 @@ export async function updateUserProfile(updates: {
     isNewUser?: boolean;
     email?: string;
     referredBy?: string | null;
-    avatarSvg?: string; // Expect avatar SVG string from client
+    avatarSvg?: string | null;
+    photoURL?: string | null;
     username?: string;
     bio?: string;
     age?: number | string | null;
@@ -68,19 +70,27 @@ export async function updateUserProfile(updates: {
         updatesForDb.age = Number(updates.age);
     }
     
+    // Handle photoURL from data URL
+    if (updates.photoURL?.startsWith('data:image')) {
+        const imageBuffer = Buffer.from(updates.photoURL.split(',')[1], 'base64');
+        const imagePath = `avatars/${userId}/${uuidv4()}.png`;
+        const imageStorageRef = storageRef(storage, imagePath);
+        await uploadBytes(imageStorageRef, imageBuffer, { contentType: 'image/png' });
+        updatesForDb.photoURL = await getDownloadURL(imageStorageRef);
+    }
+
+    const userSnap = await getDoc(userRef);
+    const userData = userSnap.exists() ? userSnap.data() : {};
+
     // Check for username change and uniqueness
-    if (updates.username) {
-        const userSnap = await getDoc(userRef);
-        const userData = userSnap.data();
-        if (!isNewUser && userData?.username_lowercase !== updates.username.toLowerCase()) {
-            const existingUser = await checkUsernameExists(updates.username);
-            if (existingUser) {
-                const usersRef = collection(db, 'users');
-                const q = query(usersRef, where('username_lowercase', '==', updates.username.toLowerCase()), limit(1));
-                const querySnapshot = await getDocs(q);
-                if (!querySnapshot.empty && querySnapshot.docs[0].id !== userId) {
-                     throw new Error("Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor.");
-                }
+    if (updates.username && updates.username !== userData?.username) {
+        const existingUser = await checkUsernameExists(updates.username);
+        if (existingUser) {
+            const usersRef = collection(db, 'users');
+            const q = query(usersRef, where('username_lowercase', '==', updates.username.toLowerCase()), limit(1));
+            const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty && querySnapshot.docs[0].id !== userId) {
+                 throw new Error("Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor.");
             }
         }
         updatesForDb.username = updates.username;
@@ -101,10 +111,25 @@ export async function updateUserProfile(updates: {
             latitude: updates.location.latitude,
             longitude: updates.location.longitude,
         }
-        // These will be updated from a separate reverse geocoding call if available
         if (updates.location.city) updatesForDb.city = updates.location.city;
         if (updates.location.country) updatesForDb.country = updates.location.country;
     }
+
+    // Check for profile completion reward
+    if (!isNewUser && userData && !userData.profileCompletionAwarded) {
+        const hasBio = 'bio' in updatesForDb ? !!updatesForDb.bio : !!userData.bio;
+        const hasAge = 'age' in updatesForDb ? !!updatesForDb.age : !!userData.age;
+        const hasGender = 'gender' in updatesForDb ? !!updatesForDb.gender : !!userData.gender;
+        const hasInterests = 'interests' in updatesForDb ? (updatesForDb.interests?.length > 0) : (userData.interests?.length > 0);
+        const isVerified = userData.emailVerified;
+
+        if (hasBio && hasAge && hasGender && hasInterests && isVerified) {
+            updatesForDb.diamonds = increment(50);
+            updatesForDb.profileCompletionAwarded = true;
+            // Notification will be sent after the update
+        }
+    }
+
 
     if (isNewUser) {
          const isAdminEmail = updates.email === 'admin@example.com';
@@ -149,6 +174,7 @@ export async function updateUserProfile(updates: {
             isFirstPremium: false,
             unlimitedRoomCreationUntil: null,
             profileCompletionNotificationSent: false,
+            profileCompletionAwarded: false, // New field
             location: null,
          };
          delete updatesForDb.isNewUser;
@@ -160,12 +186,8 @@ export async function updateUserProfile(updates: {
     }
     
     const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
-    if(updates.username) {
-      authProfileUpdates.displayName = updates.username;
-    }
-    if(updatesForDb.photoURL) {
-      authProfileUpdates.photoURL = updatesForDb.photoURL;
-    }
+    if(updates.username) authProfileUpdates.displayName = updates.username;
+    if(updatesForDb.photoURL) authProfileUpdates.photoURL = updatesForDb.photoURL;
 
     if(Object.keys(authProfileUpdates).length > 0) {
       const auth = getAuth();
@@ -173,6 +195,18 @@ export async function updateUserProfile(updates: {
     }
 
     await batch.commit();
+
+    // Send reward notification if applicable
+    if (updatesForDb.profileCompletionAwarded) {
+         await createNotification({
+            recipientId: userId,
+            senderId: 'system-reward',
+            senderUsername: 'HiweWalk',
+            senderAvatar: null,
+            type: 'system', // A generic system type can be used
+            messageText: 'Tebrikler! Profilini tamamladığın için 50 elmas kazandın! 💎',
+        });
+    }
 
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;

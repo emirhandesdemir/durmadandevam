@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2, Sliders, Wallet } from "lucide-react";
+import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2, Sliders, Wallet, BadgeCheck, Mail } from "lucide-react";
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
@@ -23,7 +23,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "..
 import { updateUserProfile } from "@/lib/actions/userActions";
 import { Textarea } from "../ui/textarea";
 import BlockedUsersDialog from "./BlockedUsersDialog";
-import { sendPasswordResetEmail } from "firebase/auth";
+import { sendPasswordResetEmail, sendEmailVerification } from "firebase/auth";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { deleteUserAccount } from "@/lib/actions/userActions";
 import { Gem } from "lucide-react";
@@ -114,6 +114,7 @@ export default function ProfilePageClient() {
         try {
             const updatesForDb: { [key: string]: any } = {};
             
+            if(username.trim() !== (userData?.username || '').trim()) updatesForDb.username = username;
             if (bio !== userData?.bio) updatesForDb.bio = bio;
             if (age !== userData?.age) updatesForDb.age = Number(age) || null;
             if (gender !== userData?.gender) updatesForDb.gender = gender || null;
@@ -135,6 +136,20 @@ export default function ProfilePageClient() {
             setIsSaving(false);
         }
     };
+
+    const handleSendVerificationEmail = async () => {
+        if (!user) return;
+        try {
+            await sendEmailVerification(user);
+            toast({
+                title: 'E-posta Gönderildi',
+                description: 'Hesabınızı doğrulamak için lütfen e-posta kutunuzu kontrol edin.'
+            });
+        } catch (error: any) {
+            console.error("Verification email error:", error);
+            toast({ variant: 'destructive', description: "Doğrulama e-postası gönderilirken bir hata oluştu." });
+        }
+    }
 
     const handlePasswordReset = async () => {
         if (!user?.email) {
@@ -228,8 +243,7 @@ export default function ProfilePageClient() {
 
                          <div className="space-y-2">
                             <Label htmlFor="username">Kullanıcı Adı</Label>
-                            <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} disabled />
-                            <p className="text-xs text-muted-foreground">Kullanıcı adınızı değiştirmek için destekle iletişime geçin.</p>
+                            <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} />
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="bio">Biyografi</Label>
@@ -397,14 +411,14 @@ export default function ProfilePageClient() {
                              <AccordionTrigger className="p-6">
                                 <CardHeader className="p-0 text-left">
                                     <div className="flex items-center gap-3">
-                                        <Lock className="h-6 w-6 text-primary" />
-                                        <CardTitle>Gizlilik ve Güvenlik</CardTitle>
+                                        <Shield className="h-6 w-6 text-primary" />
+                                        <CardTitle>Hesap Güvenliği</CardTitle>
                                     </div>
-                                    <CardDescription>Hesabınızın gizliliğini ve kimlerin sizinle etkileşim kurabileceğini yönetin.</CardDescription>
+                                    <CardDescription>Hesabınızın gizliliğini ve güvenliğini yönetin.</CardDescription>
                                 </CardHeader>
                             </AccordionTrigger>
                              <AccordionContent className="p-6 pt-0 space-y-4">
-                                 <div className="flex items-center justify-between">
+                                <div className="flex items-center justify-between">
                                     <div>
                                         <Label htmlFor="privacy-mode" className="font-semibold">Gizli Hesap</Label>
                                         <p className="text-xs text-muted-foreground">Aktif olduğunda, sadece onayladığın kişiler seni takip edebilir.</p>
@@ -430,10 +444,18 @@ export default function ProfilePageClient() {
                                         <ShieldOff className="mr-2 h-4 w-4"/>Engellenen Hesapları Yönet
                                     </Button>
                                 </div>
-                                <div className="flex items-center justify-between">
-                                    <Button variant="outline" className="w-full" onClick={handlePasswordReset}>
-                                        <Lock className="mr-2 h-4 w-4" />Şifremi Değiştir
-                                    </Button>
+                                 <div className="space-y-2 rounded-lg border p-3">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <Label className="font-semibold">E-posta Doğrulaması</Label>
+                                            <p className="text-xs text-muted-foreground">{user.email}</p>
+                                        </div>
+                                        {user.emailVerified ? (
+                                            <span className="flex items-center text-sm font-semibold text-green-600"><BadgeCheck className="mr-2 h-4 w-4"/>Doğrulandı</span>
+                                        ) : (
+                                            <Button size="sm" variant="secondary" onClick={handleSendVerificationEmail}>Doğrula</Button>
+                                        )}
+                                    </div>
                                 </div>
                             </AccordionContent>
                         </Card>
@@ -508,6 +530,9 @@ export default function ProfilePageClient() {
                     <CardContent className="flex flex-col sm:flex-row gap-2">
                         <Button variant="outline" onClick={handleLogout}>
                             <LogOut className="mr-2 h-4 w-4" />Çıkış Yap
+                        </Button>
+                        <Button variant="outline" onClick={handlePasswordReset}>
+                            <Lock className="mr-2 h-4 w-4" />Şifremi Değiştir
                         </Button>
                          <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
                             <Trash2 className="mr-2 h-4 w-4" />Hesabımı Sil

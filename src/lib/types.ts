@@ -3,7 +3,7 @@ import { Timestamp } from "firebase/firestore";
 
 export interface Transaction {
     id: string;
-    type: 'diamond_purchase' | 'gift_sent' | 'gift_received' | 'profile_value_conversion' | 'room_creation' | 'room_perk' | 'admin_grant' | 'ad_reward' | 'referral_bonus' | 'live_gift';
+    type: 'diamond_purchase' | 'gift_sent' | 'gift_received' | 'profile_value_conversion' | 'room_creation' | 'room_perk' | 'admin_grant' | 'ad_reward' | 'referral_bonus' | 'live_gift' | 'profile_completion_reward';
     amount: number;
     description: string;
     relatedUserId?: string | null;
@@ -169,6 +169,7 @@ export interface UserProfile {
     isFirstPremium: boolean;
     unlimitedRoomCreationUntil: Timestamp | null;
     profileCompletionNotificationSent: boolean;
+    profileCompletionAwarded?: boolean;
     selectedBubble: string;
     selectedAvatarFrame: string;
     activeMatchmakingChatId: string | null;
@@ -216,7 +217,7 @@ export interface Notification {
     photoURL: string | null;
     profileEmoji?: string | null;
     senderAvatarFrame?: string;
-    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile';
+    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile' | 'system';
     postId?: string | null;
     postImage?: string | null;
     commentText?: string;
@@ -247,6 +248,7 @@ export interface Post {
     createdAt: Timestamp | { seconds: number; nanoseconds: number } | string;
     likes: string[];
     likeCount: number;
+    commentCount: number;
     saveCount?: number;
     savedBy?: string[];
     language?: string;
@@ -279,7 +281,7 @@ export interface Comment {
         commentId: string;
         username: string;
     } | null;
-    giftId?: string | null; // This can be removed in a future cleanup if no longer needed
+    giftId?: string | null;
 }
 
 export interface Giveaway {

@@ -19,7 +19,7 @@ interface CreateNotificationArgs {
   senderUsername: string;
   senderAvatar: string | null;
   senderAvatarFrame?: string;
-  type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile';
+  type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile' | 'system';
   postId?: string | null;
   postImage?: string | null;
   commentText?: string;

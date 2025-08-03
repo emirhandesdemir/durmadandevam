@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import PostsFeed from "@/components/posts/PostsFeed";
 import { Card, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { UserCog, BadgeCheck } from "lucide-react";
+import { UserCog, Gem } from "lucide-react";
 import Link from 'next/link';
 
 /**
@@ -29,22 +29,13 @@ export default function HomePage() {
       )
   }
 
-  const getIncompleteProfileStep = () => {
-      if (!userData.bio) return { action: 'Biyografi Ekle', focusId: '#bio' };
-      if (!userData.age) return { action: 'Yaşını Ekle', focusId: '#age' };
-      if (!userData.gender) return { action: 'Cinsiyetini Seç', focusId: '#gender' };
-      if (!userData.interests || userData.interests.length === 0) return { action: 'İlgi Alanı Ekle', focusId: '#interests' };
-      if (!user.emailVerified) return { action: 'Hesabını Doğrula', focusId: '#account-security'};
-      return null;
-  }
-
-  const incompleteStep = getIncompleteProfileStep();
+  const isProfileComplete = !!(userData.bio && userData.age && userData.gender && userData.interests && userData.interests.length > 0 && userData.emailVerified);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <main>
         <div className="flex flex-col items-center gap-4">
-          {incompleteStep && (
+          {!isProfileComplete && !userData.profileCompletionAwarded && (
             <div className="w-full px-4 pt-4">
               <Card className="bg-secondary">
                 <CardHeader>
@@ -53,17 +44,13 @@ export default function HomePage() {
                     Profilini Tamamla!
                   </CardTitle>
                   <CardDescription>
-                    {incompleteStep.action === 'Hesabını Doğrula'
-                        ? "Hesabını doğrulayarak mavi tik kazan ve topluluktaki güvenilirliğini artır."
-                        : "Tüm özellikleri kullanabilmek ve daha iyi eşleşmeler bulmak için profilindeki eksik bilgileri tamamla."
-                    }
+                    Profilindeki eksik bilgileri tamamlayarak hem daha iyi bir deneyim yaşa hem de ödül kazan!
                   </CardDescription>
                 </CardHeader>
                 <CardFooter>
                   <Button asChild className="w-full">
-                    <Link href={`/profile${incompleteStep.focusId}`}>
-                      {incompleteStep.action === 'Hesabını Doğrula' && <BadgeCheck className="mr-2 h-4 w-4"/>}
-                      {incompleteStep.action}
+                    <Link href="/profile">
+                       <Gem className="mr-2 h-4 w-4"/> Profilini Tamamla ve 50 Elmas Kazan
                     </Link>
                   </Button>
                 </CardFooter>
