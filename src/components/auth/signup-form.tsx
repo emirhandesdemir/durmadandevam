@@ -8,10 +8,9 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
 import { creditReferrer } from "@/lib/actions/diamondActions";
-import { checkUsernameExists } from "@/lib/actions/userActions";
+import { checkUsernameExists, updateUserProfile } from "@/lib/actions/userActions";
 import Image from "next/image";
 import multiavatar from '@multiavatar/multiavatar';
 
@@ -89,16 +88,13 @@ export default function SignUpForm() {
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const user = userCredential.user;
             
-            const randomAvatarSvg = multiavatar(user.uid);
-            const avatarDataUrl = `data:image/svg+xml;base64,${btoa(randomAvatarSvg)}`;
+            // Generate avatar on the client
+            const avatarSvgString = multiavatar(user.uid);
 
+            // Update Firebase Auth profile immediately
             await updateProfile(user, {
                 displayName: values.username,
-                photoURL: avatarDataUrl,
             });
-            
-            const isAdminEmail = values.email === 'admin@example.com';
-            const userRole = isAdminEmail ? 'admin' : 'user';
             
             let ref: string | null = null;
             const encodedRef = searchParams.get('ref');
@@ -111,51 +107,19 @@ export default function SignUpForm() {
                 }
             }
 
-            await setDoc(doc(db, "users", user.uid), {
-                uid: user.uid,
+            // Create user profile in Firestore using a server action
+            await updateUserProfile({
+                userId: user.uid,
+                isNewUser: true, // Flag to set initial data
                 username: values.username,
-                username_lowercase: values.username.toLowerCase(),
-                photoURL: avatarDataUrl,
-                bio: null,
-                age: null,
-                city: null, 
-                country: null,
-                gender: null,
-                interests: [],
-                role: userRole,
-                createdAt: serverTimestamp(),
-                lastActionTimestamp: serverTimestamp(),
-                diamonds: 10,
-                profileValue: 0,
-                giftLevel: 0,
-                totalDiamondsSent: 0,
-                referredBy: ref || null,
-                referralCount: 0,
-                postCount: 0,
-                followers: [],
-                following: [],
-                blockedUsers: [],
-                savedPosts: [],
-                hiddenPostIds: [],
-                privateProfile: false,
-                acceptsFollowRequests: true,
-                followRequests: [],
-                selectedBubble: '',
-                selectedAvatarFrame: '',
-                isBanned: false,
-                reportCount: 0,
-                isOnline: true,
-                lastSeen: serverTimestamp(),
-                premiumUntil: null,
-                isFirstPremium: false,
-                unlimitedRoomCreationUntil: null,
-                profileCompletionNotificationSent: false,
-                location: null,
+                email: values.email,
+                avatarSvg: avatarSvgString, // Pass SVG string to server action
+                referredBy: ref,
             });
 
             if (ref) {
                 try {
-                    await creditReferrer(ref, { uid: user.uid, username: values.username, photoURL: avatarDataUrl });
+                    await creditReferrer(ref, { uid: user.uid, username: values.username, photoURL: '' }); // photoURL will be updated by server action
                 } catch (e) {
                     console.error("Referrer credit failed, but signup continues:", e);
                 }

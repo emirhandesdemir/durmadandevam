@@ -11,43 +11,19 @@ import { getAuth } from '../firebaseAdmin';
 import { deleteRoomWithSubcollections } from '../firestoreUtils';
 import { updateUserPosts, updateUserComments, updateUserDmMessages } from './propagationActions';
 import { v4 as uuidv4 } from 'uuid';
-import multiavatar from '@multiavatar/multiavatar';
 
-// Helper function to convert SVG string to PNG Blob
-const svgToPngBlob = (svgString: string): Promise<Blob> => {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-        const url = URL.createObjectURL(svgBlob);
+export async function sendVerificationEmail(userId: string) {
+    if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
+    
+    // Note: Firebase client SDK handles sending the email. 
+    // This server action is a placeholder for potential future logic,
+    // like logging the request or checking for abuse.
+    // The actual email sending is initiated from the client.
+    
+    console.log(`Verification email request for user: ${userId}`);
+    return { success: true };
+}
 
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 128;
-            canvas.height = 128;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-                ctx.drawImage(img, 0, 0, 128, 128);
-                canvas.toBlob((blob) => {
-                    URL.revokeObjectURL(url);
-                    if (blob) {
-                        resolve(blob);
-                    } else {
-                        reject(new Error("Canvas to Blob conversion failed."));
-                    }
-                }, 'image/png');
-            } else {
-                reject(new Error("Canvas context could not be created."));
-            }
-        };
-
-        img.onerror = (e) => {
-            URL.revokeObjectURL(url);
-            reject(new Error("Failed to load SVG image for conversion."));
-        };
-        
-        img.src = url;
-    });
-};
 
 export async function checkUsernameExists(username: string): Promise<boolean> {
     if (!username) return false;
@@ -59,6 +35,10 @@ export async function checkUsernameExists(username: string): Promise<boolean> {
 
 export async function updateUserProfile(updates: {
     userId: string;
+    isNewUser?: boolean;
+    email?: string;
+    referredBy?: string | null;
+    avatarSvg?: string; // Expect avatar SVG string from client
     username?: string;
     bio?: string;
     age?: number | string | null;
@@ -68,23 +48,17 @@ export async function updateUserProfile(updates: {
     acceptsFollowRequests?: boolean;
     showOnlineStatus?: boolean;
     animatedNav?: boolean;
-    avatarId?: string; // Expect avatarId string
     selectedBubble?: string;
     selectedAvatarFrame?: string;
     interests?: string[];
     location?: { latitude: number; longitude: number; city?: string | null; country?: string | null; } | null;
-    phoneNumber?: string | null;
 }) {
-    const { userId, avatarId, ...otherUpdates } = updates;
+    const { userId, isNewUser, ...otherUpdates } = updates;
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
 
     const userRef = doc(db, 'users', userId);
     
     const batch = writeBatch(db);
-
-    const userSnap = await getDoc(userRef);
-    if (!userSnap.exists()) throw new Error("Kullanıcı bulunamadı.");
-    const userData = userSnap.data();
 
     const updatesForDb: { [key: string]: any } = { ...otherUpdates };
     
@@ -95,32 +69,30 @@ export async function updateUserProfile(updates: {
     }
     
     // Check for username change and uniqueness
-    if (updates.username && userData.username_lowercase !== updates.username.toLowerCase()) {
-        const existingUser = await checkUsernameExists(updates.username);
-        // Throw error only if the username is taken by a DIFFERENT user
-        if (existingUser) {
-            const usersRef = collection(db, 'users');
-            const q = query(usersRef, where('username_lowercase', '==', updates.username.toLowerCase()), limit(1));
-            const querySnapshot = await getDocs(q);
-            if (!querySnapshot.empty && querySnapshot.docs[0].id !== userId) {
-                 throw new Error("Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor.");
+    if (updates.username) {
+        const userSnap = await getDoc(userRef);
+        const userData = userSnap.data();
+        if (!isNewUser && userData?.username_lowercase !== updates.username.toLowerCase()) {
+            const existingUser = await checkUsernameExists(updates.username);
+            if (existingUser) {
+                const usersRef = collection(db, 'users');
+                const q = query(usersRef, where('username_lowercase', '==', updates.username.toLowerCase()), limit(1));
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty && querySnapshot.docs[0].id !== userId) {
+                     throw new Error("Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor.");
+                }
             }
         }
         updatesForDb.username = updates.username;
         updatesForDb.username_lowercase = updates.username.toLowerCase();
     }
     
-    // If an avatarId is provided, generate SVG, convert to PNG, and upload to Storage
-    if (avatarId) {
-        const svgString = multiavatar(avatarId);
-        // This conversion part needs a browser environment, which is not available in a server action.
-        // We'll simulate the blob creation. A better solution involves a proper image library on the server.
-        const pngBlob = new Blob([svgString], { type: "image/svg+xml" }); // Simplified for now
-        
-        const pngPath = `avatars/${userId}/${uuidv4()}.png`;
-        const pngStorageRef = storageRef(storage, pngPath);
-        await uploadBytes(pngStorageRef, pngBlob, { contentType: 'image/svg+xml' });
-        updatesForDb.photoURL = await getDownloadURL(pngStorageRef);
+    if (updates.avatarSvg) {
+        const svgPath = `avatars/${userId}/avatar.svg`;
+        const svgStorageRef = storageRef(storage, svgPath);
+        await uploadString(svgStorageRef, updates.avatarSvg, 'raw', { contentType: 'image/svg+xml' });
+        updatesForDb.photoURL = await getDownloadURL(svgStorageRef);
+        delete updatesForDb.avatarSvg;
     }
 
 
@@ -134,15 +106,64 @@ export async function updateUserProfile(updates: {
         if (updates.location.country) updatesForDb.country = updates.location.country;
     }
 
-    if (Object.keys(updatesForDb).length > 0) {
+    if (isNewUser) {
+         const isAdminEmail = updates.email === 'admin@example.com';
+         const userRole = isAdminEmail ? 'admin' : 'user';
+         const initialData = {
+            uid: userId,
+            email: updates.email,
+            username: updates.username,
+            username_lowercase: updates.username?.toLowerCase(),
+            photoURL: updatesForDb.photoURL || null,
+            bio: null,
+            age: null,
+            city: null, 
+            country: null,
+            gender: null,
+            interests: [],
+            role: userRole,
+            createdAt: serverTimestamp(),
+            lastActionTimestamp: serverTimestamp(),
+            diamonds: 10,
+            profileValue: 0,
+            giftLevel: 0,
+            totalDiamondsSent: 0,
+            referredBy: updates.referredBy || null,
+            referralCount: 0,
+            postCount: 0,
+            followers: [],
+            following: [],
+            blockedUsers: [],
+            savedPosts: [],
+            hiddenPostIds: [],
+            privateProfile: false,
+            acceptsFollowRequests: true,
+            followRequests: [],
+            selectedBubble: '',
+            selectedAvatarFrame: '',
+            isBanned: false,
+            reportCount: 0,
+            isOnline: true,
+            lastSeen: serverTimestamp(),
+            premiumUntil: null,
+            isFirstPremium: false,
+            unlimitedRoomCreationUntil: null,
+            profileCompletionNotificationSent: false,
+            location: null,
+         };
+         delete updatesForDb.isNewUser;
+         delete updatesForDb.email;
+         delete updatesForDb.referredBy;
+         batch.set(userRef, { ...initialData, ...updatesForDb });
+    } else if (Object.keys(updatesForDb).length > 0) {
         batch.update(userRef, updatesForDb);
     }
     
     const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
-    if(updates.username && updates.username !== userData.username) {
+    if(updates.username) {
       authProfileUpdates.displayName = updates.username;
     }
-    if(updatesForDb.photoURL !== undefined && updatesForDb.photoURL !== userData.photoURL) {
+    if(updatesForDb.photoURL) {
       authProfileUpdates.photoURL = updatesForDb.photoURL;
     }
 
@@ -155,7 +176,7 @@ export async function updateUserProfile(updates: {
 
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (updatesForDb.photoURL !== undefined) propagationUpdates.photoURL = updatesForDb.photoURL;
+    if (updatesForDb.photoURL) propagationUpdates.photoURL = updatesForDb.photoURL;
     if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
 
     if (Object.keys(propagationUpdates).length > 0) {
@@ -391,7 +412,13 @@ export async function deleteUserAccount(userId: string) {
     const userRef = doc(db, "users", userId);
     const userSnap = await getDoc(userRef);
     if (userSnap.exists() && userSnap.data().photoURL) {
-        // Avatars are data URIs, so no Storage deletion is needed.
+        // Avatars are now stored in Storage
+        try {
+            const avatarRef = storageRef(storage, userSnap.data().photoURL);
+            await deleteObject(avatarRef);
+        } catch (e) {
+            console.error("Avatar deletion error:", e);
+        }
     }
     batch.delete(userRef);
 

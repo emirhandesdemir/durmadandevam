@@ -1,6 +1,18 @@
 // src/types.ts
 import { Timestamp } from "firebase/firestore";
 
+export interface Transaction {
+    id: string;
+    type: 'diamond_purchase' | 'gift_sent' | 'gift_received' | 'profile_value_conversion' | 'room_creation' | 'room_perk' | 'admin_grant' | 'ad_reward' | 'referral_bonus' | 'live_gift';
+    amount: number;
+    description: string;
+    relatedUserId?: string | null;
+    roomId?: string | null;
+    liveId?: string | null;
+    giftId?: string | null;
+    timestamp: Timestamp | { seconds: number; nanoseconds: number };
+}
+
 export interface MatchmakingChat {
     id: string;
     participants: { [uid: string]: { username: string, photoURL: string | null, age?: number } };
@@ -71,8 +83,12 @@ export interface LiveSession {
     title: string;
     status: 'live' | 'ended';
     viewerCount: number;
+    viewers: string[]; // List of unique viewer UIDs
+    peakViewerCount: number;
     createdAt: Timestamp;
     endedAt?: Timestamp;
+    totalGiftValue?: number;
+    durationSeconds?: number;
 }
 
 export interface ColorTheme {
@@ -109,10 +125,14 @@ export interface ThemeSettings {
 
 export interface UserProfile {
     uid: string;
+    email: string;
+    emailVerified: boolean;
     username: string;
     username_lowercase?: string;
     photoURL: string | null;
+    profileEmoji?: string | null;
     bio: string | null;
+    phoneNumber?: string | null;
     postCount: number;
     role: 'admin' | 'user';
     gender?: 'male' | 'female';
@@ -126,10 +146,14 @@ export interface UserProfile {
     privateProfile: boolean;
     acceptsFollowRequests: boolean;
     showOnlineStatus: boolean;
+    animatedNav?: boolean;
     followers: string[];
     following: string[];
     followRequests: FollowRequest[];
     diamonds: number;
+    profileValue: number; // For receiving gifts
+    giftLevel: number; // The user's gift-giving level
+    totalDiamondsSent: number; // Total diamonds spent on gifts
     referredBy: string | null;
     referralCount: number;
     hasUnreadNotifications: boolean;
@@ -159,6 +183,7 @@ export interface ProfileViewer {
     viewedAt: Timestamp;
     username?: string;
     photoURL: string | null;
+    profileEmoji?: string | null;
     selectedAvatarFrame?: string;
 }
 
@@ -189,6 +214,7 @@ export interface Notification {
     senderId: string;
     senderUsername: string;
     photoURL: string | null;
+    profileEmoji?: string | null;
     senderAvatarFrame?: string;
     type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile';
     postId?: string | null;
@@ -213,11 +239,12 @@ export interface Post {
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
+    emailVerified?: boolean;
     text: string;
     imageUrl?: string | null;
     videoUrl?: string | null;
     backgroundStyle?: string;
-    createdAt: Timestamp | { seconds: number; nanoseconds: number };
+    createdAt: Timestamp | { seconds: number; nanoseconds: number } | string;
     likes: string[];
     likeCount: number;
     commentCount: number;
@@ -235,7 +262,7 @@ export interface Post {
         text: string;
         imageUrl?: string;
         videoUrl?: string;
-        createdAt: Timestamp | { seconds: number; nanoseconds: number };
+        createdAt: Timestamp | { seconds: number; nanoseconds: number } | string;
     }
 }
 
@@ -248,11 +275,12 @@ export interface Comment {
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     text: string;
-    createdAt: Timestamp;
+    createdAt: Timestamp | { seconds: number; nanoseconds: number } | string;
     replyTo?: {
         commentId: string;
         username: string;
     } | null;
+    giftId?: string | null;
 }
 
 export interface Giveaway {
@@ -273,6 +301,7 @@ export interface Room {
         username: string;
         photoURL: string | null;
         role: string;
+        isPremium?: boolean;
         selectedAvatarFrame?: string;
     };
     moderators: string[];
@@ -293,6 +322,7 @@ export interface Room {
     currentTrackName?: string;
     giveaway?: Giveaway;
     activeMindWarSessionId?: string | null;
+    totalGiftValue?: number;
 }
 
 export interface PlaylistTrack {
@@ -310,7 +340,9 @@ export interface VoiceParticipant {
     uid: string;
     username: string;
     photoURL?: string | null;
+    profileEmoji?: string | null;
     role?: 'admin' | 'user';
+    giftLevel: number;
     isSpeaker: boolean;
     isMuted: boolean;
     canSpeak: boolean;
@@ -418,13 +450,19 @@ export interface Message {
   text?: string;
   imageUrl?: string;
   videoUrl?: string;
-  type?: 'system' | 'game' | 'portal' | 'user' | 'gameInvite';
+  type?: 'system' | 'game' | 'portal' | 'user' | 'gameInvite' | 'gift';
   createdAt: Timestamp;
   selectedBubble?: string;
   selectedAvatarFrame?: string;
   portalRoomId?: string;
   portalRoomName?: string;
   gameInviteData?: GameInviteMessageData;
+  giftData?: {
+      senderName: string;
+      senderLevel?: number;
+      receiverName?: string | null;
+      giftId: string;
+  }
 }
 
 export interface Call {
@@ -469,7 +507,7 @@ export interface RoomActivityDataPoint {
 export interface AuditLog {
     id: string;
     type: 'user_created' | 'user_deleted';
-    timestamp: Timestamp;
+    timestamp: Timestamp | string;
     actor: {
         uid: string;
         email?: string;
