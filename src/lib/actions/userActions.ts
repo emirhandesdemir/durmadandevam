@@ -12,7 +12,6 @@ import { deleteRoomWithSubcollections } from '../firestoreUtils';
 import { updateUserPosts, updateUserComments, updateUserDmMessages } from './propagationActions';
 import { v4 as uuidv4 } from 'uuid';
 import { createNotification } from './notificationActions';
-import { emojiToDataUrl } from '../utils';
 
 
 export async function sendVerificationEmail(userId: string) {
@@ -71,21 +70,6 @@ export async function updateUserProfile(updates: {
         updatesForDb.age = Number(updates.age);
     }
     
-    // Handle photoURL from data URL
-    if (updates.photoURL?.startsWith('data:image')) {
-        const match = updates.photoURL.match(/^data:(image\/\w+);base64,(.+)$/);
-        if (!match) throw new Error("Geçersiz resim formatı.");
-        
-        const contentType = match[1]; // e.g., "image/png"
-        const imageBuffer = Buffer.from(match[2], 'base64');
-
-        const imagePath = `avatars/${userId}/profile.png`; // Use a consistent name
-        const imageStorageRef = storageRef(storage, imagePath);
-        
-        await uploadBytes(imageStorageRef, imageBuffer, { contentType });
-        updatesForDb.photoURL = await getDownloadURL(imageStorageRef);
-    }
-
     const userSnap = await getDoc(userRef);
     const userData = userSnap.exists() ? userSnap.data() : {};
 
@@ -101,10 +85,10 @@ export async function updateUserProfile(updates: {
     }
     
     if (updates.email && updates.email !== userData?.email) {
-        const auth = getAuth();
-        await auth.updateUser(userId, { email: updates.email, emailVerified: false });
+        // Email update is now handled on client side with re-authentication for security
+        // But we still update the firestore document.
         updatesForDb.email = updates.email;
-        updatesForDb.emailVerified = false;
+        updatesForDb.emailVerified = false; // Always reset verification on email change
     }
 
 
@@ -142,7 +126,7 @@ export async function updateUserProfile(updates: {
             emailVerified: false,
             username: updates.username,
             username_lowercase: updates.username?.toLowerCase(),
-            photoURL: updatesForDb.photoURL || null, // Use the newly uploaded URL if available
+            photoURL: updates.photoURL || null,
             bio: null,
             age: null,
             city: null, 
@@ -187,13 +171,24 @@ export async function updateUserProfile(updates: {
         batch.update(userRef, updatesForDb);
     }
     
-    const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
-    if(updates.username) authProfileUpdates.displayName = updates.username;
-    if(updatesForDb.photoURL) authProfileUpdates.photoURL = updatesForDb.photoURL;
-
-    if(Object.keys(authProfileUpdates).length > 0) {
-      const auth = getAuth();
-      await auth.updateUser(userId, authProfileUpdates);
+    // Update Firebase Auth display name if username changed
+    if (updates.username) {
+        try {
+            const auth = getAuth();
+            await auth.updateUser(userId, { displayName: updates.username });
+        } catch (e) {
+            console.error("Auth display name update failed:", e);
+        }
+    }
+    
+    // Update photoURL if a new one was provided (from client-side upload)
+    if (updates.photoURL) {
+         try {
+            const auth = getAuth();
+            await auth.updateUser(userId, { photoURL: updates.photoURL });
+        } catch (e) {
+            console.error("Auth photoURL update failed:", e);
+        }
     }
 
     await batch.commit();
@@ -212,7 +207,7 @@ export async function updateUserProfile(updates: {
 
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (updatesForDb.photoURL) propagationUpdates.userPhotoURL = updatesForDb.photoURL;
+    if (updates.photoURL) propagationUpdates.userPhotoURL = updates.photoURL;
     if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
 
     if (Object.keys(propagationUpdates).length > 0) {
@@ -453,7 +448,10 @@ export async function deleteUserAccount(userId: string) {
             const avatarRef = storageRef(storage, userSnap.data().photoURL);
             await deleteObject(avatarRef);
         } catch (e) {
-            console.error("Avatar deletion error:", e);
+            // Ignore if object doesn't exist, which can happen.
+            if ((e as any).code !== 'storage/object-not-found') {
+                 console.error("Avatar deletion error:", e);
+            }
         }
     }
     batch.delete(userRef);

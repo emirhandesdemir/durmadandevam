@@ -1,31 +1,36 @@
+
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    
-    // Genel Kural: Varsayılan olarak tüm yollara erişimi engelle.
+    // Public Read Access for all files
     match /{allPaths=**} {
-      allow read, write: if false;
+      allow read;
+    }
+    
+    // Allow authenticated users to write to their own avatar folder.
+    // They can create, update, or delete profile.png inside their folder.
+    match /avatars/{userId}/profile.png {
+      allow write: if request.auth != null && 
+                       request.auth.uid == userId &&
+                       request.resource.size < 5 * 1024 * 1024 && // Max 5MB
+                       request.resource.contentType.matches('image/.*'); // Must be an image
     }
 
-    // Kullanıcı Avatarları: Kullanıcılar sadece kendi avatarını güncelleyebilir. Herkes okuyabilir.
-    match /upload/avatars/{userId}/{fileName} {
-      allow read: if true;
+    // Allow authenticated users to upload to their own folders within /upload.
+    // This is a general rule for features like post images or videos.
+    match /upload/{userId}/{allPaths=**} {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
-
-    // Gönderi Medyası (Resimler & Videolar): Kullanıcılar sadece kendi gönderi medyalarını yükleyebilir. Herkes okuyabilir.
-    match /upload/posts/{mediaType}/{userId}/{fileName} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId && (mediaType == 'images' || mediaType == 'videos');
+    
+    // Rules for DM attachments
+    match /dms/{chatId}/{folder}/{allPaths=**} {
+        allow write: if request.auth != null && request.auth.uid in chatId.split('_');
     }
-
-    // Oda Medyası: Odadaki katılımcılar dosya yükleyebilir. Herkes okuyabilir.
-    // Not: Bu kural, oda dokümanına erişim gerektirir, bu yüzden daha karmaşık olabilir.
-    // Şimdilik, giriş yapmış tüm kullanıcıların yüklemesine izin veriyoruz.
-    match /upload/rooms/{roomId}/{mediaType}/{fileName} {
-      allow read: if true;
-      allow write: if request.auth != null;
+    
+    // Rules for music uploads in rooms
+    match /music/{roomId}/{allPaths=**} {
+        allow write: if request.auth != null; // Simplistic rule, can be refined to check room membership
     }
   }
 }

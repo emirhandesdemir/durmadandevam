@@ -14,7 +14,7 @@ import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
 import { useState, useRef, useEffect, useMemo } from "react";
-import { auth, db } from "@/lib/firebase";
+import { auth, db, storage } from "@/lib/firebase";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../common/LanguageSwitcher";
@@ -24,7 +24,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "..
 import { updateUserProfile } from "@/lib/actions/userActions";
 import { Textarea } from "../ui/textarea";
 import BlockedUsersDialog from "./BlockedUsersDialog";
-import { sendPasswordResetEmail, sendEmailVerification, verifyBeforeUpdateEmail } from "firebase/auth";
+import { sendPasswordResetEmail, sendEmailVerification, updateEmail } from "firebase/auth";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { deleteUserAccount } from "@/lib/actions/userActions";
 import { Gem } from "lucide-react";
@@ -33,6 +33,7 @@ import { Progress } from "@/components/ui/progress";
 import ImageCropperDialog from "../common/ImageCropperDialog";
 import { Toaster as HotToaster, toast as hotToast } from 'react-hot-toast';
 import AnimatedLogoLoader from "../common/AnimatedLogoLoader";
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const bubbleOptions = [
     { id: "", name: "Varsayılan", isPremium: false },
@@ -117,30 +118,45 @@ export default function ProfilePageClient() {
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            if (file.size > 10 * 1024 * 1024) { 
-                toast({ variant: "destructive", title: "Dosya Çok Büyük", description: "Resim boyutu 10MB'dan büyük olamaz." });
+            if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                toast({ variant: "destructive", title: "Dosya Çok Büyük", description: "Resim boyutu 5MB'dan büyük olamaz." });
                 return;
             }
             const reader = new FileReader();
             reader.onload = () => setImageToCrop(reader.result as string);
-            reader.readAsDataURL(e.target.files[0]);
+            reader.readAsDataURL(file);
         }
     };
+
+    const dataURLtoBlob = (dataurl: string) => {
+        let arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)?.[1],
+            bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+        while(n--){
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], {type:mime});
+    }
     
     const handleCropComplete = async (croppedDataUrl: string) => {
         if (!user) return;
         setImageToCrop(null);
         hotToast.loading("Profil fotoğrafı güncelleniyor...");
+        
         try {
+            const blob = dataURLtoBlob(croppedDataUrl);
+            const imageRef = storageRef(storage, `avatars/${user.uid}/profile.png`);
+            await uploadBytes(imageRef, blob);
+            const downloadURL = await getDownloadURL(imageRef);
+
             await updateUserProfile({
                 userId: user.uid,
-                photoURL: croppedDataUrl,
+                photoURL: downloadURL,
             });
             hotToast.dismiss();
             toast({ title: "Başarılı!", description: "Profil fotoğrafınız güncellendi." });
         } catch(error: any) {
             hotToast.dismiss();
-            toast({ variant: 'destructive', title: "Hata", description: error.message });
+            toast({ variant: 'destructive', title: "Hata", description: `Fotoğraf yüklenemedi: ${error.message}` });
         }
     };
 
@@ -153,8 +169,8 @@ export default function ProfilePageClient() {
             const updatesForDb: { [key: string]: any } = {};
             
             if(username.trim() !== (userData?.username || '').trim()) {
-                const usernameExists = await updateUserProfile({userId: user.uid, username});
-                if(usernameExists.error) throw new Error(usernameExists.error);
+                const usernameResult = await updateUserProfile({userId: user.uid, username});
+                if(usernameResult.error) throw new Error(usernameResult.error);
             }
             if (bio !== userData?.bio) updatesForDb.bio = bio;
             if (age !== userData?.age) updatesForDb.age = Number(age) || null;
@@ -193,30 +209,22 @@ export default function ProfilePageClient() {
     }
     
     const handleUpdateEmail = async () => {
-        if (!user || !newEmail || newEmail === user.email) return;
+        if (!auth.currentUser || !newEmail || newEmail === user.email) return;
         setIsUpdatingEmail(true);
         try {
-            await updateUserProfile({ userId: user.uid, email: newEmail });
-            
-            // Re-fetch user to get the latest email verification status
-            await user.reload(); 
-            const latestUser = auth.currentUser;
+            // Firebase requires recent login for security-sensitive operations like changing email.
+            // We use updateEmail which is simpler if re-auth is not required.
+            // If it fails with 'auth/requires-recent-login', we should guide the user to log out and log back in.
+            await updateEmail(auth.currentUser, newEmail);
+            await updateUserProfile({ userId: auth.currentUser.uid, email: newEmail });
+            await sendEmailVerification(auth.currentUser);
 
-            if (latestUser?.emailVerified) {
-                await verifyBeforeUpdateEmail(latestUser, newEmail);
-                toast({
-                    title: "Doğrulama Gerekli",
-                    description: `E-posta adresinizi güncellemek için mevcut adresinize (${user.email}) bir doğrulama linki gönderdik.`,
-                    duration: 8000
-                });
-            } else {
-                 await sendEmailVerification(latestUser!); // Send verification to the new email
-                toast({
-                    title: "E-posta Güncellendi",
-                    description: `Yeni e-posta adresinize (${newEmail}) bir doğrulama linki gönderdik.`
-                });
-            }
+            toast({
+                title: "E-posta Güncellendi ve Doğrulama Gönderildi",
+                description: `Yeni e-posta adresinizi (${newEmail}) doğrulamak için bir link gönderdik.`
+            });
             setNewEmail("");
+
         } catch (error: any) {
             console.error("Email update error:", error);
             let desc = "E-posta güncellenirken bir hata oluştu.";
@@ -330,11 +338,6 @@ export default function ProfilePageClient() {
                                     <Pencil className="h-8 w-8" />
                                 </div>
                             </button>
-                            <Button variant="outline" asChild>
-                                <Link href="/avatar-studio">
-                                    <Sparkles className="mr-2 h-4 w-4"/> AI Avatar Stüdyosu
-                                </Link>
-                            </Button>
                         </div>
 
                          <div className="space-y-2">
@@ -514,6 +517,19 @@ export default function ProfilePageClient() {
                                 </CardHeader>
                             </AccordionTrigger>
                              <AccordionContent className="p-6 pt-0 space-y-4">
+                                <div className="space-y-2 rounded-lg border p-3">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <Label className="font-semibold">E-posta</Label>
+                                            <p className="text-xs text-muted-foreground">{user.email}</p>
+                                        </div>
+                                        {user.emailVerified ? (
+                                            <span className="flex items-center text-sm font-semibold text-green-600"><BadgeCheck className="mr-2 h-4 w-4"/>Doğrulandı</span>
+                                        ) : (
+                                            <Button size="sm" variant="secondary" onClick={handleSendVerificationEmail}>Doğrulama E-postası Gönder</Button>
+                                        )}
+                                    </div>
+                                </div>
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <Label htmlFor="privacy-mode" className="font-semibold">Gizli Hesap</Label>
@@ -539,28 +555,6 @@ export default function ProfilePageClient() {
                                     <Button variant="outline" className="w-full" onClick={() => setIsBlockedUsersOpen(true)}>
                                         <ShieldOff className="mr-2 h-4 w-4"/>Engellenen Hesapları Yönet
                                     </Button>
-                                </div>
-                                 <div className="space-y-2 rounded-lg border p-3">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <Label className="font-semibold">E-posta</Label>
-                                            <p className="text-xs text-muted-foreground">{user.email}</p>
-                                        </div>
-                                        {user.emailVerified ? (
-                                            <span className="flex items-center text-sm font-semibold text-green-600"><BadgeCheck className="mr-2 h-4 w-4"/>Doğrulandı</span>
-                                        ) : (
-                                            <Button size="sm" variant="secondary" onClick={handleSendVerificationEmail}>Doğrulama E-postası Gönder</Button>
-                                        )}
-                                    </div>
-                                     <div className="pt-2">
-                                        <Label htmlFor="new-email">E-postayı Değiştir</Label>
-                                        <div className="flex gap-2 mt-1">
-                                            <Input id="new-email" type="email" placeholder="Yeni e-posta adresiniz" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} disabled={isUpdatingEmail} />
-                                            <Button onClick={handleUpdateEmail} disabled={isUpdatingEmail || !newEmail}>
-                                                {isUpdatingEmail ? <Loader2 className="h-4 w-4 animate-spin"/> : "Değiştir"}
-                                            </Button>
-                                        </div>
-                                    </div>
                                 </div>
                             </AccordionContent>
                         </Card>
