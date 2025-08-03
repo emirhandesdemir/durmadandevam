@@ -25,12 +25,6 @@ import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 import ImageCropperDialog from "../common/ImageCropperDialog";
 import TextPostBackgroundSelector from "./TextPostBackgroundSelector";
 
-async function dataUriToBlob(dataUri: string): Promise<Blob> {
-    const response = await fetch(dataUri);
-    const blob = await response.blob();
-    return blob;
-}
-
 export default function NewPostForm() {
   const router = useRouter();
   const { user, userData, featureFlags } = useAuth();
@@ -199,17 +193,11 @@ export default function NewPostForm() {
     router.push('/home');
 
     try {
-        let finalImageUrl: string | null = null;
-        
-        if (croppedImage) {
-            if (featureFlags?.contentModerationEnabled) {
-                const safetyResult = await checkImageSafety({ photoDataUri: croppedImage });
-                if (!safetyResult.success || !safetyResult.data?.isSafe) {
-                    throw new Error(safetyResult.error || safetyResult.data?.reason || "Resim güvenlik kontrolünden geçemedi.");
-                }
+        if (croppedImage && featureFlags?.contentModerationEnabled) {
+            const safetyResult = await checkImageSafety({ photoDataUri: croppedImage });
+            if (!safetyResult.success || !safetyResult.data?.isSafe) {
+                throw new Error(safetyResult.error || safetyResult.data?.reason || "Resim güvenlik kontrolünden geçemedi.");
             }
-            const imageBlob = await dataUriToBlob(croppedImage);
-            finalImageUrl = await createPost.uploadImage(imageBlob);
         }
 
         await createPost({
@@ -220,7 +208,7 @@ export default function NewPostForm() {
             userRole: userData.role || 'user',
             userGender: userData.gender,
             text: text,
-            imageUrl: finalImageUrl,
+            imageUrl: croppedImage, // Pass the base64 data URI
             videoUrl: null,
             language: i18n.language,
             commentsDisabled: commentsDisabled,
@@ -235,6 +223,8 @@ export default function NewPostForm() {
             description: error.message || 'Gönderiniz paylaşılamadı. Lütfen tekrar deneyin.', 
             duration: 9000 
         });
+    } finally {
+        // Do not set isSubmitting to false, as we are navigating away
     }
   };
 

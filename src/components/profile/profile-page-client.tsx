@@ -1,4 +1,3 @@
-
 // src/components/profile/profile-page-client.tsx
 "use client";
 
@@ -24,14 +23,13 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "..
 import { updateUserProfile } from "@/lib/actions/userActions";
 import { Textarea } from "../ui/textarea";
 import BlockedUsersDialog from "./BlockedUsersDialog";
-import { sendPasswordResetEmail, sendEmailVerification, updateEmail } from "firebase/auth";
+import { sendPasswordResetEmail, sendEmailVerification, verifyBeforeUpdateEmail } from "firebase/auth";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { deleteUserAccount } from "@/lib/actions/userActions";
 import { Gem } from "lucide-react";
 import { giftLevelThresholds } from "@/lib/gifts";
 import { Progress } from "@/components/ui/progress";
 import ImageCropperDialog from "../common/ImageCropperDialog";
-import { Toaster as HotToaster, toast as hotToast } from 'react-hot-toast';
 import AnimatedLogoLoader from "../common/AnimatedLogoLoader";
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 
@@ -68,8 +66,6 @@ export default function ProfilePageClient() {
     const [animatedNav, setAnimatedNav] = useState(true);
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [newEmail, setNewEmail] = useState("");
-    const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
 
     const isPremium = userData?.premiumUntil && userData.premiumUntil.toDate() > new Date();
     
@@ -128,35 +124,22 @@ export default function ProfilePageClient() {
         }
     };
 
-    const dataURLtoBlob = (dataurl: string) => {
-        let arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)?.[1],
-            bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-        while(n--){
-            u8arr[n] = bstr.charCodeAt(n);
-        }
-        return new Blob([u8arr], {type:mime});
-    }
-    
     const handleCropComplete = async (croppedDataUrl: string) => {
         if (!user) return;
         setImageToCrop(null);
-        hotToast.loading("Profil fotoğrafı güncelleniyor...");
+        setIsSaving(true);
+        toast({ title: "Yükleniyor...", description: "Profil fotoğrafınız güncelleniyor..." });
         
         try {
-            const blob = dataURLtoBlob(croppedDataUrl);
-            const imageRef = storageRef(storage, `avatars/${user.uid}/profile.png`);
-            await uploadBytes(imageRef, blob);
-            const downloadURL = await getDownloadURL(imageRef);
-
             await updateUserProfile({
                 userId: user.uid,
-                photoURL: downloadURL,
+                photoURL: croppedDataUrl,
             });
-            hotToast.dismiss();
             toast({ title: "Başarılı!", description: "Profil fotoğrafınız güncellendi." });
         } catch(error: any) {
-            hotToast.dismiss();
             toast({ variant: 'destructive', title: "Hata", description: `Fotoğraf yüklenemedi: ${error.message}` });
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -208,38 +191,6 @@ export default function ProfilePageClient() {
         }
     }
     
-    const handleUpdateEmail = async () => {
-        if (!auth.currentUser || !newEmail || newEmail === user.email) return;
-        setIsUpdatingEmail(true);
-        try {
-            // Firebase requires recent login for security-sensitive operations like changing email.
-            // We use updateEmail which is simpler if re-auth is not required.
-            // If it fails with 'auth/requires-recent-login', we should guide the user to log out and log back in.
-            await updateEmail(auth.currentUser, newEmail);
-            await updateUserProfile({ userId: auth.currentUser.uid, email: newEmail });
-            await sendEmailVerification(auth.currentUser);
-
-            toast({
-                title: "E-posta Güncellendi ve Doğrulama Gönderildi",
-                description: `Yeni e-posta adresinizi (${newEmail}) doğrulamak için bir link gönderdik.`
-            });
-            setNewEmail("");
-
-        } catch (error: any) {
-            console.error("Email update error:", error);
-            let desc = "E-posta güncellenirken bir hata oluştu.";
-            if (error.code === 'auth/requires-recent-login') {
-                desc = "Bu hassas bir işlem olduğu için lütfen tekrar giriş yapıp deneyin.";
-            } else if (error.code === 'auth/email-already-in-use') {
-                desc = "Bu e-posta adresi zaten başka bir hesap tarafından kullanılıyor.";
-            }
-            toast({ variant: 'destructive', description: desc });
-        } finally {
-            setIsUpdatingEmail(false);
-        }
-    };
-
-
     const handlePasswordReset = async () => {
         if (!user?.email) {
             toast({ variant: 'destructive', description: "E-posta adresiniz bulunamadı."});
@@ -309,7 +260,6 @@ export default function ProfilePageClient() {
 
     return (
         <>
-             <HotToaster position="bottom-center" />
             <ImageCropperDialog
                 isOpen={!!imageToCrop}
                 setIsOpen={setImageToCrop}
@@ -338,6 +288,11 @@ export default function ProfilePageClient() {
                                     <Pencil className="h-8 w-8" />
                                 </div>
                             </button>
+                             <Button asChild variant="secondary">
+                                <Link href="/avatar-studio">
+                                    <Sparkles className="mr-2 h-4 w-4" /> Avatar Stüdyosu
+                                </Link>
+                            </Button>
                         </div>
 
                          <div className="space-y-2">

@@ -24,7 +24,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
 import { findUserByUsername } from "../server-utils";
-import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject, uploadString } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
 
 
@@ -45,7 +45,7 @@ async function handlePostMentions(postId: string, text: string, sender: { uid: s
                         recipientId: mentionedUser.uid,
                         senderId: sender.uid,
                         senderUsername: sender.displayName || "Biri",
-                        photoURL: sender.photoURL || '',
+                        senderAvatar: sender.photoURL || '',
                         senderAvatarFrame: sender.userAvatarFrame || '',
                         type: 'mention',
                         postId: postId,
@@ -59,96 +59,95 @@ async function handlePostMentions(postId: string, text: string, sender: { uid: s
 }
 
 
-const uploadImage = async (imageBlob: Blob): Promise<string> => {
-    const fileExtension = imageBlob.type.split('/')[1] || 'jpg';
-    const imageRef = storageRef(storage, `upload/posts/${uuidv4()}.${fileExtension}`);
-    const snapshot = await uploadBytes(imageRef, imageBlob);
-    return getDownloadURL(snapshot.ref);
-};
+export async function createPost(postData: {
+    uid: string;
+    username: string;
+    userPhotoURL: string | null;
+    userAvatarFrame?: string;
+    userRole?: 'admin' | 'user';
+    userGender?: 'male' | 'female';
+    text: string;
+    imageUrl: string | null; // This will now be a base64 data URI or null
+    videoUrl: string | null;
+    language: string;
+    commentsDisabled?: boolean;
+    likesHidden?: boolean;
+    backgroundStyle?: string;
+}) {
+    const newPostRef = doc(collection(db, 'posts'));
+    const userRef = doc(db, 'users', postData.uid);
+    let finalPostId = newPostRef.id;
+    let finalImageUrl: string | null = null;
+    
+    // If an image data URI is provided, upload it to Storage
+    if (postData.imageUrl) {
+        const imagePath = `upload/posts/${uuidv4()}.jpg`;
+        const imageStorageRef = storageRef(storage, imagePath);
+        
+        const response = await uploadString(imageStorageRef, postData.imageUrl, 'data_url');
+        finalImageUrl = await getDownloadURL(response.ref);
+    }
 
-// Add a static method to the main function for easy access
-export const createPost = Object.assign(
-    async (postData: {
-        uid: string;
-        username: string;
-        userPhotoURL: string | null;
-        userAvatarFrame?: string;
-        userRole?: 'admin' | 'user';
-        userGender?: 'male' | 'female';
-        text: string;
-        imageUrl: string | null;
-        videoUrl: string | null;
-        language: string;
-        commentsDisabled?: boolean;
-        likesHidden?: boolean;
-        backgroundStyle?: string;
-    }) => {
-        const newPostRef = doc(collection(db, 'posts'));
-        const userRef = doc(db, 'users', postData.uid);
-        let finalPostId = newPostRef.id;
-
-        await runTransaction(db, async (transaction) => {
-            const userSnap = await transaction.get(userRef);
-            if (!userSnap.exists()) throw new Error("User not found.");
-            
-            const userData = userSnap.data();
-            const postCount = userData.postCount || 0;
-            
-            const newPostData = {
-                uid: postData.uid,
-                username: postData.username,
-                userPhotoURL: postData.userPhotoURL,
-                userAvatarFrame: postData.userAvatarFrame || '',
-                userRole: postData.userRole,
-                userGender: postData.userGender,
-                text: postData.text,
-                imageUrl: postData.imageUrl,
-                videoUrl: postData.videoUrl,
-                backgroundStyle: postData.backgroundStyle || '',
-                editedWithAI: false, // This feature was removed
-                language: postData.language,
-                commentsDisabled: postData.commentsDisabled,
-                likesHidden: postData.likesHidden,
-                createdAt: serverTimestamp(),
-                likes: [],
-                likeCount: 0,
-                commentCount: 0,
-                saveCount: 0,
-                savedBy: [],
-            };
-            transaction.set(newPostRef, newPostData);
-            
-            const userUpdates: { [key: string]: any } = {
-                lastActionTimestamp: serverTimestamp(),
-                postCount: increment(1)
-            };
-
-            if (postCount === 0 && !postData.videoUrl) {
-                userUpdates.diamonds = increment(90);
-            }
-            
-            transaction.update(userRef, userUpdates);
-        });
-
-        await handlePostMentions(finalPostId, postData.text, {
+    await runTransaction(db, async (transaction) => {
+        const userSnap = await transaction.get(userRef);
+        if (!userSnap.exists()) throw new Error("User not found.");
+        
+        const userData = userSnap.data();
+        const postCount = userData.postCount || 0;
+        
+        const newPostData = {
             uid: postData.uid,
-            displayName: postData.username,
-            photoURL: postData.userPhotoURL || '',
-            userAvatarFrame: postData.userAvatarFrame
-        });
+            username: postData.username,
+            userPhotoURL: postData.userPhotoURL,
+            userAvatarFrame: postData.userAvatarFrame || '',
+            userRole: postData.userRole,
+            userGender: postData.userGender,
+            text: postData.text,
+            imageUrl: finalImageUrl, // Use the public download URL
+            videoUrl: postData.videoUrl,
+            backgroundStyle: postData.backgroundStyle || '',
+            editedWithAI: false,
+            language: postData.language,
+            commentsDisabled: postData.commentsDisabled,
+            likesHidden: postData.likesHidden,
+            createdAt: serverTimestamp(),
+            likes: [],
+            likeCount: 0,
+            commentCount: 0,
+            saveCount: 0,
+            savedBy: [],
+        };
+        transaction.set(newPostRef, newPostData);
+        
+        const userUpdates: { [key: string]: any } = {
+            lastActionTimestamp: serverTimestamp(),
+            postCount: increment(1)
+        };
 
-        revalidatePath('/home');
-        if (postData.videoUrl) {
-          revalidatePath('/surf');
+        if (postCount === 0 && !postData.videoUrl) {
+            userUpdates.diamonds = increment(90);
         }
-        if (postData.uid) {
-            revalidatePath(`/profile/${postData.uid}`);
-        }
+        
+        transaction.update(userRef, userUpdates);
+    });
 
-        return { success: true, postId: finalPostId };
-    },
-    { uploadImage }
-);
+    await handlePostMentions(finalPostId, postData.text, {
+        uid: postData.uid,
+        displayName: postData.username,
+        photoURL: postData.userPhotoURL || '',
+        userAvatarFrame: postData.userAvatarFrame
+    });
+
+    revalidatePath('/home');
+    if (postData.videoUrl) {
+      revalidatePath('/surf');
+    }
+    if (postData.uid) {
+        revalidatePath(`/profile/${postData.uid}`);
+    }
+
+    return { success: true, postId: finalPostId };
+}
 
 
 export async function deletePost(postId: string) {
@@ -166,12 +165,14 @@ export async function deletePost(postId: string) {
             const userRef = doc(db, 'users', postData.uid);
 
             if (postData.imageUrl) {
-                const imageRef = storageRef(storage, postData.imageUrl);
-                await deleteObject(imageRef).catch((error) => {
-                    if (error.code !== 'storage/object-not-found') {
+                try {
+                    const imageRef = storageRef(storage, postData.imageUrl);
+                    await deleteObject(imageRef);
+                } catch (error) {
+                    if ((error as any).code !== 'storage/object-not-found') {
                         console.error("Storage resmi silinirken hata oluştu:", error);
                     }
-                });
+                }
             }
 
             transaction.delete(postRef);
@@ -231,7 +232,7 @@ export async function likePost(
                     recipientId: postData.uid,
                     senderId: currentUser.uid,
                     senderUsername: currentUser.displayName || "Biri",
-                    photoURL: currentUser.photoURL || '',
+                    senderAvatar: currentUser.photoURL || '',
                     senderAvatarFrame: currentUser.userAvatarFrame || '',
                     type: 'like',
                     postId: postId,

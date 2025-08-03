@@ -4,7 +4,7 @@
 import { db, storage } from '@/lib/firebase';
 import type { Post, Report, UserProfile } from '../types';
 import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, collectionGroup, deleteDoc, setDoc } from 'firebase/firestore';
-import { ref as storageRef, deleteObject, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref as storageRef, deleteObject, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
 import { getAuth } from '../firebaseAdmin';
@@ -40,7 +40,7 @@ export async function updateUserProfile(updates: {
     isNewUser?: boolean;
     email?: string;
     referredBy?: string | null;
-    photoURL?: string | null;
+    photoURL?: string | null; // Can be a public URL or a data URI for new uploads
     username?: string;
     bio?: string;
     age?: number | string | null;
@@ -59,10 +59,18 @@ export async function updateUserProfile(updates: {
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
 
     const userRef = doc(db, 'users', userId);
-    
     const batch = writeBatch(db);
 
-    const updatesForDb: { [key: string]: any } = { ...otherUpdates };
+    let updatesForDb: { [key: string]: any } = { ...otherUpdates };
+    let finalPhotoURL = updates.photoURL;
+
+    // Handle profile picture upload if photoURL is a data URI
+    if (updates.photoURL && updates.photoURL.startsWith('data:image')) {
+        const imageRef = storageRef(storage, `avatars/${userId}/profile.png`);
+        const response = await uploadString(imageRef, updates.photoURL, 'data_url');
+        finalPhotoURL = await getDownloadURL(response.ref);
+        updatesForDb.photoURL = finalPhotoURL;
+    }
     
     if (updates.age === '' || updates.age === undefined || updates.age === null) {
         updatesForDb.age = null;
@@ -73,7 +81,6 @@ export async function updateUserProfile(updates: {
     const userSnap = await getDoc(userRef);
     const userData = userSnap.exists() ? userSnap.data() : {};
 
-    // Check for username change and uniqueness
     if (updates.username && updates.username !== userData?.username) {
         const q = query(collection(db, 'users'), where('username_lowercase', '==', updates.username.toLowerCase()), limit(1));
         const querySnapshot = await getDocs(q);
@@ -85,23 +92,17 @@ export async function updateUserProfile(updates: {
     }
     
     if (updates.email && updates.email !== userData?.email) {
-        // Email update is now handled on client side with re-authentication for security
-        // But we still update the firestore document.
         updatesForDb.email = updates.email;
-        updatesForDb.emailVerified = false; // Always reset verification on email change
+        updatesForDb.emailVerified = false;
     }
 
 
     if (updates.location) {
-        updatesForDb.location = {
-            latitude: updates.location.latitude,
-            longitude: updates.location.longitude,
-        }
+        updatesForDb.location = { latitude: updates.location.latitude, longitude: updates.location.longitude };
         if (updates.location.city) updatesForDb.city = updates.location.city;
         if (updates.location.country) updatesForDb.country = updates.location.country;
     }
 
-    // Check for profile completion reward
     if (!isNewUser && userData && !userData.profileCompletionAwarded) {
         const hasBio = 'bio' in updatesForDb ? !!updatesForDb.bio?.trim() : !!userData.bio?.trim();
         const hasAge = 'age' in updatesForDb ? !!updatesForDb.age : !!userData.age;
@@ -112,7 +113,6 @@ export async function updateUserProfile(updates: {
         if (hasBio && hasAge && hasGender && hasInterests && isVerified) {
             updatesForDb.diamonds = increment(50);
             updatesForDb.profileCompletionAwarded = true;
-            // Notification will be sent after the update
         }
     }
 
@@ -121,48 +121,20 @@ export async function updateUserProfile(updates: {
          const isAdminEmail = updates.email === 'admin@example.com';
          const userRole = isAdminEmail ? 'admin' : 'user';
          const initialData = {
-            uid: userId,
-            email: updates.email,
-            emailVerified: false,
-            username: updates.username,
-            username_lowercase: updates.username?.toLowerCase(),
-            photoURL: updates.photoURL || null,
-            bio: null,
-            age: null,
-            city: null, 
-            country: null,
-            gender: null,
-            interests: [],
-            role: userRole,
-            createdAt: serverTimestamp(),
-            lastActionTimestamp: serverTimestamp(),
-            diamonds: 10,
-            profileValue: 0,
-            giftLevel: 0,
-            totalDiamondsSent: 0,
-            referredBy: updates.referredBy || null,
-            referralCount: 0,
-            postCount: 0,
-            followers: [],
-            following: [],
-            blockedUsers: [],
-            savedPosts: [],
-            hiddenPostIds: [],
-            privateProfile: false,
-            acceptsFollowRequests: true,
-            followRequests: [],
-            selectedBubble: '',
-            selectedAvatarFrame: '',
-            isBanned: false,
-            reportCount: 0,
-            isOnline: true,
-            lastSeen: serverTimestamp(),
-            premiumUntil: null,
-            isFirstPremium: false,
-            unlimitedRoomCreationUntil: null,
-            profileCompletionNotificationSent: false,
-            profileCompletionAwarded: false, 
-            location: null,
+            uid: userId, email: updates.email, emailVerified: false,
+            username: updates.username, username_lowercase: updates.username?.toLowerCase(),
+            photoURL: finalPhotoURL || null, bio: null, age: null, city: null, country: null,
+            gender: null, interests: [], role: userRole,
+            createdAt: serverTimestamp(), lastActionTimestamp: serverTimestamp(),
+            diamonds: 10, profileValue: 0, giftLevel: 0, totalDiamondsSent: 0,
+            referredBy: updates.referredBy || null, referralCount: 0, postCount: 0,
+            followers: [], following: [], blockedUsers: [], savedPosts: [],
+            hiddenPostIds: [], privateProfile: false, acceptsFollowRequests: true,
+            followRequests: [], selectedBubble: '', selectedAvatarFrame: '', isBanned: false,
+            reportCount: 0, isOnline: true, lastSeen: serverTimestamp(),
+            premiumUntil: null, isFirstPremium: false,
+            unlimitedRoomCreationUntil: null, profileCompletionNotificationSent: false,
+            profileCompletionAwarded: false, location: null,
          };
          delete updatesForDb.isNewUser;
          delete updatesForDb.referredBy;
@@ -171,35 +143,24 @@ export async function updateUserProfile(updates: {
         batch.update(userRef, updatesForDb);
     }
     
-    // Update Firebase Auth display name if username changed
-    if (updates.username) {
+    if (updates.username || finalPhotoURL) {
         try {
             const auth = getAuth();
-            await auth.updateUser(userId, { displayName: updates.username });
+            const authUpdates: { displayName?: string, photoURL?: string } = {};
+            if(updates.username) authUpdates.displayName = updates.username;
+            if(finalPhotoURL) authUpdates.photoURL = finalPhotoURL;
+            await auth.updateUser(userId, authUpdates);
         } catch (e) {
-            console.error("Auth display name update failed:", e);
-        }
-    }
-    
-    // Update photoURL if a new one was provided (from client-side upload)
-    if (updates.photoURL) {
-         try {
-            const auth = getAuth();
-            await auth.updateUser(userId, { photoURL: updates.photoURL });
-        } catch (e) {
-            console.error("Auth photoURL update failed:", e);
+            console.error("Auth profile update failed:", e);
         }
     }
 
     await batch.commit();
 
-    // Send reward notification if applicable
     if (updatesForDb.profileCompletionAwarded) {
          await createNotification({
-            recipientId: userId,
-            senderId: 'system-reward',
-            senderUsername: 'HiweWalk',
-            senderAvatar: null,
+            recipientId: userId, senderId: 'system-reward',
+            senderUsername: 'HiweWalk', senderAvatar: null,
             type: 'system',
             messageText: 'Tebrikler! Profilini tamamladığın için 50 elmas kazandın! 💎',
         });
@@ -207,7 +168,7 @@ export async function updateUserProfile(updates: {
 
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (updates.photoURL) propagationUpdates.userPhotoURL = updates.photoURL;
+    if (finalPhotoURL) propagationUpdates.userPhotoURL = finalPhotoURL;
     if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
 
     if (Object.keys(propagationUpdates).length > 0) {
@@ -245,7 +206,6 @@ export async function searchUsers(searchTerm: string, currentUserId: string): Pr
     const users = snapshot.docs
         .map(doc => {
             const data = doc.data();
-            // Exclude sensitive fields like email
             const { email, fcmTokens, ...safeData } = data;
             return { ...safeData, uid: doc.id } as UserProfile;
         })
@@ -288,7 +248,6 @@ export async function submitReport(reportData: Omit<Report, 'id' | 'timestamp'>)
         
         batch.update(reportedUserRef, { reportCount: increment(1) });
         
-        // Rate limiting: Update last action timestamp
         batch.update(reporterUserRef, { lastActionTimestamp: serverTimestamp() });
         
         await batch.commit();
@@ -357,8 +316,8 @@ export async function updateUserLocation(uid: string, latitude: number, longitud
             latitude,
             longitude
         },
-        city: 'Bilinmeyen Şehir', // Placeholder until we have reverse geocoding
-        country: 'TR', // Placeholder
+        city: 'Bilinmeyen Şehir',
+        country: 'TR',
         lastSeen: serverTimestamp()
     }, { merge: true });
 }
@@ -409,7 +368,6 @@ export async function deleteUserAccount(userId: string) {
     
     const batch = writeBatch(db);
     
-    // 1. Delete user's posts and their associated images/videos
     const postsQuery = query(collection(db, "posts"), where("uid", "==", userId));
     const postsSnapshot = await getDocs(postsQuery);
     postsSnapshot.forEach((postDoc) => {
@@ -425,30 +383,22 @@ export async function deleteUserAccount(userId: string) {
         batch.delete(postDoc.ref);
     });
     
-    // 2. Delete user's comments
     const commentsQuery = query(collectionGroup(db, "comments"), where("uid", "==", userId));
     const commentsSnapshot = await getDocs(commentsQuery);
     commentsSnapshot.forEach((doc) => batch.delete(doc.ref));
     
-    // 3. Delete user's rooms
     const roomsQuery = query(collection(db, 'rooms'), where('createdBy.uid', '==', userId));
     const roomsSnapshot = await getDocs(roomsQuery);
     const roomDeletePromises = roomsSnapshot.docs.map(roomDoc => deleteRoomWithSubcollections(roomDoc.id));
     await Promise.all(roomDeletePromises);
     
-    // 4. Remove user from followers/following lists of other users (more complex, consider a Cloud Function for this)
-    // For now, we will skip this step to avoid very large reads/writes.
-    
-    // 5. Delete user's main document and avatar
     const userRef = doc(db, "users", userId);
     const userSnap = await getDoc(userRef);
     if (userSnap.exists() && userSnap.data().photoURL) {
-        // Avatars are now stored in Storage
         try {
             const avatarRef = storageRef(storage, userSnap.data().photoURL);
             await deleteObject(avatarRef);
         } catch (e) {
-            // Ignore if object doesn't exist, which can happen.
             if ((e as any).code !== 'storage/object-not-found') {
                  console.error("Avatar deletion error:", e);
             }
@@ -459,7 +409,6 @@ export async function deleteUserAccount(userId: string) {
     try {
         await batch.commit();
 
-        // 6. Delete user from Firebase Auth
         const auth = getAuth();
         await auth.deleteUser(userId);
         
@@ -481,13 +430,11 @@ export async function blockUser(blockerId: string, targetId: string) {
     try {
         const batch = writeBatch(db);
         
-        // Add target to blocker's list
         batch.update(blockerRef, { 
             blockedUsers: arrayUnion(targetId),
             lastActionTimestamp: serverTimestamp()
         });
         
-        // Force unfollow both ways
         batch.update(blockerRef, { following: arrayRemove(targetId) });
         batch.update(targetRef, { followers: arrayRemove(blockerId) });
         batch.update(targetRef, { following: arrayRemove(blockerId) });
