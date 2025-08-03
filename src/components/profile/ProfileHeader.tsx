@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { blockUser, unblockUser } from '@/lib/actions/userActions';
 import ReportDialog from '../common/ReportDialog';
 import { Loader2 } from 'lucide-react';
-import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '../ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import type { UserProfile } from '@/lib/types';
 import { Timestamp } from 'firebase/firestore';
 
@@ -48,7 +48,11 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
   const haveIBlockedThisUser = currentUserData?.blockedUsers?.includes(profileUser.uid);
   // Safely parse timestamp string from server component
   const isPremium = isClient && profileUser.premiumUntil && new Date(profileUser.premiumUntil as any) > new Date();
-  const isJudge = profileUser.giftLevel === 10;
+  
+  // Use a more specific check for the judge role.
+  const isJudge = profileUser?.role === 'admin' && profileUser.giftLevel === 10;
+  
+  const isVerified = isClient && (profileUser.emailVerified || (currentUserAuth?.emailVerified && isOwnProfile));
 
 
   const handleStatClick = (type: 'followers' | 'following') => {
@@ -94,7 +98,7 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
 
   return (
     <>
-      <div className={cn("flex flex-col items-center text-center p-4", isJudge && "judge-profile-bg")}>
+      <div className={cn("flex flex-col items-center text-center p-4", isPremium && "judge-profile-bg")}>
         {/* Avatar */}
          <div className={cn("avatar-frame-wrapper", profileUser.selectedAvatarFrame)}>
             <Avatar className="relative z-[1] h-24 w-24 md:h-28 md:w-28 border-4 border-background shadow-lg">
@@ -115,11 +119,11 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
                         </Tooltip>
                     </TooltipProvider>
                 )}
-                 {isJudge && (
+                 {isVerified && (
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger><BadgeCheck className="h-6 w-6 text-blue-500" /></TooltipTrigger>
-                            <TooltipContent><p>Yargıç</p></TooltipContent>
+                            <TooltipContent><p>Onaylanmış Hesap</p></TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
                 )}

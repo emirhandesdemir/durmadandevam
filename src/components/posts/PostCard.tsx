@@ -69,8 +69,8 @@ const safeParseTimestamp = (timestamp: any): Date => {
     if (!timestamp) return new Date(0); 
     if (timestamp instanceof Date) return timestamp;
     if (timestamp instanceof Timestamp) return timestamp.toDate();
-    if (typeof obj.seconds === 'number' && typeof obj.nanoseconds === 'number') {
-        return new Timestamp(obj.seconds, obj.nanoseconds).toDate();
+    if (typeof timestamp === 'object' && 'seconds' in timestamp && 'nanoseconds' in timestamp) {
+        return new Timestamp(timestamp.seconds, timestamp.nanoseconds).toDate();
     }
     if (typeof timestamp === 'string') {
         const date = new Date(timestamp);
@@ -239,15 +239,20 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                         <div className={cn("avatar-frame-wrapper", post.userAvatarFrame)}>
                             <Avatar className="relative z-[1] h-10 w-10">
                                 <AvatarImage src={post.photoURL || undefined} />
-                                <AvatarFallback>{post.profileEmoji || post.username?.charAt(0)}</AvatarFallback>
+                                <AvatarFallback>{currentUserData?.profileEmoji || post.username?.charAt(0)}</AvatarFallback>
                             </Avatar>
                         </div>
                     </Link>
                     <div className="flex-1">
                         <div className="flex items-center gap-1.5">
                             <Link href={`/profile/${post.uid}`}><p className="font-bold text-sm hover:underline">{post.username}</p></Link>
-                            {post.userRole === 'admin' && (
-                                <TooltipProvider><Tooltip><TooltipTrigger><BadgeCheck className="h-4 w-4 text-primary fill-primary/20" /></TooltipTrigger><TooltipContent><p>Yönetici</p></TooltipContent></Tooltip></TooltipProvider>
+                            {post.emailVerified && (
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger><BadgeCheck className="h-4 w-4 text-blue-500 fill-blue-500/20" /></TooltipTrigger>
+                                        <TooltipContent><p>Onaylanmış Hesap</p></TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
                             )}
                         </div>
                         <span className="text-xs text-muted-foreground">{timeAgo}</span>

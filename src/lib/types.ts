@@ -125,6 +125,8 @@ export interface ThemeSettings {
 
 export interface UserProfile {
     uid: string;
+    email: string; // Add email to user profile
+    emailVerified: boolean; // Track verification status
     username: string;
     username_lowercase?: string;
     photoURL: string | null;
@@ -237,6 +239,7 @@ export interface Post {
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
+    emailVerified?: boolean;
     text: string;
     imageUrl?: string | null;
     videoUrl?: string | null;
@@ -244,7 +247,6 @@ export interface Post {
     createdAt: Timestamp | { seconds: number; nanoseconds: number } | string;
     likes: string[];
     likeCount: number;
-    commentCount: number;
     saveCount?: number;
     savedBy?: string[];
     language?: string;
@@ -277,7 +279,7 @@ export interface Comment {
         commentId: string;
         username: string;
     } | null;
-    giftId?: string | null;
+    giftId?: string | null; // This can be removed in a future cleanup if no longer needed
 }
 
 export interface Giveaway {
