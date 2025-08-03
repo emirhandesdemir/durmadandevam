@@ -11,7 +11,7 @@ import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { creditReferrer } from "@/lib/actions/diamondActions";
-import { findUserByUsername } from "@/lib/server-utils";
+import { checkUsernameExists } from "@/lib/actions/userActions";
 import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
@@ -70,8 +70,8 @@ export default function SignUpForm() {
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsLoading(true);
         try {
-            const existingUser = await findUserByUsername(values.username);
-            if (existingUser) {
+            const usernameExists = await checkUsernameExists(values.username);
+            if (usernameExists) {
                 toast({
                     title: "Kullanıcı Adı Alınmış",
                     description: "Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor. Lütfen farklı bir tane seçin.",
@@ -124,6 +124,9 @@ export default function SignUpForm() {
                 createdAt: serverTimestamp(),
                 lastActionTimestamp: serverTimestamp(),
                 diamonds: 10,
+                profileValue: 0,
+                giftLevel: 0,
+                totalDiamondsSent: 0,
                 referredBy: ref || null,
                 referralCount: 0,
                 postCount: 0,
