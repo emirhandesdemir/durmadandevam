@@ -4,7 +4,7 @@
 import { db, storage } from '@/lib/firebase';
 import type { Post, Report, UserProfile } from '../types';
 import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, collectionGroup, deleteDoc, setDoc, runTransaction } from 'firebase/firestore';
-import { ref as storageRef, deleteObject, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref as storageRef, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
 import { getAuth } from '../firebaseAdmin';
@@ -50,85 +50,90 @@ export async function updateUserProfile(updates: {
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
 
     const userRef = doc(db, 'users', userId);
-    
-    // This is the core fix. We separate the creation logic from the update logic.
-    if (isNewUser) {
-        // Create the document for a new user. This is called once on signup.
-        const counterRef = doc(db, 'config', 'counters');
-        
-        await runTransaction(db, async (transaction) => {
-            const counterDoc = await transaction.get(counterRef);
-            const currentTag = counterDoc.exists() ? counterDoc.data().userTag || 1000 : 1000;
-            const newTag = currentTag + 1;
-            transaction.update(counterRef, { userTag: newTag });
 
-            const isAdminEmail = updates.email === 'admin@example.com';
-            const userRole = isAdminEmail ? 'admin' : 'user';
+    await runTransaction(db, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+
+        if (!userDoc.exists()) {
+            if (isNewUser) {
+                // Create the document for a new user.
+                const counterRef = doc(db, 'config', 'counters');
+                const counterDoc = await transaction.get(counterRef);
+                const currentTag = counterDoc.exists() ? counterDoc.data().userTag || 1000 : 1000;
+                const newTag = currentTag + 1;
+                transaction.update(counterRef, { userTag: newTag });
+                
+                const isAdminEmail = updates.email === 'admin@example.com';
+                const userRole = isAdminEmail ? 'admin' : 'user';
+
+                const initialData = {
+                    uid: userId, uniqueTag: newTag, email: updates.email, emailVerified: false,
+                    username: updates.username, username_lowercase: updates.username?.toLowerCase(), 
+                    photoURL: null, bio: null, age: null, city: null, country: null,
+                    gender: null, interests: [], role: userRole,
+                    createdAt: serverTimestamp(), lastActionTimestamp: serverTimestamp(),
+                    diamonds: 10, profileValue: 0, giftLevel: 0, totalDiamondsSent: 0,
+                    referredBy: updates.referredBy || null, referralCount: 0, postCount: 0,
+                    followers: [], following: [], blockedUsers: [], savedPosts: [],
+                    hiddenPostIds: [], privateProfile: false, acceptsFollowRequests: true,
+                    followRequests: [], selectedBubble: '', selectedAvatarFrame: '', isBanned: false,
+                    reportCount: 0, isOnline: true, lastSeen: serverTimestamp(),
+                    premiumUntil: null, isFirstPremium: false,
+                    unlimitedRoomCreationUntil: null, profileCompletionNotificationSent: false,
+                    profileCompletionAwarded: false, location: null,
+                 };
+                transaction.set(userRef, initialData);
+            } else {
+                 console.error(`Attempted to update a non-existent user document without 'isNewUser' flag for userId: ${userId}`);
+                 throw new Error("Kullanıcı profili güncellenemedi çünkü henüz mevcut değil.");
+            }
+        } else {
+             // This is for updating an existing user.
+            let updatesForDb: { [key: string]: any } = { ...otherUpdates };
             
-            const initialData = {
-                uid: userId, 
-                uniqueTag: newTag,
-                email: updates.email, 
-                emailVerified: false,
-                username: updates.username,
-                username_lowercase: updates.username?.toLowerCase(), 
-                photoURL: null, bio: null, age: null, city: null, country: null,
-                gender: null, interests: [], role: userRole,
-                createdAt: serverTimestamp(), lastActionTimestamp: serverTimestamp(),
-                diamonds: 10, profileValue: 0, giftLevel: 0, totalDiamondsSent: 0,
-                referredBy: updates.referredBy || null, referralCount: 0, postCount: 0,
-                followers: [], following: [], blockedUsers: [], savedPosts: [],
-                hiddenPostIds: [], privateProfile: false, acceptsFollowRequests: true,
-                followRequests: [], selectedBubble: '', selectedAvatarFrame: '', isBanned: false,
-                reportCount: 0, isOnline: true, lastSeen: serverTimestamp(),
-                premiumUntil: null, isFirstPremium: false,
-                unlimitedRoomCreationUntil: null, profileCompletionNotificationSent: false,
-                profileCompletionAwarded: false, location: null,
-             };
-            transaction.set(userRef, initialData);
-        });
+            if (updates.age === '' || updates.age === undefined || updates.age === null) {
+                updatesForDb.age = null;
+            } else if (updates.age !== undefined) {
+                updatesForDb.age = Number(updates.age);
+            }
 
-    } else {
-        // This is for updating an existing user.
-        let updatesForDb: { [key: string]: any } = { ...otherUpdates };
-        
-        if (updates.age === '' || updates.age === undefined || updates.age === null) {
-            updatesForDb.age = null;
-        } else if (updates.age !== undefined) {
-            updatesForDb.age = Number(updates.age);
-        }
-
-        if (Object.keys(updatesForDb).length > 0) {
-            await updateDoc(userRef, updatesForDb);
-        }
-
-        // Handle data propagation to other collections if needed.
-        const propagationUpdates: { [key: string]: any } = {};
-        if (updates.username) propagationUpdates.username = updates.username;
-        if (updates.photoURL) propagationUpdates.userPhotoURL = updates.photoURL;
-        if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
-
-        if (Object.keys(propagationUpdates).length > 0) {
-            try {
-                await Promise.all([
-                    updateUserPosts(userId, propagationUpdates),
-                    updateUserComments(userId, propagationUpdates),
-                    updateUserDmMessages(userId, propagationUpdates),
-                ]);
-            } catch(err) {
-                console.error("Propagation error:", err);
+            if (Object.keys(updatesForDb).length > 0) {
+                 transaction.update(userRef, updatesForDb);
             }
         }
+    });
 
-        // Also update the photo in Firebase Auth if it changed
-        if (updates.photoURL) {
-          try {
-            const auth = getAuth();
-            await auth.updateUser(userId, { photoURL: updates.photoURL });
-          } catch (e) {
-            console.error("Auth profile photo update failed:", e);
-          }
+    // --- Post-Transaction Operations ---
+    
+    // Handle data propagation to other collections if needed.
+    const propagationUpdates: { [key: string]: any } = {};
+    if (updates.username) propagationUpdates.username = updates.username;
+    if (updates.photoURL) propagationUpdates.userPhotoURL = updates.photoURL;
+    if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
+
+    if (Object.keys(propagationUpdates).length > 0) {
+        try {
+            await Promise.all([
+                updateUserPosts(userId, propagationUpdates),
+                updateUserComments(userId, propagationUpdates),
+                updateUserDmMessages(userId, propagationUpdates),
+            ]);
+        } catch(err) {
+            console.error("Propagation error:", err);
         }
+    }
+
+    // Also update the photo and username in Firebase Auth if it changed
+    if (updates.photoURL || updates.username) {
+      try {
+        const auth = getAuth();
+        const authUpdates: { photoURL?: string; displayName?: string } = {};
+        if (updates.photoURL) authUpdates.photoURL = updates.photoURL;
+        if (updates.username) authUpdates.displayName = updates.username;
+        await auth.updateUser(userId, authUpdates);
+      } catch (e) {
+        console.error("Auth profile update failed:", e);
+      }
     }
 
     revalidatePath(`/profile/${userId}`, 'layout');

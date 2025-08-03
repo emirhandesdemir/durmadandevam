@@ -71,13 +71,13 @@ export async function updateUserComments(uid: string, updates: { [key: string]: 
     await processQueryInBatches(commentsQuery, propagationUpdates);
 }
 
-export async function updateUserDmMessages(uid: string, updates: { [key: string]: any }) {
+export async function updateUserDmMessages(uid: string, updates: { [key:string]: any }) {
     if (!uid || !updates || Object.keys(updates).length === 0) return;
 
     const propagationUpdates: { [key: string]: any } = {};
-    if (updates.username) propagationUpdates['participantInfo.' + uid + '.username'] = updates.username;
-    if (updates.userPhotoURL !== undefined) propagationUpdates['participantInfo.' + uid + '.photoURL'] = updates.userPhotoURL;
-    if (updates.userAvatarFrame !== undefined) propagationUpdates['participantInfo.' + uid + '.selectedAvatarFrame'] = updates.userAvatarFrame;
+    if (updates.username) propagationUpdates[`participantInfo.${uid}.username`] = updates.username;
+    if (updates.userPhotoURL !== undefined) propagationUpdates[`participantInfo.${uid}.photoURL`] = updates.userPhotoURL;
+    if (updates.userAvatarFrame !== undefined) propagationUpdates[`participantInfo.${uid}.selectedAvatarFrame`] = updates.userAvatarFrame;
 
     if (Object.keys(propagationUpdates).length === 0) return;
     
