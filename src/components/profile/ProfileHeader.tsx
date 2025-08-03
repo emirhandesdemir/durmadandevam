@@ -3,7 +3,7 @@
 
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff, UserCheck, Crown, Bookmark, BadgeCheck } from 'lucide-react';
+import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff, UserCheck, Crown, Bookmark, BadgeCheck, Award } from 'lucide-react';
 import FollowButton from './FollowButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
@@ -21,6 +21,7 @@ import { Loader2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import type { UserProfile } from '@/lib/types';
 import { Timestamp } from 'firebase/firestore';
+import BadgesDialog from './BadgesDialog';
 
 interface ProfileHeaderProps {
   profileUser: UserProfile;
@@ -36,6 +37,7 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
   const [sendDiamondOpen, setSendDiamondOpen] = useState(false);
   const [isBlocking, setIsBlocking] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isBadgesOpen, setIsBadgesOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -48,9 +50,6 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
   const haveIBlockedThisUser = currentUserData?.blockedUsers?.includes(profileUser.uid);
   // Safely parse timestamp string from server component
   const isPremium = isClient && profileUser.premiumUntil && new Date(profileUser.premiumUntil as any) > new Date();
-  
-  // Use a more specific check for the judge role.
-  const isJudge = profileUser?.role === 'admin' && profileUser.giftLevel === 10;
   
   const isVerified = isClient && (profileUser.emailVerified || (currentUserAuth?.emailVerified && isOwnProfile));
 
@@ -160,12 +159,17 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
             "mt-4 w-full max-w-sm flex justify-center items-center gap-2"
         )}>
            {isOwnProfile ? (
-              <Button asChild variant="secondary" className="flex-1">
-                  <Link href="/profile">
-                    <Settings className="mr-2 h-4 w-4"/>
-                    Profili ve Ayarları Düzenle
-                  </Link>
-              </Button>
+              <>
+                <Button asChild variant="secondary" className="flex-1">
+                    <Link href="/profile">
+                      <Settings className="mr-2 h-4 w-4"/>
+                      Profili ve Ayarları Düzenle
+                    </Link>
+                </Button>
+                 <Button variant="outline" size="icon" onClick={() => setIsBadgesOpen(true)}>
+                    <Award />
+                </Button>
+              </>
             ) : haveIBlockedThisUser ? (
                  <Button onClick={handleUnblockUser} variant="destructive" className="w-full" disabled={isBlocking}>
                     {isBlocking ? <Loader2 className="animate-spin mr-2"/> : <UserCheck className="mr-2 h-4 w-4"/>}
@@ -184,6 +188,9 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
                         <Button variant="outline" size="icon"><MoreHorizontal /></Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
+                        <DropdownMenuItem onSelect={() => setIsBadgesOpen(true)}>
+                          <Award className="mr-2 h-4 w-4"/>Rozetler
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setSendDiamondOpen(true)} disabled={!areMutuals}>
                           <Gem className="mr-2 h-4 w-4"/>Elmas Gönder
                         </DropdownMenuItem>
@@ -214,6 +221,11 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
         isOpen={isReportOpen}
         onOpenChange={setIsReportOpen}
         target={{ type: 'user', id: profileUser.uid, name: profileUser.username }}
+      />
+       <BadgesDialog
+        isOpen={isBadgesOpen}
+        onOpenChange={setIsBadgesOpen}
+        user={profileUser}
       />
     </>
   );
