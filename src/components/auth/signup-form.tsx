@@ -13,6 +13,7 @@ import { auth, db } from "@/lib/firebase";
 import { creditReferrer } from "@/lib/actions/diamondActions";
 import { checkUsernameExists } from "@/lib/actions/userActions";
 import Image from "next/image";
+import multiavatar from '@multiavatar/multiavatar';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -88,11 +89,12 @@ export default function SignUpForm() {
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const user = userCredential.user;
             
-            const defaultAvatarUrl = emojiToDataUrl('🙂');
+            const randomAvatarSvg = multiavatar(user.uid);
+            const avatarDataUrl = `data:image/svg+xml;base64,${btoa(randomAvatarSvg)}`;
 
             await updateProfile(user, {
                 displayName: values.username,
-                photoURL: defaultAvatarUrl,
+                photoURL: avatarDataUrl,
             });
             
             const isAdminEmail = values.email === 'admin@example.com';
@@ -113,7 +115,7 @@ export default function SignUpForm() {
                 uid: user.uid,
                 username: values.username,
                 username_lowercase: values.username.toLowerCase(),
-                photoURL: defaultAvatarUrl,
+                photoURL: avatarDataUrl,
                 bio: null,
                 age: null,
                 city: null, 
@@ -153,7 +155,7 @@ export default function SignUpForm() {
 
             if (ref) {
                 try {
-                    await creditReferrer(ref, { uid: user.uid, username: values.username, photoURL: defaultAvatarUrl });
+                    await creditReferrer(ref, { uid: user.uid, username: values.username, photoURL: avatarDataUrl });
                 } catch (e) {
                     console.error("Referrer credit failed, but signup continues:", e);
                 }
