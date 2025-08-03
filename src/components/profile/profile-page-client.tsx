@@ -131,6 +131,11 @@ export default function ProfilePageClient() {
                     <SettingsHeader title="Görünüm" />
                     <SettingsLink href="/profile/appearance" icon={Palette} title="Görünüm Ayarları" />
                 </div>
+                
+                <div className="border-b">
+                    <SettingsHeader title="İçerik Tercihleri" />
+                    <SettingsLink href="/profile/hidden-content" icon={EyeOff} title="Gizlenen İçerikler" />
+                </div>
 
                 <div className="border-b">
                     <SettingsHeader title="Diğer" />
