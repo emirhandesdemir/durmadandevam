@@ -133,8 +133,8 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
                     <Button variant="outline" size="icon"><MoreHorizontal /></Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem onSelect={() => setIsReportOpen(true)}>Şikayet Et</DropdownMenuItem>
-                    <DropdownMenuItem onSelect={handleBlockUser} className="text-destructive focus:text-destructive">
+                    <DropdownMenuItem onClick={() => setIsReportOpen(true)}>Şikayet Et</DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleBlockUser} className="text-destructive focus:text-destructive">
                        {isBlocking ? <Loader2 className="animate-spin mr-2"/> : <ShieldOff className="mr-2 h-4 w-4"/>}
                         Engelle
                     </DropdownMenuItem>
