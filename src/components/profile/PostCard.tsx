@@ -117,6 +117,11 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     const timeAgo = createdAtDate.getTime() !== 0 ? formatDistanceToNow(createdAtDate, { addSuffix: true, locale: tr }) : "az önce";
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+    // Use current user data if it's their own post for real-time updates
+    const postUserPhoto = isOwner ? currentUserData?.photoURL : post.userPhotoURL;
+    const postUserAvatarFrame = isOwner ? currentUserData?.selectedAvatarFrame : post.userAvatarFrame;
+    const postUsername = isOwner ? currentUserData?.username : post.username;
+
     useEffect(() => {
         setEditedText(post.text || '');
     }, [post.text]);
@@ -238,15 +243,15 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                 <div className="flex items-center gap-3 p-4">
                      <Link href={`/profile/${post.uid}`}>
                         <AvatarWithFrame
-                            photoURL={post.userPhotoURL}
-                            selectedAvatarFrame={post.userAvatarFrame}
+                            photoURL={postUserPhoto}
+                            selectedAvatarFrame={postUserAvatarFrame}
                             className="h-10 w-10"
-                            fallback={post.username?.charAt(0).toUpperCase()}
+                            fallback={postUsername?.charAt(0).toUpperCase()}
                         />
                     </Link>
                     <div className="flex-1">
                         <div className="flex items-center gap-1.5">
-                            <Link href={`/profile/${post.uid}`}><p className="font-bold text-sm hover:underline">{post.username}</p></Link>
+                            <Link href={`/profile/${post.uid}`}><p className="font-bold text-sm hover:underline">{postUsername}</p></Link>
                             {post.emailVerified && (
                                 <TooltipProvider>
                                     <Tooltip>
@@ -326,7 +331,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                                         <div className="flex justify-end gap-2"><Button variant="ghost" size="sm" onClick={handleCancelEdit}>İptal</Button><Button size="sm" onClick={handleSaveEdit} disabled={isSaving}>{isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Kaydet</Button></div>
                                     </div>
                                 ) : (
-                                    <div className="flex items-start"><Link href={`/profile/${post.uid}`} className="font-bold hover:underline shrink-0">{post.username}</Link><span className="ml-1"><ReadMore text={post.text} /></span></div>
+                                    <div className="flex items-start"><Link href={`/profile/${post.uid}`} className="font-bold hover:underline shrink-0">{postUsername}</Link><span className="ml-1"><ReadMore text={post.text} /></span></div>
                                 )}
                             </div>
                         )}
