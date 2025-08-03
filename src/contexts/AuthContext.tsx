@@ -109,8 +109,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) {
         setLoading(false);
-        // If not a protected route, allow access. Otherwise, redirect to login.
-        // The root page `/` is special and will handle its own redirect logic.
         const isProtectedRoute = pathname.startsWith('/(main)') || pathname.startsWith('/wallet') || pathname.startsWith('/admin') || pathname.startsWith('/profile');
         if (isProtectedRoute && pathname !== '/') {
             router.replace('/login');
@@ -141,8 +139,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (isAuthPage) {
                 router.replace('/home');
             }
-        } else { 
-            console.log("Waiting for user document to be created...");
         }
         setLoading(false);
     }, (error) => {

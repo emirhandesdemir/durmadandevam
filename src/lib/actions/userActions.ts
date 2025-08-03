@@ -4,7 +4,7 @@
 import { db, storage } from '@/lib/firebase';
 import type { Post, Report, UserProfile } from '../types';
 import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, collectionGroup, deleteDoc, setDoc, runTransaction } from 'firebase/firestore';
-import { ref as storageRef, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
+import { ref as storageRef, deleteObject, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
 import { getAuth } from '../firebaseAdmin';
@@ -60,13 +60,10 @@ export async function updateUserProfile(updates: {
         updatesForDb.age = Number(updates.age);
     }
     
-    // Start a transaction to handle all operations atomically
     await runTransaction(db, async (transaction) => {
         const userSnap = await transaction.get(userRef);
-        const userData = userSnap.exists() ? userSnap.data() : {};
-
-        // If it's a new user or the document doesn't exist, we must use set()
-        if (isNewUser || !userSnap.exists()) {
+        
+        if (!userSnap.exists()) {
             const counterRef = doc(db, 'config', 'counters');
             const counterDoc = await transaction.get(counterRef);
             const currentTag = counterDoc.exists() ? counterDoc.data().userTag || 1000 : 1000;
@@ -99,11 +96,11 @@ export async function updateUserProfile(updates: {
             
              delete updatesForDb.isNewUser;
              delete updatesForDb.referredBy;
-             // Use set to create the document with all initial and updated data
              transaction.set(userRef, { ...initialData, ...updatesForDb });
              
-        } else { // Document exists, so we can update it
-            // Assign uniqueTag if it doesn't exist (for existing users)
+        } else {
+            const userData = userSnap.data();
+            
             if (!userData.uniqueTag) {
                 const counterRef = doc(db, 'config', 'counters');
                 const counterDoc = await transaction.get(counterRef);
@@ -115,7 +112,7 @@ export async function updateUserProfile(updates: {
 
             if (updates.email && updates.email !== userData.email) {
                 updatesForDb.email = updates.email;
-                updatesForDb.emailVerified = false; // Reset verification status on email change
+                updatesForDb.emailVerified = false;
             }
 
             if (updates.location) {
@@ -143,7 +140,6 @@ export async function updateUserProfile(updates: {
         }
     });
 
-    // Propagate changes to other collections
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
     if (updates.photoURL) propagationUpdates.userPhotoURL = updates.photoURL;
@@ -158,8 +154,6 @@ export async function updateUserProfile(updates: {
             ]);
         } catch(err) {
             console.error("Propagation error:", err);
-            // This is a background task, so we don't want to fail the whole request
-            // but we should log it.
         }
     }
 

@@ -86,15 +86,8 @@ export default function SignUpForm() {
                 }
             }
 
-            // Create user profile in Firestore using a server action.
-            // This action now also handles generating the uniqueTag.
-            await updateUserProfile({
-                userId: user.uid,
-                isNewUser: true,
-                username: values.username,
-                email: values.email,
-                referredBy: ref,
-            });
+            // Let AuthContext handle user document creation.
+            // This prevents race conditions.
 
             if (ref) {
                 try {
