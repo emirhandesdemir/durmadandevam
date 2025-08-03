@@ -117,10 +117,10 @@ export default function SystemSettingsPage() {
                         <CardHeader>
                             <div className="flex items-center gap-3">
                                 <Gamepad2 className="h-6 w-6 text-muted-foreground" />
-                                <CardTitle>Quiz Oyunu Ayarları</CardTitle>
+                                <CardTitle>Otomatik Quiz Ayarları</CardTitle>
                             </div>
                             <CardDescription>
-                                Oda içi quiz oyununun çalışma şeklini ve ödüllerini buradan yönetin.
+                                Oda içi quiz oyununun otomatik çalışma şeklini ve ödüllerini buradan yönetin.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
@@ -131,16 +131,16 @@ export default function SystemSettingsPage() {
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <FormField control={form.control} name="gameIntervalMinutes" render={({ field }) => (
-                                        <FormItem><FormLabel>Oyun Aralığı (Dakika)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                        <FormItem><FormLabel>Oyun Tekrar Aralığı (Dakika)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                     <FormField control={form.control} name="cooldownSeconds" render={({ field }) => (
+                                        <FormItem><FormLabel>Oyun Sonrası Bekleme (Saniye)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                                     )} />
                                     <FormField control={form.control} name="questionTimerSeconds" render={({ field }) => (
                                         <FormItem><FormLabel>Soru Süresi (Saniye)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                                     )} />
                                     <FormField control={form.control} name="rewardAmount" render={({ field }) => (
                                         <FormItem><FormLabel>Doğru Cevap Ödülü (Elmas)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                                    )} />
-                                    <FormField control={form.control} name="cooldownSeconds" render={({ field }) => (
-                                        <FormItem className="md:col-span-2"><FormLabel>Oyun Sonrası Bekleme (Saniye)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                                     )} />
                                 </div>
                             )}

@@ -22,8 +22,9 @@ import { startGameInRoom } from '@/lib/actions/gameActions';
 import type { Room } from '@/lib/types';
 import { Puzzle, Loader2 } from 'lucide-react';
 
-const gameOptions = [
-  { id: 'quiz', name: 'Quiz Oyunu', icon: Puzzle, minPlayers: 1 },
+// Quiz oyunu kaldırıldı, bu component şimdilik boş.
+const gameOptions: any[] = [
+  // { id: 'quiz', name: 'Quiz Oyunu', icon: Puzzle, minPlayers: 1 },
 ];
 
 interface GameLobbyDialogProps {
@@ -36,7 +37,7 @@ interface GameLobbyDialogProps {
 export default function GameLobbyDialog({ isOpen, onOpenChange, roomId, participants }: GameLobbyDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [selectedGameId, setSelectedGameId] = useState<string>('quiz');
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleStartGame = async () => {
@@ -72,19 +73,23 @@ export default function GameLobbyDialog({ isOpen, onOpenChange, roomId, particip
         </DialogHeader>
 
         <div className="py-4 flex-1">
-            <RadioGroup value={selectedGameId || ''} onValueChange={(v) => setSelectedGameId(v)}>
-              <div className="space-y-2">
-                {gameOptions.map(game => (
-                  <Label key={game.id} htmlFor={game.id} className="flex items-center gap-4 rounded-lg border p-3 cursor-pointer hover:bg-accent has-[:checked]:border-primary">
-                    <game.icon className="h-6 w-6 text-primary" />
-                    <div className="flex-1">
-                      <p className="font-semibold">{game.name}</p>
+            {gameOptions.length > 0 ? (
+                 <RadioGroup value={selectedGameId || ''} onValueChange={(v) => setSelectedGameId(v)}>
+                    <div className="space-y-2">
+                        {gameOptions.map(game => (
+                        <Label key={game.id} htmlFor={game.id} className="flex items-center gap-4 rounded-lg border p-3 cursor-pointer hover:bg-accent has-[:checked]:border-primary">
+                            <game.icon className="h-6 w-6 text-primary" />
+                            <div className="flex-1">
+                            <p className="font-semibold">{game.name}</p>
+                            </div>
+                            <RadioGroupItem value={game.id} id={game.id} />
+                        </Label>
+                        ))}
                     </div>
-                    <RadioGroupItem value={game.id} id={game.id} />
-                  </Label>
-                ))}
-              </div>
-            </RadioGroup>
+                    </RadioGroup>
+            ) : (
+                <p className="text-center text-sm text-muted-foreground">Şu anda mevcut oyun yok.</p>
+            )}
         </div>
 
         <DialogFooter>

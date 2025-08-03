@@ -22,10 +22,12 @@ import {
   } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { deleteRoomAsOwner, extendRoomTime, increaseParticipantLimit, extendRoomFor30Days } from "@/lib/actions/roomActions";
-import { Trash2, Loader2, ShieldAlert, Clock, UserPlus, Gem, CalendarDays } from "lucide-react";
+import { deleteRoomAsOwner, extendRoomTime, increaseParticipantLimit, extendRoomFor30Days, updateRoomSettings } from "@/lib/actions/roomActions";
+import { Trash2, Loader2, ShieldAlert, Clock, UserPlus, Gem, CalendarDays, Gamepad2, Puzzle } from "lucide-react";
 import type { Room } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
+import { Switch } from "../ui/switch";
+import { Label } from "../ui/label";
 
 interface RoomManagementDialogProps {
   isOpen: boolean;
@@ -41,7 +43,14 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
   const [isExtending, setIsExtending] = useState(false);
   const [isIncreasingLimit, setIsIncreasingLimit] = useState(false);
   const [isExtending30Days, setIsExtending30Days] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
   
+  const [autoQuizEnabled, setAutoQuizEnabled] = useState(room?.autoQuizEnabled ?? true);
+
+
+  if (!room) return null;
+  const isHost = user?.uid === room.createdBy.uid;
+
   const handleDeleteRoom = async () => {
     if (!room || !user) return;
     setIsDeleting(true);
@@ -125,9 +134,20 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
         setIsExtending30Days(false);
     }
   }
+  
+  const handleSettingsSave = async () => {
+      if (!room || !user || !isHost) return;
+      setIsSavingSettings(true);
+      try {
+          await updateRoomSettings(room.id, { autoQuizEnabled });
+          toast({ description: "Oda ayarları kaydedildi."})
+      } catch (error: any) {
+           toast({ variant: 'destructive', description: "Ayarlar kaydedilirken hata." });
+      } finally {
+          setIsSavingSettings(false);
+      }
+  }
 
-
-  if (!room) return null;
 
   return (
     <>
@@ -141,6 +161,24 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
           </DialogHeader>
 
           <div className="py-4 space-y-4">
+            <div className="space-y-2 rounded-lg border p-4">
+                <div className="flex items-center justify-between">
+                    <Label htmlFor="auto-quiz" className="font-semibold flex items-center gap-2">
+                        <Puzzle className="h-4 w-4 text-muted-foreground"/>
+                        Otomatik Quizi Etkinleştir
+                    </Label>
+                    <Switch
+                        id="auto-quiz"
+                        checked={autoQuizEnabled}
+                        onCheckedChange={setAutoQuizEnabled}
+                    />
+                </div>
+                 <Button size="sm" onClick={handleSettingsSave} disabled={isSavingSettings} className="w-full">
+                    {isSavingSettings && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                    Oyun Ayarını Kaydet
+                </Button>
+            </div>
+
              <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
                 <h4 className="font-bold text-foreground">Süreyi Uzat (+20 dk)</h4>
