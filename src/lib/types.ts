@@ -130,6 +130,7 @@ export interface UserProfile {
     photoURL: string | null;
     profileEmoji?: string | null;
     bio: string | null;
+    phoneNumber?: string | null;
     postCount: number;
     role: 'admin' | 'user';
     gender?: 'male' | 'female';

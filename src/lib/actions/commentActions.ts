@@ -14,14 +14,11 @@ import {
 } from "firebase/firestore";
 import { createNotification } from "./notificationActions";
 import { findUserByUsername } from "../server-utils";
-import { logTransaction } from "./transactionActions";
 
 interface AddCommentArgs {
     postId: string;
     postOwnerId: string;
     text: string;
-    giftId: string | null;
-    giftCost: number;
     user: {
         uid: string;
         displayName: string | null;
@@ -65,39 +62,14 @@ async function handleMentions(text: string, postId: string, sender: { uid: strin
 }
 
 
-export async function addComment({ postId, postOwnerId, text, giftId, giftCost, user, replyTo }: AddCommentArgs) {
+export async function addComment({ postId, postOwnerId, text, user, replyTo }: AddCommentArgs) {
     if (!user || !user.uid) throw new Error("Yetkilendirme hatası.");
     if (!text.trim()) throw new Error("Yorum metni boş olamaz.");
 
     const senderRef = doc(db, 'users', user.uid);
     const postRef = doc(db, "posts", postId);
-    const postOwnerRef = doc(db, 'users', postOwnerId);
     const commentsColRef = collection(postRef, "comments");
     const batch = writeBatch(db);
-
-    // Handle gift cost deduction
-    if (giftId && giftCost > 0) {
-        const senderSnap = await getDoc(senderRef);
-        if (!senderSnap.exists() || (senderSnap.data().diamonds || 0) < giftCost) {
-            throw new Error("Hediye göndermek için yeterli elmas yok.");
-        }
-        batch.update(senderRef, { diamonds: increment(-giftCost) });
-        batch.update(postOwnerRef, { profileValue: increment(giftCost) });
-        
-        await logTransaction(null, user.uid, {
-            type: 'gift_sent',
-            amount: -giftCost,
-            description: `Yoruma hediye: ${giftId}`,
-            relatedUserId: postOwnerId,
-        }, batch);
-
-        await logTransaction(null, postOwnerId, {
-            type: 'gift_received',
-            amount: giftCost,
-            description: `${user.displayName} kullanıcısından yoruma hediye`,
-            relatedUserId: user.uid,
-        }, batch);
-    }
 
     const newCommentRef = doc(commentsColRef); 
     batch.set(newCommentRef, {
@@ -107,7 +79,6 @@ export async function addComment({ postId, postOwnerId, text, giftId, giftCost, 
         userAvatarFrame: user.userAvatarFrame || '',
         userRole: user.role || 'user',
         text: text,
-        giftId: giftId || null,
         createdAt: serverTimestamp(),
         replyTo: replyTo || null,
     });

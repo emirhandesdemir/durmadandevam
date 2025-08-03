@@ -72,7 +72,8 @@ export async function updateUserProfile(updates: {
     selectedBubble?: string;
     selectedAvatarFrame?: string;
     interests?: string[];
-    location?: { latitude: number; longitude: number; city?: string | null; country?: string | null; } | null
+    location?: { latitude: number; longitude: number; city?: string | null; country?: string | null; } | null;
+    phoneNumber?: string | null;
 }) {
     const { userId, avatarId, ...otherUpdates } = updates;
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
