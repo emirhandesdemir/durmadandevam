@@ -34,7 +34,12 @@ export default function PostsFeed() {
     };
 
     useEffect(() => {
-        if (authLoading) return;
+        // Fix: Add a guard clause to ensure the user object is loaded before querying.
+        // This prevents passing `undefined` to a Firestore `where` clause.
+        if (authLoading || !user) {
+            setLoading(false);
+            return;
+        }
 
         const postsRef = collection(db, 'posts');
         const q = query(postsRef, orderBy('createdAt', 'desc'), limit(50));
