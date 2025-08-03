@@ -12,7 +12,7 @@ import { deleteRoomWithSubcollections } from '../firestoreUtils';
 import { updateUserPosts, updateUserComments, updateUserDmMessages } from './propagationActions';
 import { v4 as uuidv4 } from 'uuid';
 import { createNotification } from './notificationActions';
-import { updateEmail, sendEmailVerification as sendFirebaseEmailVerification } from 'firebase/auth';
+import { emojiToDataUrl } from '../utils';
 
 
 export async function sendVerificationEmail(userId: string) {
@@ -73,10 +73,16 @@ export async function updateUserProfile(updates: {
     
     // Handle photoURL from data URL
     if (updates.photoURL?.startsWith('data:image')) {
-        const imageBuffer = Buffer.from(updates.photoURL.split(',')[1], 'base64');
-        const imagePath = `avatars/${userId}/profile.png`; // Simplified path
+        const match = updates.photoURL.match(/^data:(image\/\w+);base64,(.+)$/);
+        if (!match) throw new Error("Geçersiz resim formatı.");
+        
+        const contentType = match[1]; // e.g., "image/png"
+        const imageBuffer = Buffer.from(match[2], 'base64');
+
+        const imagePath = `avatars/${userId}/profile.png`; // Use a consistent name
         const imageStorageRef = storageRef(storage, imagePath);
-        await uploadBytes(imageStorageRef, imageBuffer, { contentType: 'image/png' });
+        
+        await uploadBytes(imageStorageRef, imageBuffer, { contentType });
         updatesForDb.photoURL = await getDownloadURL(imageStorageRef);
     }
 
@@ -85,14 +91,10 @@ export async function updateUserProfile(updates: {
 
     // Check for username change and uniqueness
     if (updates.username && updates.username !== userData?.username) {
-        const existingUser = await checkUsernameExists(updates.username);
-        if (existingUser) {
-            const usersRef = collection(db, 'users');
-            const q = query(usersRef, where('username_lowercase', '==', updates.username.toLowerCase()), limit(1));
-            const querySnapshot = await getDocs(q);
-            if (!querySnapshot.empty && querySnapshot.docs[0].id !== userId) {
-                 throw new Error("Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor.");
-            }
+        const q = query(collection(db, 'users'), where('username_lowercase', '==', updates.username.toLowerCase()), limit(1));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty && querySnapshot.docs[0].id !== userId) {
+             throw new Error("Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor.");
         }
         updatesForDb.username = updates.username;
         updatesForDb.username_lowercase = updates.username.toLowerCase();
@@ -140,7 +142,7 @@ export async function updateUserProfile(updates: {
             emailVerified: false,
             username: updates.username,
             username_lowercase: updates.username?.toLowerCase(),
-            photoURL: null,
+            photoURL: updatesForDb.photoURL || null, // Use the newly uploaded URL if available
             bio: null,
             age: null,
             city: null, 
@@ -210,7 +212,7 @@ export async function updateUserProfile(updates: {
 
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (updatesForDb.photoURL) propagationUpdates.photoURL = updatesForDb.photoURL;
+    if (updatesForDb.photoURL) propagationUpdates.userPhotoURL = updatesForDb.photoURL;
     if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
 
     if (Object.keys(propagationUpdates).length > 0) {
