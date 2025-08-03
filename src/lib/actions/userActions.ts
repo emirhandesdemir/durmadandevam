@@ -56,10 +56,12 @@ export async function updateUserProfile(updates: {
     if (photoDataUrl) {
         try {
             const imageRef = storageRef(storage, `avatars/${userId}/profile.png`);
+            // The Firebase SDK for JS (v9+) correctly handles data URLs with uploadString.
             await uploadString(imageRef, photoDataUrl, 'data_url');
             finalPhotoURL = await getDownloadURL(imageRef);
         } catch (error) {
             console.error("Firebase Storage upload failed:", error);
+            // Provide a more user-friendly error message
             throw new Error("Profil fotoğrafı yüklenemedi.");
         }
     }

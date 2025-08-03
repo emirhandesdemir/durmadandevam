@@ -31,6 +31,7 @@ import { giftLevelThresholds } from "@/lib/gifts";
 import { Progress } from "@/components/ui/progress";
 import ImageCropperDialog from "../common/ImageCropperDialog";
 import AnimatedLogoLoader from "../common/AnimatedLogoLoader";
+import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
 
 const bubbleOptions = [
     { id: "", name: "Varsayılan", isPremium: false },
@@ -137,6 +138,7 @@ export default function ProfilePageClient() {
                 userId: user.uid,
                 photoURL: croppedDataUrl,
             });
+
             if (result.success) {
                 toast({ title: "Başarılı!", description: "Profil fotoğrafınız güncellendi." });
                 await refreshUserData();
@@ -649,11 +651,11 @@ export default function ProfilePageClient() {
             <AnimatePresence>
             {hasChanges && (
                 <motion.div
-                    initial={{ y: "100%", opacity: 0 }}
+                    initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: "100%", opacity: 0 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    className="fixed bottom-4 left-4 z-[60]"
+                    exit={{ y: 20, opacity: 0 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    className="fixed bottom-20 left-4 z-[60]"
                 >
                     <Button onClick={handleSaveChanges} disabled={isSaving} size="lg" className="shadow-lg">
                         {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
