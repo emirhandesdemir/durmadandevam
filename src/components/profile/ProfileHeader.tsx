@@ -22,6 +22,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/
 import type { UserProfile } from '@/lib/types';
 import { Timestamp } from 'firebase/firestore';
 import BadgesDialog from './BadgesDialog';
+import AvatarWithFrame from '../common/AvatarWithFrame';
+
 
 interface ProfileHeaderProps {
   profileUser: UserProfile;
@@ -99,12 +101,13 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
     <>
       <div className={cn("flex flex-col items-center text-center p-4", isPremium && "judge-profile-bg")}>
         {/* Avatar */}
-         <div className={cn("avatar-frame-wrapper", profileUser.selectedAvatarFrame)}>
-            <Avatar className="relative z-[1] h-24 w-24 md:h-28 md:w-28 border-4 border-background shadow-lg">
-                <AvatarImage src={profileUser.photoURL || undefined} />
-                <AvatarFallback className="text-5xl">{profileUser.username?.charAt(0).toUpperCase()}</AvatarFallback>
-            </Avatar>
-        </div>
+        <AvatarWithFrame 
+            photoURL={profileUser.photoURL}
+            selectedAvatarFrame={profileUser.selectedAvatarFrame}
+            className="h-24 w-24 md:h-28 md:w-28 border-4 border-background shadow-lg"
+            fallback={profileUser.username?.charAt(0).toUpperCase()}
+            fallbackClassName="text-5xl"
+        />
 
         {/* User Info */}
         <div className="mt-4">

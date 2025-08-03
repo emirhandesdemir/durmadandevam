@@ -31,6 +31,7 @@ import { giftLevelThresholds } from "@/lib/gifts";
 import { Progress } from "@/components/ui/progress";
 import AnimatedLogoLoader from "../common/AnimatedLogoLoader";
 import { useRouter } from 'next/navigation';
+import AvatarWithFrame from "../common/AvatarWithFrame";
 
 const bubbleOptions = [
     { id: "", name: "Varsayılan", isPremium: false },
@@ -261,12 +262,13 @@ export default function ProfilePageClient() {
                     <CardContent className="space-y-4">
                         <div className="flex flex-col items-center gap-4">
                            <button onClick={() => router.push('/avatar-studio')} className="relative group rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-                               <div className={cn("avatar-frame-wrapper", userData.selectedAvatarFrame)}>
-                                    <Avatar className="relative z-[1] h-24 w-24 border-2 shadow-sm">
-                                        <AvatarImage src={userData.photoURL || undefined} />
-                                        <AvatarFallback className="text-4xl bg-primary/20">{userData.username?.charAt(0).toUpperCase()}</AvatarFallback>
-                                    </Avatar>
-                                </div>
+                                <AvatarWithFrame
+                                    photoURL={userData.photoURL}
+                                    selectedAvatarFrame={userData.selectedAvatarFrame}
+                                    className="h-24 w-24 border-2 shadow-sm"
+                                    fallback={userData.username?.charAt(0).toUpperCase()}
+                                    fallbackClassName="text-4xl bg-primary/20"
+                                />
                                 <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200">
                                     <Pencil className="h-8 w-8" />
                                 </div>
