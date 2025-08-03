@@ -16,7 +16,6 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   // Show a full-screen loader while auth data is being fetched.
-  // This is the primary fix: ensures we don't try to render anything until we have the data.
   if (loading) {
     return (
         <div className="flex h-screen w-full flex-col items-center justify-center bg-background">
@@ -25,9 +24,11 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Once loading is complete, we can safely check for the user and their role.
+  // Once loading is complete, check for user. If not present, redirect.
+  // We return a loader here as well to give the router time to redirect
+  // without attempting to render a broken UI state.
   if (!user || !userData) {
-     router.replace('/login'); // Redirect to login if user is not available after loading
+     router.replace('/login');
      return (
          <div className="flex h-screen w-full flex-col items-center justify-center bg-background">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -35,6 +36,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
      );
   }
   
+  // If user is present but not an admin, show access denied message.
   if (userData.role !== 'admin') {
       return (
           <div className="flex h-screen w-full flex-col items-center justify-center bg-background p-4 text-center">
