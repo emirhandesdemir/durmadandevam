@@ -2,179 +2,71 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2, Sliders, Wallet, HelpCircle, EyeOff } from "lucide-react";
+import { LogOut, Palette, Loader2, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2, Sliders, Wallet, HelpCircle, EyeOff, Bookmark, History, Bell, Globe, ChevronRight, Lock, KeyRound } from "lucide-react";
 import { useTheme } from "next-themes";
-import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { Switch } from "../ui/switch";
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { auth, db } from "@/lib/firebase";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../common/LanguageSwitcher";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from 'next/link';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import { updateUserProfile } from "@/lib/actions/userActions";
-import { Textarea } from "../ui/textarea";
-import BlockedUsersDialog from "./BlockedUsersDialog";
-import HiddenContentDialog from "./HiddenContentDialog";
-import { sendPasswordResetEmail, verifyBeforeUpdateEmail, updateEmail } from "firebase/auth";
+import { sendPasswordResetEmail } from "firebase/auth";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { deleteUserAccount } from "@/lib/actions/userActions";
-import AvatarWithFrame from "../common/AvatarWithFrame";
 import { Gem, BadgeCheck } from 'lucide-react';
+import { useRouter } from "next/navigation";
 
-const bubbleOptions = [
-    { id: "", name: "Varsayılan", isPremium: false },
-    { id: "bubble-style-1", name: "Neon Parti", isPremium: false },
-    { id: "bubble-style-2", name: "Okyanus", isPremium: false },
-    { id: "bubble-style-3", name: "Gün Batımı", isPremium: false },
-    { id: "bubble-style-4", name: "Orman", isPremium: false },
-    { id: "bubble-style-premium", name: "Altın", isPremium: true },
-];
+
+const SettingsLink = ({ href, icon: Icon, title, value, onClick }: { href?: string, icon: React.ElementType, title: string, value?: string, onClick?: () => void }) => {
+    const content = (
+         <div className="flex items-center justify-between w-full p-4 rounded-lg hover:bg-muted/50 transition-colors">
+            <div className="flex items-center gap-4">
+                <Icon className="h-6 w-6 text-muted-foreground" />
+                <span className="font-medium">{title}</span>
+            </div>
+            <div className="flex items-center gap-2 text-muted-foreground">
+                {value && <span className="text-sm">{value}</span>}
+                <ChevronRight className="h-5 w-5" />
+            </div>
+        </div>
+    );
+
+    if (href) {
+        return <Link href={href}>{content}</Link>;
+    }
+    return <button onClick={onClick} className="w-full text-left">{content}</button>;
+};
+
+const SettingsHeader = ({ title }: { title: string }) => (
+    <h2 className="px-4 pt-6 pb-2 text-lg font-bold text-primary">{title}</h2>
+);
+
 
 export default function ProfilePageClient() {
     const { user, userData, loading, handleLogout, refreshUserData } = useAuth();
     const { toast } = useToast();
-    const { theme, setTheme } = useTheme();
-    const { t } = useTranslation();
-    
-    // Form States
-    const [username, setUsername] = useState("");
-    const [bio, setBio] = useState("");
-    const [age, setAge] = useState<number | string>("");
-    const [gender, setGender] = useState<"male" | "female" | undefined>(undefined);
-    const [privateProfile, setPrivateProfile] = useState(false);
-    const [acceptsFollowRequests, setAcceptsFollowRequests] = useState(true);
-    const [showOnlineStatus, setShowOnlineStatus] = useState(true);
-    const [selectedBubble, setSelectedBubble] = useState("");
+    const router = useRouter();
+
     const [isSaving, setIsSaving] = useState(false);
-    const [interests, setInterests] = useState<string[]>([]);
-    const [currentInterest, setCurrentInterest] = useState("");
-    const [inviteLink, setInviteLink] = useState("");
-    const [isBlockedUsersOpen, setIsBlockedUsersOpen] = useState(false);
-    const [isHiddenContentOpen, setIsHiddenContentOpen] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [animatedNav, setAnimatedNav] = useState(true);
-    const [newEmail, setNewEmail] = useState("");
-    const [showEmailChange, setShowEmailChange] = useState(false);
 
-
-    const isPremium = userData?.premiumUntil && userData.premiumUntil.toDate() > new Date();
-    
-    useEffect(() => {
-        if (userData) {
-            setUsername(userData.username || "");
-            setBio(userData.bio || "");
-            setAge(userData.age || "");
-            setGender(userData.gender || undefined);
-            setPrivateProfile(userData.privateProfile || false);
-            setAcceptsFollowRequests(userData.acceptsFollowRequests ?? true);
-            setShowOnlineStatus(userData.showOnlineStatus ?? true);
-            setSelectedBubble(userData.selectedBubble || "");
-            setInterests(userData.interests || []);
-            setAnimatedNav(userData.animatedNav ?? true);
-        }
-        if (user) {
-            const encodedRef = btoa(user.uid);
-            setInviteLink(`${window.location.origin}/signup?ref=${encodedRef}`);
-        }
-    }, [userData, user]);
-    
-    const hasChanges = useMemo(() => {
-        if (!userData) return false;
-        const ageAsNumber = age === '' || age === undefined ? undefined : Number(age);
-        const userDataAge = userData.age === undefined ? undefined : Number(userData.age);
-
-        if (username.trim() !== (userData.username || '').trim()) return true;
-        if (bio.trim() !== (userData.bio || '').trim()) return true;
-        if (ageAsNumber !== userDataAge) return true;
-        if (gender !== userData.gender) return true;
-        if (privateProfile !== (userData.privateProfile || false)) return true;
-        if (acceptsFollowRequests !== (userData.acceptsFollowRequests ?? true)) return true;
-        if (showOnlineStatus !== (userData.showOnlineStatus ?? true)) return true;
-        if (selectedBubble !== (userData.selectedBubble || '')) return true;
-        if (JSON.stringify(interests.map(i => i.trim()).sort()) !== JSON.stringify((userData.interests || []).map(i => i.trim()).sort())) return true;
-        if (animatedNav !== (userData.animatedNav ?? true)) return true;
-    
-        return false;
-    }, [
-        username, bio, age, gender, privateProfile, 
-        acceptsFollowRequests, showOnlineStatus, selectedBubble, 
-        interests, animatedNav, userData
-    ]);
-    
     const handleSaveChanges = useCallback(async () => {
-        if (!user || !hasChanges) return;
-    
+        if (!user) return;
         setIsSaving(true);
+        // This is a placeholder for a more complex save logic if needed in the future
         try {
-            const updatesForDb: { [key: string]: any } = {};
-            if (username.trim() !== (userData?.username || '').trim()) updatesForDb.username = username.trim();
-            if (bio !== userData?.bio) updatesForDb.bio = bio;
-            if (Number(age) !== userData?.age) updatesForDb.age = Number(age) || null;
-            if (gender !== userData?.gender) updatesForDb.gender = gender || null;
-            if (privateProfile !== userData?.privateProfile) updatesForDb.privateProfile = privateProfile;
-            if (acceptsFollowRequests !== (userData?.acceptsFollowRequests ?? true)) updatesForDb.acceptsFollowRequests = acceptsFollowRequests;
-            if (showOnlineStatus !== (userData?.showOnlineStatus ?? true)) updatesForDb.showOnlineStatus = showOnlineStatus;
-            if (selectedBubble !== (userData?.selectedBubble || "")) updatesForDb.selectedBubble = selectedBubble;
-            if (JSON.stringify(interests.sort()) !== JSON.stringify((userData?.interests || []).sort())) updatesForDb.interests = interests;
-            if (animatedNav !== (userData?.animatedNav ?? true)) updatesForDb.animatedNav = animatedNav;
-            
-            if (Object.keys(updatesForDb).length > 0) {
-                 await updateUserProfile({ userId: user.uid, ...updatesForDb });
-            }
-            
-            await refreshUserData(); // Refresh data in context after saving
+            await refreshUserData(); 
             toast({ title: "Başarılı!", description: "Profiliniz başarıyla güncellendi." });
-
         } catch (error: any) {
             toast({ title: "Hata", description: error.message || "Profil güncellenirken bir hata oluştu.", variant: "destructive" });
         } finally {
             setIsSaving(false);
         }
-    }, [user, userData, hasChanges, username, bio, age, gender, privateProfile, acceptsFollowRequests, showOnlineStatus, selectedBubble, interests, animatedNav, toast, refreshUserData]);
-
-    const handleChangeEmail = async () => {
-        if (!user || !newEmail || !user.email) return;
-        setIsSaving(true);
-        try {
-            if (user.emailVerified) {
-                await verifyBeforeUpdateEmail(user, newEmail);
-                toast({
-                    title: 'Onay Gerekli',
-                    description: `E-posta adresinizi güncellemek için ${user.email} adresine gönderilen linke tıklayın.`
-                });
-            } else {
-                await updateEmail(user, newEmail);
-                await updateUserProfile({ userId: user.uid, email: newEmail });
-                toast({
-                    title: 'E-posta Güncellendi',
-                    description: 'E-posta adresiniz başarıyla değiştirildi. Lütfen yeni adresinizi doğrulayın.'
-                });
-            }
-            setShowEmailChange(false);
-            setNewEmail("");
-            await refreshUserData();
-        } catch (error: any) {
-            console.error("Email change error:", error);
-            let desc = "E-posta adresi güncellenirken bir hata oluştu.";
-            if (error.code === 'auth/email-already-in-use') {
-                desc = "Bu e-posta adresi zaten başka bir hesap tarafından kullanılıyor.";
-            } else if (error.code === 'auth/requires-recent-login') {
-                desc = "Bu hassas bir işlem. Lütfen çıkış yapıp tekrar giriş yaptıktan sonra deneyin.";
-            }
-            toast({ variant: 'destructive', description: desc });
-        } finally {
-            setIsSaving(false);
-        }
-    };
+    }, [user, refreshUserData, toast]);
     
     const handlePasswordReset = async () => {
         if (!user?.email) {
@@ -209,22 +101,6 @@ export default function ProfilePageClient() {
         }
     }
     
-    const handleAddInterest = () => {
-        const newInterest = currentInterest.trim();
-        if (newInterest && !interests.includes(newInterest) && interests.length < 10) {
-            setInterests([...interests, newInterest]);
-            setCurrentInterest('');
-        }
-    };
-    
-    const handleRemoveInterest = (interestToRemove: string) => {
-        setInterests(interests.filter(i => i !== interestToRemove));
-    };
-    
-    const copyToClipboard = () => {
-        navigator.clipboard.writeText(inviteLink);
-        toast({ description: "Davet linki kopyalandı!" });
-    };
 
     if (loading || !user || !userData) {
         return (
@@ -236,358 +112,35 @@ export default function ProfilePageClient() {
 
     return (
         <>
-            <div className="space-y-6 pb-24">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-3"><UserIcon className="h-6 w-6" />Profil Bilgileri</CardTitle>
-                        <CardDescription>Profilinizde görünecek herkese açık bilgiler.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex flex-col items-center gap-4">
-                           <Link href="/avatar-studio" className="relative group rounded-full">
-                                <AvatarWithFrame
-                                    photoURL={userData.photoURL}
-                                    selectedAvatarFrame={userData.selectedAvatarFrame}
-                                    className="h-24 w-24 border-2 shadow-sm"
-                                    fallback={userData.username?.charAt(0).toUpperCase()}
-                                    fallbackClassName="text-4xl bg-primary/20"
-                                />
-                                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                    <Camera className="h-8 w-8" />
-                                </div>
-                            </Link>
-                        </div>
+            <div className="space-y-2 pb-24">
+                <div className="border-b">
+                    <SettingsHeader title="Hesap" />
+                    <SettingsLink href="/profile/edit" icon={UserIcon} title="Profili Düzenle" />
+                    <SettingsLink href="/profile/saved" icon={Bookmark} title="Kaydedilenler" />
+                    <SettingsLink href="/wallet" icon={Wallet} title="Cüzdanım" />
+                </div>
+                
+                 <div className="border-b">
+                    <SettingsHeader title="Gizlilik ve Güvenlik" />
+                    <SettingsLink href="/profile/privacy" icon={Lock} title="Hesap Gizliliği" value={userData.privateProfile ? 'Gizli' : 'Herkese Açık'}/>
+                    <SettingsLink href="/profile/blocked" icon={ShieldOff} title="Engellenen Hesaplar" value={String(userData.blockedUsers?.length || 0)} />
+                    <SettingsLink onClick={handlePasswordReset} icon={KeyRound} title="Şifreyi Değiştir" />
+                </div>
 
-                         <div className="space-y-2">
-                            <Label htmlFor="username">Kullanıcı Adı</Label>
-                            <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} />
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="bio">Biyografi</Label>
-                            <Textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Kendini anlat..." className="rounded-xl" maxLength={150} />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                               <Label htmlFor="age">Yaş</Label>
-                               <Input id="age" type="number" value={age || ''} onChange={(e) => setAge(e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Cinsiyet</Label>
-                                <RadioGroup value={gender} onValueChange={(value: "male" | "female") => setGender(value)} className="flex space-x-4 pt-2">
-                                    <div className="flex items-center space-x-2"><RadioGroupItem value="male" id="male" /><Label htmlFor="male">Erkek</Label></div>
-                                    <div className="flex items-center space-x-2"><RadioGroupItem value="female" id="female" /><Label htmlFor="female">Kadın</Label></div>
-                                </RadioGroup>
-                            </div>
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="interests">İlgi Alanlarım (Maks. 10)</Label>
-                             <div className="flex gap-2">
-                                <Input 
-                                    id="interests" 
-                                    value={currentInterest} 
-                                    onChange={(e) => setCurrentInterest(e.target.value)} 
-                                    onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleAddInterest(); } }}
-                                    placeholder="örn: Kitap Okumak, Oyun"
-                                />
-                                <Button type="button" onClick={handleAddInterest}>Ekle</Button>
-                            </div>
-                             <div className="flex flex-wrap gap-2 pt-2">
-                                {interests.map(interest => (
-                                    <div key={interest} className="flex items-center gap-1 bg-secondary text-secondary-foreground rounded-full px-3 py-1 text-sm">
-                                        {interest}
-                                        <button onClick={() => handleRemoveInterest(interest)} className="ml-1 text-muted-foreground hover:text-destructive">
-                                            <X className="h-3 w-3" />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                 <div className="border-b">
+                    <SettingsHeader title="Görünüm" />
+                    <SettingsLink href="/profile/appearance" icon={Palette} title="Görünüm Ayarları" />
+                </div>
 
-                 <Accordion type="multiple" className="w-full space-y-4">
-                     <AccordionItem value="item-3" asChild>
-                         <Card>
-                             <AccordionTrigger className="p-6">
-                                <CardHeader className="p-0 text-left">
-                                    <div className="flex items-center gap-3">
-                                        <Wallet className="h-6 w-6 text-primary" />
-                                        <CardTitle>Cüzdan</CardTitle>
-                                    </div>
-                                    <CardDescription>Bakiye durumunu görüntüle ve mağazaya git.</CardDescription>
-                                </CardHeader>
-                            </AccordionTrigger>
-                             <AccordionContent className="p-6 pt-0 space-y-4">
-                                <div className="p-4 rounded-lg border bg-muted/50 flex justify-between items-center">
-                                    <p className="font-semibold">Mevcut Elmas Bakiyesi</p>
-                                    <div className="flex items-center gap-2 font-bold text-lg text-cyan-500">
-                                        <Gem className="h-5 w-5"/> {userData.diamonds}
-                                    </div>
-                                </div>
-                                <Button asChild className="w-full">
-                                    <Link href="/wallet">Cüzdanı Yönet</Link>
-                                </Button>
-                             </AccordionContent>
-                        </Card>
-                    </AccordionItem>
-                    
-                    <AccordionItem value="item-1" asChild>
-                        <Card>
-                             <AccordionTrigger className="p-6">
-                                <CardHeader className="p-0 text-left">
-                                    <div className="flex items-center gap-3">
-                                        <Palette className="h-6 w-6 text-primary" />
-                                        <CardTitle>Görünüm Ayarları</CardTitle>
-                                    </div>
-                                    <CardDescription>Uygulamanın genel görünümünü özelleştirin.</CardDescription>
-                                </CardHeader>
-                            </AccordionTrigger>
-                            <AccordionContent className="p-6 pt-0">
-                                <div className="space-y-6">
-                                    <div className="flex items-center justify-between rounded-lg border p-3">
-                                        <div>
-                                            <Label htmlFor="animated-nav" className="font-semibold flex items-center gap-2"><Sliders className="h-4 w-4"/> Arayüz Animasyonları</Label>
-                                            <p className="text-xs text-muted-foreground pl-6">Uygulama genelindeki arayüz geçişlerini ve efektleri etkinleştirir.</p>
-                                        </div>
-                                        <Switch id="animated-nav" checked={animatedNav} onCheckedChange={setAnimatedNav} />
-                                    </div>
-                                    <div>
-                                        <Label className="text-base font-medium">Tema</Label>
-                                        <RadioGroup value={theme} onValueChange={setTheme} className="grid grid-cols-3 gap-2 pt-2">
-                                            <Label htmlFor="light-theme" className={cn("flex flex-col items-center justify-center rounded-lg border-2 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer", theme === 'light' && "border-primary")}>
-                                                <RadioGroupItem value="light" id="light-theme" className="sr-only" />
-                                                <Sun className="mb-2 h-6 w-6" />
-                                                <span className="font-bold text-xs">Aydınlık</span>
-                                            </Label>
-                                            <Label htmlFor="dark-theme" className={cn("flex flex-col items-center justify-center rounded-lg border-2 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer", theme === 'dark' && "border-primary")}>
-                                                <RadioGroupItem value="dark" id="dark-theme" className="sr-only" />
-                                                <Moon className="mb-2 h-6 w-6" />
-                                                <span className="font-bold text-xs">Karanlık</span>
-                                            </Label>
-                                            <Label htmlFor="system-theme" className={cn("flex flex-col items-center justify-center rounded-lg border-2 p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer", theme === 'system' && "border-primary")}>
-                                                <RadioGroupItem value="system" id="system-theme" className="sr-only" />
-                                                <Laptop className="mb-2 h-6 w-6" />
-                                                <span className="font-bold text-xs">Sistem</span>
-                                            </Label>
-                                        </RadioGroup>
-                                    </div>
-                                    <div>
-                                        <Label className="text-base font-medium">Sohbet Baloncuğu</Label>
-                                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-2">
-                                            {bubbleOptions.map(option => (
-                                                <button key={option.id} onClick={() => setSelectedBubble(option.id)} disabled={option.isPremium && !isPremium} className={cn("flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer p-2 aspect-square hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50", selectedBubble === option.id ? "border-primary" : "")}>
-                                                    <div className="relative h-12 w-12 bg-muted rounded-full overflow-hidden">
-                                                        {option.id !== "" && (<div className={`bubble-wrapper ${option.id}`}>{Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}</div>)}
-                                                        {option.isPremium && <Crown className="absolute top-1 right-1 h-4 w-4 text-red-500"/>}
-                                                    </div>
-                                                    <span className="text-xs font-bold text-center">{option.name}</span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </AccordionContent>
-                        </Card>
-                    </AccordionItem>
-                    
-                    <AccordionItem value="item-2" asChild>
-                         <Card>
-                             <AccordionTrigger className="p-6">
-                                <CardHeader className="p-0 text-left">
-                                    <div className="flex items-center gap-3">
-                                        <Shield className="h-6 w-6 text-primary" />
-                                        <CardTitle>Hesap Güvenliği</CardTitle>
-                                    </div>
-                                    <CardDescription>Hesabınızın gizliliğini ve güvenliğini yönetin.</CardDescription>
-                                </CardHeader>
-                            </AccordionTrigger>
-                             <AccordionContent className="p-6 pt-0 space-y-4">
-                                <div className="space-y-2 rounded-lg border p-3">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <Label className="font-semibold">E-posta</Label>
-                                            <p className="text-xs text-muted-foreground">{user.email}</p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            {user.emailVerified ? (
-                                                <span className="flex items-center text-sm font-semibold text-green-600"><BadgeCheck className="mr-2 h-4 w-4"/>Doğrulandı</span>
-                                            ) : (
-                                                <Button size="sm" variant="secondary" onClick={() => {}}>Doğrula</Button>
-                                            )}
-                                            <Button size="sm" variant="outline" onClick={() => setShowEmailChange(p => !p)}>Değiştir</Button>
-                                        </div>
-                                    </div>
-                                     {showEmailChange && (
-                                        <div className="pt-2 space-y-2">
-                                            <Input value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="Yeni e-posta adresiniz" type="email" />
-                                            <Button size="sm" onClick={handleChangeEmail} disabled={isSaving || !newEmail}>
-                                                {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-2"/>} Onayla
-                                            </Button>
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <Label htmlFor="privacy-mode" className="font-semibold">Gizli Hesap</Label>
-                                        <p className="text-xs text-muted-foreground">Aktif olduğunda, sadece onayladığın kişiler seni takip edebilir.</p>
-                                    </div>
-                                    <Switch id="privacy-mode" checked={privateProfile} onCheckedChange={setPrivateProfile} />
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                         <Label htmlFor="requests-mode" className={cn("font-semibold transition-colors", !privateProfile && "text-muted-foreground/50")}>Takip İsteklerine İzin Ver</Label>
-                                        <p className={cn("text-xs text-muted-foreground transition-colors", !privateProfile && "text-muted-foreground/50")}>Kapalıysa, kimse size takip isteği gönderemez.</p>
-                                    </div>
-                                    <Switch id="requests-mode" checked={acceptsFollowRequests} onCheckedChange={setAcceptsFollowRequests} disabled={!privateProfile}/>
-                                </div>
-                                <div className="flex items-center justify-between rounded-lg border p-3">
-                                    <div>
-                                        <Label htmlFor="online-status" className="font-semibold">Çevrimiçi Durumumu Göster</Label>
-                                        <p className="text-xs text-muted-foreground">Aktif olduğunda, diğer kullanıcılar çevrimiçi olduğunu görebilir.</p>
-                                    </div>
-                                    <Switch id="online-status" checked={showOnlineStatus} onCheckedChange={setShowOnlineStatus} />
-                                </div>
-                                 <div className="flex items-center justify-between">
-                                    <Button variant="outline" className="w-full" onClick={() => setIsBlockedUsersOpen(true)}>
-                                        <ShieldOff className="mr-2 h-4 w-4"/>Engellenen Hesapları Yönet
-                                    </Button>
-                                </div>
-                            </AccordionContent>
-                        </Card>
-                    </AccordionItem>
+                <div className="border-b">
+                    <SettingsHeader title="Diğer" />
+                     <SettingsLink href="/guide" icon={HelpCircle} title="Uygulama Kılavuzu" />
+                     <SettingsLink onClick={() => setShowDeleteConfirm(true)} icon={Trash2} title="Hesabı Sil" />
+                     <SettingsLink onClick={() => handleLogout()} icon={LogOut} title="Çıkış Yap" />
+                </div>
 
-                     <AccordionItem value="item-4" asChild>
-                         <Card>
-                             <AccordionTrigger className="p-6">
-                                <CardHeader className="p-0 text-left">
-                                    <div className="flex items-center gap-3">
-                                        <EyeOff className="h-6 w-6 text-primary" />
-                                        <CardTitle>İçerik Tercihleri</CardTitle>
-                                    </div>
-                                    <CardDescription>Gizlediğiniz gönderileri yönetin.</CardDescription>
-                                </CardHeader>
-                            </AccordionTrigger>
-                             <AccordionContent className="p-6 pt-0">
-                                 <div className="flex items-center justify-between rounded-lg border p-3">
-                                    <div>
-                                        <Label className="font-semibold">Gizlenen Gönderiler</Label>
-                                        <p className="text-xs text-muted-foreground">"İlgilenmiyorum" olarak işaretlediğiniz gönderileri buradan görebilir ve tekrar görünür yapabilirsiniz.</p>
-                                    </div>
-                                    <Button variant="outline" onClick={() => setIsHiddenContentOpen(true)}>Yönet</Button>
-                                </div>
-                            </AccordionContent>
-                        </Card>
-                    </AccordionItem>
-                     
-                    <AccordionItem value="item-5" asChild>
-                        <Card>
-                            <AccordionTrigger className="p-6">
-                                <CardHeader className="p-0 text-left">
-                                    <div className="flex items-center gap-3">
-                                        <Sparkles className="h-6 w-6 text-primary" />
-                                        <CardTitle>Ekstra</CardTitle>
-                                    </div>
-                                    <CardDescription>Davet sistemi, dil ayarları ve daha fazlası.</CardDescription>
-                                </CardHeader>
-                            </AccordionTrigger>
-                            <AccordionContent className="p-6 pt-0">
-                                 <div className="space-y-6">
-                                    <div>
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <Gift className="h-5 w-5 text-muted-foreground" />
-                                            <Label className="text-base font-semibold">{t('invitation_system')}</Label>
-                                        </div>
-                                        <p className="text-sm text-muted-foreground">
-                                            Bu linki arkadaşlarınla paylaş. Senin linkinle kayıt olan her arkadaşın için <strong>10 elmas</strong> kazan!
-                                        </p>
-                                         <div className="text-sm font-semibold p-2 bg-muted rounded-md text-center flex items-center justify-center gap-2 mt-2">
-                                            <Users className="h-4 w-4"/>
-                                            <span>Bu linkle toplam <span className="text-primary">{userData.referralCount || 0}</span> kişi kayıt oldu.</span>
-                                        </div>
-                                        <div className="flex gap-2 mt-2">
-                                            <Input value={inviteLink} readOnly className="text-sm" />
-                                            <Button onClick={copyToClipboard} variant="outline" size="icon"><Copy className="h-4 w-4" /></Button>
-                                        </div>
-                                    </div>
-                                    <div>
-                                         <div className="flex items-center gap-3 mb-2">
-                                            <Globe className="h-5 w-5 text-muted-foreground" />
-                                            <Label className="text-base font-semibold">{t('language_settings')}</Label>
-                                        </div>
-                                         <LanguageSwitcher />
-                                    </div>
-                                    <div>
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <HelpCircle className="h-5 w-5 text-muted-foreground" />
-                                            <Label className="text-base font-semibold">Yardım & Kılavuz</Label>
-                                        </div>
-                                        <Button asChild variant="outline" className="w-full">
-                                            <Link href="/guide">Uygulama Kılavuzunu Görüntüle</Link>
-                                        </Button>
-                                    </div>
-                                </div>
-                            </AccordionContent>
-                        </Card>
-                    </AccordionItem>
-                </Accordion>
-                    
-                {userData.role === 'admin' && (
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center gap-3">
-                                <Shield className="h-6 w-6 text-primary" />
-                                <CardTitle>Yönetim</CardTitle>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <Button asChild>
-                                <Link href="/admin">
-                                    <Shield className="mr-2 h-4 w-4" />
-                                    Yönetim Paneline Git
-                                </Link>
-                            </Button>
-                        </CardContent>
-                    </Card>
-                )}
-                    
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Hesap İşlemleri</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex flex-col sm:flex-row gap-2">
-                        <Button variant="outline" onClick={handleLogout}>
-                            <LogOut className="mr-2 h-4 w-4" />Çıkış Yap
-                        </Button>
-                        <Button variant="outline" onClick={handlePasswordReset}>
-                            <Lock className="mr-2 h-4 w-4" />Şifremi Değiştir
-                        </Button>
-                         <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
-                            <Trash2 className="mr-2 h-4 w-4" />Hesabımı Sil
-                        </Button>
-                    </CardContent>
-                </Card>
             </div>
             
-            <AnimatePresence>
-            {hasChanges && (
-                <motion.div
-                    initial={{ y: 100 }}
-                    animate={{ y: 0 }}
-                    exit={{ y: 100 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                    className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[60]"
-                >
-                    <Button onClick={handleSaveChanges} disabled={isSaving} size="lg" className="shadow-lg">
-                        {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {t('save_changes')}
-                    </Button>
-                </motion.div>
-            )}
-            </AnimatePresence>
-            
-            <BlockedUsersDialog isOpen={isBlockedUsersOpen} onOpenChange={setIsBlockedUsersOpen} blockedUserIds={userData.blockedUsers || []}/>
-            <HiddenContentDialog isOpen={isHiddenContentOpen} onOpenChange={setIsHiddenContentOpen} hiddenPostIds={userData.hiddenPostIds || []} />
-
              <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
