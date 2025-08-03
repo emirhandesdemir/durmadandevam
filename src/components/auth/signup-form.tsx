@@ -31,7 +31,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, HelpCircle } from "lucide-react";
 import { Checkbox } from "../ui/checkbox";
 import { useTranslation } from "react-i18next";
 
@@ -133,8 +133,13 @@ export default function SignUpForm() {
     }
 
     return (
-        <Card className="w-full max-w-sm mx-auto shadow-2xl rounded-2xl bg-card/80 backdrop-blur-lg border-white/20">
+        <Card className="w-full max-w-sm mx-auto shadow-2xl rounded-2xl bg-card/80 backdrop-blur-lg border-white/20 relative">
             <CardHeader className="text-center space-y-4 pt-10">
+                 <Button asChild variant="outline" size="sm" className="absolute top-4 right-4 rounded-full">
+                    <Link href="/guide">
+                        <HelpCircle className="mr-2 h-4 w-4"/> Kılavuz
+                    </Link>
+                </Button>
                 <Image src="/icons/icon.svg" alt="HiweWalk Logo" width={64} height={64} className="h-16 w-16 mx-auto" />
                 <CardTitle className="text-3xl font-bold">Aramıza Katıl</CardTitle>
                 <CardDescription>

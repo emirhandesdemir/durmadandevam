@@ -4,11 +4,20 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Compass, Diamond, Gift, HelpCircle, Palette, PenSquare, Shield, Users, Mic, MessageSquare } from "lucide-react";
+import { ChevronLeft, Compass, Diamond, Gift, HelpCircle, Palette, PenSquare, Shield, Users, Mic, MessageSquare, KeyRound, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
 const guideSections = [
+    {
+        title: "Başlarken: Hesap İşlemleri",
+        icon: UserPlus,
+        items: [
+            { title: "Kayıt Olma ve Giriş Yapma", description: "Uygulamaya e-posta adresiniz ve belirleyeceğiniz bir şifre ile kolayca kayıt olabilirsiniz. Giriş ekranından 'Hemen Kayıt Ol' seçeneğini kullanın." },
+            { title: "E-posta Doğrulama", description: "Hesap güvenliğiniz için e-postanızı doğrulamanız önemlidir. Ayarlar -> Hesap Güvenliği menüsünden doğrulama e-postasını tekrar gönderebilirsiniz." },
+            { title: "Şifre Değiştirme", description: "Şifrenizi unuttuysanız giriş ekranındaki 'Şifremi Unuttum' linkini, mevcut şifrenizi değiştirmek isterseniz Ayarlar -> Hesap Güvenliği menüsündeki 'Şifremi Değiştir' butonunu kullanabilirsiniz." },
+        ]
+    },
     {
         title: "Temel Özellikler",
         icon: Compass,
@@ -20,21 +29,22 @@ const guideSections = [
         ]
     },
     {
-        title: "Oda Seviye Sistemi",
+        title: "Cüzdan & Ekonomi",
+        icon: Diamond,
+        items: [
+            { title: "Elmas Nasıl Kazanılır?", description: "Mağaza sayfasından reklam izleyerek, arkadaşlarınızı davet linkinizle üye yaparak, ilk gönderinizi paylaşarak veya profilinizi tamamlayarak elmas kazanabilirsiniz." },
+            { title: "Hediye Gönderme ve Alma", description: "Sohbet odalarında diğer kullanıcılara veya doğrudan odaya hediye gönderebilirsiniz. Size gönderilen hediyeler, 'Profil Değerinizi' artırır." },
+            { title: "Profil Değerini Elmasa Çevirme", description: "Profilinize gönderilen hediyelerin toplam değeri, 'Profil Değeri' olarak birikir. Bu değeri, Cüzdan sayfanızdan %70 oranında elmasa dönüştürerek harcanabilir bakiye elde edebilirsiniz." },
+        ]
+    },
+    {
+        title: "Oda Seviye Sistemi ve Popülerlik",
         icon: Users,
         items: [
             { title: "XP Nasıl Kazanılır?", description: "Odanız, içinde sesli sohbete katılan aktif kullanıcı sayısı ile orantılı olarak her 5 dakikada bir otomatik olarak XP (deneyim puanı) kazanır. Ayrıca, odaya atılan her hediye, elmas değeri kadar XP kazandırır." },
             { title: "Seviye Atlamanın Faydaları", description: "Seviye atlayan odalar, liderlik tablosunda daha üst sıralarda yer alır ve daha fazla kullanıcı tarafından keşfedilir. Gelecekte seviyeye özel yeni özellikler eklenecektir." },
+            { title: "Odanı Nasıl Öne Çıkarırsın?", description: "Odanızı daha popüler yapmak için, oda ayarlarından 'Portal Aç' özelliğini kullanabilirsiniz. Bu, odanızı 5 dakika boyunca diğer tüm odalarda duyurur ve kullanıcıların tek tıkla katılmasına olanak tanır. Bu işlem 100 elmas gerektirir." },
             { title: "Oda Sahibi Olarak Hediye Gönderme", description: "Oda sahipleri de dahil olmak üzere herkes, 'Odaya' hediye göndererek odanın XP'sine doğrudan katkıda bulunabilir." },
-        ]
-    },
-    {
-        title: "Elmas & Hediyeler",
-        icon: Diamond,
-        items: [
-            { title: "Elmas Kazanma", description: "Reklam izleyerek, arkadaşlarınızı davet ederek veya hediye alarak elmas kazanabilirsiniz. İlk gönderi ve profil tamamlama gibi görevler de elmas kazandırır." },
-            { title: "Hediye Gönderme", description: "Sohbet odalarında diğer kullanıcılara veya doğrudan odaya hediye gönderebilirsiniz. Gönderilen hediyeler, alıcının 'profil değerini' veya odanın 'XP'sini artırır." },
-            { title: "Profil Değeri", description: "Size gönderilen hediyelerin toplam elmas değeridir. Bu değeri, cüzdan sayfanızdan %70 oranında elmasa dönüştürebilirsiniz." },
         ]
     },
      {
@@ -46,7 +56,7 @@ const guideSections = [
         ]
     },
     {
-        title: "Hesap ve Profil",
+        title: "Hesap ve Profil Ayarları",
         icon: Palette,
         items: [
             { title: "Profil Güncelleme", description: "Ayarlar sayfasından kullanıcı adı, biyografi, yaş, cinsiyet, ilgi alanları gibi bilgilerinizi güncelleyebilirsiniz." },
