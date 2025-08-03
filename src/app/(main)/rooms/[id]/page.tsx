@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, onSnapshot, collection, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, orderBy, limit, where, Timestamp, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -13,7 +13,7 @@ import TextChat from '@/components/chat/text-chat';
 import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
 import RoomHeader from '@/components/rooms/RoomHeader';
 
-import type { Room, Message, Giveaway, ActiveGame, GameSettings, ActiveGameSession, MindWarSession } from '@/lib/types';
+import type { Room, Message, Giveaway, ActiveGame, GameSettings, ActiveGameSession, MindWarSession, VoiceParticipant } from '@/lib/types';
 import RoomFooter from '@/components/rooms/RoomFooter';
 import SpeakerLayout from '@/components/rooms/SpeakerLayout';
 import RoomInfoCards from '@/components/rooms/RoomInfoCards';
@@ -30,6 +30,7 @@ import GameLobbyDialog from '@/components/game/GameLobbyDialog';
 import ActiveGameArea from '@/components/game/ActiveGameArea';
 import MindWarLobby from '@/components/games/mindwar/MindWarLobby';
 import MindWarMainUI from '@/components/games/mindwar/MindWarMainUI';
+import EntryEffectManager from '@/components/rooms/EntryEffectManager';
 
 
 export default function RoomPage() {
@@ -40,7 +41,7 @@ export default function RoomPage() {
     
     // --- Auth & Contexts ---
     const { user, userData, featureFlags, loading: authLoading } = useAuth();
-    const { setActiveRoomId } = useVoiceChat();
+    const { setActiveRoomId, participants } = useVoiceChat();
 
     // --- Component State ---
     const [room, setRoom] = useState<Room | null>(null);
@@ -142,22 +143,30 @@ export default function RoomPage() {
     // Handle game state transitions (countdown -> active)
     useEffect(() => {
         if (activeQuiz?.status !== 'countdown' || !isHost) return;
-
+    
         const countdownEnd = (activeQuiz.countdownStartTime as Timestamp).toMillis() + 60000;
         const now = Date.now();
-        
+    
+        const triggerGameStart = async () => {
+            try {
+                // The action is now idempotent, so no need to check status here again.
+                await generateQuestionsForGame(roomId, activeQuiz.id);
+            } catch (e) {
+                console.error("Failed to start game from client", e);
+            }
+        };
+    
         if (now >= countdownEnd) {
-            generateQuestionsForGame(roomId, activeQuiz.id);
+            triggerGameStart();
         } else {
-            const timer = setTimeout(() => {
-                generateQuestionsForGame(roomId, activeQuiz.id);
-            }, countdownEnd - now);
+            const timer = setTimeout(triggerGameStart, countdownEnd - now);
             return () => clearTimeout(timer);
         }
-    }, [activeQuiz, isHost, roomId]);
+    }, [activeQuiz?.id, activeQuiz?.status, activeQuiz?.countdownStartTime, isHost, roomId]);
+
 
      // Handle question timer and auto-advance
-    useEffect(() => {
+     useEffect(() => {
         if (activeQuiz?.status !== 'active' || !gameSettings || !isHost) return;
 
         const startTime = (activeQuiz.startTime as Timestamp).toMillis();
@@ -166,16 +175,22 @@ export default function RoomPage() {
         
         const now = Date.now();
 
+        const triggerAdvance = async () => {
+             try {
+                await advanceToNextQuestion(roomId, activeQuiz.id);
+            } catch (e) {
+                console.error("Failed to advance question from client", e);
+            }
+        }
+
         if (now >= timeUp) {
-            advanceToNextQuestion(roomId, activeQuiz.id);
+            triggerAdvance();
         } else {
-            const timer = setTimeout(() => {
-                advanceToNextQuestion(roomId, activeQuiz.id);
-            }, timeUp - now);
+            const timer = setTimeout(triggerAdvance, timeUp - now);
             return () => clearTimeout(timer);
         }
 
-    }, [activeQuiz, gameSettings, isHost, roomId]);
+    }, [activeQuiz?.id, activeQuiz?.status, activeQuiz?.startTime, activeQuiz?.currentQuestionIndex, gameSettings, isHost, roomId]);
 
     const handleAnswerSubmit = useCallback(async (answerIndex: number) => {
         if (!activeQuiz || !user) return;
@@ -212,6 +227,7 @@ export default function RoomPage() {
 
     return (
         <>
+            <EntryEffectManager participants={participants} />
             <div className={cn("flex flex-col h-full bg-background text-foreground", room.type === 'event' && 'event-room-bg')}>
                  <RoomHeader 
                     room={room} 

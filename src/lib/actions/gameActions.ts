@@ -82,12 +82,21 @@ export async function generateQuestionsForGame(roomId: string, gameId: string) {
     const gameRef = doc(db, 'rooms', roomId, 'games', gameId);
     
     try {
-        const questions = await generateQuizQuestions();
-        
-        await updateDoc(gameRef, {
-            questions: questions,
-            status: 'active',
-            startTime: serverTimestamp(),
+        // Run as a transaction to prevent race conditions
+        await runTransaction(db, async (transaction) => {
+            const gameDoc = await transaction.get(gameRef);
+            if (!gameDoc.exists() || gameDoc.data().status !== 'countdown') {
+                // Game has already been started by another client or cancelled.
+                return;
+            }
+
+            const questions = await generateQuizQuestions();
+            
+            transaction.update(gameRef, {
+                questions: questions,
+                status: 'active',
+                startTime: serverTimestamp(),
+            });
         });
         
         await addSystemMessage(roomId, "Oyun başladı! İlk soru geliyor...");
@@ -136,10 +145,9 @@ async function endGame(transaction: any, gameRef: any, roomRef: any, gameData: A
     const scores = gameData.scores || {};
     
     // Find all unique participants
-    const allParticipants = new Set<string>();
-    if(gameData.answeredBy) {
-        gameData.answeredBy.forEach(uid => allParticipants.add(uid));
-    }
+    const allParticipants = new Set<string>(gameData.answeredBy || []);
+    Object.keys(scores).forEach(uid => allParticipants.add(uid));
+
 
     const maxScore = Math.max(0, ...Object.values(scores));
     const winnersData: ActiveGame['winners'] = [];

@@ -16,7 +16,9 @@ export default function GameResultCard({ game, settings }: GameResultCardProps) 
   const prize = winners[0]?.reward || 10;
   
   const isWinner = userData ? winners.some(w => w.uid === userData.uid) : false;
-  const participated = userData ? Object.values(game.answeredBy || {}).flat().includes(userData.uid) : false;
+  
+  // Check if the user participated by checking if their ID is in answeredBy or scores
+  const participated = userData ? (game.answeredBy?.includes(userData.uid) || (game.scores && game.scores[userData.uid] !== undefined)) : false;
 
   return (
     <Card className="w-full bg-card border-primary/20 shadow-lg animate-in fade-in duration-500 rounded-2xl overflow-hidden">
