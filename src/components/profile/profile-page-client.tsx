@@ -136,7 +136,6 @@ export default function ProfilePageClient() {
         try {
             const imageRef = storageRef(storage, `avatars/${user.uid}/profile.png`);
             
-            // Convert data URL to blob for upload
             const response = await fetch(croppedDataUrl);
             const blob = await response.blob();
     
@@ -657,15 +656,12 @@ export default function ProfilePageClient() {
                     animate={{ y: 0, opacity: 1 }}
                     exit={{ y: "100%", opacity: 0 }}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    className="fixed bottom-0 left-0 right-0 z-[60] p-4 bg-background/80 backdrop-blur-sm border-t"
+                    className="fixed bottom-4 left-4 z-[60]"
                 >
-                    <div className="container mx-auto flex justify-between items-center max-w-4xl">
-                        <p className="text-sm font-semibold">Kaydedilmemiş değişiklikleriniz var.</p>
-                        <Button onClick={handleSaveChanges} disabled={isSaving}>
-                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {t('save_changes')}
-                        </Button>
-                    </div>
+                    <Button onClick={handleSaveChanges} disabled={isSaving} size="lg" className="shadow-lg">
+                        {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {t('save_changes')}
+                    </Button>
                 </motion.div>
             )}
             </AnimatePresence>
