@@ -12,7 +12,6 @@ import { db } from '@/lib/firebase';
 import { Skeleton } from '../ui/skeleton';
 import type { Room } from '@/lib/types';
 import RoomManagementDialog from './RoomManagementDialog';
-import { deleteRoomAsOwner } from '@/lib/actions/roomActions';
 
 export default function CreateRoomCard() {
     const { user } = useAuth();
@@ -27,7 +26,7 @@ export default function CreateRoomCard() {
         setUserRoom('loading');
         const q = query(collection(db, "rooms"), where("createdBy.uid", "==", user.uid), limit(1));
         
-        const unsubscribe = onSnapshot(q, async (snapshot) => {
+        const unsubscribe = onSnapshot(q, (snapshot) => {
             if (!snapshot.empty) {
                 const roomDoc = snapshot.docs[0];
                 const roomData = { id: roomDoc.id, ...roomDoc.data() } as Room;
@@ -35,8 +34,8 @@ export default function CreateRoomCard() {
                 const isExpired = roomData.expiresAt && (roomData.expiresAt as Timestamp).toDate() < new Date();
                 
                 if (isExpired && roomData.type !== 'event') {
-                    // This logic can be moved to a backend function for better reliability
-                    // await deleteRoomAsOwner(roomData.id, user.uid);
+                    // This check is now less critical as expired rooms are filtered in the main list.
+                    // This prevents an unnecessary delete call from the client if the room is expired.
                     setUserRoom(null);
                 } else {
                     setUserRoom(roomData);

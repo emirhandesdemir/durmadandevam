@@ -254,6 +254,19 @@ export async function hidePost(userId: string, postId: string) {
     }
 }
 
+export async function unhidePost(userId: string, postId: string) {
+    if (!userId || !postId) return;
+    const userRef = doc(db, 'users', userId);
+    try {
+        await updateDoc(userRef, {
+            hiddenPostIds: arrayRemove(postId)
+        });
+        revalidatePath('/home');
+    } catch (error) {
+        console.error("Error unhiding post:", error);
+    }
+}
+
 
 export async function getSavedPosts(userId: string): Promise<Post[]> {
     const userRef = doc(db, 'users', userId);

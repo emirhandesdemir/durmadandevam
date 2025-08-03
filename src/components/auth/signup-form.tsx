@@ -76,14 +76,19 @@ export default function SignUpForm() {
             });
             
             let ref: string | null = null;
-            const encodedRef = searchParams.get('ref');
-            if (encodedRef) {
-                try {
+            try {
+                const encodedRef = searchParams.get('ref');
+                if (encodedRef) {
                     ref = atob(encodedRef);
-                } catch (e) {
-                    console.error("Failed to decode referral code:", e);
-                    ref = null;
                 }
+            } catch (e) {
+                console.error("Failed to decode referral code:", e);
+                toast({
+                    variant: 'destructive',
+                    title: 'Geçersiz Davet Kodu',
+                    description: 'Kullandığınız davet linki hatalı görünüyor, ancak kayıt işlemine devam edebilirsiniz.'
+                });
+                ref = null;
             }
 
             // CRITICAL FIX: Create user document immediately on signup.
@@ -235,5 +240,4 @@ export default function SignUpForm() {
                 </div>
             </CardContent>
         </Card>
-    );
-}
+    

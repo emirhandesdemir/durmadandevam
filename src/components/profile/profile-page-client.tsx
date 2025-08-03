@@ -1,4 +1,3 @@
-
 // src/components/profile/profile-page-client.tsx
 "use client";
 
@@ -9,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2, Sliders, Wallet, HelpCircle, Gem } from "lucide-react";
+import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2, Sliders, Wallet, HelpCircle, EyeOff } from "lucide-react";
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
@@ -24,10 +23,12 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "..
 import { updateUserProfile } from "@/lib/actions/userActions";
 import { Textarea } from "../ui/textarea";
 import BlockedUsersDialog from "./BlockedUsersDialog";
+import HiddenContentDialog from "./HiddenContentDialog";
 import { sendPasswordResetEmail, verifyBeforeUpdateEmail, updateEmail } from "firebase/auth";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { deleteUserAccount } from "@/lib/actions/userActions";
 import AvatarWithFrame from "../common/AvatarWithFrame";
+import { Gem, BadgeCheck } from 'lucide-react';
 
 const bubbleOptions = [
     { id: "", name: "Varsayılan", isPremium: false },
@@ -58,6 +59,7 @@ export default function ProfilePageClient() {
     const [currentInterest, setCurrentInterest] = useState("");
     const [inviteLink, setInviteLink] = useState("");
     const [isBlockedUsersOpen, setIsBlockedUsersOpen] = useState(false);
+    const [isHiddenContentOpen, setIsHiddenContentOpen] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [animatedNav, setAnimatedNav] = useState(true);
     const [newEmail, setNewEmail] = useState("");
@@ -453,6 +455,29 @@ export default function ProfilePageClient() {
                             </AccordionContent>
                         </Card>
                     </AccordionItem>
+
+                     <AccordionItem value="item-4" asChild>
+                         <Card>
+                             <AccordionTrigger className="p-6">
+                                <CardHeader className="p-0 text-left">
+                                    <div className="flex items-center gap-3">
+                                        <EyeOff className="h-6 w-6 text-primary" />
+                                        <CardTitle>İçerik Tercihleri</CardTitle>
+                                    </div>
+                                    <CardDescription>Gizlediğiniz gönderileri yönetin.</CardDescription>
+                                </CardHeader>
+                            </AccordionTrigger>
+                             <AccordionContent className="p-6 pt-0">
+                                 <div className="flex items-center justify-between rounded-lg border p-3">
+                                    <div>
+                                        <Label className="font-semibold">Gizlenen Gönderiler</Label>
+                                        <p className="text-xs text-muted-foreground">"İlgilenmiyorum" olarak işaretlediğiniz gönderileri buradan görebilir ve tekrar görünür yapabilirsiniz.</p>
+                                    </div>
+                                    <Button variant="outline" onClick={() => setIsHiddenContentOpen(true)}>Yönet</Button>
+                                </div>
+                            </AccordionContent>
+                        </Card>
+                    </AccordionItem>
                      
                     <AccordionItem value="item-5" asChild>
                         <Card>
@@ -561,6 +586,7 @@ export default function ProfilePageClient() {
             </AnimatePresence>
             
             <BlockedUsersDialog isOpen={isBlockedUsersOpen} onOpenChange={setIsBlockedUsersOpen} blockedUserIds={userData.blockedUsers || []}/>
+            <HiddenContentDialog isOpen={isHiddenContentOpen} onOpenChange={setIsHiddenContentOpen} hiddenPostIds={userData.hiddenPostIds || []} />
 
              <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
                 <AlertDialogContent>
@@ -586,5 +612,3 @@ export default function ProfilePageClient() {
         </>
     );
 }
-
-    
