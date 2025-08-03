@@ -14,19 +14,20 @@ import { cn } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 
-// List of available Dicebear styles
+// Updated list of visually appealing Dicebear styles
 const avatarStyles = [
   { id: 'adventurer', name: 'Macera' },
-  { id: 'pixel-art', name: 'Piksel' },
-  { id: 'initials', name: 'İlk Harfler' },
+  { id: 'adventurer-neutral', name: 'Sade' },
+  { id: 'avataaars', name: 'Avataaars' },
+  { id: 'big-ears', name: 'Kulaklar' },
+  { id: 'big-smile', name: 'Gülümseme' },
   { id: 'bottts', name: 'Botlar' },
-  { id: 'micah', name: 'Micah' },
-  { id: 'fun-emoji', name: 'Emoji' },
-  { id: 'lorelei', name: 'Çizgi' },
-  { id: 'identicon', name: 'Geo' },
-  { id: 'notionists', name: 'Notion' },
+  { id: 'rings', name: 'Halkalar' },
   { id: 'miniavs', name: 'Minimalist' },
+  { id: 'pixel-art', name: 'Piksel' },
+  { id: 'open-peeps', name: 'İnsanlar' },
 ];
+
 
 export default function AvatarStudioPage() {
   const { user, userData, loading: authLoading, refreshUserData } = useAuth();
