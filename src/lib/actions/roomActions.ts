@@ -689,7 +689,7 @@ export async function updateModerators(roomId: string, targetUserId: string, act
     }
 }
 
-export async function updateRoomDetails(roomId: string, userId: string, details: { rules?: string, welcomeMessage?: string }) {
+export async function updateRoomDetails(roomId: string, userId: string, details: { rules?: string, welcomeMessage?: string, backgroundUrl?: string }) {
     const roomRef = doc(db, 'rooms', roomId);
     const roomDoc = await getDoc(roomRef);
     if (!roomDoc.exists() || roomDoc.data().createdBy.uid !== userId) {
@@ -719,10 +719,11 @@ export async function unpinMessage(roomId: string, userId: string) {
     return { success: true };
 }
 
-export async function updateRoomSettings(roomId: string, settings: { autoQuizEnabled: boolean }) {
+export async function updateRoomSettings(roomId: string, settings: { autoQuizEnabled?: boolean, backgroundUrl?: string }) {
     if (!roomId) throw new Error("Oda ID'si gerekli.");
     const roomRef = doc(db, 'rooms', roomId);
     await updateDoc(roomRef, settings);
+    revalidatePath(`/rooms/${roomId}`);
     return { success: true };
 }
 

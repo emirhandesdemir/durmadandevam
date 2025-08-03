@@ -23,11 +23,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { deleteRoomAsOwner, extendRoomTime, increaseParticipantLimit, extendRoomFor30Days, updateRoomSettings } from "@/lib/actions/roomActions";
-import { Trash2, Loader2, ShieldAlert, Clock, UserPlus, Gem, CalendarDays, Gamepad2, Puzzle } from "lucide-react";
+import { Trash2, Loader2, ShieldAlert, Clock, UserPlus, Gem, CalendarDays, Gamepad2, Puzzle, Image } from "lucide-react";
 import type { Room } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
+import { Input } from "../ui/input";
 
 interface RoomManagementDialogProps {
   isOpen: boolean;
@@ -46,6 +47,7 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   
   const [autoQuizEnabled, setAutoQuizEnabled] = useState(room?.autoQuizEnabled ?? true);
+  const [backgroundUrl, setBackgroundUrl] = useState(room?.backgroundUrl || '');
 
 
   if (!room) return null;
@@ -139,7 +141,7 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
       if (!room || !user || !isHost) return;
       setIsSavingSettings(true);
       try {
-          await updateRoomSettings(room.id, { autoQuizEnabled });
+          await updateRoomSettings(room.id, { autoQuizEnabled, backgroundUrl });
           toast({ description: "Oda ayarları kaydedildi."})
       } catch (error: any) {
            toast({ variant: 'destructive', description: "Ayarlar kaydedilirken hata." });
@@ -173,9 +175,21 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
                         onCheckedChange={setAutoQuizEnabled}
                     />
                 </div>
+                 <div className="space-y-1">
+                    <Label htmlFor="bg-url" className="font-semibold flex items-center gap-2">
+                        <Image className="h-4 w-4 text-muted-foreground"/>
+                        Arka Plan URL'si
+                    </Label>
+                    <Input
+                        id="bg-url"
+                        value={backgroundUrl}
+                        onChange={(e) => setBackgroundUrl(e.target.value)}
+                        placeholder="Bir resim linki yapıştırın..."
+                    />
+                </div>
                  <Button size="sm" onClick={handleSettingsSave} disabled={isSavingSettings} className="w-full">
                     {isSavingSettings && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                    Oyun Ayarını Kaydet
+                    Genel Ayarları Kaydet
                 </Button>
             </div>
 

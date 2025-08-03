@@ -297,6 +297,7 @@ export interface Room {
     id: string;
     name: string;
     description: string;
+    backgroundUrl?: string | null;
     createdBy: {
         uid: string;
         username: string;

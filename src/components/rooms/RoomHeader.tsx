@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft, MoreHorizontal, Users, UserPlus, Gift, Zap, ChevronUp, ChevronDown, Clock, LogOut, MicOff, Minimize2, Settings, Star } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Users, UserPlus, Gift, Zap, ChevronUp, ChevronDown, Clock, LogOut, MicOff, Minimize2, Settings, Star, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Room } from '@/lib/types';
 import InviteDialog from './InviteDialog';
@@ -21,6 +21,7 @@ import { useRouter } from 'next/navigation';
 import RoomManagementDialog from './RoomManagementDialog';
 import { Progress } from '../ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { useToast } from '@/hooks/use-toast';
 
 interface RoomHeaderProps {
   room: Room;
@@ -43,8 +44,9 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, isSp
     const [isManagementOpen, setIsManagementOpen] = useState(false);
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
     const [warningSent, setWarningSent] = useState(false);
-    const { leaveRoom, leaveVoiceOnly } = useVoiceChat();
+    const { leaveRoom } = useVoiceChat();
     const router = useRouter();
+    const { toast } = useToast();
 
 
     useEffect(() => {
@@ -66,107 +68,75 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, isSp
         }
     }, [timeLeft, room.id, warningSent]);
 
-
-    const hasActivePortal = room.portalExpiresAt && (room.portalExpiresAt as Timestamp).toMillis() > Date.now();
-    
-    const xpPercentage = room.level > 0 && room.xpToNextLevel > 0 
-        ? Math.max(0, Math.min(100, (room.xp / room.xpToNextLevel) * 100))
-        : 0;
+    const handleShare = () => {
+        if (navigator.share) {
+            navigator.share({
+                title: room.name,
+                text: `Seni "${room.name}" odasına davet ediyorum!`,
+                url: window.location.href,
+            })
+            .then(() => console.log('Successful share'))
+            .catch((error) => console.log('Error sharing', error));
+        } else {
+            navigator.clipboard.writeText(window.location.href);
+            toast({
+                title: "Link Kopyalandı",
+                description: "Oda davet linki panoya kopyalandı.",
+            });
+        }
+    };
 
 
     return (
         <>
-            <header className="flex items-center justify-between p-3 border-b shrink-0 bg-background/50 backdrop-blur-sm">
-                <div className="flex items-center gap-1">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="rounded-full">
+            <header className="absolute top-0 left-0 right-0 z-10 p-3 bg-gradient-to-b from-black/50 to-transparent text-white">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 p-1.5 rounded-full bg-black/30 backdrop-blur-sm">
+                        <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 hover:bg-white/10" onClick={() => router.back()}>
                           <ChevronLeft />
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
-                        <DropdownMenuItem onClick={() => router.push('/rooms')}>
-                          <Minimize2 className="mr-2 h-4 w-4" /> Odayı Küçült
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={leaveVoiceOnly}>
-                          <MicOff className="mr-2 h-4 w-4" /> Sesden Ayrıl
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={leaveRoom} className="text-destructive focus:text-destructive">
-                          <LogOut className="mr-2 h-4 w-4" /> Odadan Ayrıl
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-
-                    {isHost && (
-                         <div className="relative">
-                            <Button onClick={() => setIsPortalDialogOpen(true)} variant="ghost" size="icon" className="rounded-full text-yellow-400 hover:text-yellow-300 animate-pulse" disabled={hasActivePortal}>
-                                <Zap className="h-5 w-5" />
-                            </Button>
-                             <div className="absolute inset-0 -z-10 bg-yellow-400/50 blur-lg animate-pulse rounded-full"></div>
-                        </div>
-                    )}
-
-                    <div className="flex-1">
-                        <h1 className="text-md font-bold truncate max-w-[120px] sm:max-w-[180px] text-primary shadow-primary/50 [text-shadow:_0_0_8px_var(--tw-shadow-color)]">{room.name}</h1>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <TooltipProvider delayDuration={0}>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <div className='flex items-center gap-1.5 cursor-pointer'>
-                                            <Star className="h-3 w-3 text-yellow-500" />
-                                            <span className='font-bold'>SV {room.level || 0}</span>
-                                        </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <div className="flex flex-col gap-1 text-center">
-                                            <p className="font-semibold">Seviye İlerlemesi</p>
-                                            <Progress value={xpPercentage} className="h-1.5 w-24" />
-                                            <p className="text-xs">{room.xp} / {room.xpToNextLevel} XP</p>
-                                        </div>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                             {timeLeft !== null && room.expiresAt && (
-                                <>
-                                    <span>·</span>
-                                    <div className="flex items-center gap-1">
-                                        <Clock className="h-3 w-3" />
-                                        <span>{formatTime(timeLeft)}</span>
-                                    </div>
-                                </>
-                            )}
+                        <div>
+                            <h1 className="font-bold text-sm truncate">{room.name}</h1>
+                            <p className="text-xs opacity-70">ID: {room.id}</p>
                         </div>
                     </div>
-                </div>
 
-                <div className="flex items-center gap-1 sm:gap-2">
-                    <Button variant="ghost" size="icon" className="rounded-full" onClick={onParticipantListToggle}>
-                        <Users className="h-5 w-5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="rounded-full" onClick={onToggleCollapse}>
-                       {isSpeakerLayoutCollapsed ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
-                    </Button>
-                    {isHost && (
-                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="rounded-full">
-                                    <MoreHorizontal />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => setIsInviteOpen(true)}>
-                                    <UserPlus className="mr-2 h-4 w-4" />
-                                    Davet Et
-                                </DropdownMenuItem>
-                                 <DropdownMenuItem onClick={() => setIsManagementOpen(true)}>
-                                    <Settings className="mr-2 h-4 w-4" />
-                                    Oda Ayarları
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    )}
+                    <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="rounded-full hover:bg-white/10" onClick={onParticipantListToggle}>
+                           <Users className="h-5 w-5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="rounded-full hover:bg-white/10" onClick={handleShare}>
+                           <Share2 className="h-5 w-5" />
+                        </Button>
+                         <Button variant="ghost" size="icon" className="rounded-full hover:bg-white/10" onClick={leaveRoom}>
+                           <LogOut className="h-5 w-5" />
+                        </Button>
+                    </div>
                 </div>
+                 <div className="flex items-center justify-between mt-3 px-2">
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <div className='flex items-center gap-2 cursor-pointer bg-black/30 p-1.5 pr-3 rounded-full'>
+                                    <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                                    <span className='font-bold text-sm'>SV {room.level || 0}</span>
+                                </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <div className="flex flex-col gap-1 text-center">
+                                    <p className="font-semibold">Seviye İlerlemesi</p>
+                                    <Progress value={(room.xp / room.xpToNextLevel) * 100} className="h-1.5 w-24" />
+                                    <p className="text-xs">{room.xp} / {room.xpToNextLevel} XP</p>
+                                </div>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                    {isHost && (
+                        <Button variant="ghost" size="icon" className="rounded-full hover:bg-white/10" onClick={() => setIsManagementOpen(true)}>
+                           <Settings className="h-5 w-5" />
+                        </Button>
+                    )}
+                 </div>
             </header>
             <InviteDialog
                 isOpen={isInviteOpen}
