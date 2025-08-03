@@ -1,6 +1,9 @@
-// This file is obsolete and has been removed to resolve a routing conflict.
-// The new guide page at src/app/guide/page.tsx is now the single source of truth.
-// This file can be safely deleted.
-export default function ObsoleteGuidePage() {
-  return null;
+// Bu sayfa artık sadece NewPostForm bileşenini render ediyor.
+// Tüm layout ve stil mantığı, daha iyi bir yapı için NewPostForm'un içine taşındı.
+import NewPostForm from "@/components/posts/NewPostForm";
+
+export default function CreatePostPage() {
+  return (
+    <NewPostForm />
+  );
 }
