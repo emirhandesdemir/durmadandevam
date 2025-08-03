@@ -1,3 +1,4 @@
+
 // src/components/admin/sidebar.tsx
 // Bu bileşen, admin panelinin sol tarafında yer alan dikey navigasyon menüsüdür.
 // Paneldeki farklı yönetim sayfalarına (Dashboard, Kullanıcılar, Odalar vb.)
