@@ -60,9 +60,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="tr" suppressHydrationWarning>
-      <head>
-          {/* OneSignal SDK script is now handled through next-pwa for better PWA compatibility */}
-      </head>
+      <head></head>
       <body
         className={cn(
           'min-h-screen bg-background font-sans antialiased font-medium',
