@@ -64,7 +64,7 @@ export default function SignUpForm() {
         },
     });
 
-    async function onSubmit(values: z.infer<typeof formSchema>) {
+    async function onSubmit(values: z.infer<typeof formSchema>>) {
         setIsLoading(true);
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
@@ -139,21 +139,21 @@ export default function SignUpForm() {
     }
 
     return (
-        <Card className="w-full max-w-sm mx-auto shadow-2xl rounded-2xl bg-card/80 backdrop-blur-lg border-white/20 relative">
-            <CardHeader className="text-center space-y-4 pt-10">
-                 <Button asChild variant="outline" size="sm" className="absolute top-4 right-4 rounded-full">
-                    <Link href="/guide">
-                        <HelpCircle className="mr-2 h-4 w-4"/> Kılavuz
-                    </Link>
-                </Button>
-                <Image src="/icons/icon.svg" alt="HiweWalk Logo" width={64} height={64} className="h-16 w-16 mx-auto" />
-                <CardTitle className="text-3xl font-bold">Aramıza Katıl</CardTitle>
-                <CardDescription>
-                    Yeni bir hesap oluşturmak için bilgilerinizi girin.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Form {...form}>
+        <Form {...form}>
+            <Card className="w-full max-w-sm mx-auto shadow-2xl rounded-2xl bg-card/80 backdrop-blur-lg border-white/20 relative">
+                <CardHeader className="text-center space-y-4 pt-10">
+                    <Button asChild variant="outline" size="sm" className="absolute top-4 right-4 rounded-full">
+                        <Link href="/guide">
+                            <HelpCircle className="mr-2 h-4 w-4"/> Kılavuz
+                        </Link>
+                    </Button>
+                    <Image src="/icons/icon.svg" alt="HiweWalk Logo" width={64} height={64} className="h-16 w-16 mx-auto" />
+                    <CardTitle className="text-3xl font-bold">Aramıza Katıl</CardTitle>
+                    <CardDescription>
+                        Yeni bir hesap oluşturmak için bilgilerinizi girin.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                         <FormField
                             control={form.control}
@@ -191,7 +191,7 @@ export default function SignUpForm() {
                                     <FormControl>
                                         <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...field} />
                                     </FormControl>
-                                     <Button
+                                    <Button
                                         type="button"
                                         variant="ghost"
                                         size="icon"
@@ -207,24 +207,24 @@ export default function SignUpForm() {
                         />
                         
                         <FormField
-                          control={form.control}
-                          name="terms"
-                          render={({ field }) => (
+                        control={form.control}
+                        name="terms"
+                        render={({ field }) => (
                             <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                              <FormControl>
+                            <FormControl>
                                 <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
                                 />
-                              </FormControl>
-                              <div className="space-y-1 leading-none">
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
                                 <FormLabel>
-                                   <Link href="/terms" target="_blank" className="text-primary hover:underline">Kullanıcı Sözleşmesi</Link> ve <Link href="/privacy" target="_blank" className="text-primary hover:underline">Gizlilik Politikasını</Link> okudum ve kabul ediyorum.
+                                <Link href="/terms" target="_blank" className="text-primary hover:underline">Kullanıcı Sözleşmesi</Link> ve <Link href="/privacy" target="_blank" className="text-primary hover:underline">Gizlilik Politikasını</Link> okudum ve kabul ediyorum.
                                 </FormLabel>
                                 <FormMessage />
-                              </div>
+                            </div>
                             </FormItem>
-                          )}
+                        )}
                         />
 
                         <Button type="submit" className="w-full text-lg font-semibold shadow-lg shadow-primary/30 transition-transform hover:scale-105" disabled={isLoading}>
@@ -232,13 +232,13 @@ export default function SignUpForm() {
                             Hesap Oluştur
                         </Button>
                     </form>
-                </Form>
-                <div className="mt-6 text-center text-sm">
-                    Zaten bir hesabınız var mı?{" "}
-                    <Link href="/login" className="font-semibold text-primary hover:underline">
-                        Giriş Yap
-                    </Link>
-                </div>
-            </CardContent>
-        </Card>
-    
+                    <div className="mt-6 text-center text-sm">
+                        Zaten bir hesabınız var mı?{" "}
+                        <Link href="/login" className="font-semibold text-primary hover:underline">
+                            Giriş Yap
+                        </Link>
+                    </div>
+                </CardContent>
+            </Card>
+        </Form>
+    );
