@@ -147,7 +147,7 @@ export default function ProfilePageClient() {
 
             if (result.success) {
                 toast({ title: "Başarılı!", description: "Profil fotoğrafınız güncellendi." });
-                await refreshUserData();
+                // The onIdTokenChanged listener in AuthContext will handle the refresh automatically.
             } else {
                 throw new Error(result.error || "Bilinmeyen bir hata oluştu.");
             }
@@ -186,7 +186,7 @@ export default function ProfilePageClient() {
             }
             
             toast({ title: "Başarılı!", description: "Profiliniz başarıyla güncellendi." });
-            await refreshUserData();
+            // The onIdTokenChanged listener in AuthContext will handle refreshing the data.
         } catch (error: any) {
             toast({ title: "Hata", description: error.message || "Profil güncellenirken bir hata oluştu.", variant: "destructive" });
         } finally {
@@ -657,10 +657,10 @@ export default function ProfilePageClient() {
             <AnimatePresence>
             {hasChanges && (
                 <motion.div
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: 20, opacity: 0 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    initial={{ y: 100 }}
+                    animate={{ y: 0 }}
+                    exit={{ y: 100 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 25 }}
                     className="fixed bottom-20 left-4 z-[60]"
                 >
                     <Button onClick={handleSaveChanges} disabled={isSaving} size="lg" className="shadow-lg">

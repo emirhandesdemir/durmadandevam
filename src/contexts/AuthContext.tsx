@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { onIdTokenChanged, User, signOut } from 'firebase/auth';
-import { doc, onSnapshot, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, serverTimestamp, updateDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { FeatureFlags, UserProfile, ThemeSettings } from '@/lib/types';
@@ -104,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const unsubscribeAuth = onIdTokenChanged(auth, async (currentUser) => {
         setUser(currentUser);
-        const idToken = await currentUser?.getIdToken() || null;
+        const idToken = await currentUser?.getIdToken(true) || null; // Force refresh token
         await setSessionCookie(idToken);
         
         if (!currentUser) {
@@ -155,8 +155,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 router.replace('/home');
             }
         }
-        // If the doc doesn't exist (e.g. for a new user), it will be created by the signup form.
-        // We just need to wait, so we still set loading to false.
         setLoading(false);
     }, (error) => {
         console.error("Firestore user listener error:", error);
