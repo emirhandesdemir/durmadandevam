@@ -130,7 +130,7 @@ export default function UsersTable({ users }: UsersTableProps) {
                                     </Avatar>
                                     <div>
                                         <p className="font-medium group-hover:text-primary">{user.username}</p>
-                                        <p className="text-xs text-muted-foreground flex items-center gap-1"><AtSign className="h-3 w-3"/>{user.uniqueTag}</p>
+                                        <p className="text-xs text-muted-foreground flex items-center gap-1"><AtSign className="h-3 w-3"/>{user.uniqueTag || user.uid.slice(0, 4)}</p>
                                         {user.reportCount && user.reportCount > 0 && (
                                             <span className="text-xs text-destructive font-bold">{user.reportCount} şikayet</span>
                                         )}

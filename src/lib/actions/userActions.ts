@@ -75,7 +75,7 @@ export async function updateUserProfile(updates: {
                 const initialData = {
                     uid: userId, uniqueTag: newTag, email: updates.email, emailVerified: false,
                     username: updates.username, username_lowercase: updates.username?.toLowerCase(), 
-                    photoURL: updates.photoURL || `https://api.dicebear.com/8.x/initials/svg?seed=${updates.username}`, 
+                    photoURL: updates.photoURL, 
                     bio: null, age: null, city: null, country: null,
                     gender: null, interests: [], role: userRole,
                     createdAt: serverTimestamp(), lastActionTimestamp: serverTimestamp(),
