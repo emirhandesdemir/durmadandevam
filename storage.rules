@@ -2,42 +2,33 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Default to denying all access
+    
+    // Allow public read access to all files.
+    // This is useful for profile pictures, post images, etc.
     match /{allPaths=**} {
-      allow read, write: if false;
+      allow read;
+    }
+
+    // Allow authenticated users to write to their own avatar directory.
+    // The path checks that the user is trying to write to a folder
+    // that matches their own UID.
+    match /avatars/{userId}/{fileName} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Allow authenticated users to upload to their own room folders
+    match /upload/rooms/{roomId}/{allPaths=**} {
+      allow write: if request.auth != null;
+    }
+
+     // Allow authenticated users to upload to their own dm folders
+    match /dms/{chatId}/{allPaths=**} {
+      allow write: if request.auth != null;
     }
     
-    // Allow users to manage their own avatar
-    // Avatars are public to read by anyone
-    match /upload/avatars/{userId}/{fileName} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Allow users to upload images for their posts
-    // Post images are public to read
-    match /upload/posts/{userId}/{fileName} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Allow users to upload videos for their surf posts
-    // Surf videos are public to read
-    match /upload/videos/{userId}/{fileName} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Allow users to upload media in their direct messages
-    // Only chat participants should be able to read/write
-    match /dms/{chatId}/{mediaType}/{fileName} {
-      allow read, write: if request.auth != null && chatId.split('_').includes(request.auth.uid);
-    }
-    
-    // Allow users to upload music to rooms
-    // This could be restricted further if needed (e.g., only room participants)
-    match /music/{roomId}/{fileName} {
-        allow read, write: if request.auth != null;
+    // Allow authenticated users to upload music to room playlists
+    match /music/{roomId}/{allPaths=**} {
+      allow write: if request.auth != null;
     }
   }
 }

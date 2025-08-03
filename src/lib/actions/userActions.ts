@@ -4,7 +4,7 @@
 import { db, storage } from '@/lib/firebase';
 import type { Post, Report, UserProfile } from '../types';
 import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, collectionGroup, deleteDoc, setDoc } from 'firebase/firestore';
-import { ref as storageRef, deleteObject, uploadString, getDownloadURL, uploadBytes } from 'firebase/storage';
+import { ref as storageRef, deleteObject, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
 import { getAuth } from '../firebaseAdmin';
@@ -12,7 +12,8 @@ import { deleteRoomWithSubcollections } from '../firestoreUtils';
 import { updateUserPosts, updateUserComments, updateUserDmMessages } from './propagationActions';
 import { v4 as uuidv4 } from 'uuid';
 import { createNotification } from './notificationActions';
-import { updateEmail } from 'firebase/auth';
+import { updateEmail, sendEmailVerification as sendFirebaseEmailVerification } from 'firebase/auth';
+
 
 export async function sendVerificationEmail(userId: string) {
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
@@ -40,7 +41,6 @@ export async function updateUserProfile(updates: {
     isNewUser?: boolean;
     email?: string;
     referredBy?: string | null;
-    avatarSvg?: string | null;
     photoURL?: string | null;
     username?: string;
     bio?: string;
@@ -74,7 +74,7 @@ export async function updateUserProfile(updates: {
     // Handle photoURL from data URL
     if (updates.photoURL?.startsWith('data:image')) {
         const imageBuffer = Buffer.from(updates.photoURL.split(',')[1], 'base64');
-        const imagePath = `avatars/${userId}/${uuidv4()}.png`;
+        const imagePath = `avatars/${userId}/profile.png`; // Simplified path
         const imageStorageRef = storageRef(storage, imagePath);
         await uploadBytes(imageStorageRef, imageBuffer, { contentType: 'image/png' });
         updatesForDb.photoURL = await getDownloadURL(imageStorageRef);
@@ -100,7 +100,7 @@ export async function updateUserProfile(updates: {
     
     if (updates.email && updates.email !== userData?.email) {
         const auth = getAuth();
-        await auth.updateUser(userId, { email: updates.email });
+        await auth.updateUser(userId, { email: updates.email, emailVerified: false });
         updatesForDb.email = updates.email;
         updatesForDb.emailVerified = false;
     }
@@ -117,7 +117,7 @@ export async function updateUserProfile(updates: {
 
     // Check for profile completion reward
     if (!isNewUser && userData && !userData.profileCompletionAwarded) {
-        const hasBio = 'bio' in updatesForDb ? !!updatesForDb.bio : !!userData.bio;
+        const hasBio = 'bio' in updatesForDb ? !!updatesForDb.bio?.trim() : !!userData.bio?.trim();
         const hasAge = 'age' in updatesForDb ? !!updatesForDb.age : !!userData.age;
         const hasGender = 'gender' in updatesForDb ? !!updatesForDb.gender : !!userData.gender;
         const hasInterests = 'interests' in updatesForDb ? (updatesForDb.interests?.length > 0) : (userData.interests?.length > 0);
@@ -203,14 +203,14 @@ export async function updateUserProfile(updates: {
             senderId: 'system-reward',
             senderUsername: 'HiweWalk',
             senderAvatar: null,
-            type: 'system', // A generic system type can be used
+            type: 'system',
             messageText: 'Tebrikler! Profilini tamamladığın için 50 elmas kazandın! 💎',
         });
     }
 
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (updatesForDb.photoURL) propagationUpdates.userPhotoURL = updatesForDb.photoURL;
+    if (updatesForDb.photoURL) propagationUpdates.photoURL = updatesForDb.photoURL;
     if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
 
     if (Object.keys(propagationUpdates).length > 0) {
