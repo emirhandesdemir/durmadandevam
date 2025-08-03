@@ -4,7 +4,7 @@
 import { db, storage } from '@/lib/firebase';
 import type { Post, Report, UserProfile } from '../types';
 import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, collectionGroup, deleteDoc, setDoc, runTransaction } from 'firebase/firestore';
-import { ref as storageRef, deleteObject, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage';
+import { ref as storageRef, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
 import { getAuth } from '../firebaseAdmin';
@@ -60,58 +60,14 @@ export async function updateUserProfile(updates: {
         updatesForDb.age = Number(updates.age);
     }
     
-    const userSnap = await getDoc(userRef);
-    const userData = userSnap.exists() ? userSnap.data() : {};
+    // Start a transaction to handle all operations atomically
+    await runTransaction(db, async (transaction) => {
+        const userSnap = await transaction.get(userRef);
+        const userData = userSnap.exists() ? userSnap.data() : {};
 
-    // Check for username change and uniqueness
-    if (updates.username && updates.username !== userData?.username) {
-        // No longer checking for uniqueness as per new system design
-        updatesForDb.username = updates.username;
-        updatesForDb.username_lowercase = updates.username.toLowerCase();
-    }
-    
-    if (updates.email && updates.email !== userData?.email) {
-        updatesForDb.email = updates.email;
-        updatesForDb.emailVerified = false; // Reset verification status on email change
-    }
-
-
-    if (updates.location) {
-        updatesForDb.location = { latitude: updates.location.latitude, longitude: updates.location.longitude };
-        if (updates.location.city) updatesForDb.city = updates.location.city;
-        if (updates.location.country) updatesForDb.country = updates.location.country;
-    }
-
-    // Assign uniqueTag if it doesn't exist (for existing users)
-    if (!isNewUser && userData && !userData.uniqueTag) {
-        const counterRef = doc(db, 'config', 'counters');
-        await runTransaction(db, async (transaction) => {
-            const counterDoc = await transaction.get(counterRef);
-            const currentTag = counterDoc.exists() ? counterDoc.data().userTag || 1000 : 1000;
-            const newTag = currentTag + 1;
-            transaction.update(counterRef, { userTag: newTag });
-            updatesForDb.uniqueTag = newTag;
-        });
-    }
-
-    if (!isNewUser && userData && !userData.profileCompletionAwarded) {
-        const hasBio = 'bio' in updatesForDb ? !!updatesForDb.bio?.trim() : !!userData.bio?.trim();
-        const hasAge = 'age' in updatesForDb ? !!updatesForDb.age : !!userData.age;
-        const hasGender = 'gender' in updatesForDb ? !!updatesForDb.gender : !!userData.gender;
-        const hasInterests = 'interests' in updatesForDb ? (updatesForDb.interests?.length > 0) : (userData.interests?.length > 0);
-        const isVerified = userData.emailVerified;
-
-        if (hasBio && hasAge && hasGender && hasInterests && isVerified) {
-            updatesForDb.diamonds = increment(50);
-            updatesForDb.profileCompletionAwarded = true;
-        }
-    }
-
-
-    if (isNewUser) {
-        const counterRef = doc(db, 'config', 'counters');
-        
-        await runTransaction(db, async (transaction) => {
+        // If it's a new user or the document doesn't exist, we must use set()
+        if (isNewUser || !userSnap.exists()) {
+            const counterRef = doc(db, 'config', 'counters');
             const counterDoc = await transaction.get(counterRef);
             const currentTag = counterDoc.exists() ? counterDoc.data().userTag || 1000 : 1000;
             const newTag = currentTag + 1;
@@ -143,12 +99,50 @@ export async function updateUserProfile(updates: {
             
              delete updatesForDb.isNewUser;
              delete updatesForDb.referredBy;
+             // Use set to create the document with all initial and updated data
              transaction.set(userRef, { ...initialData, ...updatesForDb });
-        });
-    } else if (Object.keys(updatesForDb).length > 0) {
-        await updateDoc(userRef, updatesForDb);
-    }
-    
+             
+        } else { // Document exists, so we can update it
+            // Assign uniqueTag if it doesn't exist (for existing users)
+            if (!userData.uniqueTag) {
+                const counterRef = doc(db, 'config', 'counters');
+                const counterDoc = await transaction.get(counterRef);
+                const currentTag = counterDoc.exists() ? counterDoc.data().userTag || 1000 : 1000;
+                const newTag = currentTag + 1;
+                transaction.update(counterRef, { userTag: newTag });
+                updatesForDb.uniqueTag = newTag;
+            }
+
+            if (updates.email && updates.email !== userData.email) {
+                updatesForDb.email = updates.email;
+                updatesForDb.emailVerified = false; // Reset verification status on email change
+            }
+
+            if (updates.location) {
+                updatesForDb.location = { latitude: updates.location.latitude, longitude: updates.location.longitude };
+                if (updates.location.city) updatesForDb.city = updates.location.city;
+                if (updates.location.country) updatesForDb.country = updates.location.country;
+            }
+
+            if (!userData.profileCompletionAwarded) {
+                const hasBio = 'bio' in updatesForDb ? !!updatesForDb.bio?.trim() : !!userData.bio?.trim();
+                const hasAge = 'age' in updatesForDb ? !!updatesForDb.age : !!userData.age;
+                const hasGender = 'gender' in updatesForDb ? !!updatesForDb.gender : !!userData.gender;
+                const hasInterests = 'interests' in updatesForDb ? (updatesForDb.interests?.length > 0) : (userData.interests?.length > 0);
+                const isVerified = userData.emailVerified;
+
+                if (hasBio && hasAge && hasGender && hasInterests && isVerified) {
+                    updatesForDb.diamonds = increment(50);
+                    updatesForDb.profileCompletionAwarded = true;
+                }
+            }
+
+            if (Object.keys(updatesForDb).length > 0) {
+                 transaction.update(userRef, updatesForDb);
+            }
+        }
+    });
+
     // Propagate changes to other collections
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
