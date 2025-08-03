@@ -3,7 +3,7 @@
 
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff, UserCheck, Crown, Bookmark } from 'lucide-react';
+import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff, UserCheck, Crown, Bookmark, Copy, Shield, BadgeCheck, Star } from 'lucide-react';
 import FollowButton from './FollowButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { blockUser, unblockUser } from '@/lib/actions/userActions';
 import ReportDialog from '../common/ReportDialog';
 import { Loader2 } from 'lucide-react';
+import { Separator } from '../ui/separator';
 
 interface UserProfile {
   uid: string;
@@ -30,11 +31,22 @@ interface UserProfile {
   followRequests?: any[];
   blockedUsers?: string[];
   premiumUntil?: any;
+  uniqueTag?: number;
+  giftLevel?: number;
+  role?: 'admin' | 'user';
+  emailVerified?: boolean;
 }
 
 interface ProfileHeaderProps {
   profileUser: UserProfile;
 }
+
+const BadgeItem = ({ icon: Icon, label }: { icon: React.ElementType, label: string }) => (
+    <div className="flex flex-col items-center gap-2 p-3 rounded-lg bg-muted/50 border w-24 h-24 justify-center">
+        <Icon className="h-7 w-7 text-primary" />
+        <span className="text-xs font-semibold text-center">{label}</span>
+    </div>
+);
 
 export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
   const { user: currentUserAuth, userData: currentUserData } = useAuth();
@@ -51,11 +63,18 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
   const haveIBlockedThisUser = currentUserData?.blockedUsers?.includes(profileUser.uid);
   const isPremium = profileUser.premiumUntil && new Date(profileUser.premiumUntil.seconds * 1000) > new Date();
 
-
   const handleStatClick = (type: 'followers' | 'following') => {
     setDialogType(type);
     setDialogOpen(true);
   };
+  
+   const copyIdToClipboard = () => {
+        if(!profileUser.uniqueTag) return;
+        navigator.clipboard.writeText(`@${profileUser.uniqueTag}`);
+        toast({
+            description: "Kullanıcı ID'si kopyalandı!",
+        });
+    };
 
   const handleBlockUser = async () => {
     if (!currentUserData) return;
@@ -101,17 +120,13 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
             <AvatarImage src={profileUser.photoURL || undefined} />
             <AvatarFallback className="text-3xl bg-muted">{profileUser.username?.charAt(0).toUpperCase()}</AvatarFallback>
           </Avatar>
-          <div className="flex-1 space-y-1">
-            <div className="flex items-center gap-2">
+           <div className="flex-1 space-y-1">
+             <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold">{profileUser.username}</h1>
-                {isPremium && <Crown className="h-5 w-5 text-yellow-500" />}
+                <p className="text-lg text-muted-foreground">@{profileUser.uniqueTag}</p>
+                <Button onClick={copyIdToClipboard} variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground"><Copy className="h-4 w-4"/></Button>
             </div>
-            
-            <div className="flex items-center gap-4 text-sm">
-                <div><span className="font-bold">{profileUser.postCount}</span> gönderi</div>
-                <button onClick={() => handleStatClick('followers')} className="hover:underline"><span className="font-bold">{profileUser.followers?.length || 0}</span> takipçi</button>
-                <button onClick={() => handleStatClick('following')} className="hover:underline"><span className="font-bold">{profileUser.following?.length || 0}</span> takip</button>
-            </div>
+            {profileUser.bio && <p className="text-sm text-foreground/80">{profileUser.bio}</p>}
           </div>
           {isOwnProfile && (
              <Button asChild variant="outline" size="icon">
@@ -120,7 +135,15 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
           )}
         </div>
         
-        {profileUser.bio && <p className="text-sm">{profileUser.bio}</p>}
+        <div className="space-y-2">
+            <p className="text-sm font-semibold text-muted-foreground">Rozetler</p>
+            <div className="flex flex-wrap gap-2">
+                <BadgeItem icon={Star} label={`Seviye ${profileUser.giftLevel || 0}`} />
+                {isPremium && <BadgeItem icon={Crown} label="Premium" />}
+                {profileUser.role === 'admin' && <BadgeItem icon={Shield} label="Yönetici" />}
+                {profileUser.emailVerified && <BadgeItem icon={BadgeCheck} label="Onaylı Hesap" />}
+            </div>
+        </div>
 
         {!isOwnProfile && !haveIBlockedThisUser && (
             <div className="flex w-full gap-2">
@@ -149,6 +172,21 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
             </Button>
         )}
       </div>
+
+       <div className="flex items-center justify-around text-center py-3 border-y bg-muted/50">
+            <div className="text-sm">
+                <p className="font-bold text-base">{profileUser.postCount}</p>
+                <p className="text-muted-foreground">gönderi</p>
+            </div>
+            <button onClick={() => handleStatClick('followers')} className="text-sm">
+                <p className="font-bold text-base">{profileUser.followers?.length || 0}</p>
+                <p className="text-muted-foreground">takipçi</p>
+            </button>
+            <button onClick={() => handleStatClick('following')} className="text-sm">
+                <p className="font-bold text-base">{profileUser.following?.length || 0}</p>
+                <p className="text-muted-foreground">takip</p>
+            </button>
+       </div>
 
       <FollowListDialog
         isOpen={dialogOpen}

@@ -125,6 +125,7 @@ export interface ThemeSettings {
 
 export interface UserProfile {
     uid: string;
+    uniqueTag: number;
     email: string;
     emailVerified: boolean;
     username: string;
