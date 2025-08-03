@@ -1,6 +1,15 @@
 // src/lib/gifts.ts
 
 import { Rose, Heart, PartyPopper, Rocket, Castle, Plane } from "lucide-react";
+import { 
+    AnimatedRose, 
+    AnimatedHeart, 
+    AnimatedPopper, 
+    AnimatedRocket, 
+    AnimatedCastle, 
+    AnimatedPlane 
+} from "@/components/gifts/GiftAnimations";
+
 
 export interface Gift {
     id: string;
@@ -14,42 +23,42 @@ export const giftList: Gift[] = [
     {
         id: 'rose',
         name: 'Gül',
-        icon: Rose,
+        icon: AnimatedRose,
         diamondCost: 1,
         animationClass: 'gift-animate-rose'
     },
     {
         id: 'heart',
         name: 'Kalp',
-        icon: Heart,
+        icon: AnimatedHeart,
         diamondCost: 5,
         animationClass: 'gift-animate-heart'
     },
     {
         id: 'popper',
-        name: 'Parti Şapkası',
-        icon: PartyPopper,
+        name: 'Parti Patlatıcısı',
+        icon: AnimatedPopper,
         diamondCost: 10,
         animationClass: 'gift-animate-popper'
     },
     {
         id: 'rocket',
         name: 'Roket',
-        icon: Rocket,
+        icon: AnimatedRocket,
         diamondCost: 50,
         animationClass: 'gift-animate-rocket'
     },
     {
         id: 'castle',
         name: 'Kale',
-        icon: Castle,
+        icon: AnimatedCastle,
         diamondCost: 100,
         animationClass: 'gift-animate-castle'
     },
     {
         id: 'plane',
         name: 'Uçak',
-        icon: Plane,
+        icon: AnimatedPlane,
         diamondCost: 1000,
         animationClass: 'gift-animate-plane'
     },

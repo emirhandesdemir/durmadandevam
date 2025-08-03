@@ -30,7 +30,7 @@ export default function GiftMessage({ message }: { message: Message }) {
       transition={{ type: 'spring', stiffness: 200, damping: 15 }}
       className="flex flex-col items-center justify-center gap-2 my-4 p-4 rounded-xl bg-gradient-to-tr from-yellow-400/10 via-amber-500/10 to-red-500/10 border-2 border-amber-500/20 text-center relative overflow-hidden"
     >
-        <div className={cn("absolute inset-0 pointer-events-none", gift.animationClass)}>
+        <div className={cn("absolute inset-0 pointer-events-none flex items-center justify-center", gift.animationClass)}>
             <GiftIcon className="h-24 w-24 text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.9)] opacity-80" />
         </div>
         <div className="relative z-10 flex items-center gap-2">
