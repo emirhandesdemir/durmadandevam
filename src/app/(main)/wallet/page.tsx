@@ -4,7 +4,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Gem, Gift, Loader2, Store, Repeat, ShoppingCart, ArrowRightLeft, History, Info } from "lucide-react";
+import { Gem, Gift, Loader2, Store, Repeat, ShoppingCart, ArrowRightLeft, History, Info, Wallet } from "lucide-react";
 import { convertProfileValueToDiamonds } from "@/lib/actions/giftActions";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
