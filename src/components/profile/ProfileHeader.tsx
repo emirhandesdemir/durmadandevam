@@ -21,7 +21,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/
 import type { UserProfile } from '@/lib/types';
 import { Timestamp } from 'firebase/firestore';
 import BadgesDialog from './BadgesDialog';
-import AvatarWithFrame from '../common/AvatarWithFrame';
+import AvatarWithFrame from "../common/AvatarWithFrame";
 import { Progress } from '../ui/progress';
 import { giftLevelThresholds } from '@/lib/gifts';
 
