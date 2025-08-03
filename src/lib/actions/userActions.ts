@@ -53,6 +53,7 @@ export async function updateUserProfile(updates: {
     
     let updatesForDb: { [key: string]: any } = { ...otherUpdates };
     
+    // Convert age to number or null
     if (updates.age === '' || updates.age === undefined || updates.age === null) {
         updatesForDb.age = null;
     } else if (updates.age !== undefined) {
@@ -62,13 +63,16 @@ export async function updateUserProfile(updates: {
     const userSnap = await getDoc(userRef);
     const userData = userSnap.exists() ? userSnap.data() : {};
 
+    // Check for username change and uniqueness
     if (updates.username && updates.username !== userData?.username) {
+        // No longer checking for uniqueness as per new system design
         updatesForDb.username = updates.username;
+        updatesForDb.username_lowercase = updates.username.toLowerCase();
     }
     
     if (updates.email && updates.email !== userData?.email) {
         updatesForDb.email = updates.email;
-        updatesForDb.emailVerified = false;
+        updatesForDb.emailVerified = false; // Reset verification status on email change
     }
 
 
@@ -76,6 +80,18 @@ export async function updateUserProfile(updates: {
         updatesForDb.location = { latitude: updates.location.latitude, longitude: updates.location.longitude };
         if (updates.location.city) updatesForDb.city = updates.location.city;
         if (updates.location.country) updatesForDb.country = updates.location.country;
+    }
+
+    // Assign uniqueTag if it doesn't exist (for existing users)
+    if (!isNewUser && userData && !userData.uniqueTag) {
+        const counterRef = doc(db, 'config', 'counters');
+        await runTransaction(db, async (transaction) => {
+            const counterDoc = await transaction.get(counterRef);
+            const currentTag = counterDoc.exists() ? counterDoc.data().userTag || 1000 : 1000;
+            const newTag = currentTag + 1;
+            transaction.update(counterRef, { userTag: newTag });
+            updatesForDb.uniqueTag = newTag;
+        });
     }
 
     if (!isNewUser && userData && !userData.profileCompletionAwarded) {
@@ -109,7 +125,8 @@ export async function updateUserProfile(updates: {
                 uniqueTag: newTag,
                 email: updates.email, 
                 emailVerified: false,
-                username: updates.username, 
+                username: updates.username,
+                username_lowercase: updates.username?.toLowerCase(), 
                 photoURL: updates.photoURL || null, bio: null, age: null, city: null, country: null,
                 gender: null, interests: [], role: userRole,
                 createdAt: serverTimestamp(), lastActionTimestamp: serverTimestamp(),
@@ -132,18 +149,35 @@ export async function updateUserProfile(updates: {
         await updateDoc(userRef, updatesForDb);
     }
     
-    if (updates.username || updates.photoURL) {
+    // Propagate changes to other collections
+    const propagationUpdates: { [key: string]: any } = {};
+    if (updates.username) propagationUpdates.username = updates.username;
+    if (updates.photoURL) propagationUpdates.userPhotoURL = updates.photoURL;
+    if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
+
+    if (Object.keys(propagationUpdates).length > 0) {
         try {
-            const auth = getAuth();
-            const authUpdates: { displayName?: string, photoURL?: string } = {};
-            if(updates.username) authUpdates.displayName = updates.username;
-            if(updates.photoURL) authUpdates.photoURL = updates.photoURL;
-            await auth.updateUser(userId, authUpdates);
-        } catch (e) {
-            console.error("Auth profile update failed:", e);
+            await Promise.all([
+                updateUserPosts(userId, propagationUpdates),
+                updateUserComments(userId, propagationUpdates),
+                updateUserDmMessages(userId, propagationUpdates),
+            ]);
+        } catch(err) {
+            console.error("Propagation error:", err);
+            // This is a background task, so we don't want to fail the whole request
+            // but we should log it.
         }
     }
 
+    if (updates.photoURL) {
+      try {
+        const auth = getAuth();
+        await auth.updateUser(userId, { photoURL: updates.photoURL });
+      } catch (e) {
+        console.error("Auth profile photo update failed:", e);
+      }
+    }
+    
     if (updatesForDb.profileCompletionAwarded) {
          await createNotification({
             recipientId: userId, senderId: 'system-reward',
@@ -153,24 +187,6 @@ export async function updateUserProfile(updates: {
         });
     }
 
-    const propagationUpdates: { [key: string]: any } = {};
-    if (updates.username) propagationUpdates.username = updates.username;
-    if (updates.photoURL) propagationUpdates.userPhotoURL = updates.photoURL;
-    if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
-
-    if (Object.keys(propagationUpdates).length > 0) {
-         try {
-            await Promise.all([
-                updateUserPosts(userId, propagationUpdates),
-                updateUserComments(userId, propagationUpdates),
-                updateUserDmMessages(userId, propagationUpdates),
-            ]);
-        } catch(err) {
-            console.error("Propagasyon hatası:", err);
-            throw new Error("Profil güncellendi ancak eski içeriklere yansıtılamadı.");
-        }
-    }
-    
     revalidatePath(`/profile/${userId}`, 'layout');
     return { success: true };
 }
@@ -182,19 +198,17 @@ export async function searchUsers(searchTerm: string, currentUserId: string): Pr
     const usersRef = collection(db, 'users');
     const promises: Promise<any>[] = [];
 
-    // Search by uniqueTag if the term is a number
     const numericSearchTerm = searchTerm.startsWith('@') ? parseInt(searchTerm.substring(1), 10) : parseInt(searchTerm, 10);
     if (!isNaN(numericSearchTerm)) {
         const qTag = query(usersRef, where('uniqueTag', '==', numericSearchTerm), limit(5));
         promises.push(getDocs(qTag));
     }
 
-    // Search by username
     const searchTermLower = searchTerm.toLowerCase();
     const qName = query(
         usersRef,
-        where('username', '>=', searchTerm),
-        where('username', '<=', searchTerm + '\uf8ff'),
+        where('username_lowercase', '>=', searchTermLower),
+        where('username_lowercase', '<=', searchTermLower + '\uf8ff'),
         limit(10)
     );
     promises.push(getDocs(qName));

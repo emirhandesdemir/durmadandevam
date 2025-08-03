@@ -8,28 +8,17 @@ async function processQueryInBatches(queryToProcess: any, updates: any) {
     // Firestore allows up to 500 writes in a single batch.
     // We process in smaller chunks to be safe.
     const BATCH_SIZE = 400; 
-    let lastDoc = null;
     
-    while(true) {
-        let q = queryToProcess;
-        if(lastDoc) {
-            q = query(q, BATCH_SIZE);
-        } else {
-            q = query(q, BATCH_SIZE);
-        }
+    const snapshot = await getDocs(queryToProcess);
+    if (snapshot.empty) return;
 
-        const snapshot = await getDocs(q);
-        if (snapshot.empty) break;
-
+    for (let i = 0; i < snapshot.docs.length; i += BATCH_SIZE) {
         const batch = writeBatch(db);
-        snapshot.docs.forEach((doc) => {
+        const chunk = snapshot.docs.slice(i, i + BATCH_SIZE);
+        chunk.forEach((doc) => {
             batch.update(doc.ref, updates);
         });
         await batch.commit();
-
-        if (snapshot.size < BATCH_SIZE) break;
-
-        lastDoc = snapshot.docs[snapshot.docs.length - 1];
     }
 }
 
@@ -39,8 +28,8 @@ export async function updateUserPosts(uid: string, updates: { [key: string]: any
     
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
-    if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
+    if (updates.userPhotoURL) propagationUpdates.userPhotoURL = updates.userPhotoURL;
+    if (updates.userAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.userAvatarFrame;
     
     if (Object.keys(propagationUpdates).length === 0) return;
 
@@ -73,8 +62,8 @@ export async function updateUserComments(uid: string, updates: { [key: string]: 
 
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (updates.photoURL) propagationUpdates.photoURL = updates.photoURL;
-    if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
+    if (updates.userPhotoURL) propagationUpdates.photoURL = updates.userPhotoURL;
+    if (updates.userAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.userAvatarFrame;
     
     if (Object.keys(propagationUpdates).length === 0) return;
 
@@ -87,8 +76,8 @@ export async function updateUserDmMessages(uid: string, updates: { [key: string]
 
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates['participantInfo.' + uid + '.username'] = updates.username;
-    if (updates.photoURL !== undefined) propagationUpdates['participantInfo.' + uid + '.photoURL'] = updates.photoURL;
-    if (updates.selectedAvatarFrame !== undefined) propagationUpdates['participantInfo.' + uid + '.selectedAvatarFrame'] = updates.selectedAvatarFrame;
+    if (updates.userPhotoURL !== undefined) propagationUpdates['participantInfo.' + uid + '.photoURL'] = updates.userPhotoURL;
+    if (updates.userAvatarFrame !== undefined) propagationUpdates['participantInfo.' + uid + '.selectedAvatarFrame'] = updates.userAvatarFrame;
 
     if (Object.keys(propagationUpdates).length === 0) return;
     

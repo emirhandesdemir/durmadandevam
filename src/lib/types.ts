@@ -125,10 +125,11 @@ export interface ThemeSettings {
 
 export interface UserProfile {
     uid: string;
-    uniqueTag: number; // Unique, system-generated, searchable tag.
+    uniqueTag: number;
     email: string;
     emailVerified: boolean;
-    username: string; // Display name, not unique.
+    username: string; 
+    username_lowercase: string;
     photoURL: string | null;
     profileEmoji?: string | null;
     bio: string | null;
