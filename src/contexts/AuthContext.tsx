@@ -122,12 +122,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // If auth state is still being determined, don't do anything.
+    if (loading) return;
+
+    const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
+    const isPublicPage = isAuthPage || pathname.startsWith('/guide') || pathname.startsWith('/terms') || pathname.startsWith('/privacy');
+
+    if (!user && !isPublicPage) {
+        // If user is not logged in and trying to access a protected page, redirect to login.
+        router.replace('/login');
+    } else if (user && isAuthPage) {
+        // If user is logged in and on an auth page, redirect to home.
+        router.replace('/home');
+    }
+
+  }, [user, loading, pathname, router]);
+
+  useEffect(() => {
     if (!user) {
         setLoading(false);
-        const isProtectedRoute = pathname.startsWith('/(main)') || pathname.startsWith('/wallet') || pathname.startsWith('/admin') || pathname.startsWith('/profile');
-        if (isProtectedRoute && pathname !== '/') {
-            router.replace('/login');
-        }
         return;
     }
 
@@ -149,11 +162,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (!data.bio && !data.profileCompletionNotificationSent) {
                 triggerProfileCompletionNotification(user.uid);
             }
-            
-            const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname === '/';
-            if (isAuthPage) {
-                router.replace('/home');
-            }
+        } else {
+             // This case might happen if a user is deleted from the DB but still has a valid auth token.
+            handleLogout();
         }
         setLoading(false);
     }, (error) => {
@@ -180,7 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubscribeDms();
       window.removeEventListener("beforeunload", onbeforeunload);
     };
-  }, [user, handleLogout, pathname, router]);
+  }, [user, handleLogout]);
 
   const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms, refreshUserData };
   

@@ -7,15 +7,14 @@ import Header from "@/components/admin/header";
 import { ShieldAlert, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const { userData, loading, user } = useAuth();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
-  const router = useRouter();
 
-  // Show a full-screen loader while auth data is being fetched.
+  // The AuthContext now handles redirects, so we only need to handle UI states here.
+  // Show a loader while auth state is resolving to prevent flashes of incorrect UI.
   if (loading) {
     return (
         <div className="flex h-screen w-full flex-col items-center justify-center bg-background">
@@ -24,20 +23,9 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Once loading is complete, check for user. If not present, redirect.
-  // We return a loader here as well to give the router time to redirect
-  // without attempting to render a broken UI state.
-  if (!user || !userData) {
-     router.replace('/login');
-     return (
-         <div className="flex h-screen w-full flex-col items-center justify-center bg-background">
-            <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        </div>
-     );
-  }
-  
-  // If user is present but not an admin, show access denied message.
-  if (userData.role !== 'admin') {
+  // If user is not an admin, show access denied message.
+  // This check is safe because `loading` is false and `userData` is populated.
+  if (!user || !userData || userData.role !== 'admin') {
       return (
           <div className="flex h-screen w-full flex-col items-center justify-center bg-background p-4 text-center">
               <ShieldAlert className="h-16 w-16 text-destructive" />
