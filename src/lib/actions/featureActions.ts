@@ -14,7 +14,7 @@ export async function getFeatureFlags(): Promise<FeatureFlags> {
     const flagsRef = doc(db, 'config', 'featureFlags');
     const docSnap = await getDoc(flagsRef);
 
-    // Varsayılan değerler. postFeedEnabled her zaman true olacak.
+    // Varsayılan değerler
     const defaultFlags: FeatureFlags = {
         quizGameEnabled: true,
         contentModerationEnabled: true,

@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessagesSquare, Plus, Compass, Clapperboard } from 'lucide-react';
+import { Home, MessagesSquare, Plus, Compass } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMemo } from 'react';
@@ -21,7 +21,6 @@ export default function BottomNav() {
         { id: 'rooms', href: '/rooms', icon: MessagesSquare, label: 'Odalar' },
         { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
         { id: 'live', href: '/live', icon: Compass, label: 'Canlı'},
-        { id: 'surf', href: '/surf', icon: Clapperboard, label: 'Surf' },
       ]
   }, [user]);
 
@@ -29,17 +28,9 @@ export default function BottomNav() {
     return null;
   }
   
-  const isFullPageLayout = (pathname.startsWith('/rooms/') && pathname !== '/rooms') || 
-                           (pathname.startsWith('/call/')) || 
-                           (pathname.startsWith('/surf')) ||
-                           (pathname.startsWith('/matchmaking/'));
-
-  // The logic for hiding the nav bar on /live pages is now handled in MainAppLayout
-  // This component will just render the bar.
-
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 w-full border-t bg-background/95 backdrop-blur-sm">
-        <nav className="mx-auto grid h-16 max-w-lg grid-cols-5 items-center">
+        <nav className="mx-auto grid h-16 max-w-lg grid-cols-4 items-center">
             {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname.startsWith(item.href);

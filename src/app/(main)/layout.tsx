@@ -139,7 +139,7 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/') || pathname.startsWith('/matchmaking/') || pathname.startsWith('/surf') || pathname.startsWith('/live');
+  const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/') || pathname.startsWith('/matchmaking/') || pathname.startsWith('/live');
   const isHomePage = pathname === '/home';
   
   return (
@@ -149,24 +149,17 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
       <div className="relative flex h-screen w-full flex-col bg-background overflow-hidden">
         <PwaInstallBar />
         
-        <AnimatePresence>
-          {!isFullPageLayout && (
-            <motion.header
-              initial={{ y: 0 }}
-              animate={{ y: animatedNavEnabled && isScrolling ? -100 : 0 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="absolute top-0 left-0 right-0 z-40"
-            >
+        {!isFullPageLayout && (
+            <header className="z-40">
               <Header />
-            </motion.header>
-          )}
-        </AnimatePresence>
+            </header>
+        )}
         
         <main
             ref={mainScrollRef}
             className={cn(
               "flex-1 flex flex-col hide-scrollbar",
-              !isFullPageLayout ? "pt-14" : "", // Add padding top for header
+              !isFullPageLayout ? "pt-0" : "", // Remove padding top for header
               isFullPageLayout ? "pb-0" : "pb-16", // Add padding bottom for nav
               isFullPageLayout ? "overflow-y-hidden" : "overflow-y-auto"
             )}

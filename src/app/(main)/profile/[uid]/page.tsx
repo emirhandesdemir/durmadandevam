@@ -1,3 +1,4 @@
+// src/app/(main)/profile/[uid]/page.tsx
 // Bu, bir kullanıcının profil sayfasını oluşturan sunucu bileşenidir.
 // Sayfa yüklendiğinde sunucuda çalışır, veritabanından gerekli verileri
 // (kullanıcı profili, gönderi sayısı vb.) çeker ve sayfayı oluşturur.
@@ -7,16 +8,14 @@ import { notFound } from 'next/navigation';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import { Separator } from '@/components/ui/separator';
 import { deepSerialize } from '@/lib/server-utils';
-import { Grid3x3, Bookmark, Clapperboard, Eye } from 'lucide-react';
+import { Grid3x3, Bookmark } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getAuth } from '@/lib/firebaseAdmin';
 import SavedPostsGrid from '@/components/profile/SavedPostsGrid';
 import { cookies } from 'next/headers';
 import { cn } from '@/lib/utils';
 import UserPostsGrid from '@/components/profile/UserPostsGrid';
-import UserSurfGrid from '@/components/profile/UserSurfGrid';
 import ProfileViewLogger from '@/components/profile/ProfileViewLogger';
-import ProfileViewerList from '@/components/profile/ProfileViewerList';
 
 interface UserProfilePageProps {
   params: { uid: string };
@@ -71,29 +70,19 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
       {/* Bu görünmez bileşen, profil görüntüleme olayını kaydeder. */}
       <ProfileViewLogger targetUserId={uid} />
       
-      <div className="w-full mx-auto max-w-4xl py-4">
+      <div className="w-full max-w-4xl">
         {/* Profilin üst kısmını (avatar, isim, takipçi sayısı vb.) oluşturan bileşen. */}
         <ProfileHeader profileUser={serializableProfileUser} />
         
-        <Separator className="my-4" />
+        <Separator className="my-0" />
 
         {/* Sekmeli İçerik Bölümü */}
         <Tabs defaultValue="posts" className="w-full">
-            <TabsList className={cn("grid w-full", isOwnProfile ? "grid-cols-4" : "grid-cols-3")}>
+            <TabsList className={cn("grid w-full", isOwnProfile ? "grid-cols-2" : "grid-cols-1")}>
                 <TabsTrigger value="posts">
                     <Grid3x3 className="h-5 w-5 mr-2" />
                     Gönderiler
                 </TabsTrigger>
-                 <TabsTrigger value="surf">
-                    <Clapperboard className="h-5 w-5 mr-2" />
-                    Surf
-                </TabsTrigger>
-                 {isOwnProfile && (
-                    <TabsTrigger value="viewers">
-                        <Eye className="h-5 w-5 mr-2" />
-                        Bakanlar
-                    </TabsTrigger>
-                )}
                 {isOwnProfile && (
                     <TabsTrigger value="saved">
                         <Bookmark className="h-5 w-5 mr-2" />
@@ -104,14 +93,6 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
             <TabsContent value="posts" className="mt-4">
                 <UserPostsGrid profileUser={serializableProfileUser} />
             </TabsContent>
-            <TabsContent value="surf" className="mt-4">
-                <UserSurfGrid profileUser={serializableProfileUser} />
-            </TabsContent>
-            {isOwnProfile && (
-                <TabsContent value="viewers" className="mt-4">
-                   <ProfileViewerList />
-                </TabsContent>
-            )}
             {isOwnProfile && (
                 <TabsContent value="saved" className="mt-4">
                     <SavedPostsGrid userId={uid} />

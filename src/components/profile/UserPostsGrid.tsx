@@ -37,16 +37,14 @@ export default function UserPostsGrid({ profileUser }: UserPostsGridProps) {
 
         setLoading(true);
         const postsRef = collection(db, 'posts');
-        // Corrected Query: Use '==' with null to correctly fetch non-video posts.
         const q = query(
             postsRef, 
-            where('uid', '==', profileUser.uid), 
-            where('videoUrl', '==', null),
+            where('uid', '==', profileUser.uid),
             orderBy('createdAt', 'desc')
         );
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const fetchedPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post));
+            const fetchedPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post)).filter(p => !p.videoUrl);
             setPosts(fetchedPosts);
             setLoading(false);
         }, (error) => {

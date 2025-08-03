@@ -3,7 +3,7 @@
 
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
-import { PenSquare, Clapperboard, Sparkles } from "lucide-react";
+import { PenSquare } from "lucide-react";
 
 export default function CreatePage() {
     return (
@@ -21,15 +21,6 @@ export default function CreatePage() {
                     </Card>
                 </Link>
 
-                <Link href="/create-surf" className="block">
-                    <Card className="p-6 flex items-center gap-4 hover:bg-muted transition-colors cursor-pointer">
-                        <Clapperboard className="h-8 w-8 text-primary" />
-                        <div>
-                            <h2 className="font-semibold">Surf Videosu Yükle</h2>
-                            <p className="text-sm text-muted-foreground">Kısa video paylaşarak keşfedil.</p>
-                        </div>
-                    </Card>
-                </Link>
             </div>
         </div>
     )

@@ -15,14 +15,6 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    // If loading is finished and there is no user, redirect to the login page.
-    // This is a safety net in case the user's session expires while on an admin page.
-    if (!loading && !user) {
-      router.replace('/login');
-    }
-  }, [user, loading, router]);
-
   // Show a full-screen loader while auth data is being fetched.
   // This is the primary fix: ensures we don't try to render anything until we have the data.
   if (loading || !user || !userData) {
