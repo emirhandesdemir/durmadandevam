@@ -52,7 +52,7 @@ function UserList({ users, onOpenChange }: { users: UserProfile[], onOpenChange:
     );
 }
 
-export default function ExploreDialog({ isOpen, onOpenChange }: UserSearchDialogProps) {
+export default function ExploreDialog({ isOpen, onOpenChange }: ExploreDialogProps) {
   const [popularUsers, setPopularUsers] = useState<UserProfile[]>([]);
   const [topFollowed, setTopFollowed] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(false);
