@@ -84,7 +84,7 @@ export async function addComment({ postId, postOwnerId, text, giftId, giftCost, 
         batch.update(senderRef, { diamonds: increment(-giftCost) });
         batch.update(postOwnerRef, { profileValue: increment(giftCost) });
         
-        await logTransaction(null, senderId, {
+        await logTransaction(null, user.uid, {
             type: 'gift_sent',
             amount: -giftCost,
             description: `Yoruma hediye: ${giftId}`,
