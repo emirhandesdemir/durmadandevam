@@ -12,7 +12,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getChatId } from '@/lib/utils';
 import { cn } from '@/lib/utils';
-import SendDiamondDialog from '../diamond/SendDiamondDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { blockUser, unblockUser } from '@/lib/actions/userActions';
@@ -38,7 +37,6 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<'followers' | 'following'>('followers');
-  const [sendDiamondOpen, setSendDiamondOpen] = useState(false);
   const [isBlocking, setIsBlocking] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [isBadgesOpen, setIsBadgesOpen] = useState(false);
@@ -188,11 +186,6 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
         onOpenChange={setDialogOpen}
         userIds={userIdsToShow || []}
         type={dialogType}
-      />
-       <SendDiamondDialog
-        isOpen={sendDiamondOpen}
-        onOpenChange={setSendDiamondOpen}
-        recipient={profileUser}
       />
       <ReportDialog 
         isOpen={isReportOpen}
