@@ -10,7 +10,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, Pin, Trash2, Bot } from 'lucide-react';
+import { Loader2, Pin, Trash2, Bot, Bell } from 'lucide-react';
 import type { Message, Room } from '@/lib/types';
 import PortalMessageCard from './PortalMessageCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
@@ -28,6 +28,18 @@ interface TextChatProps {
 }
 
 const BOT_UID = "ai-bot-walk";
+
+function AnnouncementMessageCard({ message }: { message: Message }) {
+    return (
+        <div className="relative my-4 p-4 text-center rounded-lg border-2 border-amber-400/50 bg-amber-400/10 text-amber-100 shadow-lg shadow-amber-500/10">
+             <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-amber-400 text-amber-900 text-xs font-bold rounded-full flex items-center gap-1.5">
+                <Bell size={12} /> DUYURU
+            </div>
+            <p className="font-semibold">{message.text}</p>
+            <p className="text-xs text-amber-200/70 mt-1">@{message.username} tarafından</p>
+        </div>
+    );
+}
 
 export default function TextChat({ messages, loading, room }: TextChatProps) {
   const { user: currentUser } = useAuth();
@@ -80,6 +92,10 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
               </p>
             </div>
           );
+        }
+        
+        if (msg.type === 'announcement') {
+            return <AnnouncementMessageCard key={msg.id} message={msg} />;
         }
         
         if (msg.type === 'gameInvite') {

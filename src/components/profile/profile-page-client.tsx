@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2, Sliders, Wallet, Gem } from "lucide-react";
+import { LogOut, Palette, Loader2, Sparkles, Lock, Gift, Copy, Users, Globe, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2, Sliders, Wallet, Gem, HelpCircle } from "lucide-react";
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Switch } from "../ui/switch";
@@ -432,7 +432,7 @@ export default function ProfilePageClient() {
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <Label htmlFor="requests-mode" className={cn("font-semibold transition-colors", !privateProfile && "text-muted-foreground/50")}>Takip İsteklerine İzin Ver</Label>
+                                         <Label htmlFor="requests-mode" className={cn("font-semibold transition-colors", !privateProfile && "text-muted-foreground/50")}>Takip İsteklerine İzin Ver</Label>
                                         <p className={cn("text-xs text-muted-foreground transition-colors", !privateProfile && "text-muted-foreground/50")}>Kapalıysa, kimse size takip isteği gönderemez.</p>
                                     </div>
                                     <Switch id="requests-mode" checked={acceptsFollowRequests} onCheckedChange={setAcceptsFollowRequests} disabled={!privateProfile}/>
@@ -489,6 +489,15 @@ export default function ProfilePageClient() {
                                             <Label className="text-base font-semibold">{t('language_settings')}</Label>
                                         </div>
                                          <LanguageSwitcher />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <HelpCircle className="h-5 w-5 text-muted-foreground" />
+                                            <Label className="text-base font-semibold">Yardım & Kılavuz</Label>
+                                        </div>
+                                        <Button asChild variant="outline" className="w-full">
+                                            <Link href="/guide">Uygulama Kılavuzunu Görüntüle</Link>
+                                        </Button>
                                     </div>
                                 </div>
                             </AccordionContent>

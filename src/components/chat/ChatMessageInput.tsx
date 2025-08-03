@@ -3,17 +3,13 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { addDoc, collection, serverTimestamp, getDocs, query, orderBy, limit } from 'firebase/firestore';
-import { db, storage } from '@/lib/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { v4 as uuidv4 } from 'uuid';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Send, Loader2, ImagePlus, X, Camera, Timer } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { Room, Message } from '@/lib/types';
-import { triggerBotResponse } from '@/lib/actions/roomActions';
+import type { Room } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { sendRoomMessage } from '@/lib/actions/roomActions';
 
 
 interface ChatMessageInputProps {
@@ -24,76 +20,25 @@ export default function ChatMessageInput({ room }: ChatMessageInputProps) {
   const { user: currentUser, userData } = useAuth();
   const { toast } = useToast();
   const [message, setMessage] = useState('');
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const isParticipant = room.participants.some(p => p.uid === currentUser?.uid);
 
-  useEffect(() => {
-    if (!file) {
-      setPreview(null);
-      return;
-    }
-    const objectUrl = URL.createObjectURL(file);
-    setPreview(objectUrl);
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [file]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (!selectedFile) return;
-
-    if (selectedFile.size > 25 * 1024 * 1024) { // 25MB limit
-        toast({ variant: 'destructive', description: "Dosya boyutu 25MB'dan büyük olamaz." });
-        return;
-    }
-    setFile(selectedFile);
-  };
-  
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if ((!message.trim() && !file) || !currentUser || !userData || !isParticipant || isSending) return;
+    if (!message.trim() || !currentUser || !userData || !isParticipant || isSending) return;
 
     setIsSending(true);
-    let imageUrl: string | undefined;
     
     try {
-        if (file) {
-            const folder = 'images';
-            const path = `upload/rooms/${room.id}/${folder}/${uuidv4()}_${file.name}`;
-            const storageRef = ref(storage, path);
-            await uploadBytes(storageRef, file);
-            imageUrl = await getDownloadURL(storageRef);
-        }
-
-        const messagePath = collection(db, "rooms", room.id, "messages");
-        
-        const messageData: { [key: string]: any } = {
+        await sendRoomMessage(room.id, {
             uid: currentUser.uid,
-            username: userData.username || 'Anonim',
+            displayName: userData.username,
             photoURL: userData.photoURL,
-            text: message || '',
-            createdAt: serverTimestamp(),
-            type: 'user',
-            selectedBubble: userData.selectedBubble || '',
-            selectedAvatarFrame: userData.selectedAvatarFrame || '',
-            role: userData.role || 'user',
-        };
-
-        if (imageUrl) {
-            messageData.imageUrl = imageUrl;
-        }
-        
-        await addDoc(messagePath, messageData);
-
-        // Don't await this, let it run in the background
-        if (message.trim()) {
-            triggerBotResponse(room.id, currentUser.uid, message.trim());
-        }
+            selectedAvatarFrame: userData.selectedAvatarFrame,
+            role: userData.role,
+        }, message);
         
         setMessage('');
-        setFile(null);
 
     } catch (error: any) {
         console.error("Mesaj gönderilirken hata: ", error);
@@ -113,39 +58,16 @@ export default function ChatMessageInput({ room }: ChatMessageInputProps) {
   
   return (
     <div className='w-full'>
-        {preview && file && (
-            <div className='relative p-2 mb-2 bg-background rounded-lg border w-fit'>
-                <img src={preview} alt="Önizleme" className="max-h-24 rounded-md" />
-                <Button variant="ghost" size="icon" className="absolute -top-3 -right-3 h-6 w-6 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/80" onClick={() => setFile(null)}>
-                    <X className="h-4 w-4"/>
-                </Button>
-            </div>
-        )}
         <form onSubmit={handleSendMessage} className="flex w-full items-center space-x-2 bg-muted rounded-full p-1.5">
-             <Popover>
-                <PopoverTrigger asChild>
-                    <Button type="button" variant="ghost" size="icon" className="rounded-full flex-shrink-0" disabled={isSending}>
-                        <ImagePlus className='h-5 w-5 text-muted-foreground'/>
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-2" side="top" align="start">
-                    <div className="flex flex-col gap-1">
-                        <Button variant="ghost" className="justify-start" onClick={() => fileInputRef.current?.click()}>
-                            <Camera className="mr-2 h-4 w-4" /> Fotoğraf Gönder
-                        </Button>
-                    </div>
-                </PopoverContent>
-            </Popover>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
             <Input
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Bir mesaj yaz..."
+                placeholder="Bir mesaj yaz... (+temizle, +duyuru)"
                 autoComplete="off"
                 className="flex-1 bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground"
                 disabled={isSending}
             />
-            <Button type="submit" size="icon" disabled={(!message.trim() && !file) || isSending} className="rounded-full flex-shrink-0 h-9 w-9 bg-primary shadow-lg transition-transform hover:scale-110">
+            <Button type="submit" size="icon" disabled={!message.trim() || isSending} className="rounded-full flex-shrink-0 h-9 w-9 bg-primary shadow-lg transition-transform hover:scale-110">
                 {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 <span className="sr-only">Gönder</span>
             </Button>

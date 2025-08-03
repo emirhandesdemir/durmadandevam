@@ -2,7 +2,7 @@
 'use server';
 
 import { db, storage } from '@/lib/firebase';
-import { deleteRoomWithSubcollections } from '@/lib/firestoreUtils';
+import { deleteRoomWithSubcollections, deleteCollection } from '@/lib/firestoreUtils';
 import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch, arrayUnion, arrayRemove, updateDoc, runTransaction, increment, setDoc, query, where, getDocs, orderBy, deleteField, limit, Transaction } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { createNotification } from './notificationActions';
@@ -22,6 +22,71 @@ const BOT_USER_INFO = {
     role: 'user' as 'user' | 'admin',
     selectedAvatarFrame: 'avatar-frame-tech'
 };
+
+export async function sendRoomMessage(roomId: string, user: { uid: string; displayName: string | null; photoURL: string | null; selectedAvatarFrame?: string; role?: string; }, text: string) {
+    if (!roomId || !user?.uid || !text.trim()) {
+        throw new Error("Gerekli bilgiler eksik.");
+    }
+    
+    const roomRef = doc(db, 'rooms', roomId);
+    const roomDoc = await getDoc(roomRef);
+    if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
+    const roomData = roomDoc.data() as Room;
+
+    const isHost = roomData.createdBy.uid === user.uid;
+    const isModerator = roomData.moderators.includes(user.uid);
+    const canUseCommands = isHost || isModerator;
+
+    // Command Handling
+    if (text.startsWith('+') && canUseCommands) {
+        const [command, ...args] = text.split(' ');
+        const content = args.join(' ');
+
+        if (command === '+temizle') {
+            const messagesRef = collection(db, 'rooms', roomId, 'messages');
+            const q = query(messagesRef, where('type', '==', 'user'));
+            const messagesToDelete = await getDocs(q);
+            const batch = writeBatch(db);
+            messagesToDelete.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+            await addSystemMessage(roomId, `🧹 Sohbet, ${user.displayName} tarafından temizlendi.`);
+            return { success: true };
+        }
+
+        if (command === '+duyuru') {
+            if (!content) throw new Error("Duyuru içeriği boş olamaz.");
+            const messagesRef = collection(db, 'rooms', roomId, 'messages');
+            await addDoc(messagesRef, {
+                type: 'announcement',
+                uid: user.uid,
+                username: user.displayName,
+                text: content,
+                createdAt: serverTimestamp(),
+            });
+            await pinMessage(roomId, (await getDocs(query(messagesRef, orderBy('createdAt', 'desc'), limit(1)))).docs[0].id, user.uid);
+            return { success: true };
+        }
+    }
+    
+    // Regular message
+    await addDoc(collection(db, 'rooms', roomId, 'messages'), {
+        uid: user.uid,
+        username: user.displayName || 'Anonim',
+        photoURL: user.photoURL,
+        text: text,
+        createdAt: serverTimestamp(),
+        type: 'user',
+        selectedBubble: user.selectedBubble || '',
+        selectedAvatarFrame: user.selectedAvatarFrame || '',
+        role: user.role || 'user',
+    });
+    
+    // Don't await this, let it run in the background
+    triggerBotResponse(roomId, user.uid, text);
+
+    revalidatePath(`/rooms/${roomId}`);
+    return { success: true };
+}
 
 
 // This function is not awaited in the main flow to avoid blocking UI.
@@ -241,7 +306,7 @@ export async function createRoom(
             });
             await logTransaction(transaction, userId, {
                 type: 'room_creation',
-                amount: -roomCost,
+                amount: -cost,
                 description: `${roomData.name} odası oluşturma`,
                 roomId: newRoomRef.id
             });

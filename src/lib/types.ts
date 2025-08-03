@@ -455,7 +455,7 @@ export interface Message {
   text?: string;
   imageUrl?: string;
   videoUrl?: string;
-  type?: 'system' | 'game' | 'portal' | 'user' | 'gameInvite' | 'gift';
+  type?: 'system' | 'game' | 'portal' | 'user' | 'gameInvite' | 'gift' | 'announcement';
   createdAt: Timestamp;
   selectedBubble?: string;
   selectedAvatarFrame?: string;
