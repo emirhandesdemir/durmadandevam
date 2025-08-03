@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm, SubmitHandler, Controller } from 'react-hook-form';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { submitReport } from '@/lib/actions/userActions';
 import { Loader2 } from 'lucide-react';
-import { Form, FormControl, FormField, FormItem, FormMessage } from '../ui/form';
+import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 
 type Target = {
   type: 'user';
