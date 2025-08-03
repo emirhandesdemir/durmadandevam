@@ -31,7 +31,7 @@ export async function updateUserProfile(updates: {
     isNewUser?: boolean;
     email?: string | null;
     referredBy?: string | null;
-    photoURL?: string | null;
+    photoURL?: string | null; // Can now be a Data URL
     username?: string;
     bio?: string;
     age?: number | string | null;
@@ -46,10 +46,29 @@ export async function updateUserProfile(updates: {
     interests?: string[];
     location?: { latitude: number; longitude: number; city?: string | null; country?: string | null; } | null;
 }) {
-    const { userId, isNewUser, ...otherUpdates } = updates;
+    const { userId, isNewUser, photoURL: photoDataUrl, ...otherUpdates } = updates;
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
 
     const userRef = doc(db, 'users', userId);
+    let finalPhotoURL: string | null | undefined = undefined;
+
+    // Handle photo upload first if it exists
+    if (photoDataUrl) {
+        try {
+            const imageRef = storageRef(storage, `avatars/${userId}/profile.png`);
+            await uploadString(imageRef, photoDataUrl, 'data_url');
+            finalPhotoURL = await getDownloadURL(imageRef);
+        } catch (error) {
+            console.error("Firebase Storage upload failed:", error);
+            throw new Error("Profil fotoğrafı yüklenemedi.");
+        }
+    }
+    
+    const updatesForDb: { [key: string]: any } = { ...otherUpdates };
+    if (finalPhotoURL !== undefined) {
+        updatesForDb.photoURL = finalPhotoURL;
+    }
+
 
     await runTransaction(db, async (transaction) => {
         const userDoc = await transaction.get(userRef);
@@ -69,7 +88,7 @@ export async function updateUserProfile(updates: {
                 const initialData = {
                     uid: userId, uniqueTag: newTag, email: updates.email, emailVerified: false,
                     username: updates.username, username_lowercase: updates.username?.toLowerCase(), 
-                    photoURL: null, bio: null, age: null, city: null, country: null,
+                    photoURL: updates.photoURL || null, bio: null, age: null, city: null, country: null,
                     gender: null, interests: [], role: userRole,
                     createdAt: serverTimestamp(), lastActionTimestamp: serverTimestamp(),
                     diamonds: 10, profileValue: 0, giftLevel: 0, totalDiamondsSent: 0,
@@ -81,6 +100,7 @@ export async function updateUserProfile(updates: {
                     premiumUntil: null, isFirstPremium: false,
                     unlimitedRoomCreationUntil: null, profileCompletionNotificationSent: false,
                     profileCompletionAwarded: false, location: null,
+                    ...updatesForDb
                  };
                 transaction.set(userRef, initialData);
             } else {
@@ -89,12 +109,10 @@ export async function updateUserProfile(updates: {
             }
         } else {
              // This is for updating an existing user.
-            let updatesForDb: { [key: string]: any } = { ...otherUpdates };
-            
-            if (updates.age === '' || updates.age === undefined || updates.age === null) {
+            if (updatesForDb.age === '' || updatesForDb.age === undefined || updatesForDb.age === null) {
                 updatesForDb.age = null;
-            } else if (updates.age !== undefined) {
-                updatesForDb.age = Number(updates.age);
+            } else if (updatesForDb.age !== undefined) {
+                updatesForDb.age = Number(updatesForDb.age);
             }
 
             if (Object.keys(updatesForDb).length > 0) {
@@ -104,11 +122,9 @@ export async function updateUserProfile(updates: {
     });
 
     // --- Post-Transaction Operations ---
-    
-    // Handle data propagation to other collections if needed.
     const propagationUpdates: { [key: string]: any } = {};
     if (updates.username) propagationUpdates.username = updates.username;
-    if (updates.photoURL) propagationUpdates.userPhotoURL = updates.photoURL;
+    if (finalPhotoURL !== undefined) propagationUpdates.userPhotoURL = finalPhotoURL;
     if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
 
     if (Object.keys(propagationUpdates).length > 0) {
@@ -123,12 +139,11 @@ export async function updateUserProfile(updates: {
         }
     }
 
-    // Also update the photo and username in Firebase Auth if it changed
-    if (updates.photoURL || updates.username) {
+    if (finalPhotoURL !== undefined || updates.username) {
       try {
         const auth = getAuth();
         const authUpdates: { photoURL?: string; displayName?: string } = {};
-        if (updates.photoURL) authUpdates.photoURL = updates.photoURL;
+        if (finalPhotoURL !== undefined) authUpdates.photoURL = finalPhotoURL;
         if (updates.username) authUpdates.displayName = updates.username;
         await auth.updateUser(userId, authUpdates);
       } catch (e) {
@@ -137,7 +152,7 @@ export async function updateUserProfile(updates: {
     }
 
     revalidatePath(`/profile/${userId}`, 'layout');
-    return { success: true };
+    return { success: true, newPhotoURL: finalPhotoURL };
 }
 
 

@@ -31,7 +31,6 @@ import { giftLevelThresholds } from "@/lib/gifts";
 import { Progress } from "@/components/ui/progress";
 import ImageCropperDialog from "../common/ImageCropperDialog";
 import AnimatedLogoLoader from "../common/AnimatedLogoLoader";
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const bubbleOptions = [
     { id: "", name: "Varsayılan", isPremium: false },
@@ -43,7 +42,7 @@ const bubbleOptions = [
 ];
 
 export default function ProfilePageClient() {
-    const { user, userData, loading, handleLogout } = useAuth();
+    const { user, userData, loading, handleLogout, refreshUserData } = useAuth();
     const { toast } = useToast();
     const { theme, setTheme } = useTheme();
     const { t } = useTranslation();
@@ -134,19 +133,16 @@ export default function ProfilePageClient() {
         toast({ title: "Yükleniyor...", description: "Profil fotoğrafınız güncelleniyor..." });
         
         try {
-            const imageRef = storageRef(storage, `avatars/${user.uid}/profile.png`);
-            
-            const response = await fetch(croppedDataUrl);
-            const blob = await response.blob();
-    
-            await uploadBytes(imageRef, blob);
-            const downloadURL = await getDownloadURL(imageRef);
-
-            await updateUserProfile({
+            const result = await updateUserProfile({
                 userId: user.uid,
-                photoURL: downloadURL,
+                photoURL: croppedDataUrl,
             });
-            toast({ title: "Başarılı!", description: "Profil fotoğrafınız güncellendi." });
+            if (result.success) {
+                toast({ title: "Başarılı!", description: "Profil fotoğrafınız güncellendi." });
+                await refreshUserData();
+            } else {
+                throw new Error(result.error || "Bilinmeyen bir hata oluştu.");
+            }
         } catch(error: any) {
             console.error("Profile picture upload error:", error);
             toast({ variant: 'destructive', title: "Hata", description: `Fotoğraf yüklenemedi: ${error.message}` });
@@ -182,6 +178,7 @@ export default function ProfilePageClient() {
             }
             
             toast({ title: "Başarılı!", description: "Profiliniz başarıyla güncellendi." });
+            await refreshUserData();
         } catch (error: any) {
             toast({ title: "Hata", description: error.message || "Profil güncellenirken bir hata oluştu.", variant: "destructive" });
         } finally {

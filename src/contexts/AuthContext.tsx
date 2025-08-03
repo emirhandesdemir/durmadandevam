@@ -21,6 +21,7 @@ interface AuthContextType {
   totalUnreadDms: number;
   loading: boolean;
   handleLogout: (isBan?: boolean) => Promise<void>;
+  refreshUserData: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -31,6 +32,7 @@ const AuthContext = createContext<AuthContextType>({
   totalUnreadDms: 0,
   loading: true,
   handleLogout: async () => {},
+  refreshUserData: async () => {},
 });
 
 async function setSessionCookie(idToken: string | null) {
@@ -78,6 +80,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [toast]);
   
+  const refreshUserData = useCallback(async () => {
+    if (!auth.currentUser) return;
+    try {
+        const userDocRef = doc(db, 'users', auth.currentUser.uid);
+        const docSnap = await getDoc(userDocRef);
+        if (docSnap.exists()) {
+            setUserData(docSnap.data() as UserProfile);
+        }
+    } catch (error) {
+        console.error("Error manually refreshing user data:", error);
+    }
+  }, []);
+
   useEffect(() => {
     const unsubscribeFeatures = onSnapshot(doc(db, 'config', 'featureFlags'), (docSnap) => {
       setFeatureFlags(docSnap.exists() ? docSnap.data() as FeatureFlags : { quizGameEnabled: true, contentModerationEnabled: true });
@@ -169,7 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [user, handleLogout, pathname, router]);
 
-  const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms };
+  const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms, refreshUserData };
   
   return (
       <AuthContext.Provider value={value}>
