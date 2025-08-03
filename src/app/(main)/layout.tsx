@@ -149,17 +149,24 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
       <div className="relative flex h-screen w-full flex-col bg-background overflow-hidden">
         <PwaInstallBar />
         
-        {!isFullPageLayout && (
-            <header className="z-40">
+        <AnimatePresence>
+          {!isFullPageLayout && (
+             <motion.header
+              initial={{ y: 0 }}
+              animate={{ y: animatedNavEnabled && isScrolling ? -100 : 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="absolute top-0 left-0 right-0 z-40"
+            >
               <Header />
-            </header>
-        )}
+            </motion.header>
+          )}
+        </AnimatePresence>
         
         <main
             ref={mainScrollRef}
             className={cn(
               "flex-1 flex flex-col hide-scrollbar",
-              !isFullPageLayout ? "pt-0" : "", // Remove padding top for header
+              !isFullPageLayout ? "pt-14" : "", // Add padding top for header
               isFullPageLayout ? "pb-0" : "pb-16", // Add padding bottom for nav
               isFullPageLayout ? "overflow-y-hidden" : "overflow-y-auto"
             )}
