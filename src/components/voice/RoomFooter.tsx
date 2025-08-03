@@ -3,7 +3,7 @@
 
 import { Button } from '@/components/ui/button';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
-import { Mic, MicOff, Settings, Loader2, ScreenShareOff, ScreenShare, Music, Camera, CameraOff, SwitchCamera, Gamepad2, Gift, BrainCircuit } from 'lucide-react';
+import { Mic, MicOff, Settings, Loader2, ScreenShareOff, ScreenShare, Music, Camera, CameraOff, SwitchCamera, Gamepad2, Gift, BrainCircuit, MoreHorizontal } from 'lucide-react';
 import ChatMessageInput from '../chat/ChatMessageInput';
 import type { Room } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';

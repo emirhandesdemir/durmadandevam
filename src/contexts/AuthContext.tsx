@@ -103,14 +103,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     const unsubscribeAuth = onIdTokenChanged(auth, async (currentUser) => {
+        setLoading(true); // Always start loading on auth state change
         setUser(currentUser);
-        const idToken = await currentUser?.getIdToken(true) || null; // Force refresh token
+        const idToken = await currentUser?.getIdToken(true) || null;
         await setSessionCookie(idToken);
         
         if (!currentUser) {
             setUserData(null);
             setTotalUnreadDms(0);
-            setLoading(false);
+            setLoading(false); // Stop loading if no user
         }
     });
 
@@ -120,31 +121,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubscribeTheme();
     };
   }, []);
-
+  
   useEffect(() => {
-    // If auth state is still being determined, don't do anything.
-    if (loading) return;
+      // Don't perform routing logic while initial auth state is being determined.
+      if (loading) return;
 
-    const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
-    const isPublicPage = isAuthPage || pathname.startsWith('/guide') || pathname.startsWith('/terms') || pathname.startsWith('/privacy');
+      const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
+      const isPublicPage = isAuthPage || pathname.startsWith('/guide') || pathname.startsWith('/terms') || pathname.startsWith('/privacy');
 
-    if (!user && !isPublicPage) {
-        // If user is not logged in and trying to access a protected page, redirect to login.
-        router.replace('/login');
-    } else if (user && isAuthPage) {
-        // If user is logged in and on an auth page, redirect to home.
-        router.replace('/home');
-    }
+      if (!user && !isPublicPage) {
+          router.replace('/login');
+      } else if (user && isAuthPage) {
+          router.replace('/home');
+      }
 
   }, [user, loading, pathname, router]);
 
   useEffect(() => {
-    if (!user) {
-        setLoading(false);
-        return;
-    }
+    // If no user, we don't need to listen to user-specific data.
+    // The loading state is handled by the previous effect.
+    if (!user) return;
 
-    setLoading(true);
     const userDocRef = doc(db, 'users', user.uid);
     const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
         if (docSnap.exists()) {
@@ -162,11 +159,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (!data.bio && !data.profileCompletionNotificationSent) {
                 triggerProfileCompletionNotification(user.uid);
             }
+            // Once user data is loaded, stop loading.
+            setLoading(false);
+
         } else {
              // This case might happen if a user is deleted from the DB but still has a valid auth token.
             handleLogout();
         }
-        setLoading(false);
     }, (error) => {
         console.error("Firestore user listener error:", error);
         setUserData(null);

@@ -154,7 +154,7 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
              <motion.header
               initial={{ y: 0 }}
               animate={{ y: animatedNavEnabled && isScrolling ? -100 : 0 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
               className="absolute top-0 left-0 right-0 z-40"
             >
               <Header />
@@ -187,7 +187,7 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
             <motion.div
               initial={{ y: 0 }}
               animate={{ y: animatedNavEnabled && isScrolling ? 100 : 0 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
               className="absolute bottom-0 left-0 right-0 z-30"
             >
               <BottomNav />
