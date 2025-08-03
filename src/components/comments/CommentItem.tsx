@@ -43,7 +43,7 @@ interface CommentItemProps {
 /**
  * Tek bir yorumu ve onunla ilgili eylemleri (silme, cevaplama) gösteren bileşen.
  */
-export default function CommentItem({ comment, postId, onReply }: CommentItemProps) {
+function CommentItem({ comment, postId, onReply }: CommentItemProps) {
     const { user: currentUser } = useAuth();
     const { toast } = useToast();
     const [isDeleting, setIsDeleting] = useState(false);
@@ -180,3 +180,5 @@ export default function CommentItem({ comment, postId, onReply }: CommentItemPro
         </div>
     );
 }
+
+export default CommentItem;
