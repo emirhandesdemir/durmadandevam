@@ -26,6 +26,7 @@ import BlockedUsersDialog from "./BlockedUsersDialog";
 import { sendPasswordResetEmail, verifyBeforeUpdateEmail, updateEmail } from "firebase/auth";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { deleteUserAccount } from "@/lib/actions/userActions";
+import AvatarWithFrame from "../common/AvatarWithFrame";
 
 const bubbleOptions = [
     { id: "", name: "Varsayılan", isPremium: false },
@@ -249,7 +250,7 @@ export default function ProfilePageClient() {
                                     fallbackClassName="text-4xl bg-primary/20"
                                 />
                                 <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                    <Pencil className="h-8 w-8" />
+                                    <Camera className="h-8 w-8" />
                                 </div>
                             </Link>
                         </div>
