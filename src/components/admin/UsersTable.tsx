@@ -7,7 +7,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import { tr } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
 import { updateUserRole, banUser, deleteUserAndContent } from "@/lib/actions/adminActions";
-import { MoreHorizontal, Trash2, UserCheck, UserX, Loader2, ShieldCheck, Shield, Gem, Ban, Crown, CheckCircle2, CircleOff } from "lucide-react";
+import { MoreHorizontal, Trash2, UserCheck, UserX, Loader2, ShieldCheck, Shield, Gem, Ban, Crown, CheckCircle2, CircleOff, AtSign } from "lucide-react";
 
 import {
   Table,
@@ -126,10 +126,11 @@ export default function UsersTable({ users }: UsersTableProps) {
                                 <Link href={`/profile/${user.uid}`} className="flex items-center gap-3 group hover:underline" target="_blank">
                                     <Avatar>
                                         <AvatarImage src={user.photoURL || undefined} />
-                                        <AvatarFallback>{user.profileEmoji || user.username?.charAt(0).toUpperCase()}</AvatarFallback>
+                                        <AvatarFallback>{user.username?.charAt(0).toUpperCase()}</AvatarFallback>
                                     </Avatar>
                                     <div>
                                         <p className="font-medium group-hover:text-primary">{user.username}</p>
+                                        <p className="text-xs text-muted-foreground flex items-center gap-1"><AtSign className="h-3 w-3"/>{user.uniqueTag}</p>
                                         {user.reportCount && user.reportCount > 0 && (
                                             <span className="text-xs text-destructive font-bold">{user.reportCount} şikayet</span>
                                         )}

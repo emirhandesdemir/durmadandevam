@@ -1,3 +1,4 @@
+// src/components/search/UserSearchDialog.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -28,7 +29,7 @@ export default function UserSearchDialog({ isOpen, onOpenChange }: UserSearchDia
   const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(false);
-  const debouncedSearchTerm = useDebounce(searchTerm, 200);
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   useEffect(() => {
     if (debouncedSearchTerm.length > 1 && currentUser) {
@@ -49,7 +50,7 @@ export default function UserSearchDialog({ isOpen, onOpenChange }: UserSearchDia
            <div className="relative mt-2">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                    placeholder="Kullanıcı adı ile ara..."
+                    placeholder="Kullanıcı adı veya @ID ile ara..."
                     className="pl-9"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -74,11 +75,14 @@ export default function UserSearchDialog({ isOpen, onOpenChange }: UserSearchDia
                   <div className={cn("avatar-frame-wrapper", user.selectedAvatarFrame)}>
                     <Avatar className="relative z-[1] h-10 w-10">
                         <AvatarImage src={user.photoURL || undefined} />
-                        <AvatarFallback>{user.profileEmoji || user.username?.charAt(0).toUpperCase()}</AvatarFallback>
+                        <AvatarFallback>{user.username?.charAt(0).toUpperCase()}</AvatarFallback>
                     </Avatar>
                   </div>
                   <div>
-                    <p className="font-semibold">{user.username}</p>
+                    <div className="flex items-center gap-2">
+                        <p className="font-semibold">{user.username}</p>
+                        <p className="text-xs text-muted-foreground">@{user.uniqueTag}</p>
+                    </div>
                     {user.bio && <p className="text-xs text-muted-foreground line-clamp-1">{user.bio}</p>}
                   </div>
                 </Link>

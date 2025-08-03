@@ -1,3 +1,4 @@
+
 {
   "indexes": [
     {
@@ -141,7 +142,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "username",
+          "fieldPath": "uniqueTag",
           "order": "ASCENDING"
         }
       ]

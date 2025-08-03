@@ -3,7 +3,7 @@
 
 import { db, storage } from '@/lib/firebase';
 import type { Post, Report, UserProfile } from '../types';
-import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, collectionGroup, deleteDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, collectionGroup, deleteDoc, setDoc, runTransaction } from 'firebase/firestore';
 import { ref as storageRef, deleteObject, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
@@ -26,21 +26,12 @@ export async function sendVerificationEmail(userId: string) {
     return { success: true };
 }
 
-
-export async function checkUsernameExists(username: string): Promise<boolean> {
-    if (!username) return false;
-    const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('username_lowercase', '==', username.toLowerCase()), limit(1));
-    const querySnapshot = await getDocs(q);
-    return !querySnapshot.empty;
-}
-
 export async function updateUserProfile(updates: {
     userId: string;
     isNewUser?: boolean;
     email?: string;
     referredBy?: string | null;
-    photoURL?: string | null; // This will now always be a public URL
+    photoURL?: string | null;
     username?: string;
     bio?: string;
     age?: number | string | null;
@@ -59,8 +50,7 @@ export async function updateUserProfile(updates: {
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
 
     const userRef = doc(db, 'users', userId);
-    const batch = writeBatch(db);
-
+    
     let updatesForDb: { [key: string]: any } = { ...otherUpdates };
     
     if (updates.age === '' || updates.age === undefined || updates.age === null) {
@@ -73,13 +63,7 @@ export async function updateUserProfile(updates: {
     const userData = userSnap.exists() ? userSnap.data() : {};
 
     if (updates.username && updates.username !== userData?.username) {
-        const q = query(collection(db, 'users'), where('username_lowercase', '==', updates.username.toLowerCase()), limit(1));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty && querySnapshot.docs[0].id !== userId) {
-             throw new Error("Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor.");
-        }
         updatesForDb.username = updates.username;
-        updatesForDb.username_lowercase = updates.username.toLowerCase();
     }
     
     if (updates.email && updates.email !== userData?.email) {
@@ -109,29 +93,43 @@ export async function updateUserProfile(updates: {
 
 
     if (isNewUser) {
-         const isAdminEmail = updates.email === 'admin@example.com';
-         const userRole = isAdminEmail ? 'admin' : 'user';
-         const initialData = {
-            uid: userId, email: updates.email, emailVerified: false,
-            username: updates.username, username_lowercase: updates.username?.toLowerCase(),
-            photoURL: updates.photoURL || null, bio: null, age: null, city: null, country: null,
-            gender: null, interests: [], role: userRole,
-            createdAt: serverTimestamp(), lastActionTimestamp: serverTimestamp(),
-            diamonds: 10, profileValue: 0, giftLevel: 0, totalDiamondsSent: 0,
-            referredBy: updates.referredBy || null, referralCount: 0, postCount: 0,
-            followers: [], following: [], blockedUsers: [], savedPosts: [],
-            hiddenPostIds: [], privateProfile: false, acceptsFollowRequests: true,
-            followRequests: [], selectedBubble: '', selectedAvatarFrame: '', isBanned: false,
-            reportCount: 0, isOnline: true, lastSeen: serverTimestamp(),
-            premiumUntil: null, isFirstPremium: false,
-            unlimitedRoomCreationUntil: null, profileCompletionNotificationSent: false,
-            profileCompletionAwarded: false, location: null,
-         };
-         delete updatesForDb.isNewUser;
-         delete updatesForDb.referredBy;
-         batch.set(userRef, { ...initialData, ...updatesForDb });
+        const counterRef = doc(db, 'config', 'counters');
+        
+        await runTransaction(db, async (transaction) => {
+            const counterDoc = await transaction.get(counterRef);
+            const currentTag = counterDoc.exists() ? counterDoc.data().userTag || 1000 : 1000;
+            const newTag = currentTag + 1;
+            transaction.update(counterRef, { userTag: newTag });
+
+            const isAdminEmail = updates.email === 'admin@example.com';
+            const userRole = isAdminEmail ? 'admin' : 'user';
+            
+            const initialData = {
+                uid: userId, 
+                uniqueTag: newTag,
+                email: updates.email, 
+                emailVerified: false,
+                username: updates.username, 
+                photoURL: updates.photoURL || null, bio: null, age: null, city: null, country: null,
+                gender: null, interests: [], role: userRole,
+                createdAt: serverTimestamp(), lastActionTimestamp: serverTimestamp(),
+                diamonds: 10, profileValue: 0, giftLevel: 0, totalDiamondsSent: 0,
+                referredBy: updates.referredBy || null, referralCount: 0, postCount: 0,
+                followers: [], following: [], blockedUsers: [], savedPosts: [],
+                hiddenPostIds: [], privateProfile: false, acceptsFollowRequests: true,
+                followRequests: [], selectedBubble: '', selectedAvatarFrame: '', isBanned: false,
+                reportCount: 0, isOnline: true, lastSeen: serverTimestamp(),
+                premiumUntil: null, isFirstPremium: false,
+                unlimitedRoomCreationUntil: null, profileCompletionNotificationSent: false,
+                profileCompletionAwarded: false, location: null,
+             };
+            
+             delete updatesForDb.isNewUser;
+             delete updatesForDb.referredBy;
+             transaction.set(userRef, { ...initialData, ...updatesForDb });
+        });
     } else if (Object.keys(updatesForDb).length > 0) {
-        batch.update(userRef, updatesForDb);
+        await updateDoc(userRef, updatesForDb);
     }
     
     if (updates.username || updates.photoURL) {
@@ -145,8 +143,6 @@ export async function updateUserProfile(updates: {
             console.error("Auth profile update failed:", e);
         }
     }
-
-    await batch.commit();
 
     if (updatesForDb.profileCompletionAwarded) {
          await createNotification({
@@ -184,26 +180,44 @@ export async function searchUsers(searchTerm: string, currentUserId: string): Pr
     if (!searchTerm.trim()) return [];
 
     const usersRef = collection(db, 'users');
+    const promises: Promise<any>[] = [];
+
+    // Search by uniqueTag if the term is a number
+    const numericSearchTerm = searchTerm.startsWith('@') ? parseInt(searchTerm.substring(1), 10) : parseInt(searchTerm, 10);
+    if (!isNaN(numericSearchTerm)) {
+        const qTag = query(usersRef, where('uniqueTag', '==', numericSearchTerm), limit(5));
+        promises.push(getDocs(qTag));
+    }
+
+    // Search by username
     const searchTermLower = searchTerm.toLowerCase();
-    const q = query(
+    const qName = query(
         usersRef,
-        where('username_lowercase', '>=', searchTermLower),
-        where('username_lowercase', '<=', searchTermLower + '\uf8ff'),
+        where('username', '>=', searchTerm),
+        where('username', '<=', searchTerm + '\uf8ff'),
         limit(10)
     );
+    promises.push(getDocs(qName));
 
-    const snapshot = await getDocs(q);
-    
-    const users = snapshot.docs
-        .map(doc => {
-            const data = doc.data();
-            const { email, fcmTokens, ...safeData } = data;
-            return { ...safeData, uid: doc.id } as UserProfile;
-        })
-        .filter(user => user.uid !== currentUserId);
+    const snapshots = await Promise.all(promises);
+    const userMap = new Map<string, UserProfile>();
 
+    snapshots.forEach(snapshot => {
+        snapshot.docs.forEach(doc => {
+            if (!userMap.has(doc.id)) {
+                const data = doc.data();
+                const { email, fcmTokens, ...safeData } = data;
+                if (data.uid !== currentUserId) {
+                    userMap.set(doc.id, { ...safeData, uid: doc.id } as UserProfile);
+                }
+            }
+        });
+    });
+
+    const users = Array.from(userMap.values());
     return deepSerialize(users);
 }
+
 
 
 export async function saveFCMToken(userId: string, token: string) {
@@ -315,7 +329,7 @@ export async function updateUserLocation(uid: string, latitude: number, longitud
 
 export async function getNearbyUsers(currentUid: string, latitude: number, longitude: number, radiusKm: number = 20): Promise<any[]> {
     const latDegrees = radiusKm / 111.32; 
-    const lonDegrees = radiusKm / (111.32 * Math.cos(latitude * (Math.PI / 180)));
+    const lonDegrees = radiusKm / (111.32 * Math.cos(latitude * (latitude * (Math.PI / 180))));
     
     const lowerLat = latitude - latDegrees;
     const upperLat = latitude + latDegrees;
@@ -387,7 +401,7 @@ export async function deleteUserAccount(userId: string) {
     const userSnap = await getDoc(userRef);
     if (userSnap.exists() && userSnap.data().photoURL) {
         try {
-            const avatarRef = storageRef(storage, userSnap.data().photoURL);
+            const avatarRef = storageRef(storage, `avatars/${userId}/profile.png`);
             await deleteObject(avatarRef);
         } catch (e) {
             if ((e as any).code !== 'storage/object-not-found') {

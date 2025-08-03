@@ -3,7 +3,7 @@
 
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff, UserCheck, Crown, Bookmark, BadgeCheck, Award } from 'lucide-react';
+import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff, UserCheck, Crown, Bookmark, BadgeCheck, Award, At } from 'lucide-react';
 import FollowButton from './FollowButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
@@ -110,6 +110,7 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
         <div className="mt-4">
             <div className="flex items-center justify-center gap-2">
                 <h1 className="text-2xl font-bold">{profileUser.username}</h1>
+                <h2 className="text-lg text-muted-foreground font-semibold">@{profileUser.uniqueTag}</h2>
                 {isPremium && (
                     <TooltipProvider>
                         <Tooltip>

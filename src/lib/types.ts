@@ -125,10 +125,10 @@ export interface ThemeSettings {
 
 export interface UserProfile {
     uid: string;
-    email: string; // Add email to user profile
-    emailVerified: boolean; // Track verification status
-    username: string;
-    username_lowercase?: string;
+    uniqueTag: number; // Unique, system-generated, searchable tag.
+    email: string;
+    emailVerified: boolean;
+    username: string; // Display name, not unique.
     photoURL: string | null;
     profileEmoji?: string | null;
     bio: string | null;

@@ -10,7 +10,7 @@ import { useState } from "react";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { creditReferrer } from "@/lib/actions/diamondActions";
-import { checkUsernameExists, updateUserProfile } from "@/lib/actions/userActions";
+import { updateUserProfile } from "@/lib/actions/userActions";
 import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
@@ -34,13 +34,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { Checkbox } from "../ui/checkbox";
 import { useTranslation } from "react-i18next";
-import { emojiToDataUrl } from "@/lib/utils";
 
 const formSchema = z.object({
   username: z.string()
     .min(3, { message: "Kullanıcı adı en az 3 karakter olmalıdır." })
-    .max(20, { message: "Kullanıcı adı en fazla 20 karakter olabilir."})
-    .regex(/^[a-zA-Z0-9_]+$/, { message: "Kullanıcı adı sadece harf, rakam ve alt çizgi içerebilir." }),
+    .max(20, { message: "Kullanıcı adı en fazla 20 karakter olabilir."}),
   email: z.string().email({ message: "Geçersiz e-posta adresi." }),
   password: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır." }),
   terms: z.literal<boolean>(true, {
@@ -69,25 +67,10 @@ export default function SignUpForm() {
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsLoading(true);
         try {
-            const usernameExists = await checkUsernameExists(values.username);
-            if (usernameExists) {
-                toast({
-                    title: "Kullanıcı Adı Alınmış",
-                    description: "Bu kullanıcı adı zaten başka birisi tarafından kullanılıyor. Lütfen farklı bir tane seçin.",
-                    variant: "destructive",
-                });
-                 form.setError("username", {
-                    type: "manual",
-                    message: "Bu kullanıcı adı zaten alınmış.",
-                });
-                setIsLoading(false);
-                return;
-            }
-
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const user = userCredential.user;
             
-            // Update Firebase Auth profile immediately with username. photoURL is set via server action.
+            // Update Firebase Auth profile immediately with username.
             await updateProfile(user, {
                 displayName: values.username,
             });
@@ -103,10 +86,11 @@ export default function SignUpForm() {
                 }
             }
 
-            // Create user profile in Firestore using a server action
+            // Create user profile in Firestore using a server action.
+            // This action now also handles generating the uniqueTag.
             await updateUserProfile({
                 userId: user.uid,
-                isNewUser: true, // Flag to set initial data
+                isNewUser: true,
                 username: values.username,
                 email: values.email,
                 referredBy: ref,
@@ -114,7 +98,7 @@ export default function SignUpForm() {
 
             if (ref) {
                 try {
-                    await creditReferrer(ref, { uid: user.uid, username: values.username, photoURL: '' }); // photoURL will be updated by server action
+                    await creditReferrer(ref, { uid: user.uid, username: values.username, photoURL: '' });
                 } catch (e) {
                     console.error("Referrer credit failed, but signup continues:", e);
                 }
@@ -167,7 +151,7 @@ export default function SignUpForm() {
                                 <FormItem>
                                     <FormLabel>Kullanıcı Adı</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="kullanici_adi" {...field} />
+                                        <Input placeholder="Görünmesini istediğiniz isim" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
