@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { collection, query, onSnapshot, orderBy, limit } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, limit, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Post } from '@/lib/types';
 import PostCard from './PostCard';
@@ -15,7 +15,45 @@ export default function PostsFeed() {
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
     const [clientHiddenIds, setClientHiddenIds] = useState<string[]>([]);
+    
+    const followingIds = useMemo(() => userData?.following || [], [userData]);
 
+    useEffect(() => {
+        // Fix: Add guard clauses for authLoading and followingIds length.
+        // This ensures the query does not run with an undefined or empty `followingIds` array.
+        if (authLoading || !user) {
+            setLoading(false);
+            return;
+        }
+        
+        if (followingIds.length === 0) {
+            setLoading(false);
+            setPosts([]);
+            return;
+        }
+
+        setLoading(true);
+        const postsRef = collection(db, 'posts');
+        const q = query(
+            postsRef, 
+            where('uid', 'in', followingIds), 
+            orderBy('createdAt', 'desc'), 
+            limit(50)
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const postsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post));
+            setPosts(postsData);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching friends posts:", error);
+            setLoading(false);
+        });
+        
+        return () => unsubscribe();
+
+    }, [user, followingIds, authLoading]);
+    
     const filteredAndSortedPosts = useMemo(() => {
         if (!posts || !userData) return [];
         const allHiddenIds = new Set([...(userData.hiddenPostIds || []), ...clientHiddenIds]);
@@ -33,35 +71,9 @@ export default function PostsFeed() {
         }
     };
 
-    useEffect(() => {
-        // Fix: Add a guard clause to ensure the user object is loaded before querying.
-        // This prevents passing `undefined` to a Firestore `where` clause.
-        if (authLoading || !user) {
-            setLoading(false);
-            return;
-        }
-
-        const postsRef = collection(db, 'posts');
-        const q = query(postsRef, orderBy('createdAt', 'desc'), limit(50));
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const postsData = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            } as Post));
-            setPosts(postsData);
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching posts:", error);
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, [user, authLoading]);
-
     if (loading) {
         return (
-            <div className="space-y-4 w-full">
+             <div className="space-y-4 w-full">
                 <Skeleton className="h-96 w-full" />
                 <Skeleton className="h-96 w-full" />
             </div>
