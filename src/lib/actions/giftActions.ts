@@ -60,16 +60,33 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
   const roomRef = roomId ? doc(db, 'rooms', roomId) : null;
 
   return await runTransaction(db, async (transaction) => {
+    // --- 1. ALL READS FIRST ---
     const senderDoc = await transaction.get(senderRef);
     if (!senderDoc.exists() || (senderDoc.data().diamonds || 0) < gift.diamondCost) {
       throw new Error('Yetersiz elmas bakiyesi.');
     }
-    
+
+    let receiverDoc = null;
+    if (receiverRef) {
+      receiverDoc = await transaction.get(receiverRef);
+      if (!receiverDoc.exists()) throw new Error('Hediye alıcısı bulunamadı.');
+    }
+
+    let roomDoc = null;
+    let roomData = null;
+    if (roomRef) {
+        roomDoc = await transaction.get(roomRef);
+        if (!roomDoc.exists()) throw new Error('Oda bulunamadı.');
+        roomData = roomDoc.data();
+    }
+
+    // --- 2. LOGIC AND PREPARATION ---
     const senderData = senderDoc.data();
     const newTotalDiamondsSent = (senderData.totalDiamondsSent || 0) + gift.diamondCost;
     const newGiftLevel = getGiftLevel(newTotalDiamondsSent);
+    const receiverName = receiverDoc?.data()?.username || null;
+    let leveledUp = false;
     
-    // Deduct diamonds and update gift stats for sender
     const senderUpdates: { [key: string]: any } = {
         diamonds: increment(-gift.diamondCost),
         totalDiamondsSent: newTotalDiamondsSent
@@ -77,35 +94,22 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
     if (newGiftLevel > (senderData.giftLevel || 0)) {
         senderUpdates.giftLevel = newGiftLevel;
     }
+
+    // --- 3. ALL WRITES LAST ---
     transaction.update(senderRef, senderUpdates);
 
-
-    let receiverName: string | null = null;
-    let leveledUp = false;
-
     // If it's a gift to a specific user, increment their profile value
-    if (receiverRef) {
-      const receiverDoc = await transaction.get(receiverRef);
-      if (!receiverDoc.exists()) {
-        throw new Error('Hediye alıcısı bulunamadı.');
-      }
-      receiverName = receiverDoc.data().username;
+    if (receiverRef && receiverDoc) {
       transaction.update(receiverRef, { profileValue: increment(gift.diamondCost) });
-
-      // Log transaction for receiver
-       await logTransaction(transaction, receiverId!, {
+      await logTransaction(transaction, receiverId!, {
             type: 'gift_received',
             amount: gift.diamondCost,
             description: `${senderName} kullanıcısından ${gift.name} hediyesi`,
             relatedUserId: senderId,
             giftId: giftId,
        });
-    } else if (roomRef) {
+    } else if (roomRef && roomData) {
         // Gift to the room, update room XP
-        const roomDoc = await transaction.get(roomRef);
-        if (!roomDoc.exists()) throw new Error('Oda bulunamadı.');
-        const roomData = roomDoc.data();
-
         const currentXp = roomData.xp || 0;
         const newXp = currentXp + gift.diamondCost;
         const oldLevelInfo = getRoomLevelInfo(currentXp);
@@ -120,8 +124,7 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
         }
         transaction.update(roomRef, roomUpdates);
     }
-
-    // Log transaction for sender
+    
     await logTransaction(transaction, senderId, {
         type: 'gift_sent',
         amount: -gift.diamondCost,
@@ -131,12 +134,11 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
         giftId: giftId,
     });
 
-    // Create a system message in the chat to announce the gift if it's a room gift
     if (roomId) {
         const messagesRef = collection(db, 'rooms', roomId, 'messages');
         const giftMessageData = {
           type: 'gift' as const,
-          uid: 'system', // Gifts are system messages
+          uid: 'system',
           text: `${senderName}, ${receiverName ? `${receiverName}'a` : 'odaya'} bir ${gift.name} gönderdi!`,
           createdAt: serverTimestamp(),
           giftData: {
@@ -148,17 +150,13 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
         };
         transaction.set(doc(messagesRef), giftMessageData);
         
-        // If the gift is the 'plane', open a portal
-        if (gift.id === 'plane') {
-          const currentRoomDoc = await transaction.get(roomRef!);
-          if (currentRoomDoc.exists()) {
-             await openPortalForRoom(roomId, senderId, transaction);
-          }
+        if (gift.id === 'plane' && roomRef) {
+          await openPortalForRoom(roomId, senderId, transaction);
         }
         
-        if (leveledUp) {
-            const roomData = (await transaction.get(roomRef!)).data();
-            const newLevel = getRoomLevelInfo(roomData!.xp).level;
+        if (leveledUp && roomRef) {
+            const updatedRoomData = (await transaction.get(roomRef)).data();
+            const newLevel = getRoomLevelInfo(updatedRoomData!.xp).level;
             await addSystemMessage(roomId, `🎉 Oda seviye atladı! Yeni Seviye: ${newLevel}`, transaction);
         }
     }
