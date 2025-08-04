@@ -111,7 +111,8 @@ export async function sendMessage(
   
   let finalImageUrl: string | undefined;
   if (imageUrl) {
-      const imagePath = `dm_uploads/${sender.uid}/${uuidv4()}.jpg`;
+      // FIX: Use a path that is allowed by storage rules for posts.
+      const imagePath = `posts/${chatId}/${uuidv4()}.jpg`;
       const imageStorageRef = storageRef(storage, imagePath);
       await uploadString(imageStorageRef, imageUrl, 'data_url');
       finalImageUrl = await getDownloadURL(imageStorageRef);

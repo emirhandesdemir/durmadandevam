@@ -47,6 +47,7 @@ export default function ImagePreviewSheet({ file, setFile, chatId, sender, recei
             const maxWidth = window.innerWidth;
             const maxHeight = window.innerHeight;
             let ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
+            // Limit canvas size for performance
             if (img.width * ratio > 800) {
                 ratio = 800 / img.width;
             }
@@ -56,10 +57,12 @@ export default function ImagePreviewSheet({ file, setFile, chatId, sender, recei
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             
+            // Save initial state for undo
             setHistory([ctx.getImageData(0, 0, canvas.width, canvas.height)]);
         };
     }, [file]);
 
+    // Redraw canvas when the file changes
     useEffect(() => {
         if(file){
             drawOnCanvas();
@@ -105,11 +108,12 @@ export default function ImagePreviewSheet({ file, setFile, chatId, sender, recei
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
         ctx.closePath();
+        // Save state after drawing
         setHistory(prev => [...prev, ctx.getImageData(0, 0, canvas.width, canvas.height)]);
     };
     
     const handleUndo = () => {
-        if (history.length <= 1) return; 
+        if (history.length <= 1) return; // Can't undo the initial image
         
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -148,6 +152,7 @@ export default function ImagePreviewSheet({ file, setFile, chatId, sender, recei
         setIsSubmitting(true);
         
         try {
+            // Get the final image from the canvas
             const base64Image = canvas.toDataURL('image/jpeg', 0.9);
             await sendMessage(chatId, sender, receiver, { text: caption, imageUrl: base64Image, imageType });
             handleClose();
