@@ -128,7 +128,7 @@ export async function updateUserProfile(updates: {
                     diamonds: 50, // Initial diamond reward
                     profileValue: 0, giftLevel: 0, totalDiamondsSent: 0,
                     referredBy: updates.referredBy || null, referralCount: 0, postCount: 0,
-                    followers: [], following: [], blockedUsers: [], savedPosts: [],
+                    followers: [], following: [], blockedUsers: [], savedPosts: [], // Initialize as empty arrays
                     hiddenPostIds: [], privateProfile: false, acceptsFollowRequests: true,
                     followRequests: [], selectedBubble: '', selectedAvatarFrame: '', isBanned: false,
                     reportCount: 0, isOnline: true, lastSeen: serverTimestamp(),
@@ -332,7 +332,7 @@ export async function getSavedPosts(userId: string): Promise<Post[]> {
     for (let i = 0; i < savedPostIds.length; i += 30) {
         const batchIds = savedPostIds.slice(i, i + 30);
         // CRITICAL FIX: Ensure batchIds is not empty before querying
-        if (batchIds.length > 0) {
+        if (batchIds && batchIds.length > 0) {
             const postsQuery = query(collection(db, 'posts'), where('__name__', 'in', batchIds));
             const postsSnapshot = await getDocs(postsQuery);
             postsSnapshot.forEach(doc => {
