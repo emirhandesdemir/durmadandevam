@@ -10,7 +10,6 @@ import { revalidatePath } from 'next/cache';
 import { getAuth } from '../firebaseAdmin';
 import { deleteRoomWithSubcollections } from '../firestoreUtils';
 import { updateUserPosts, updateUserComments, updateUserDmMessages } from './propagationActions';
-import { createNotification } from './notificationActions';
 import { logTransaction } from './transactionActions';
 
 export async function assignMissingUniqueTag(userId: string) {
@@ -574,4 +573,3 @@ export async function unblockUser(blockerId: string, targetId: string) {
         return { success: false, error: "Engelleme kaldırılamadı: " + error.message };
     }
 }
-
