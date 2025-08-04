@@ -32,6 +32,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
   });
 
   const isSystemNotification = notification.senderId.startsWith('system');
+  const profileLink = `/profile/${notification.senderUniqueTag || notification.senderId}`;
 
   const handleWrapperClick = () => {
     if (notification.type === 'complete_profile') {
@@ -43,7 +44,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
       // TODO: Implement opening a post dialog/modal
       console.log("Navigating to post:", notification.postId);
     } else if (['follow', 'mention', 'follow_accept', 'referral_bonus'].includes(notification.type)) {
-       router.push(`/profile/${notification.senderId}`);
+       router.push(profileLink);
     }
   };
 
@@ -117,7 +118,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
                         <AvatarFallback>HW</AvatarFallback>
                     </Avatar>
             ) : (
-                    <Link href={`/profile/${notification.senderId}`} onClick={(e) => e.stopPropagation()}>
+                    <Link href={profileLink} onClick={(e) => e.stopPropagation()}>
                             <div className={cn("avatar-frame-wrapper", notification.senderAvatarFrame)}>
                                 <Avatar className="relative z-[1] h-10 w-10">
                                     <AvatarImage src={notification.photoURL || undefined} />

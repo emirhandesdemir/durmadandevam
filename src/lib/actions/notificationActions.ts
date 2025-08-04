@@ -32,6 +32,7 @@ interface CreateNotificationArgs {
   callId?: string;
   callType?: 'video' | 'audio';
   profileEmoji?: string | null;
+  senderUniqueTag?: number;
 }
 
 interface BroadcastNotificationArgs {

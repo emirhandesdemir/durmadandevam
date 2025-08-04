@@ -215,6 +215,7 @@ export interface Notification {
     recipientId: string;
     senderId: string;
     senderUsername: string;
+    senderUniqueTag?: number;
     photoURL: string | null;
     profileEmoji?: string | null;
     senderAvatarFrame?: string;

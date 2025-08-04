@@ -28,6 +28,7 @@ export async function followUser(currentUserId: string, targetUserId: string, cu
     throw new Error('Takip edilecek kullanıcı bulunamadı.');
   }
   const isPrivate = targetUserSnap.data().privateProfile;
+  const targetUserUniqueTag = targetUserSnap.data().uniqueTag;
 
   await runTransaction(db, async (transaction) => {
     const targetUserDoc = await transaction.get(targetUserRef);
@@ -81,11 +82,12 @@ export async function followUser(currentUserId: string, targetUserId: string, cu
         profileEmoji: currentUserInfo.profileEmoji,
         senderAvatarFrame: currentUserInfo.userAvatarFrame,
         type: 'follow',
+        senderUniqueTag: targetUserUniqueTag,
     });
   }
 
-  revalidatePath(`/profile/${targetUserId}`);
-  revalidatePath(`/profile/${currentUserId}`);
+  revalidatePath(`/profile/${targetUserUniqueTag}`);
+  revalidatePath(`/profile/${currentUserDoc.data().uniqueTag}`);
 }
 
 export async function unfollowUser(currentUserId: string, targetUserId: string) {
@@ -98,12 +100,15 @@ export async function unfollowUser(currentUserId: string, targetUserId: string) 
         lastActionTimestamp: serverTimestamp()
     });
     transaction.update(targetUserRef, {
-        followers: arrayRemove(targetUserId),
+        followers: arrayRemove(currentUserId),
     });
   });
 
-  revalidatePath(`/profile/${targetUserId}`);
-  revalidatePath(`/profile/${currentUserId}`);
+  const currentUserDoc = await getDoc(currentUserRef);
+  const targetUserDoc = await getDoc(targetUserRef);
+
+  revalidatePath(`/profile/${targetUserDoc.data()?.uniqueTag}`);
+  revalidatePath(`/profile/${currentUserDoc.data()?.uniqueTag}`);
 }
 
 export async function handleFollowRequest(currentUserId: string, requesterId: string, action: 'accept' | 'deny') {
@@ -120,6 +125,7 @@ export async function handleFollowRequest(currentUserId: string, requesterId: st
       throw new Error('Kullanıcı bulunamadı.');
     }
     const currentUserData = currentUserDoc.data();
+    const requesterData = requesterDoc.data();
 
     const requestToRemove = currentUserData.followRequests?.find((req: any) => req.uid === requesterId);
     if (requestToRemove) {
@@ -143,11 +149,15 @@ export async function handleFollowRequest(currentUserId: string, requesterId: st
             senderAvatar: currentUserData.photoURL,
             profileEmoji: currentUserData.profileEmoji,
             senderAvatarFrame: currentUserData.selectedAvatarFrame,
+            senderUniqueTag: currentUserData.uniqueTag,
             type: 'follow_accept', // A new type for accepted request
         });
     }
   });
 
-  revalidatePath(`/profile/${requesterId}`);
-  revalidatePath(`/profile/${currentUserId}`);
+  const currentUserDoc = await getDoc(currentUserRef);
+  const requesterDoc = await getDoc(requesterRef);
+
+  revalidatePath(`/profile/${requesterDoc.data()?.uniqueTag}`);
+  revalidatePath(`/profile/${currentUserDoc.data()?.uniqueTag}`);
 }

@@ -1,8 +1,8 @@
-// src/app/(main)/profile/[uid]/page.tsx
+// src/app/(main)/profile/[id]/page.tsx
 // Bu, bir kullanıcının profil sayfasını oluşturan sunucu bileşenidir.
 // Sayfa yüklendiğinde sunucuda çalışır, veritabanından gerekli verileri
 // (kullanıcı profili, gönderi sayısı vb.) çeker ve sayfayı oluşturur.
-import { doc, getDoc, collection, query, where, getCountFromServer } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getCountFromServer, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { notFound } from 'next/navigation';
 import ProfileHeader from '@/components/profile/ProfileHeader';
@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 import UserPostsGrid from '@/components/profile/UserPostsGrid';
 
 interface UserProfilePageProps {
-  params: { uid: string };
+  params: { id: string };
 }
 
 async function getAuthenticatedUser() {
@@ -32,47 +32,47 @@ async function getAuthenticatedUser() {
     }
 }
 
+async function findUserByUniqueTag(tag: number) {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('uniqueTag', '==', tag), limit(1));
+    const querySnapshot = await getDocs(q);
+    if (querySnapshot.empty) {
+        return null;
+    }
+    const userDoc = querySnapshot.docs[0];
+    return { uid: userDoc.id, ...userDoc.data() };
+}
+
 
 export default async function UserProfilePage({ params }: UserProfilePageProps) {
-  const { uid } = params;
-  const authUser = await getAuthenticatedUser();
-  const isOwnProfile = authUser?.uid === uid;
-
-  // Veritabanı sorguları için referanslar oluştur.
-  const profileUserRef = doc(db, 'users', uid);
-  const postsQuery = query(collection(db, 'posts'), where('uid', '==', uid));
-
-  // Kullanıcı verisini ve gönderi sayısını aynı anda, paralel olarak çek.
-  // Bu, sayfa yükleme süresini optimize eder.
-  const [profileUserSnap, postsCountSnap] = await Promise.all([
-    getDoc(profileUserRef),
-    getCountFromServer(postsQuery)
-  ]);
-
-  // Eğer kullanıcı veritabanında bulunamazsa, 404 sayfasına yönlendir.
-  if (!profileUserSnap.exists()) {
-    notFound();
+  const numericId = parseInt(params.id, 10);
+  if (isNaN(numericId)) {
+      notFound();
   }
 
-  // Gelen verileri işle.
-  const profileUserData = profileUserSnap.data();
+  const authUser = await getAuthenticatedUser();
+  const profileUserData = await findUserByUniqueTag(numericId);
+
+  if (!profileUserData) {
+    notFound();
+  }
+  
+  const uid = profileUserData.uid;
+  const isOwnProfile = authUser?.uid === uid;
+  
+  const postsQuery = query(collection(db, 'posts'), where('uid', '==', uid));
+  const postsCountSnap = await getCountFromServer(postsQuery);
   profileUserData.postCount = postsCountSnap.data().count;
 
-  // ÖNEMLİ: Sunucu Bileşeninden İstemci Bileşenine Veri Aktarımı
-  // Firestore'dan gelen ve Timestamp gibi serileştirilemeyen nesneler içeren veriyi
-  // istemci bileşenlerine (client components) güvenle aktarılabilen düz JSON formatına çeviriyoruz.
-  // Bu işlem, "only plain objects can be passed to Client Components" hatasını önler.
   const serializableProfileUser = deepSerialize(profileUserData);
   
   return (
     <>
       <div className="w-full max-w-4xl">
-        {/* Profilin üst kısmını (avatar, isim, takipçi sayısı vb.) oluşturan bileşen. */}
         <ProfileHeader profileUser={serializableProfileUser} />
         
         <Separator className="my-0" />
 
-        {/* Sekmeli İçerik Bölümü */}
         <Tabs defaultValue="posts" className="w-full">
             <TabsList className={cn("grid w-full", isOwnProfile ? "grid-cols-2" : "grid-cols-1")}>
                 <TabsTrigger value="posts">

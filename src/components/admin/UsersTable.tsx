@@ -123,7 +123,7 @@ export default function UsersTable({ users }: UsersTableProps) {
                     return (
                         <TableRow key={user.uid} className={cn(user.reportCount && user.reportCount > 5 && "bg-destructive/10 hover:bg-destructive/20")}>
                             <TableCell>
-                                <Link href={`/profile/${user.uid}`} className="flex items-center gap-3 group hover:underline" target="_blank">
+                                <Link href={`/profile/${user.uniqueTag}`} className="flex items-center gap-3 group hover:underline" target="_blank">
                                     <Avatar>
                                         <AvatarImage src={user.photoURL || undefined} />
                                         <AvatarFallback>{user.username?.charAt(0).toUpperCase()}</AvatarFallback>

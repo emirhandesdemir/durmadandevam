@@ -75,7 +75,7 @@ export default function Header({}: HeaderProps) {
                                 <DropdownMenuLabel>{userData?.username}</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                  <DropdownMenuItem asChild>
-                                    <Link href={`/profile/${user?.uid}`}>
+                                    <Link href={`/profile/${userData?.uniqueTag}`}>
                                         <User className="mr-2 h-4 w-4" />
                                         <span>Profil</span>
                                     </Link>

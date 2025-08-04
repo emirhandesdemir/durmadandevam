@@ -31,17 +31,14 @@ export async function assignMissingUniqueTag(userId: string) {
             const counterDoc = await transaction.get(counterRef);
             if (counterDoc.exists()) {
                 currentTag = counterDoc.data().userTag || 1000;
-            } else {
-                // If counter doesn't exist, create it within the transaction
-                transaction.set(counterRef, { userTag: 1000 });
             }
         } catch (e) {
-             // Handle case where config collection might not exist yet
-             transaction.set(counterRef, { userTag: 1000 });
+            console.warn("Counter document not found, will create it.");
         }
         
         const newTag = currentTag + 1;
-        transaction.update(counterRef, { userTag: newTag });
+        
+        transaction.set(counterRef, { userTag: newTag }, { merge: true });
         transaction.update(userRef, { uniqueTag: newTag });
         
         console.log(`Assigned uniqueTag ${newTag} to user ${userId}`);
@@ -150,18 +147,15 @@ export async function updateUserProfile(updates: {
                     const counterDoc = await transaction.get(counterRef);
                     if (counterDoc.exists()) {
                         newTag = (counterDoc.data().userTag || 1000) + 1;
-                    } else {
-                        transaction.set(counterRef, { userTag: newTag });
                     }
-                    transaction.update(counterRef, { userTag: newTag });
+                    transaction.set(counterRef, { userTag: newTag }, { merge: true });
                 } catch(e) {
-                    // Counter doc doesn't exist, create it.
-                    transaction.set(counterRef, { userTag: newTag });
+                     transaction.set(counterRef, { userTag: newTag }, { merge: true });
                 }
                 
                 const initialData: UserProfile = {
                     uid: userId,
-                    uniqueTag: newTag, // FIX: Assign the generated tag
+                    uniqueTag: newTag,
                     email: updates.email!,
                     emailVerified: false,
                     username: updates.username!,
@@ -580,3 +574,4 @@ export async function unblockUser(blockerId: string, targetId: string) {
         return { success: false, error: "Engelleme kaldırılamadı: " + error.message };
     }
 }
+

@@ -52,12 +52,12 @@ export default function ReportsTable({ reports }: ReportsTableProps) {
                 {reports.map((report) => (
                     <TableRow key={report.id}>
                         <TableCell>
-                            <Link href={`/profile/${report.reporterId}`} className="hover:underline font-medium" target="_blank">
+                            <Link href={`/profile/${report.reporterUniqueTag}`} className="hover:underline font-medium" target="_blank">
                                 {report.reporterUsername}
                             </Link>
                         </TableCell>
                          <TableCell>
-                            <Link href={`/profile/${report.reportedUserId}`} className="hover:underline font-medium text-destructive" target="_blank">
+                            <Link href={`/profile/${report.reportedUserUniqueTag}`} className="hover:underline font-medium text-destructive" target="_blank">
                                 {report.reportedUsername}
                             </Link>
                         </TableCell>
@@ -72,7 +72,7 @@ export default function ReportsTable({ reports }: ReportsTableProps) {
                         </TableCell>
                         <TableCell className="text-right">
                            <Button asChild variant="outline" size="sm">
-                                <Link href={report.targetType === 'post' ? `/home` : `/profile/${report.reportedUserId}`} target="_blank">
+                                <Link href={report.targetType === 'post' ? `/home` : `/profile/${report.reportedUserUniqueTag}`} target="_blank">
                                     {report.targetType === 'post' ? 'Gönderiye Git' : 'Profile Git'}
                                     <ArrowRight className="ml-2 h-4 w-4" />
                                 </Link>
