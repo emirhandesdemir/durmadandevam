@@ -132,7 +132,7 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
           </div>
           {isOwnProfile && (
              <Button asChild variant="outline" size="icon">
-                <Link href="/profile"><Settings className="h-5 w-5"/></Link>
+                <Link href="/profile/edit"><Settings className="h-5 w-5"/></Link>
             </Button>
           )}
         </div>
