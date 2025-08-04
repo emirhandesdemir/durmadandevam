@@ -159,7 +159,10 @@ export async function updateUserProfile(updates: {
     const updatesForDb: { [key: string]: any } = { ...restOfUpdates };
     
     if (photoURL !== undefined) updatesForDb.photoURL = photoURL;
-    if (username !== undefined) updatesForDb.username = username;
+    if (username !== undefined) {
+        updatesForDb.username = username;
+        updatesForDb.username_lowercase = username.toLowerCase();
+    }
 
     await runTransaction(db, async (transaction) => {
         const userDoc = await transaction.get(userRef);

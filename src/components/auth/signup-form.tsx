@@ -86,7 +86,9 @@ export default function SignUpForm() {
                 ref = null;
             }
 
-            // CRITICAL FIX: Create user document immediately on signup.
+            // CRITICAL FIX: Await the creation of the user document in Firestore.
+            // This ensures that the user's data is fully available before they are
+            // redirected and can perform actions like creating a room.
             await updateUserProfile({
                 userId: user.uid,
                 isNewUser: true, // This flag tells the action to create the document.
