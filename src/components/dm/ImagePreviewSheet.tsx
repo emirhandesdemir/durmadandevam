@@ -45,8 +45,8 @@ export default function ImagePreviewSheet({ file, setFile, chatId, sender, recei
         img.src = URL.createObjectURL(file);
         img.onload = () => {
             // Set canvas dimensions to match the image, scaled to fit the screen
-            const maxWidth = window.innerWidth * 0.9;
-            const maxHeight = window.innerHeight * 0.7;
+            const maxWidth = window.innerWidth;
+            const maxHeight = window.innerHeight;
             const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
             canvas.width = img.width * ratio;
             canvas.height = img.height * ratio;
@@ -60,8 +60,10 @@ export default function ImagePreviewSheet({ file, setFile, chatId, sender, recei
     }, [file]);
 
     useEffect(() => {
-        drawOnCanvas();
-    }, [drawOnCanvas]);
+        if(file){
+            drawOnCanvas();
+        }
+    }, [file, drawOnCanvas]);
 
     const handleDrawingStart = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
         e.preventDefault();
