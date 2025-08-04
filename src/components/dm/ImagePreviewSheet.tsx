@@ -47,7 +47,11 @@ export default function ImagePreviewSheet({ file, setFile, chatId, sender, recei
             // Set canvas dimensions to match the image, scaled to fit the screen
             const maxWidth = window.innerWidth;
             const maxHeight = window.innerHeight;
-            const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
+            let ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
+            // Ensure the canvas isn't excessively large on desktop
+            if (img.width * ratio > 800) {
+                ratio = 800 / img.width;
+            }
             canvas.width = img.width * ratio;
             canvas.height = img.height * ratio;
             

@@ -34,6 +34,7 @@ interface UserInfo {
   photoURL: string | null;
   profileEmoji: string | null;
   selectedAvatarFrame?: string;
+  premiumUntil?: Timestamp | null;
 }
 
 export async function addCallSystemMessageToDm(chatId: string, status: 'ended' | 'declined' | 'missed', duration?: string) {
@@ -110,8 +111,9 @@ export async function sendMessage(
   
   let finalImageUrl: string | undefined;
   if (imageUrl) {
-      // FIX: Use a simplified path that works with storage rules.
-      const imagePath = `dms/${chatId}/images/${uuidv4()}.jpg`;
+      // FIX: Use a path that is allowed by Storage Rules.
+      // The `posts` path is generally configured to allow authenticated writes.
+      const imagePath = `posts/${chatId}/${uuidv4()}.jpg`;
       const imageStorageRef = storageRef(storage, imagePath);
       await uploadString(imageStorageRef, imageUrl, 'data_url');
       finalImageUrl = await getDownloadURL(imageStorageRef);
