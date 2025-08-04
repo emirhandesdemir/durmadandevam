@@ -8,7 +8,7 @@ import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { FeatureFlags, UserProfile, ThemeSettings } from '@/lib/types';
 import { assignMissingUniqueTag } from '@/lib/actions/userActions';
-import { triggerProfileCompletionNotification } from '@/lib/actions/notificationActions';
+import { createNotification } from '@/lib/actions/notificationActions';
 import i18n from '@/lib/i18n';
 import AnimatedLogoLoader from '@/components/common/AnimatedLogoLoader';
 import { collection, query, where } from 'firebase/firestore';
@@ -104,8 +104,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (docSnap.exists()) setThemeSettings(docSnap.data() as ThemeSettings);
     });
 
-    const unsubscribeAuth = onIdTokenChanged(auth, (currentUser) => {
+    const unsubscribeAuth = onIdTokenChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      const token = await currentUser?.getIdToken();
+      await setSessionCookie(token || null);
     });
 
     return () => {
@@ -143,7 +145,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             i18n.changeLanguage(data.language);
         }
         if (!data.bio && !data.profileCompletionNotificationSent) {
-            triggerProfileCompletionNotification(user.uid);
+            createNotification({
+                recipientId: user.uid,
+                senderId: 'system-profile',
+                senderUsername: 'HiweWalk',
+                senderAvatar: 'https://placehold.co/100x100.png',
+                type: 'complete_profile',
+            }).then(() => {
+                updateDoc(userDocRef, { profileCompletionNotificationSent: true });
+            });
         }
         setLoading(false);
       } else {
@@ -182,11 +192,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
     const isPublicPage = isAuthPage || pathname.startsWith('/guide') || pathname.startsWith('/terms') || pathname.startsWith('/privacy');
+    const isRootPage = pathname === '/';
 
-    if (!user && !isPublicPage) {
-      router.replace('/login');
-    } else if (user && userData && isAuthPage) {
-      router.replace('/home');
+    if (user && userData) {
+        // Logged-in user
+        if (isAuthPage || isRootPage) {
+            router.replace('/home');
+        }
+    } else {
+        // Logged-out user
+        if (!isPublicPage && !isRootPage) {
+            router.replace('/login');
+        } else if (isRootPage) {
+            router.replace('/login');
+        }
     }
   }, [user, userData, loading, pathname, router]);
 
@@ -194,7 +213,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   return (
       <AuthContext.Provider value={value}>
-        {children}
+        {loading ? <AnimatedLogoLoader fullscreen /> : children}
       </AuthContext.Provider>
   );
 }

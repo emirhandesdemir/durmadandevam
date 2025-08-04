@@ -3,23 +3,15 @@
 
 import { Suspense } from 'react';
 import AnimatedLogoLoader from '@/components/common/AnimatedLogoLoader';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import { useEffect } from 'react';
 
+// This component's only job is to show a loader.
+// All redirection logic is now handled centrally in AuthContext.
 function PageContent() {
-    const { user, loading } = useAuth();
-    const router = useRouter();
-
-    // The logic to redirect is now fully handled by AuthContext.
-    // This component's only job is to show a loader until the context
-    // determines where to send the user.
-
     return <AnimatedLogoLoader fullscreen />;
 }
 
 // This page now acts as the primary entry point.
-// It shows a loader and then redirects based on auth state.
+// It shows a loader and then AuthContext handles redirection.
 export default function RootPage() {
   return (
     <Suspense>
