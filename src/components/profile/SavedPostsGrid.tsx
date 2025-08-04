@@ -27,6 +27,7 @@ export default function SavedPostsGrid({ userId }: SavedPostsGridProps) {
         }
 
         setLoading(true);
+        // The getSavedPosts action now safely handles undefined savedPosts arrays.
         getSavedPosts(userId)
             .then(setSavedPosts)
             .finally(() => setLoading(false));

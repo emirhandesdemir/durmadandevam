@@ -324,7 +324,7 @@ export async function getSavedPosts(userId: string): Promise<Post[]> {
 
     const savedPostIds: string[] = userSnap.data().savedPosts || [];
 
-    if (savedPostIds.length === 0) {
+    if (!Array.isArray(savedPostIds) || savedPostIds.length === 0) {
         return [];
     }
 
