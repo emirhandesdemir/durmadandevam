@@ -362,6 +362,10 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             setActiveRoom(null);
             setParticipants([]);
             setLivePlaylist([]);
+            // If user is not in a room, ensure no voice connection persists
+            if(connectedRoomId) {
+                _cleanupAndResetState();
+            }
             return;
         }
 
@@ -375,6 +379,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                  }
                  setActiveRoom(null);
                  setParticipants([]);
+                 _cleanupAndResetState(); // Clean up if room is deleted
             }
         });
 

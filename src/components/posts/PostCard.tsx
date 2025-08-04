@@ -70,7 +70,7 @@ const safeParseTimestamp = (timestamp: any): Date => {
     if (!timestamp) return new Date(0); 
     if (timestamp instanceof Date) return timestamp;
     if (timestamp instanceof Timestamp) return timestamp.toDate();
-    if (typeof timestamp === 'object' && 'seconds' in timestamp && 'nanoseconds' in timestamp) {
+    if (typeof timestamp === 'object' && 'seconds' in timestamp && typeof timestamp.seconds === 'number' && 'nanoseconds' in timestamp && typeof timestamp.nanoseconds === 'number') {
         return new Timestamp(timestamp.seconds, timestamp.nanoseconds).toDate();
     }
     if (typeof timestamp === 'string') {
@@ -269,7 +269,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 rounded-full -mr-2"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            {(isOwner || isAdmin) && <DropdownMenuItem onClick={() => setIsEditing(true)}><Edit className="mr-2 h-4 w-4" /><span>Düzenle</span></DropdownMenuItem>}
+                            {isOwner && <DropdownMenuItem onClick={() => setIsEditing(true)}><Edit className="mr-2 h-4 w-4" /><span>Düzenle</span></DropdownMenuItem>}
                             {(isOwner || isAdmin) ? (
                                 <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Sil</span></DropdownMenuItem>
                             ) : (

@@ -62,10 +62,9 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
   return await runTransaction(db, async (transaction) => {
     // --- 1. ALL READS FIRST ---
     const senderDoc = await transaction.get(senderRef);
-    if (!senderDoc.exists() || (senderDoc.data().diamonds || 0) < gift.diamondCost) {
-      throw new Error('Yetersiz elmas bakiyesi.');
-    }
-
+    if (!senderDoc.exists()) throw new Error("Gönderen kullanıcı bulunamadı.");
+    const senderData = senderDoc.data();
+    
     let receiverDoc = null;
     if (receiverRef) {
       receiverDoc = await transaction.get(receiverRef);
@@ -73,24 +72,29 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
     }
 
     let roomDoc = null;
-    let roomData = null;
     if (roomRef) {
         roomDoc = await transaction.get(roomRef);
         if (!roomDoc.exists()) throw new Error('Oda bulunamadı.');
-        roomData = roomDoc.data();
     }
+    const roomData = roomDoc?.data();
 
     // --- 2. LOGIC AND PREPARATION ---
-    const senderData = senderDoc.data();
+    const isAdmin = senderData.role === 'admin';
+    if (!isAdmin && (senderData.diamonds || 0) < gift.diamondCost) {
+      throw new Error('Yetersiz elmas bakiyesi.');
+    }
+
     const newTotalDiamondsSent = (senderData.totalDiamondsSent || 0) + gift.diamondCost;
     const newGiftLevel = getGiftLevel(newTotalDiamondsSent);
     const receiverName = receiverDoc?.data()?.username || null;
     let leveledUp = false;
     
     const senderUpdates: { [key: string]: any } = {
-        diamonds: increment(-gift.diamondCost),
         totalDiamondsSent: newTotalDiamondsSent
     };
+    if (!isAdmin) {
+        senderUpdates.diamonds = increment(-gift.diamondCost);
+    }
     if (newGiftLevel > (senderData.giftLevel || 0)) {
         senderUpdates.giftLevel = newGiftLevel;
     }
@@ -125,14 +129,16 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
         transaction.update(roomRef, roomUpdates);
     }
     
-    await logTransaction(transaction, senderId, {
-        type: 'gift_sent',
-        amount: -gift.diamondCost,
-        description: `${receiverName || 'Odaya'} gönderilen ${gift.name} hediyesi`,
-        relatedUserId: receiverId,
-        roomId: roomId,
-        giftId: giftId,
-    });
+    if (!isAdmin) {
+        await logTransaction(transaction, senderId, {
+            type: 'gift_sent',
+            amount: -gift.diamondCost,
+            description: `${receiverName || 'Odaya'} gönderilen ${gift.name} hediyesi`,
+            relatedUserId: receiverId,
+            roomId: roomId,
+            giftId: giftId,
+        });
+    }
 
     if (roomId) {
         const messagesRef = collection(db, 'rooms', roomId, 'messages');

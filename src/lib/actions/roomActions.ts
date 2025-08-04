@@ -559,7 +559,7 @@ export async function extendRoomTime(roomId: string, userId: string) {
         transaction.update(roomRef, { expiresAt: newExpiresAt });
     });
     
-    await addSystemMessage(roomId, `⏰ Oda süresi 20 dakika uzatıldı! Bu işlem ${cost} elmasa mal oldu.`);
+    await addSystemMessage(roomId, `⏰ Oda süresi 20 dakika uzatıldı!`);
     return { success: true };
 }
 
@@ -614,16 +614,17 @@ export async function increaseParticipantLimit(roomId: string, userId: string) {
 
 export async function openPortalForRoom(roomId: string, userId: string, externalTransaction?: FirestoreTransaction) {
     const cost = 100;
-
     const userRef = doc(db, 'users', userId);
     const roomRef = doc(db, 'rooms', roomId);
     
     const portalRef = doc(db, 'portals', roomId);
 
     const processPortal = async (transaction: any) => {
-        const userDoc = await transaction.get(userRef);
-        const roomDoc = await transaction.get(roomRef);
-        const portalDoc = await transaction.get(portalRef);
+        const [userDoc, roomDoc, portalDoc] = await Promise.all([
+            transaction.get(userRef),
+            transaction.get(roomRef),
+            transaction.get(portalRef)
+        ]);
 
         if (!userDoc.exists() || !roomDoc.exists()) throw new Error("Kullanıcı veya oda bulunamadı.");
 
@@ -633,22 +634,25 @@ export async function openPortalForRoom(roomId: string, userId: string, external
         if (portalDoc.exists() && (portalDoc.data().expiresAt as Timestamp).toMillis() > Date.now()) {
             throw new Error("Bu oda için zaten aktif bir portal var.");
         }
+        
+        const isAdmin = userData.role === 'admin';
 
-        if ((userData.diamonds || 0) < cost) {
+        if (!isAdmin && (userData.diamonds || 0) < cost) {
             throw new Error(`Portal açmak için ${cost} elmasa ihtiyacınız var.`);
         }
 
         const fiveMinutesInMs = 5 * 60 * 1000;
         const newExpiresAt = Timestamp.fromMillis(Date.now() + fiveMinutesInMs);
         
-        transaction.update(userRef, { diamonds: increment(-cost) });
-        
-        await logTransaction(transaction, userId, {
-            type: 'room_perk',
-            amount: -cost,
-            description: `${roomData.name} odası için portal açma`,
-            roomId: roomId,
-        });
+        if (!isAdmin) {
+            transaction.update(userRef, { diamonds: increment(-cost) });
+            await logTransaction(transaction, userId, {
+                type: 'room_perk',
+                amount: -cost,
+                description: `${roomData.name} odası için portal açma`,
+                roomId: roomId,
+            });
+        }
         
         transaction.set(portalRef, {
             roomId: roomId,
@@ -983,27 +987,30 @@ export async function extendRoomFor30Days(roomId: string, userId: string) {
 
         const roomData = roomDoc.data();
         const userData = userDoc.data();
+        const isAdmin = userData.role === 'admin';
 
-        if (roomData.createdBy.uid !== userId) {
+        if (roomData.createdBy.uid !== userId && !isAdmin) {
             throw new Error("Sadece oda sahibi bu işlemi yapabilir.");
         }
 
-        if ((userData.diamonds || 0) < cost) {
+        if (!isAdmin && (userData.diamonds || 0) < cost) {
             throw new Error(`Oda süresini uzatmak için ${cost} elmasa ihtiyacınız var.`);
         }
         
         const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
         const newExpiresAt = Timestamp.fromMillis(Date.now() + thirtyDaysInMs);
         
-        transaction.update(userRef, { diamonds: increment(-cost) });
+        if (!isAdmin) {
+            transaction.update(userRef, { diamonds: increment(-cost) });
+            await logTransaction(transaction, userId, {
+                type: 'room_perk',
+                amount: -cost,
+                description: `${roomData.name} odası için 30 günlük süre uzatma`,
+                roomId: roomId
+            });
+        }
+        
         transaction.update(roomRef, { expiresAt: newExpiresAt });
-
-        await logTransaction(transaction, userId, {
-            type: 'room_perk',
-            amount: -cost,
-            description: `${roomData.name} odası için 30 günlük süre uzatma`,
-            roomId: roomId
-        });
     });
 
     await addSystemMessage(roomId, `✨ Oda süresi 30 gün uzatıldı!`);
