@@ -102,17 +102,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (docSnap.exists()) setThemeSettings(docSnap.data() as ThemeSettings);
     });
 
-    const unsubscribeAuth = onIdTokenChanged(auth, async (currentUser) => {
-        setLoading(true); // Always start loading on auth state change
-        setUser(currentUser);
-        const idToken = await currentUser?.getIdToken(true) || null;
-        await setSessionCookie(idToken);
-        
-        if (!currentUser) {
-            setUserData(null);
-            setTotalUnreadDms(0);
-            setLoading(false); // Stop loading if no user
-        }
+    const unsubscribeAuth = onIdTokenChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      // We will handle loading state inside the user data listener.
     });
 
     return () => {
@@ -121,63 +113,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubscribeTheme();
     };
   }, []);
-  
-  useEffect(() => {
-      // Don't perform routing logic while initial auth state is being determined.
-      if (loading) return;
-
-      const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
-      const isPublicPage = isAuthPage || pathname.startsWith('/guide') || pathname.startsWith('/terms') || pathname.startsWith('/privacy');
-
-      if (!user && !isPublicPage) {
-          router.replace('/login');
-      } else if (user && isAuthPage) {
-          router.replace('/home');
-      }
-
-  }, [user, loading, pathname, router]);
 
   useEffect(() => {
-    // If no user, we don't need to listen to user-specific data.
-    // The loading state is handled by the previous effect.
-    if (!user) return;
+    if (user === undefined) {
+      return; // Wait for Firebase Auth to initialize
+    }
 
+    if (!user) {
+      setUserData(null);
+      setTotalUnreadDms(0);
+      setLoading(false); // No user, stop loading.
+      return;
+    }
+
+    // User is authenticated, now listen for their data.
     const userDocRef = doc(db, 'users', user.uid);
     const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-            const data = docSnap.data() as UserProfile;
-            if (data.isBanned) {
-                handleLogout(true);
-                return;
-            }
-
-            setUserData(data);
-            
-            if (data.language && i18n.language !== data.language) {
-                i18n.changeLanguage(data.language);
-            }
-            if (!data.bio && !data.profileCompletionNotificationSent) {
-                triggerProfileCompletionNotification(user.uid);
-            }
-            // Once user data is loaded, stop loading.
-            setLoading(false);
-
-        } else {
-             // This case might happen if a user is deleted from the DB but still has a valid auth token.
-            handleLogout();
+      if (docSnap.exists()) {
+        const data = docSnap.data() as UserProfile;
+        if (data.isBanned) {
+          handleLogout(true);
+          return;
         }
+        setUserData(data);
+        if (data.language && i18n.language !== data.language) {
+            i18n.changeLanguage(data.language);
+        }
+        if (!data.bio && !data.profileCompletionNotificationSent) {
+            triggerProfileCompletionNotification(user.uid);
+        }
+        setLoading(false); // User data is loaded, stop loading.
+      } else {
+        // This can happen if the user's document hasn't been created yet on first signup
+        // or if it was deleted. The loading state will persist until the doc is created.
+        console.log("Waiting for user document to be created...");
+      }
     }, (error) => {
-        console.error("Firestore user listener error:", error);
-        setUserData(null);
-        setLoading(false);
-        handleLogout();
+      console.error("Firestore user listener error:", error);
+      handleLogout();
     });
 
     const dmsQuery = query(collection(db, 'directMessagesMetadata'), where('participantUids', 'array-contains', user.uid));
     const unsubscribeDms = onSnapshot(dmsQuery, (snapshot) => {
-        let total = 0;
-        snapshot.forEach(doc => { total += doc.data().unreadCounts?.[user.uid] || 0; });
-        setTotalUnreadDms(total);
+      let total = 0;
+      snapshot.forEach(doc => { total += doc.data().unreadCounts?.[user.uid] || 0; });
+      setTotalUnreadDms(total);
     });
     
     setDoc(userDocRef, { isOnline: true }, { merge: true });
@@ -191,6 +171,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("beforeunload", onbeforeunload);
     };
   }, [user, handleLogout]);
+
+  useEffect(() => {
+    // Only perform routing logic once the loading state is resolved.
+    if (loading) return;
+
+    const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
+    const isPublicPage = isAuthPage || pathname.startsWith('/guide') || pathname.startsWith('/terms') || pathname.startsWith('/privacy');
+
+    if (!user && !isPublicPage) {
+      router.replace('/login');
+    } else if (user && userData && isAuthPage) {
+      // Ensure userData is also loaded before redirecting from auth pages.
+      router.replace('/home');
+    }
+  }, [user, userData, loading, pathname, router]);
 
   const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms, refreshUserData };
   
