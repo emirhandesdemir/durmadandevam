@@ -3,7 +3,7 @@
 
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff, UserCheck, Crown, Bookmark, Copy, Shield, BadgeCheck, Star } from 'lucide-react';
+import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff, UserCheck, Crown, Bookmark, Copy, Shield, BadgeCheck, Star, Gift } from 'lucide-react';
 import FollowButton from './FollowButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
@@ -18,6 +18,7 @@ import { blockUser, unblockUser } from '@/lib/actions/userActions';
 import ReportDialog from '../common/ReportDialog';
 import { Loader2 } from 'lucide-react';
 import { Separator } from '../ui/separator';
+import ProfileGiftDialog from './ProfileGiftDialog';
 
 interface UserProfile {
   uid: string;
@@ -59,6 +60,7 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
   const [dialogType, setDialogType] = useState<'followers' | 'following'>('followers');
   const [isBlocking, setIsBlocking] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isGiftOpen, setIsGiftOpen] = useState(false);
 
   const isOwnProfile = currentUserAuth?.uid === profileUser.uid;
   const amIBlockedByThisUser = profileUser.blockedUsers?.includes(currentUserAuth?.uid || '');
@@ -153,6 +155,7 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
                 <Button asChild className="flex-1">
                     <Link href={`/dm/${getChatId(currentUserAuth!.uid, profileUser.uid)}`}><MessageCircle className="mr-2 h-4 w-4"/> Mesaj</Link>
                 </Button>
+                 <Button onClick={() => setIsGiftOpen(true)} size="icon" variant="outline"><Gift className="h-5 w-5 text-primary"/></Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="icon"><MoreHorizontal /></Button>
@@ -203,6 +206,11 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
             target={{ type: 'user', id: profileUser.uid, name: profileUser.username }}
           />
       )}
+       <ProfileGiftDialog
+        isOpen={isGiftOpen}
+        onOpenChange={setIsGiftOpen}
+        recipient={profileUser}
+      />
     </>
   );
 }

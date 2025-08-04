@@ -238,6 +238,7 @@ export interface Post {
     id: string;
     uid: string;
     username: string;
+    userUniqueTag?: number;
     userPhotoURL: string | null;
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';

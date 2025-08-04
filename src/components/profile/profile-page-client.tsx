@@ -68,22 +68,6 @@ export default function ProfilePageClient() {
             setIsSaving(false);
         }
     }, [user, refreshUserData, toast]);
-    
-    const handlePasswordReset = async () => {
-        if (!user?.email) {
-            toast({ variant: 'destructive', description: "E-posta adresiniz bulunamadı."});
-            return;
-        }
-        try {
-            await sendPasswordResetEmail(auth, user.email);
-            toast({
-                title: "E-posta Gönderildi",
-                description: "Şifrenizi sıfırlamak için e-posta kutunuzu kontrol edin."
-            });
-        } catch (error: any) {
-            toast({ variant: 'destructive', description: "Şifre sıfırlama e-postası gönderilirken bir hata oluştu."});
-        }
-    }
 
     if (loading || !user || !userData) {
         return (
@@ -114,7 +98,7 @@ export default function ProfilePageClient() {
                     <SettingsHeader title="Gizlilik ve Güvenlik" />
                     <SettingsLink href="/profile/privacy" icon={Lock} title="Hesap Gizliliği" value={userData.privateProfile ? 'Gizli' : 'Herkese Açık'}/>
                     <SettingsLink href="/profile/blocked" icon={ShieldOff} title="Engellenen Hesaplar" value={String(userData.blockedUsers?.length || 0)} />
-                    <SettingsLink onClick={handlePasswordReset} icon={KeyRound} title="Şifreyi Değiştir" />
+                    <SettingsLink href="/profile/security" icon={KeyRound} title="Hesap Güvenliği" />
                 </div>
 
                  <div className="border-b">

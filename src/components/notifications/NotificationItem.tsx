@@ -70,6 +70,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
       case 'follow_accept': return <UserPlus className="h-5 w-5 text-green-500" />;
       case 'mention': return <AtSign className="h-5 w-5 text-indigo-500" />;
       case 'room_invite': return <DoorOpen className="h-5 w-5 text-green-500" />;
+      case 'dm_message': return <MessageCircle className="h-5 w-5 text-purple-500" />;
       case 'diamond_transfer': return <Gem className="h-5 w-5 text-cyan-400" />;
       case 'retweet': return <Repeat className="h-5 w-5 text-green-500" />;
       case 'referral_bonus': return <Gift className="h-5 w-5 text-green-500" />;
@@ -88,6 +89,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
       case 'follow_accept': return <> <span className="font-bold">{notification.senderUsername}</span> takip isteğini kabul etti.</>;
       case 'mention': return <> <span className="font-bold">{notification.senderUsername}</span> bir gönderide senden bahsetti.</>;
       case 'room_invite': return <> <span className="font-bold">{notification.senderUsername}</span> seni <span className="font-semibold">{notification.roomName}</span> odasına davet etti.</>;
+      case 'dm_message': return <> <span className="font-bold">{notification.senderUsername}</span> sana bir mesaj gönderdi: <span className="text-foreground/80 italic">"{notification.messageText}"</span></>;
       case 'diamond_transfer': return <> <span className="font-bold">{notification.senderUsername}</span> sana <strong className="text-cyan-400">{notification.diamondAmount} elmas</strong> gönderdi!</>;
       case 'retweet': return <> <span className="font-bold">{notification.senderUsername}</span> gönderini retweetledi.</>;
       case 'referral_bonus': return <> <span className="font-bold">{notification.senderUsername}</span> davetinle katıldı ve sana <strong className="text-cyan-400">{notification.diamondAmount} elmas</strong> kazandırdı! 🎉</>;

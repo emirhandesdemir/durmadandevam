@@ -23,7 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { deleteRoomAsOwner, extendRoomTime, increaseParticipantLimit, extendRoomFor30Days, updateRoomSettings } from "@/lib/actions/roomActions";
-import { Trash2, Loader2, ShieldAlert, Clock, UserPlus, Gem, CalendarDays, Gamepad2, Puzzle, Image } from "lucide-react";
+import { Trash2, Loader2, ShieldAlert, Clock, UserPlus, Gem, CalendarDays, Gamepad2, Puzzle, Image, Settings } from "lucide-react";
 import type { Room } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { Switch } from "../ui/switch";
@@ -155,7 +155,7 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>"{room.name}" Odasını Yönet</DialogTitle>
+             <DialogTitle className="flex items-center gap-2"><Settings className="h-6 w-6"/>Oda Yönetimi: {room.name}</DialogTitle>
             <DialogDescription>
               Odanızla ilgili ayarları buradan yapabilirsiniz. Bu işlemler elmas gerektirebilir.
             </DialogDescription>
