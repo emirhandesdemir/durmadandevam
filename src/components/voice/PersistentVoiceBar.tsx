@@ -5,11 +5,20 @@ import { useVoiceChat } from '@/contexts/VoiceChatContext';
 import { Button } from '../ui/button';
 import { Mic, MicOff, PhoneOff, ArrowUpLeft, Loader2, Volume2, VolumeX } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function PersistentVoiceBar() {
   const { isConnected, isMinimized, self, activeRoom, toggleSelfMute, leaveRoom, expandRoom, isConnecting, isSpeakerMuted, toggleSpeakerMute } = useVoiceChat();
   const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    // If the bar is minimized but we are still on the room page, redirect to home.
+    if (isMinimized && pathname.startsWith('/rooms/')) {
+      router.replace('/home');
+    }
+  }, [isMinimized, pathname, router]);
 
   if (!isConnected || !isMinimized || !activeRoom) {
     return null;

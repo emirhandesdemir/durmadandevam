@@ -29,7 +29,7 @@ const safeParseTimestamp = (timestamp: any): Date => {
     if (!timestamp) return new Date(0); 
     if (timestamp instanceof Date) return timestamp;
     if (timestamp instanceof Timestamp) return timestamp.toDate();
-    if (typeof timestamp === 'object' && 'seconds' in timestamp && 'nanoseconds' in timestamp) {
+    if (typeof timestamp === 'object' && 'seconds' in timestamp && typeof timestamp.seconds === 'number' && 'nanoseconds' in timestamp) {
         return new Timestamp(timestamp.seconds, timestamp.nanoseconds).toDate();
     }
     if (typeof timestamp === 'string') {
@@ -112,7 +112,7 @@ export default function QuoteRetweetDialog({ isOpen, onOpenChange, post }: Quote
             <div className="border rounded-lg p-3 space-y-2 ml-12">
                 <div className="flex items-center gap-2">
                     <Avatar className="h-6 w-6">
-                        <AvatarImage src={post.photoURL || undefined} />
+                        <AvatarImage src={post.userPhotoURL || undefined} />
                         <AvatarFallback>{post.username?.charAt(0) || '?'}</AvatarFallback>
                     </Avatar>
                     <span className="font-bold text-sm">{post.username}</span>

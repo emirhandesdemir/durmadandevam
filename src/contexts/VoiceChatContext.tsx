@@ -10,6 +10,7 @@ import { joinVoiceChat, leaveVoice, toggleSelfMute as toggleMuteAction, toggleSc
 import { leaveRoom, addTrackToPlaylist as addTrackAction, removeTrackFromPlaylist as removeTrackAction, controlPlayback as controlPlaybackAction } from '@/lib/actions/roomActions';
 import { useToast } from '@/hooks/use-toast';
 import { usePathname, useRouter } from 'next/navigation';
+import { Timestamp } from 'firebase/firestore';
 
 const ICE_SERVERS = {
     iceServers: [
@@ -189,8 +190,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     const handleLeaveRoom = useCallback(async () => {
         if (!user || !connectedRoomId) return;
-        await leaveVoice(connectedRoomId, user.uid);
-        await leaveRoom(connectedRoomId, user.uid, user.displayName || 'Biri');
+        const roomId = connectedRoomId;
+        await leaveVoice(roomId, user.uid);
         _cleanupAndResetState();
         router.push('/rooms');
     }, [user, connectedRoomId, _cleanupAndResetState, router]);

@@ -70,8 +70,8 @@ const safeParseTimestamp = (timestamp: any): Date => {
     if (!timestamp) return new Date(0); 
     if (timestamp instanceof Date) return timestamp;
     if (timestamp instanceof Timestamp) return timestamp.toDate();
-    if (typeof obj === 'object' && 'seconds' in obj && 'nanoseconds' in obj) {
-        return new Timestamp(obj.seconds, obj.nanoseconds).toDate();
+    if (typeof timestamp === 'object' && 'seconds' in timestamp && typeof timestamp.seconds === 'number' && 'nanoseconds' in timestamp) {
+        return new Timestamp(timestamp.seconds, timestamp.nanoseconds).toDate();
     }
     if (typeof timestamp === 'string') {
         const date = new Date(timestamp);
