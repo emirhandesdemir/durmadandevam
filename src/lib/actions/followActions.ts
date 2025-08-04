@@ -74,7 +74,7 @@ export async function followUser(currentUserId: string, targetUserId: string, cu
         recipientId: targetUserId,
         senderId: currentUserId,
         senderUsername: currentUserInfo.username || 'Biri',
-        photoURL: currentUserInfo.photoURL,
+        senderAvatar: currentUserInfo.photoURL,
         profileEmoji: currentUserInfo.profileEmoji,
         senderAvatarFrame: currentUserInfo.userAvatarFrame,
         type: 'follow',
@@ -137,7 +137,7 @@ export async function handleFollowRequest(currentUserId: string, requesterId: st
             recipientId: requesterId,
             senderId: currentUserId,
             senderUsername: currentUserData.username || 'Biri',
-            photoURL: currentUserData.photoURL,
+            senderAvatar: currentUserData.photoURL,
             profileEmoji: currentUserData.profileEmoji,
             senderAvatarFrame: currentUserData.selectedAvatarFrame,
             type: 'follow_accept', // A new type for accepted request

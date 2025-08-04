@@ -1,4 +1,3 @@
-
 // src/components/auth/signup-form.tsx
 "use client";
 
@@ -66,7 +65,7 @@ export default function SignUpForm() {
         },
     });
     
-    async function onSubmit(values: z.infer<typeof formSchema>>) {
+    async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsLoading(true);
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);

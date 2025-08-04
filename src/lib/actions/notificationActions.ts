@@ -30,6 +30,7 @@ interface CreateNotificationArgs {
   diamondAmount?: number;
   callId?: string;
   callType?: 'video' | 'audio';
+  profileEmoji?: string | null;
 }
 
 interface BroadcastNotificationArgs {

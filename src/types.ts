@@ -3,7 +3,7 @@ import { Timestamp } from "firebase/firestore";
 
 export interface Transaction {
     id: string;
-    type: 'diamond_purchase' | 'gift_sent' | 'gift_received' | 'profile_value_conversion' | 'room_creation' | 'room_perk' | 'admin_grant' | 'ad_reward' | 'referral_bonus' | 'live_gift';
+    type: 'diamond_purchase' | 'gift_sent' | 'gift_received' | 'profile_value_conversion' | 'room_creation' | 'room_perk' | 'admin_grant' | 'ad_reward' | 'referral_bonus' | 'live_gift' | 'user_perk';
     amount: number;
     description: string;
     relatedUserId?: string | null;
@@ -125,6 +125,7 @@ export interface ThemeSettings {
 
 export interface UserProfile {
     uid: string;
+    uniqueTag: number;
     email: string;
     emailVerified: boolean;
     username: string;
@@ -169,6 +170,7 @@ export interface UserProfile {
     isFirstPremium: boolean;
     unlimitedRoomCreationUntil: Timestamp | null;
     profileCompletionNotificationSent: boolean;
+    profileCompletionAwarded?: boolean;
     selectedBubble: string;
     selectedAvatarFrame: string;
     activeMatchmakingChatId: string | null;
@@ -216,7 +218,7 @@ export interface Notification {
     photoURL: string | null;
     profileEmoji?: string | null;
     senderAvatarFrame?: string;
-    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile';
+    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile' | 'system';
     postId?: string | null;
     postImage?: string | null;
     commentText?: string;
@@ -323,6 +325,12 @@ export interface Room {
     giveaway?: Giveaway;
     activeMindWarSessionId?: string | null;
     totalGiftValue?: number;
+    level: number;
+    xp: number;
+    xpToNextLevel: number;
+    lastXpGainTimestamp: Timestamp | null;
+    autoQuizEnabled?: boolean;
+    nextGameTimestamp?: Timestamp;
 }
 
 export interface PlaylistTrack {
@@ -450,7 +458,7 @@ export interface Message {
   text?: string;
   imageUrl?: string;
   videoUrl?: string;
-  type?: 'system' | 'game' | 'portal' | 'user' | 'gameInvite' | 'gift';
+  type?: 'system' | 'game' | 'portal' | 'user' | 'gameInvite' | 'gift' | 'announcement';
   createdAt: Timestamp;
   selectedBubble?: string;
   selectedAvatarFrame?: string;
