@@ -3,7 +3,7 @@
 
 import { db, storage } from '@/lib/firebase';
 import type { Post, Report, UserProfile } from '../types';
-import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, collectionGroup, deleteDoc, setDoc, runTransaction } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, collectionGroup, deleteDoc, setDoc, runTransaction, Timestamp } from 'firebase/firestore';
 import { ref as storageRef, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
 import { revalidatePath } from 'next/cache';
@@ -12,6 +12,36 @@ import { deleteRoomWithSubcollections } from '../firestoreUtils';
 import { updateUserPosts, updateUserComments, updateUserDmMessages } from './propagationActions';
 import { createNotification } from './notificationActions';
 import { logTransaction } from './transactionActions';
+
+export async function assignMissingUniqueTag(userId: string) {
+    if (!userId) throw new Error("User ID is required.");
+
+    const userRef = doc(db, 'users', userId);
+    const counterRef = doc(db, 'config', 'counters');
+
+    return runTransaction(db, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists() || userDoc.data()?.uniqueTag) {
+            // User doesn't exist or already has a tag, so do nothing.
+            return { success: true, message: 'No action needed.' };
+        }
+
+        let counterDoc = await transaction.get(counterRef);
+        let currentTag = 1000;
+        if (counterDoc.exists()) {
+            currentTag = counterDoc.data().userTag || 1000;
+        } else {
+            transaction.set(counterRef, { userTag: 1000 });
+        }
+        
+        const newTag = currentTag + 1;
+        transaction.update(counterRef, { userTag: newTag });
+        transaction.update(userRef, { uniqueTag: newTag });
+        
+        console.log(`Assigned uniqueTag ${newTag} to user ${userId}`);
+        return { success: true, newTag };
+    });
+}
 
 
 export async function sendVerificationEmail(userId: string) {
@@ -108,23 +138,13 @@ export async function updateUserProfile(updates: {
         if (!userDoc.exists()) {
             if (isNewUser) {
                 const counterRef = doc(db, 'config', 'counters');
-                let counterDoc;
-                try {
-                    // Try to get the document, but don't fail if it doesn't exist
-                    counterDoc = await transaction.get(counterRef);
-                } catch (e) {
-                    console.warn("Counter document might not exist, will attempt to create.", e);
-                    counterDoc = null;
-                }
+                let counterDoc = await transaction.get(counterRef);
                 
                 let currentTag = 1000;
-                if (counterDoc && counterDoc.exists()) {
+                if (counterDoc.exists()) {
                     currentTag = counterDoc.data().userTag || 1000;
-                } else {
-                    // If counter doc doesn't exist, set it up.
-                    transaction.set(counterRef, { userTag: 1000 });
                 }
-
+                
                 const newTag = currentTag + 1;
                 transaction.update(counterRef, { userTag: newTag });
                 
@@ -161,6 +181,7 @@ export async function updateUserProfile(updates: {
                     privateProfile: false,
                     acceptsFollowRequests: true,
                     showOnlineStatus: true,
+                    animatedNav: true,
                     selectedBubble: '',
                     selectedAvatarFrame: '',
                     isBanned: false,
@@ -547,5 +568,3 @@ export async function unblockUser(blockerId: string, targetId: string) {
         return { success: false, error: "Engelleme kaldırılamadı: " + error.message };
     }
 }
-
-    

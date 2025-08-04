@@ -7,7 +7,7 @@ import { doc, onSnapshot, setDoc, serverTimestamp, updateDoc, getDoc } from 'fir
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { FeatureFlags, UserProfile, ThemeSettings } from '@/lib/types';
-import { triggerProfileCompletionNotification } from '@/lib/actions/notificationActions';
+import { triggerProfileCompletionNotification, assignMissingUniqueTag } from '@/lib/actions/userActions';
 import i18n from '@/lib/i18n';
 import AnimatedLogoLoader from '@/components/common/AnimatedLogoLoader';
 import { collection, query, where } from 'firebase/firestore';
@@ -133,6 +133,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (data.isBanned) {
           handleLogout(true);
           return;
+        }
+        if (!data.uniqueTag) {
+            assignMissingUniqueTag(user.uid).catch(console.error);
         }
         setUserData(data);
         if (data.language && i18n.language !== data.language) {
