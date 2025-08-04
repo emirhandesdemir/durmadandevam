@@ -1,3 +1,4 @@
+// src/components/dm/NewMessageInput.tsx
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -8,24 +9,11 @@ import { useToast } from '@/hooks/use-toast';
 import { sendMessage } from '@/lib/actions/dmActions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Loader2, ImagePlus, Mic, Trash2, Camera, Timer, X, StopCircle, Play, Pause } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Send, Loader2, ImagePlus, Mic, Trash2, StopCircle, Play, Pause } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import type { UserInfo } from './DMChat'; // Assuming UserInfo is exported from DMChat
+import ImagePreviewSheet from './ImagePreviewSheet';
 
-interface UserInfo {
-  uid: string;
-  username: string;
-  photoURL: string | null;
-  profileEmoji: string | null;
-  selectedAvatarFrame?: string;
-}
-
-interface NewMessageInputProps {
-  chatId: string;
-  sender: UserInfo;
-  receiver: UserInfo;
-}
 
 const messageSchema = z.object({
   text: z.string().optional(),
@@ -99,6 +87,11 @@ const AudioPreviewPlayer = ({ audioUrl, duration }: { audioUrl: string; duration
     );
 };
 
+interface NewMessageInputProps {
+  chatId: string;
+  sender: UserInfo;
+  receiver: UserInfo;
+}
 
 export default function NewMessageInput({ chatId, sender, receiver }: NewMessageInputProps) {
     const { toast } = useToast();
@@ -106,9 +99,7 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
         resolver: zodResolver(messageSchema),
     });
 
-    const [file, setFile] = useState<File | null>(null);
-    const [preview, setPreview] = useState<string | null>(null);
-    const [imageSendType, setImageSendType] = useState<'permanent' | 'timed'>('permanent');
+    const [fileToSend, setFileToSend] = useState<File | null>(null);
     
     const [recordingStatus, setRecordingStatus] = useState<'idle' | 'recording' | 'preview'>('idle');
     const [recordingDuration, setRecordingDuration] = useState(0);
@@ -120,17 +111,7 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
     const [isSubmitting, setIsSubmitting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textValue = watch('text');
-    const showMicButton = !textValue?.trim() && !file && recordingStatus === 'idle';
-
-    useEffect(() => {
-        if (!file) {
-          setPreview(null);
-          return;
-        }
-        const objectUrl = URL.createObjectURL(file);
-        setPreview(objectUrl);
-        return () => URL.revokeObjectURL(objectUrl);
-    }, [file]);
+    const showMicButton = !textValue?.trim() && !fileToSend && recordingStatus === 'idle';
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0];
@@ -143,17 +124,11 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
             toast({ variant: 'destructive', description: "Dosya boyutu 5MB'dan büyük olamaz." });
             return;
         }
-        setFile(selectedFile);
+        setFileToSend(selectedFile);
     };
 
-    const handleImageOptionClick = (type: 'permanent' | 'timed') => {
-        setImageSendType(type);
-        fileInputRef.current?.click();
-    };
-    
     const cancelAndReset = () => {
         reset();
-        setFile(null);
         setAudioBlob(null);
         setAudioUrl(null);
         setRecordingStatus('idle');
@@ -222,14 +197,6 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
                     await sendMessage(chatId, sender, receiver, { audio: { dataUrl: base64Audio, duration: recordingDuration } });
                     cancelAndReset();
                 };
-            } else if (file) {
-              const reader = new FileReader();
-              reader.readAsDataURL(file);
-              reader.onloadend = async () => {
-                const base64Image = reader.result as string;
-                await sendMessage(chatId, sender, receiver, { text: data.text, imageUrl: base64Image, imageType: imageSendType });
-                cancelAndReset();
-              }
             } else if (data.text?.trim()) {
                 await sendMessage(chatId, sender, receiver, { text: data.text });
                 cancelAndReset();
@@ -243,20 +210,14 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
 
     return (
         <div className="bg-background rounded-full">
-            {preview && file && (
-                 <div className='relative p-2 ml-2 mb-2 bg-background rounded-lg border w-fit'>
-                    <img src={preview} alt="Önizleme" className="max-h-24 rounded-md" />
-                     {imageSendType === 'timed' && (
-                        <div className="absolute top-1 right-1 bg-black/50 text-white p-1 rounded-full">
-                            <Timer className="h-4 w-4" />
-                        </div>
-                    )}
-                    <Button variant="ghost" size="icon" className="absolute -top-3 -right-3 h-6 w-6 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/80" onClick={() => setFile(null)}>
-                        <X className="h-4 w-4"/>
-                    </Button>
-                </div>
-            )}
-            
+            <ImagePreviewSheet
+                file={fileToSend}
+                setFile={setFileToSend}
+                chatId={chatId}
+                sender={sender}
+                receiver={receiver}
+            />
+
             <AnimatePresence>
             {recordingStatus !== 'idle' ? (
                 <motion.div
@@ -302,23 +263,9 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
                       onSubmit={handleSubmit(onSubmit)} 
                       className="flex w-full items-center space-x-2 p-1"
                     >
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button type="button" variant="ghost" size="icon" className="rounded-full flex-shrink-0" disabled={isSubmitting}>
-                                    <ImagePlus className='h-5 w-5 text-muted-foreground'/>
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-2" side="top" align="start">
-                                <div className="flex flex-col gap-1">
-                                    <Button variant="ghost" className="justify-start" onClick={() => handleImageOptionClick('permanent')}>
-                                        <Camera className="mr-2 h-4 w-4" /> Kalıcı Fotoğraf
-                                    </Button>
-                                    <Button variant="ghost" className="justify-start" onClick={() => handleImageOptionClick('timed')}>
-                                        <Timer className="mr-2 h-4 w-4" /> Süreli Fotoğraf
-                                    </Button>
-                                </div>
-                            </PopoverContent>
-                        </Popover>
+                         <Button type="button" variant="ghost" size="icon" className="rounded-full flex-shrink-0" disabled={isSubmitting} onClick={() => fileInputRef.current?.click()}>
+                            <ImagePlus className='h-5 w-5 text-muted-foreground'/>
+                        </Button>
                         <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
                         
                         <Input
@@ -334,7 +281,7 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
                                 <Mic className="h-5 w-5" />
                             </Button>
                         ) : (
-                            <Button type='submit' size="icon" disabled={(!textValue?.trim() && !file) || isSubmitting} className="rounded-full flex-shrink-0 h-10 w-10">
+                            <Button type='submit' size="icon" disabled={!textValue?.trim() || isSubmitting} className="rounded-full flex-shrink-0 h-10 w-10">
                                 {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                                 <span className="sr-only">Gönder</span>
                             </Button>

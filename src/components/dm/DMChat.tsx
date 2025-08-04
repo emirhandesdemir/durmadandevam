@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { collection, query, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { UserProfile, DirectMessage } from '@/lib/types';
+import type { UserProfile, DirectMessage } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, Loader2, ShieldAlert, ShieldCheck, Crown } from 'lucide-react';
@@ -17,6 +17,14 @@ import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { unblockUser } from '@/lib/actions/userActions';
+
+export interface UserInfo {
+  uid: string;
+  username: string;
+  photoURL: string | null;
+  profileEmoji: string | null;
+  selectedAvatarFrame?: string;
+}
 
 interface DMChatProps {
   chatId: string;
