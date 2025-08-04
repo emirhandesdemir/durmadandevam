@@ -96,7 +96,6 @@ export async function updateUserProfile(updates: {
 
     const userRef = doc(db, 'users', userId);
     
-    // Separate photoURL to handle propagation logic correctly
     const { photoURL, username, ...restOfUpdates } = otherUpdates;
     const updatesForDb: { [key: string]: any } = { ...restOfUpdates };
     
@@ -108,7 +107,6 @@ export async function updateUserProfile(updates: {
 
         if (!userDoc.exists()) {
             if (isNewUser) {
-                // Create the document for a new user.
                 const counterRef = doc(db, 'config', 'counters');
                 const counterDoc = await transaction.get(counterRef);
                 
@@ -116,7 +114,6 @@ export async function updateUserProfile(updates: {
                 if (counterDoc.exists()) {
                     currentTag = counterDoc.data().userTag || 1000;
                 } else {
-                    // If counter doc doesn't exist, create it.
                     transaction.set(counterRef, { userTag: 1000 });
                 }
 
@@ -126,33 +123,58 @@ export async function updateUserProfile(updates: {
                 const isAdminEmail = updates.email === 'admin@example.com';
                 const userRole = isAdminEmail ? 'admin' : 'user';
 
-                const initialData: Omit<UserProfile, 'postCount' | 'giftLevel' | 'totalDiamondsSent' | 'referralCount' | 'hasUnreadNotifications' | 'reportCount' | 'isOnline' | 'isFirstPremium' | 'profileCompletionAwarded' | 'profileCompletionNotificationSent'> & { postCount: number, giftLevel: number, totalDiamondsSent: number, referralCount: number, hasUnreadNotifications: boolean, reportCount: number, isOnline: boolean, isFirstPremium: boolean, profileCompletionAwarded: boolean, profileCompletionNotificationSent: boolean } = {
-                    uid: userId, uniqueTag: newTag, email: updates.email!, emailVerified: false,
-                    username: updates.username!, username_lowercase: updates.username?.toLowerCase(), 
+                const initialData: UserProfile = {
+                    uid: userId,
+                    uniqueTag: newTag,
+                    email: updates.email!,
+                    emailVerified: false,
+                    username: updates.username!,
+                    username_lowercase: updates.username?.toLowerCase(), 
                     photoURL: updates.photoURL || null, 
-                    bio: null, age: null, city: null, country: null,
-                    gender: undefined, interests: [], role: userRole,
-                    createdAt: serverTimestamp() as any, lastActionTimestamp: serverTimestamp() as any,
-                    diamonds: 50, // Initial diamond reward
-                    profileValue: 0, giftLevel: 0, totalDiamondsSent: 0,
-                    referredBy: updates.referredBy || null, referralCount: 0, postCount: 0,
-                    followers: [], following: [], blockedUsers: [], savedPosts: [],
-                    hiddenPostIds: [], privateProfile: false, acceptsFollowRequests: true,
-                    followRequests: [], selectedBubble: '', selectedAvatarFrame: '', isBanned: false,
-                    profileEmoji: null,
-                    reportCount: 0, isOnline: true, lastSeen: serverTimestamp() as any,
-                    premiumUntil: null, isFirstPremium: false,
-                    unlimitedRoomCreationUntil: null, profileCompletionNotificationSent: false,
-                    profileCompletionAwarded: false, location: null,
-                    ...updatesForDb
+                    bio: null,
+                    age: null,
+                    city: null,
+                    country: null,
+                    gender: undefined,
+                    interests: [],
+                    role: userRole,
+                    createdAt: serverTimestamp() as any,
+                    lastActionTimestamp: serverTimestamp() as any,
+                    diamonds: 50,
+                    profileValue: 0,
+                    giftLevel: 0,
+                    totalDiamondsSent: 0,
+                    referredBy: updates.referredBy || null,
+                    referralCount: 0,
+                    postCount: 0,
+                    followers: [], // Initialize as empty array
+                    following: [], // Initialize as empty array
+                    blockedUsers: [],
+                    savedPosts: [], // Initialize as empty array
+                    hiddenPostIds: [],
+                    privateProfile: false,
+                    acceptsFollowRequests: true,
+                    followRequests: [], // Initialize as empty array
+                    selectedBubble: '',
+                    selectedAvatarFrame: '', // Initialize
+                    isBanned: false,
+                    profileEmoji: null, // Initialize
+                    reportCount: 0,
+                    isOnline: true,
+                    lastSeen: serverTimestamp() as any,
+                    premiumUntil: null,
+                    isFirstPremium: false,
+                    unlimitedRoomCreationUntil: null,
+                    profileCompletionNotificationSent: false,
+                    profileCompletionAwarded: false,
+                    location: null,
+                    hasUnreadNotifications: false,
                  };
                 transaction.set(userRef, initialData);
             } else {
-                 console.error(`Attempted to update a non-existent user document without 'isNewUser' flag for userId: ${userId}`);
                  throw new Error("Kullanıcı profili güncellenemedi çünkü henüz mevcut değil.");
             }
         } else {
-             // This is for updating an existing user.
             if (updatesForDb.age === '' || updatesForDb.age === undefined || updatesForDb.age === null) {
                 updatesForDb.age = null;
             } else if (updatesForDb.age !== undefined) {
@@ -168,7 +190,6 @@ export async function updateUserProfile(updates: {
         }
     });
 
-    // --- Post-Transaction Operations ---
     const propagationUpdates: { [key: string]: any } = {};
     if (username) propagationUpdates.username = username;
     if (photoURL !== undefined) propagationUpdates.userPhotoURL = photoURL;
@@ -323,6 +344,10 @@ export async function unhidePost(userId: string, postId: string) {
 
 
 export async function getSavedPosts(userId: string): Promise<Post[]> {
+    if (!userId) {
+        return [];
+    }
+
     const userRef = doc(db, 'users', userId);
     const userSnap = await getDoc(userRef);
 
@@ -335,13 +360,11 @@ export async function getSavedPosts(userId: string): Promise<Post[]> {
     if (!Array.isArray(savedPostIds) || savedPostIds.length === 0) {
         return [];
     }
-
+    
     const savedPosts: Post[] = [];
-    // Firestore 'in' query has a limit of 30 items. We batch the requests.
     for (let i = 0; i < savedPostIds.length; i += 30) {
         const batchIds = savedPostIds.slice(i, i + 30);
-        // CRITICAL FIX: Ensure batchIds is not empty before querying
-        if (batchIds && batchIds.length > 0) {
+        if (batchIds.length > 0) {
             const postsQuery = query(collection(db, 'posts'), where('__name__', 'in', batchIds));
             const postsSnapshot = await getDocs(postsQuery);
             postsSnapshot.forEach(doc => {
@@ -350,13 +373,13 @@ export async function getSavedPosts(userId: string): Promise<Post[]> {
         }
     }
 
-    // Sort the fetched posts to match the order in the user's savedPosts array
     const sortedPosts = savedPosts.sort((a, b) => {
         return savedPostIds.indexOf(b.id) - savedPostIds.indexOf(a.id);
     });
 
     return deepSerialize(sortedPosts);
 }
+
 
 export async function updateUserLocation(uid: string, latitude: number, longitude: number) {
     const userRef = doc(db, 'users', uid);

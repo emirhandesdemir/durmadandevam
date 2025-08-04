@@ -71,7 +71,6 @@ export default function SignUpForm() {
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const user = userCredential.user;
             
-            // Update Firebase Auth profile immediately with username.
             await updateProfile(user, {
                 displayName: values.username,
             });
@@ -84,16 +83,10 @@ export default function SignUpForm() {
                 }
             } catch (e) {
                 console.error("Failed to decode referral code:", e);
-                toast({
-                    variant: 'destructive',
-                    title: 'Geçersiz Davet Kodu',
-                    description: 'Kullandığınız davet linki hatalı görünüyor, ancak kayıt işlemine devam edebilirsiniz.'
-                });
                 ref = null;
             }
 
             // CRITICAL FIX: Create user document immediately on signup.
-            // This guarantees the document exists before the user is redirected to the profile page.
             await updateUserProfile({
                 userId: user.uid,
                 isNewUser: true, // This flag tells the action to create the document.
@@ -109,7 +102,6 @@ export default function SignUpForm() {
                     console.error("Referrer credit failed, but signup continues:", e);
                 }
             }
-             // Let the AuthProvider handle the redirect. No more manual push.
         } catch (error: any) {
             console.error("Kayıt hatası", error);
             let errorMessage = "Hesap oluşturulurken bilinmeyen bir hata oluştu. Lütfen tekrar deneyin.";

@@ -86,7 +86,7 @@ export default function Header({}: HeaderProps) {
                                         <span>Ayarlar</span>
                                     </Link>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={handleLogout}>
+                                <DropdownMenuItem onClick={() => handleLogout(false)}>
                                     <LogOut className="mr-2 h-4 w-4" />
                                     <span>Çıkış Yap</span>
                                 </DropdownMenuItem>

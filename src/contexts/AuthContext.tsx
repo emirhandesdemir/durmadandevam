@@ -64,12 +64,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (auth.currentUser) { 
             const userStatusRef = doc(db, 'users', auth.currentUser.uid);
             await setDoc(userStatusRef, { isOnline: false, lastSeen: serverTimestamp() }, { merge: true });
-            if (isBan) {
-              localStorage.setItem('isBanned', 'true');
-            }
+        }
+        if (isBan) {
+          localStorage.setItem('isBanned', 'true');
         }
         await signOut(auth);
         await setSessionCookie(null);
+        router.push('/login'); // Force redirect to login on logout
     } catch (error) {
         console.error("Logout error", error);
         toast({
@@ -78,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             variant: "destructive",
         });
     }
-  }, [toast]);
+  }, [toast, router]);
   
   const refreshUserData = useCallback(async () => {
     if (!auth.currentUser) return;
@@ -104,7 +105,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const unsubscribeAuth = onIdTokenChanged(auth, (currentUser) => {
       setUser(currentUser);
-      // We will handle loading state inside the user data listener.
     });
 
     return () => {
@@ -116,17 +116,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (user === undefined) {
-      return; // Wait for Firebase Auth to initialize
+      return; 
     }
 
     if (!user) {
       setUserData(null);
       setTotalUnreadDms(0);
-      setLoading(false); // No user, stop loading.
+      setLoading(false);
       return;
     }
 
-    // User is authenticated, now listen for their data.
     const userDocRef = doc(db, 'users', user.uid);
     const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
       if (docSnap.exists()) {
@@ -142,11 +141,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!data.bio && !data.profileCompletionNotificationSent) {
             triggerProfileCompletionNotification(user.uid);
         }
-        setLoading(false); // User data is loaded, stop loading.
+        setLoading(false);
       } else {
-        // This can happen if the user's document hasn't been created yet on first signup
-        // or if it was deleted. The loading state will persist until the doc is created.
+        // User is authenticated, but their document doesn't exist yet.
+        // This is a normal state during the very first moments of signup.
+        // We keep loading until the document is created by the `updateUserProfile` action.
         console.log("Waiting for user document to be created...");
+        setLoading(true);
       }
     }, (error) => {
       console.error("Firestore user listener error:", error);
@@ -173,7 +174,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, handleLogout]);
 
   useEffect(() => {
-    // Only perform routing logic once the loading state is resolved.
     if (loading) return;
 
     const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
@@ -182,7 +182,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user && !isPublicPage) {
       router.replace('/login');
     } else if (user && userData && isAuthPage) {
-      // Ensure userData is also loaded before redirecting from auth pages.
       router.replace('/home');
     }
   }, [user, userData, loading, pathname, router]);
