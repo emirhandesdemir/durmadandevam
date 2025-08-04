@@ -25,6 +25,7 @@ const drawingColors = [
 
 export default function ImagePreviewSheet({ file, setFile, chatId, sender, receiver }: ImagePreviewSheetProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [base64Image, setBase64Image] = useState<string | null>(null);
     const [caption, setCaption] = useState('');
     const [imageType, setImageType] = useState<'permanent' | 'timed'>('permanent');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,19 +38,21 @@ export default function ImagePreviewSheet({ file, setFile, chatId, sender, recei
     
     const drawOnCanvas = useCallback(() => {
         const canvas = canvasRef.current;
-        if (!canvas || !file) return;
+        if (!canvas || !base64Image) return;
+
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
         const img = new Image();
-        img.src = URL.createObjectURL(file);
+        img.src = base64Image;
         img.onload = () => {
-            const maxWidth = window.innerWidth;
-            const maxHeight = window.innerHeight;
+            const container = canvas.parentElement;
+            if (!container) return;
+            
+            const maxWidth = container.clientWidth;
+            const maxHeight = container.clientHeight;
+            
             let ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
-            if (img.width * ratio > 800) {
-                ratio = 800 / img.width;
-            }
             canvas.width = img.width * ratio;
             canvas.height = img.height * ratio;
             
@@ -61,13 +64,25 @@ export default function ImagePreviewSheet({ file, setFile, chatId, sender, recei
         img.onerror = () => {
              toast({ variant: 'destructive', description: "Resim dosyası yüklenemedi." });
         }
-    }, [file, toast]);
+    }, [base64Image, toast]);
 
     useEffect(() => {
-        if(file && canvasRef.current){
+        if (!file) {
+            setBase64Image(null);
+            return;
+        }
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onloadend = () => {
+            setBase64Image(reader.result as string);
+        }
+    }, [file]);
+
+    useEffect(() => {
+        if(base64Image && canvasRef.current){
             drawOnCanvas();
         }
-    }, [file, drawOnCanvas]);
+    }, [base64Image, drawOnCanvas]);
 
     const handleDrawingStart = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
         e.preventDefault();
@@ -146,8 +161,8 @@ export default function ImagePreviewSheet({ file, setFile, chatId, sender, recei
         setIsSubmitting(true);
         
         try {
-            const base64Image = canvas.toDataURL('image/jpeg', 0.9);
-            await sendMessage(chatId, sender, receiver, { text: caption, imageUrl: base64Image, imageType });
+            const finalImage = canvas.toDataURL('image/jpeg', 0.9);
+            await sendMessage(chatId, sender, receiver, { text: caption, imageUrl: finalImage, imageType });
             handleClose();
         } catch (error: any) {
             toast({ variant: 'destructive', description: `Fotoğraf gönderilemedi: ${error.message}` });

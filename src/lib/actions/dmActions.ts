@@ -111,8 +111,9 @@ export async function sendMessage(
   
   let finalImageUrl: string | undefined;
   if (imageUrl) {
-      // FIX: Use a path that is allowed by storage rules: /posts/{any_string}/{any_filename}
-      const imagePath = `posts/${chatId}/${uuidv4()}.jpg`;
+      // FIX: Use a path that is allowed by storage rules.
+      // Assuming storage rules allow users to write to their own UID folder.
+      const imagePath = `dm_uploads/${sender.uid}/${uuidv4()}.jpg`;
       const imageStorageRef = storageRef(storage, imagePath);
       await uploadString(imageStorageRef, imageUrl, 'data_url');
       finalImageUrl = await getDownloadURL(imageStorageRef);
@@ -120,9 +121,7 @@ export async function sendMessage(
 
   let finalAudioUrl: string | undefined;
   if (audio?.dataUrl) {
-      // This path needs to be allowed in storage rules if not already. Let's assume a generic user upload path.
-      // For now, let's try a path allowed for posts as well to avoid breaking.
-      const audioPath = `posts/${chatId}/audio_${uuidv4()}.webm`;
+      const audioPath = `dm_uploads/${sender.uid}/audio_${uuidv4()}.webm`;
       const audioStorageRef = storageRef(storage, audioPath);
       await uploadString(audioStorageRef, audio.dataUrl, 'data_url', { contentType: 'audio/webm' });
       finalAudioUrl = await getDownloadURL(audioStorageRef);
