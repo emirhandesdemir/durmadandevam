@@ -53,7 +53,8 @@ export async function followUser(currentUserId: string, targetUserId: string, cu
         userAvatarFrame: currentUserInfo.userAvatarFrame || '',
         requestedAt: serverTimestamp(),
       };
-      const requestExists = targetUserData.followRequests?.some((req: any) => req.uid === currentUserId);
+      // Ensure followRequests array exists before checking
+      const requestExists = (targetUserData.followRequests || []).some((req: any) => req.uid === currentUserId);
       if (!requestExists) {
         transaction.update(targetUserRef, {
           followRequests: arrayUnion(newRequest),

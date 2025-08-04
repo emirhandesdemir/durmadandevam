@@ -3,18 +3,26 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Send, Bell, Search } from "lucide-react";
+import { Send, Bell, Search, Settings, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
 import UserSearchDialog from "../search/UserSearchDialog";
 import { useState } from "react";
 import AvatarWithFrame from "../common/AvatarWithFrame";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 
 interface HeaderProps {}
 
 export default function Header({}: HeaderProps) {
-    const { themeSettings, user, userData, totalUnreadDms } = useAuth();
+    const { themeSettings, user, userData, totalUnreadDms, handleLogout } = useAuth();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
 
     const appName = themeSettings?.appName || 'HiweWalk';
@@ -50,18 +58,34 @@ export default function Header({}: HeaderProps) {
                             </Link>
                         </Button>
 
-                         <Button variant="ghost" size="icon" className="rounded-full" asChild>
-                           <Link href={`/profile/${user?.uid}`}>
-                                <AvatarWithFrame
-                                    photoURL={userData?.photoURL}
-                                    selectedAvatarFrame={userData?.selectedAvatarFrame}
-                                    className="h-7 w-7"
-                                    fallback={userData?.username?.charAt(0).toUpperCase()}
-                                    fallbackClassName="text-xs"
-                                 />
-                                <span className="sr-only">Profil</span>
-                            </Link>
-                        </Button>
+                         <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                 <Button variant="ghost" size="icon" className="rounded-full">
+                                   <AvatarWithFrame
+                                        photoURL={userData?.photoURL}
+                                        selectedAvatarFrame={userData?.selectedAvatarFrame}
+                                        className="h-7 w-7"
+                                        fallback={userData?.username?.charAt(0).toUpperCase()}
+                                        fallbackClassName="text-xs"
+                                    />
+                                    <span className="sr-only">Kullanıcı menüsü</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>{userData?.username}</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem asChild>
+                                    <Link href={`/profile`}>
+                                        <Settings className="mr-2 h-4 w-4" />
+                                        <span>Ayarlar</span>
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={handleLogout}>
+                                    <LogOut className="mr-2 h-4 w-4" />
+                                    <span>Çıkış Yap</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </div>
             </header>

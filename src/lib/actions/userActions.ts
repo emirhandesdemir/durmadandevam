@@ -128,9 +128,10 @@ export async function updateUserProfile(updates: {
                     diamonds: 50, // Initial diamond reward
                     profileValue: 0, giftLevel: 0, totalDiamondsSent: 0,
                     referredBy: updates.referredBy || null, referralCount: 0, postCount: 0,
-                    followers: [], following: [], blockedUsers: [], savedPosts: [], // Initialize as empty arrays
+                    followers: [], following: [], blockedUsers: [], savedPosts: [],
                     hiddenPostIds: [], privateProfile: false, acceptsFollowRequests: true,
                     followRequests: [], selectedBubble: '', selectedAvatarFrame: '', isBanned: false,
+                    profileEmoji: null,
                     reportCount: 0, isOnline: true, lastSeen: serverTimestamp(),
                     premiumUntil: null, isFirstPremium: false,
                     unlimitedRoomCreationUntil: null, profileCompletionNotificationSent: false,
@@ -509,5 +510,3 @@ export async function unblockUser(blockerId: string, targetId: string) {
         return { success: false, error: "Engelleme kaldırılamadı: " + error.message };
     }
 }
-
-    

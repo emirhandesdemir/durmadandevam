@@ -26,7 +26,8 @@ export default function FollowButton({ currentUserData, targetUser }: FollowButt
   const [optimisticState, setOptimisticState] = useState<'following' | 'not_following' | 'request_sent' | null>(null);
   
   const isFollowing = currentUserData?.following?.includes(targetUser.uid);
-  const hasSentRequest = targetUser.followRequests?.some((req: any) => req.uid === currentUserData?.uid);
+  const hasSentRequest = (targetUser.followRequests || []).some((req: any) => req.uid === currentUserData?.uid);
+
 
   // Props değiştiğinde optimistic state'i sıfırla
   useEffect(() => {
