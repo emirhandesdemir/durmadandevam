@@ -110,9 +110,10 @@ export async function updateUserProfile(updates: {
                 const counterRef = doc(db, 'config', 'counters');
                 let counterDoc;
                 try {
+                    // Try to get the document, but don't fail if it doesn't exist
                     counterDoc = await transaction.get(counterRef);
                 } catch (e) {
-                    console.error("Counter document does not exist, will create it.", e);
+                    console.warn("Counter document might not exist, will attempt to create.", e);
                     counterDoc = null;
                 }
                 
@@ -120,6 +121,7 @@ export async function updateUserProfile(updates: {
                 if (counterDoc && counterDoc.exists()) {
                     currentTag = counterDoc.data().userTag || 1000;
                 } else {
+                    // If counter doc doesn't exist, set it up.
                     transaction.set(counterRef, { userTag: 1000 });
                 }
 
@@ -128,7 +130,7 @@ export async function updateUserProfile(updates: {
                 
                 const initialData: UserProfile = {
                     uid: userId,
-                    uniqueTag: newTag, // **FIXED: Assign the generated tag**
+                    uniqueTag: newTag,
                     email: updates.email!,
                     emailVerified: false,
                     username: updates.username!,
@@ -140,7 +142,7 @@ export async function updateUserProfile(updates: {
                     country: null,
                     gender: undefined,
                     interests: [],
-                    role: 'user', // **FIXED: Removed admin assignment logic**
+                    role: 'user',
                     createdAt: serverTimestamp() as any,
                     lastActionTimestamp: serverTimestamp() as any,
                     diamonds: 50,
@@ -154,10 +156,11 @@ export async function updateUserProfile(updates: {
                     following: [],
                     blockedUsers: [],
                     savedPosts: [],
+                    followRequests: [],
                     hiddenPostIds: [],
                     privateProfile: false,
                     acceptsFollowRequests: true,
-                    followRequests: [],
+                    showOnlineStatus: true,
                     selectedBubble: '',
                     selectedAvatarFrame: '',
                     isBanned: false,
@@ -544,3 +547,5 @@ export async function unblockUser(blockerId: string, targetId: string) {
         return { success: false, error: "Engelleme kaldırılamadı: " + error.message };
     }
 }
+
+    
