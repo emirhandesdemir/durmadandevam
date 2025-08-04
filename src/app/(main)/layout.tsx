@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from 'framer-motion';
 import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
 import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
+import PersistentVoiceBar from "@/components/voice/PersistentVoiceBar";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -195,6 +196,7 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
           )}
         </AnimatePresence>
       </div>
+       <PersistentVoiceBar />
     </VoiceChatProvider>
   );
 }

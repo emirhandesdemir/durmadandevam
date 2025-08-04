@@ -1,4 +1,3 @@
-
 // src/contexts/VoiceChatContext.tsx
 'use client';
 
@@ -29,6 +28,8 @@ interface VoiceChatContextType {
     self: VoiceParticipant | null;
     isConnecting: boolean;
     isConnected: boolean;
+    isMinimized: boolean;
+    isSpeakerMuted: boolean;
     remoteAudioStreams: Record<string, MediaStream>;
     remoteScreenStreams: Record<string, MediaStream>;
     remoteVideoStreams: Record<string, MediaStream>;
@@ -45,6 +46,9 @@ interface VoiceChatContextType {
     leaveRoom: () => Promise<void>;
     leaveVoiceOnly: () => Promise<void>;
     toggleSelfMute: () => Promise<void>;
+    toggleSpeakerMute: () => void;
+    minimizeRoom: () => void;
+    expandRoom: () => void;
     // Music Player
     livePlaylist: PlaylistTrack[];
     currentTrack: (PlaylistTrack & { isPlaying: boolean }) | null;
@@ -66,6 +70,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
     const [connectedRoomId, setConnectedRoomId] = useState<string | null>(null);
+    const [isMinimized, setIsMinimized] = useState(false);
+    const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
 
     const [activeRoom, setActiveRoom] = useState<Room | null>(null);
     const [participants, setParticipants] = useState<VoiceParticipant[]>([]);
@@ -345,6 +351,11 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         }
     }, [user, activeRoomId, isCurrentUserDj, toast]);
 
+    // UI state management
+    const minimizeRoom = useCallback(() => setIsMinimized(true), []);
+    const expandRoom = useCallback(() => setIsMinimized(false), []);
+    const toggleSpeakerMute = useCallback(() => setIsSpeakerMuted(prev => !prev), []);
+
     // Firestore listeners
     useEffect(() => {
         if (!user || !activeRoomId) {
@@ -376,7 +387,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             }
         });
 
-        const playlistUnsub = onSnapshot(query(collection(db, "rooms", activeRoomId, "playlist"), orderBy("order")), snapshot => {
+        const playlistUnsub = onSnapshot(query(collection(db, "rooms", activeRoomId, "playlist"), orderBy('order')), snapshot => {
             const tracks = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as PlaylistTrack));
             setLivePlaylist(tracks);
         });
@@ -485,8 +496,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     }, [isConnected, user, connectedRoomId, participants, sendSignal]);
 
     const value = {
-        activeRoom, participants, self, isConnecting, isConnected, remoteAudioStreams, remoteScreenStreams, remoteVideoStreams, localStream, isSharingScreen, isSharingVideo,
-        setActiveRoomId, joinRoom, leaveRoom: handleLeaveRoom, leaveVoiceOnly, toggleSelfMute, startScreenShare, stopScreenShare, startVideo, stopVideo, switchCamera,
+        activeRoom, participants, self, isConnecting, isConnected, isMinimized, isSpeakerMuted, remoteAudioStreams, remoteScreenStreams, remoteVideoStreams, localStream, isSharingScreen, isSharingVideo,
+        setActiveRoomId, joinRoom, leaveRoom: handleLeaveRoom, leaveVoiceOnly, toggleSelfMute, toggleSpeakerMute, minimizeRoom, expandRoom, startScreenShare, stopScreenShare, startVideo, stopVideo, switchCamera,
         // Music Player values
         livePlaylist, currentTrack, isCurrentUserDj, isDjActive,
         addTrackToPlaylist, removeTrackFromPlaylist, togglePlayback, skipTrack

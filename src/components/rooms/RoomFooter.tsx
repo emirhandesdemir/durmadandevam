@@ -3,7 +3,7 @@
 
 import { Button } from '@/components/ui/button';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
-import { Mic, MicOff, Settings, Loader2, ScreenShareOff, ScreenShare, Music, Camera, CameraOff, SwitchCamera, Gamepad2, Gift, BrainCircuit } from 'lucide-react';
+import { Mic, MicOff, Settings, Loader2, ScreenShareOff, ScreenShare, Music, Camera, CameraOff, SwitchCamera, Gamepad2, Gift, BrainCircuit, Volume2, VolumeX, MoreHorizontal } from 'lucide-react';
 import ChatMessageInput from '../chat/ChatMessageInput';
 import type { Room } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
@@ -27,6 +27,8 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
         joinRoom, 
         self, 
         toggleSelfMute,
+        isSpeakerMuted,
+        toggleSpeakerMute,
         isSharingScreen,
         startScreenShare,
         stopScreenShare,
@@ -79,13 +81,16 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
                     
                     {isConnected ? (
                         <>
-                            <Button onClick={toggleSelfMute} variant="secondary" size="icon" className="rounded-full flex-shrink-0">
+                             <Button onClick={toggleSelfMute} variant="secondary" size="icon" className="rounded-full flex-shrink-0">
                                 {self?.isMuted ? <MicOff className="h-5 w-5 text-destructive"/> : <Mic className="h-5 w-5" />}
+                            </Button>
+                            <Button onClick={toggleSpeakerMute} variant="secondary" size="icon" className="rounded-full flex-shrink-0">
+                                {isSpeakerMuted ? <VolumeX className="h-5 w-5"/> : <Volume2 className="h-5 w-5" />}
                             </Button>
                             <Popover>
                                 <PopoverTrigger asChild>
                                     <Button variant="secondary" size="icon" className="rounded-full flex-shrink-0">
-                                        <Settings className="h-5 w-5" />
+                                        <MoreHorizontal className="h-5 w-5" />
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent align="end" side="top" className="w-auto p-2">

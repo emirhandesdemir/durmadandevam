@@ -244,7 +244,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                     </div>
                 )}
                 <div className="flex items-center gap-3 p-4">
-                     <Link href={`/profile/${post.uid}`}>
+                     <Link href={`/profile/${post.userUniqueTag}`}>
                         <AvatarWithFrame
                             photoURL={postUserPhoto}
                             selectedAvatarFrame={postUserAvatarFrame}
@@ -254,7 +254,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                     </Link>
                     <div className="flex-1">
                         <div className="flex items-center gap-1.5">
-                            <Link href={`/profile/${post.uid}`}><p className="font-bold text-sm hover:underline">{postUsername}</p></Link>
+                            <Link href={`/profile/${post.userUniqueTag}`}><p className="font-bold text-sm hover:underline">{postUsername}</p></Link>
                             {post.emailVerified && (
                                 <TooltipProvider>
                                     <Tooltip>
@@ -334,7 +334,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                                         <div className="flex justify-end gap-2"><Button variant="ghost" size="sm" onClick={handleCancelEdit}>İptal</Button><Button size="sm" onClick={handleSaveEdit} disabled={isSaving}>{isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Kaydet</Button></div>
                                     </div>
                                 ) : (
-                                    <div className="flex items-start"><Link href={`/profile/${post.uid}`} className="font-bold hover:underline shrink-0">{postUsername}</Link><span className="ml-1"><ReadMore text={post.text} /></span></div>
+                                    <div className="flex items-start"><Link href={`/profile/${post.userUniqueTag}`} className="font-bold hover:underline shrink-0">{postUsername}</Link><span className="ml-1"><ReadMore text={post.text} /></span></div>
                                 )}
                             </div>
                         )}
@@ -350,7 +350,9 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
             
             <CommentSheet open={showComments} onOpenChange={setShowComments} post={post} />
             <QuoteRetweetDialog isOpen={!!postToRetweet} onOpenChange={() => setPostToRetweet(null)} post={postToRetweet!} />
-            <ReportDialog isOpen={isReportOpen} onOpenChange={setIsReportOpen} target={{ type: 'post', id: post.id, user: { id: post.uid, name: post.username } }}/>
+            {isReportOpen && (
+              <ReportDialog isOpen={isReportOpen} onOpenChange={setIsReportOpen} target={{ type: 'post', id: post.id, user: { id: post.uid, name: post.username } }}/>
+            )}
         </>
     );
 }

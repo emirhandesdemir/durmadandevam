@@ -85,7 +85,7 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, isSp
             <header className="flex items-center justify-between border-b p-3 bg-card/80 backdrop-blur-sm sticky top-0 z-20">
                 <div className="flex items-center gap-1">
                     <Button variant="ghost" size="icon" className="rounded-full" onClick={minimizeRoom}>
-                        <ArrowDownLeft />
+                        <Minimize2 />
                     </Button>
                     <div className="flex flex-col">
                         <h1 className="font-bold text-lg leading-tight">{room.name}</h1>
@@ -116,9 +116,6 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, isSp
                 </div>
 
                 <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="rounded-full" onClick={toggleSpeakerMute}>
-                        {isSpeakerMuted ? <VolumeX/> : <Volume2 />}
-                    </Button>
                     <Button variant="ghost" size="icon" className="rounded-full" onClick={onToggleCollapse}>
                         {isSpeakerLayoutCollapsed ? <ChevronDown /> : <ChevronUp />}
                     </Button>

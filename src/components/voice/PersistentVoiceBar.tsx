@@ -40,9 +40,6 @@ export default function PersistentVoiceBar() {
                 </div>
             </div>
             <div className="flex items-center gap-1">
-                 <Button onClick={toggleSpeakerMute} variant="secondary" size="icon" className="rounded-full h-11 w-11">
-                    {isSpeakerMuted ? <VolumeX className="h-5 w-5"/> : <Volume2 className="h-5 w-5" />}
-                </Button>
                 <Button onClick={toggleSelfMute} variant="secondary" size="icon" className="rounded-full h-11 w-11">
                     {isConnecting ? (
                         <Loader2 className="h-5 w-5 animate-spin" />
@@ -51,6 +48,9 @@ export default function PersistentVoiceBar() {
                     ) : (
                         <Mic className="h-5 w-5" />
                     )}
+                </Button>
+                <Button onClick={toggleSpeakerMute} variant="secondary" size="icon" className="rounded-full h-11 w-11">
+                    {isSpeakerMuted ? <VolumeX className="h-5 w-5"/> : <Volume2 className="h-5 w-5" />}
                 </Button>
                 <Button onClick={leaveRoom} variant="destructive" size="icon" className="rounded-full h-11 w-11">
                     <PhoneOff className="h-5 w-5" />
