@@ -29,9 +29,8 @@ export default function ChatList({ selectedChatId }: ChatListProps) {
   const isSelectionMode = selectedChatIds.length > 0;
 
   useEffect(() => {
-    // ÖNEMLİ DÜZELTME: user nesnesinin yanı sıra user.uid'nin de mevcut olduğunu kontrol et.
-    // Bu, "undefined" hatasını önler.
-    if (!user?.uid) {
+    // CRITICAL FIX: Ensure user and user.uid are defined before proceeding.
+    if (!user || !user.uid) {
       setLoading(false);
       return;
     }
@@ -46,6 +45,7 @@ export default function ChatList({ selectedChatId }: ChatListProps) {
       } as DirectMessageMetadata));
 
       chatsData.sort((a, b) => {
+        // This sort logic requires user.uid, which is now guaranteed to be present.
         const aIsPinned = a.pinnedBy?.includes(user.uid);
         const bIsPinned = b.pinnedBy?.includes(user.uid);
         if (aIsPinned !== bIsPinned) return aIsPinned ? -1 : 1;
