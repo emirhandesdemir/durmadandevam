@@ -47,7 +47,6 @@ export default function ImagePreviewSheet({ file, setFile, chatId, sender, recei
             const maxWidth = window.innerWidth;
             const maxHeight = window.innerHeight;
             let ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
-            // Limit canvas size for performance
             if (img.width * ratio > 800) {
                 ratio = 800 / img.width;
             }
@@ -57,14 +56,15 @@ export default function ImagePreviewSheet({ file, setFile, chatId, sender, recei
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             
-            // Save initial state for undo
             setHistory([ctx.getImageData(0, 0, canvas.width, canvas.height)]);
         };
-    }, [file]);
+        img.onerror = () => {
+             toast({ variant: 'destructive', description: "Resim dosyası yüklenemedi." });
+        }
+    }, [file, toast]);
 
-    // Redraw canvas when the file changes
     useEffect(() => {
-        if(file){
+        if(file && canvasRef.current){
             drawOnCanvas();
         }
     }, [file, drawOnCanvas]);
@@ -108,12 +108,11 @@ export default function ImagePreviewSheet({ file, setFile, chatId, sender, recei
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
         ctx.closePath();
-        // Save state after drawing
         setHistory(prev => [...prev, ctx.getImageData(0, 0, canvas.width, canvas.height)]);
     };
     
     const handleUndo = () => {
-        if (history.length <= 1) return; // Can't undo the initial image
+        if (history.length <= 1) return; 
         
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -128,15 +127,10 @@ export default function ImagePreviewSheet({ file, setFile, chatId, sender, recei
 
     const getMousePos = (canvas: HTMLCanvasElement, e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
         const rect = canvas.getBoundingClientRect();
-        if ('touches' in e) {
-            return {
-                x: e.touches[0].clientX - rect.left,
-                y: e.touches[0].clientY - rect.top,
-            };
-        }
+        const touch = 'touches' in e ? e.touches[0] : null;
         return {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top,
+            x: (touch ? touch.clientX : e.clientX) - rect.left,
+            y: (touch ? touch.clientY : e.clientY) - rect.top,
         };
     };
 
@@ -152,7 +146,6 @@ export default function ImagePreviewSheet({ file, setFile, chatId, sender, recei
         setIsSubmitting(true);
         
         try {
-            // Get the final image from the canvas
             const base64Image = canvas.toDataURL('image/jpeg', 0.9);
             await sendMessage(chatId, sender, receiver, { text: caption, imageUrl: base64Image, imageType });
             handleClose();
@@ -166,24 +159,20 @@ export default function ImagePreviewSheet({ file, setFile, chatId, sender, recei
     return (
         <Sheet open={!!file} onOpenChange={(open) => !open && handleClose()}>
             <SheetContent side="bottom" className="h-full w-full p-0 bg-black flex flex-col justify-between gap-0">
-                 {/* Header Controls */}
-                <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
+                 <header className="absolute top-0 left-0 right-0 z-20 flex justify-between items-center p-4">
                     <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-black/50 text-white" onClick={handleClose}>
                         <X />
                     </Button>
-                </div>
-                 <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
-                     <div className="p-1.5 rounded-2xl bg-black/50 backdrop-blur-sm flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2 p-1.5 rounded-full bg-black/50 backdrop-blur-sm">
                         {drawingColors.map(color => (
                             <button key={color} onClick={() => setDrawingColor(color)} className={cn("h-7 w-7 rounded-full border-2", drawingColor === color ? 'border-white' : 'border-transparent')} style={{ backgroundColor: color }} />
                         ))}
+                        <Button onClick={handleUndo} variant="secondary" size="icon" className="h-8 w-8 rounded-full bg-white/20 border-white/20">
+                           <Undo2 />
+                        </Button>
                     </div>
-                     <Button onClick={handleUndo} variant="secondary" size="icon" className="h-10 w-10 rounded-full bg-black/50 border-white/20">
-                        <Undo2 />
-                    </Button>
-                </div>
+                </header>
                
-                {/* Canvas Area */}
                 <div className="flex-1 flex items-center justify-center relative touch-none">
                    <canvas
                         ref={canvasRef}
@@ -198,8 +187,7 @@ export default function ImagePreviewSheet({ file, setFile, chatId, sender, recei
                     />
                 </div>
 
-                {/* Footer Controls */}
-                <div className="p-4 bg-gradient-to-t from-black/80 via-black/50 to-transparent space-y-3 shrink-0">
+                <footer className="p-4 bg-gradient-to-t from-black/80 via-black/50 to-transparent space-y-3 shrink-0">
                     <div className="flex items-center gap-3">
                         <Input
                             value={caption}
@@ -222,7 +210,7 @@ export default function ImagePreviewSheet({ file, setFile, chatId, sender, recei
                     <Button onClick={handleSend} disabled={isSubmitting} size="lg" className="w-full bg-primary h-12 rounded-xl text-lg">
                         {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : 'Gönder'}
                     </Button>
-                </div>
+                </footer>
             </SheetContent>
         </Sheet>
     );

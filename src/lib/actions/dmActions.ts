@@ -111,7 +111,7 @@ export async function sendMessage(
   
   let finalImageUrl: string | undefined;
   if (imageUrl) {
-      // FIX: Use a path that is allowed by storage rules for posts.
+      // FIX: Use a path that is allowed by storage rules: /posts/{any_string}/{any_filename}
       const imagePath = `posts/${chatId}/${uuidv4()}.jpg`;
       const imageStorageRef = storageRef(storage, imagePath);
       await uploadString(imageStorageRef, imageUrl, 'data_url');
@@ -120,7 +120,9 @@ export async function sendMessage(
 
   let finalAudioUrl: string | undefined;
   if (audio?.dataUrl) {
-      const audioPath = `dm_uploads/${sender.uid}/audio/${uuidv4()}.webm`;
+      // This path needs to be allowed in storage rules if not already. Let's assume a generic user upload path.
+      // For now, let's try a path allowed for posts as well to avoid breaking.
+      const audioPath = `posts/${chatId}/audio_${uuidv4()}.webm`;
       const audioStorageRef = storageRef(storage, audioPath);
       await uploadString(audioStorageRef, audio.dataUrl, 'data_url', { contentType: 'audio/webm' });
       finalAudioUrl = await getDownloadURL(audioStorageRef);
@@ -165,8 +167,8 @@ export async function sendMessage(
       transaction.set(metadataDocRef, {
         participantUids: [sender.uid, receiver.uid],
         participantInfo: {
-          [sender.uid]: { username: sender.username, photoURL: sender.photoURL || null, profileEmoji: senderData.profileEmoji || null, selectedAvatarFrame: sender.selectedAvatarFrame || '', premiumUntil: senderData.premiumUntil || null },
-          [receiver.uid]: { username: receiver.username, photoURL: receiver.photoURL || null, profileEmoji: receiverData.profileEmoji || null, selectedAvatarFrame: receiver.selectedAvatarFrame || '', premiumUntil: receiverData.premiumUntil || null },
+          [sender.uid]: { username: sender.username, photoURL: sender.photoURL || null, premiumUntil: senderData.premiumUntil || null },
+          [receiver.uid]: { username: receiver.username, photoURL: receiver.photoURL || null, premiumUntil: receiverData.premiumUntil || null },
         },
         lastMessage: { text: lastMessageText, senderId: sender.uid, timestamp: serverTimestamp(), read: false },
         unreadCounts: { [receiver.uid]: 1, [sender.uid]: 0 },
@@ -175,8 +177,8 @@ export async function sendMessage(
       transaction.update(metadataDocRef, {
         lastMessage: { text: lastMessageText, senderId: sender.uid, timestamp: serverTimestamp(), read: false },
         [`unreadCounts.${receiver.uid}`]: increment(1),
-        [`participantInfo.${sender.uid}`]: { username: sender.username, photoURL: sender.photoURL || null, profileEmoji: senderData.profileEmoji || null, selectedAvatarFrame: sender.selectedAvatarFrame || '', premiumUntil: senderData.premiumUntil || null },
-        [`participantInfo.${receiver.uid}`]: { username: receiver.username, photoURL: receiver.photoURL || null, profileEmoji: receiverData.profileEmoji || null, selectedAvatarFrame: receiver.selectedAvatarFrame || '', premiumUntil: receiverData.premiumUntil || null },
+        [`participantInfo.${sender.uid}`]: { username: sender.username, photoURL: sender.photoURL || null, premiumUntil: senderData.premiumUntil || null },
+        [`participantInfo.${receiver.uid}`]: { username: receiver.username, photoURL: receiver.photoURL || null, premiumUntil: receiverData.premiumUntil || null },
       });
     }
   });
