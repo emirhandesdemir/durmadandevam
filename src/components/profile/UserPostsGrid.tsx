@@ -22,7 +22,12 @@ export default function UserPostsGrid({ profileUser }: UserPostsGridProps) {
     const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
     const isOwnProfile = currentUserData?.uid === profileUser.uid;
-    const isFollower = useMemo(() => profileUser?.followers?.includes(currentUserData?.uid || '') || false, [profileUser, currentUserData]);
+    const isFollower = useMemo(() => {
+        // FIX: Ensure profileUser.followers exists before calling .includes()
+        if (!profileUser?.followers || !currentUserData?.uid) return false;
+        return profileUser.followers.includes(currentUserData.uid);
+    }, [profileUser, currentUserData]);
+
     const canViewContent = useMemo(() => !profileUser?.privateProfile || isFollower || isOwnProfile, [profileUser, isFollower, isOwnProfile]);
     const amIBlockedByThisUser = useMemo(() => profileUser?.blockedUsers?.includes(currentUserData?.uid || ''), [profileUser, currentUserData]);
 
