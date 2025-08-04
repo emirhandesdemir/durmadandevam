@@ -414,7 +414,7 @@ export async function getSavedPosts(userId: string): Promise<Post[]> {
         throw new Error("Kullanıcı bulunamadı.");
     }
 
-    const savedPostIds: string[] = userSnap.data().savedPosts;
+    const savedPostIds: string[] = userSnap.data().savedPosts || [];
 
     if (!Array.isArray(savedPostIds) || savedPostIds.length === 0) {
         return [];

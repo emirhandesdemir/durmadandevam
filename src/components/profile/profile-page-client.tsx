@@ -83,7 +83,7 @@ export default function ProfilePageClient() {
                 <div className="border-b">
                     <SettingsHeader title="Hesap" />
                     {userData.role === 'admin' && (
-                       <SettingsLink href="/admin" icon={Shield} title="Yönetim Paneli" />
+                       <SettingsLink href="/admin/dashboard" icon={Shield} title="Yönetim Paneli" />
                     )}
                     <SettingsLink href="/profile/edit" icon={UserIcon} title="Profili Düzenle" />
                     {isPremium && (
@@ -97,7 +97,6 @@ export default function ProfilePageClient() {
                  <div className="border-b">
                     <SettingsHeader title="Gizlilik ve Güvenlik" />
                     <SettingsLink href="/profile/privacy" icon={Lock} title="Hesap Gizliliği" value={userData.privateProfile ? 'Gizli' : 'Herkese Açık'}/>
-                    <SettingsLink href="/profile/blocked" icon={ShieldOff} title="Engellenen Hesaplar" value={String(userData.blockedUsers?.length || 0)} />
                     <SettingsLink href="/profile/security" icon={KeyRound} title="Hesap Güvenliği" />
                 </div>
 

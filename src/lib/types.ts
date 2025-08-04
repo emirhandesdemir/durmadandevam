@@ -194,6 +194,7 @@ export interface Report {
     reporterId: string;
     reporterUsername: string;
     reportedUserId: string;
+    reportedUserUniqueTag?: number;
     reportedUsername: string;
     reason: string;
     details: string;

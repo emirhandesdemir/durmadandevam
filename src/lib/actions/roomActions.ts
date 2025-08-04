@@ -258,11 +258,12 @@ export async function createRoom(
         if (!userDoc.exists()) throw new Error("Kullanıcı bulunamadı.");
         
         const userData = userDoc.data();
+        const isAdmin = userData.role === 'admin';
         
         const unlimitedUntil = userData.unlimitedRoomCreationUntil as Timestamp | undefined;
         const isUnlimited = unlimitedUntil && unlimitedUntil.toDate() > new Date();
 
-        if (!isUnlimited && (userData.diamonds || 0) < roomCost) {
+        if (!isAdmin && !isUnlimited && (userData.diamonds || 0) < roomCost) {
             throw new Error(`Oda oluşturmak için ${roomCost} elmasa ihtiyacınız var.`);
         }
         
@@ -273,9 +274,9 @@ export async function createRoom(
             name: roomData.name,
             description: roomData.description,
             language: roomData.language,
-            type: 'public',
+            type: isAdmin ? 'event' : 'public',
             createdAt: serverTimestamp() as Timestamp,
-            expiresAt: Timestamp.fromMillis(Date.now() + durationInMs),
+            expiresAt: isAdmin ? null : Timestamp.fromMillis(Date.now() + durationInMs),
             createdBy: {
                 uid: userId,
                 username: creatorInfo.username,
@@ -292,7 +293,7 @@ export async function createRoom(
             maxParticipants: 9,
             voiceParticipantsCount: 0,
             autoQuizEnabled: true,
-            nextGameTimestamp: Timestamp.fromMillis(Date.now() + 5 * 60 * 1000), // Start first game in 5 mins
+            nextGameTimestamp: Timestamp.fromMillis(Date.now() + 5 * 60 * 1000),
             rules: null,
             welcomeMessage: null,
             pinnedMessageId: null,
@@ -304,7 +305,7 @@ export async function createRoom(
 
         transaction.set(newRoomRef, newRoom);
 
-        if (!isUnlimited) {
+        if (!isAdmin && !isUnlimited) {
             transaction.update(userRef, { 
                 diamonds: increment(-roomCost),
             });
@@ -531,13 +532,14 @@ export async function extendRoomTime(roomId: string, userId: string) {
         const userData = userDoc.data();
         
         const isHost = roomData.createdBy.uid === userId;
+        const isAdmin = userData.role === 'admin';
         const isModerator = roomData.moderators?.includes(userId);
 
-        if (!isHost && !isModerator) {
+        if (!isHost && !isModerator && !isAdmin) {
             throw new Error("Bu işlemi yapma yetkiniz yok.");
         }
 
-        if ((userData.diamonds || 0) < cost) {
+        if (!isAdmin && (userData.diamonds || 0) < cost) {
             throw new Error(`Süre uzatmak için ${cost} elmasa ihtiyacınız var.`);
         }
         
@@ -545,15 +547,16 @@ export async function extendRoomTime(roomId: string, userId: string) {
         const twentyMinutesInMs = 20 * 60 * 1000;
         const newExpiresAt = Timestamp.fromMillis(currentExpiresAt + twentyMinutesInMs);
         
-        transaction.update(userRef, { diamonds: increment(-cost) });
+        if (!isAdmin) {
+            transaction.update(userRef, { diamonds: increment(-cost) });
+            await logTransaction(transaction, userId, {
+                type: 'room_perk',
+                amount: -cost,
+                description: `${roomData.name} odası için süre uzatma`,
+                roomId: roomId
+            });
+        }
         transaction.update(roomRef, { expiresAt: newExpiresAt });
-
-        await logTransaction(transaction, userId, {
-            type: 'room_perk',
-            amount: -cost,
-            description: `${roomData.name} odası için süre uzatma`,
-            roomId: roomId
-        });
     });
     
     await addSystemMessage(roomId, `⏰ Oda süresi 20 dakika uzatıldı! Bu işlem ${cost} elmasa mal oldu.`);
@@ -578,18 +581,19 @@ export async function increaseParticipantLimit(roomId: string, userId: string) {
         const userData = userDoc.data();
         
         const isHost = roomData.createdBy.uid === userId;
+        const isAdmin = userData.role === 'admin';
         const isModerator = roomData.moderators?.includes(userId);
         const isPremium = userData.premiumUntil && userData.premiumUntil.toDate() > new Date();
 
-        if (!isHost && !isModerator) {
+        if (!isHost && !isModerator && !isAdmin) {
             throw new Error("Bu işlemi yapma yetkiniz yok.");
         }
         
-        if (!isPremium && (userData.diamonds || 0) < cost) {
+        if (!isPremium && !isAdmin && (userData.diamonds || 0) < cost) {
             throw new Error(`Katılımcı limitini artırmak için ${cost} elmasa ihtiyacınız var.`);
         }
         
-        if (!isPremium) {
+        if (!isPremium && !isAdmin) {
             transaction.update(userRef, { diamonds: increment(-cost) });
             await logTransaction(transaction, userId, {
                 type: 'room_perk',
