@@ -13,7 +13,7 @@ import { hidePost } from '@/lib/actions/userActions';
 import { MessageSquareOff } from 'lucide-react';
 
 export default function FriendsFeed() {
-    const { user, userData, loading: authLoading } = useAuth();
+    const { user, userData, loading: authLoading } from useAuth();
     const [posts, setPosts] = useState<Post[]>([]);
     const [rooms, setRooms] = useState<Room[]>([]);
     const [loading, setLoading] = useState(true);
@@ -22,8 +22,15 @@ export default function FriendsFeed() {
     const followingIds = useMemo(() => userData?.following || [], [userData]);
 
     useEffect(() => {
-        if (authLoading || followingIds.length === 0) {
+        if (authLoading || !userData) {
+            // Wait for auth and user data to be loaded.
+            if (!authLoading) setLoading(false);
+            return;
+        }
+
+        if (followingIds.length === 0) {
             setLoading(false);
+            setPosts([]); // Clear posts if not following anyone
             return;
         }
 
@@ -34,7 +41,11 @@ export default function FriendsFeed() {
         const unsubPosts = onSnapshot(qPosts, (snapshot) => {
             const postsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post));
             setPosts(postsData);
-        }, (error) => console.error("Error fetching friends posts:", error));
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching friends posts:", error);
+            setLoading(false);
+        });
         
         const roomsRef = collection(db, 'rooms');
         const qRooms = query(roomsRef, orderBy('voiceParticipantsCount', 'desc'), limit(10));
@@ -46,17 +57,12 @@ export default function FriendsFeed() {
             setRooms(roomsData);
         }, (error) => console.error("Error fetching rooms for feed:", error));
 
-
-        Promise.all([new Promise(res => unsubPosts && res(1)), new Promise(res => unsubRooms && res(1))]).then(() => {
-             setLoading(false);
-        });
-        
         return () => {
             unsubPosts();
             unsubRooms();
         };
 
-    }, [followingIds, authLoading]);
+    }, [followingIds, authLoading, userData]);
     
     const combinedFeed = useMemo(() => {
         const allHiddenIds = new Set([...(userData?.hiddenPostIds || []), ...clientHiddenIds]);
