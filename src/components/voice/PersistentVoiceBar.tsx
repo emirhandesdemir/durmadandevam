@@ -3,13 +3,12 @@
 
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
 import { Button } from '../ui/button';
-import { Mic, MicOff, PhoneOff, ArrowUpLeft, Loader2 } from 'lucide-react';
+import { Mic, MicOff, PhoneOff, ArrowUpLeft, Loader2, Volume2, VolumeX } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 
 export default function PersistentVoiceBar() {
-  const { isConnected, isMinimized, self, activeRoom, toggleSelfMute, leaveRoom, expandRoom, isConnecting } = useVoiceChat();
+  const { isConnected, isMinimized, self, activeRoom, toggleSelfMute, leaveRoom, expandRoom, isConnecting, isSpeakerMuted, toggleSpeakerMute } = useVoiceChat();
   const router = useRouter();
 
   if (!isConnected || !isMinimized || !activeRoom) {
@@ -41,6 +40,9 @@ export default function PersistentVoiceBar() {
                 </div>
             </div>
             <div className="flex items-center gap-1">
+                 <Button onClick={toggleSpeakerMute} variant="secondary" size="icon" className="rounded-full h-11 w-11">
+                    {isSpeakerMuted ? <VolumeX className="h-5 w-5"/> : <Volume2 className="h-5 w-5" />}
+                </Button>
                 <Button onClick={toggleSelfMute} variant="secondary" size="icon" className="rounded-full h-11 w-11">
                     {isConnecting ? (
                         <Loader2 className="h-5 w-5 animate-spin" />

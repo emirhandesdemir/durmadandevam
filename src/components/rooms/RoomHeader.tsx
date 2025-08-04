@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft, MoreHorizontal, Users, UserPlus, Gift, Zap, ChevronUp, ChevronDown, Clock, LogOut, MicOff, Minimize2, Settings, Star, Share2, ArrowDownLeft, X } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Users, UserPlus, Gift, Zap, ChevronUp, ChevronDown, Clock, LogOut, MicOff, Minimize2, Settings, Star, Share2, ArrowDownLeft, X, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Room } from '@/lib/types';
 import InviteDialog from './InviteDialog';
@@ -37,7 +37,7 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, isSp
     const [isManagementOpen, setIsManagementOpen] = useState(false);
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
     const [warningSent, setWarningSent] = useState(false);
-    const { leaveRoom, minimizeRoom } = useVoiceChat();
+    const { leaveRoom, minimizeRoom, isSpeakerMuted, toggleSpeakerMute } = useVoiceChat();
     const router = useRouter();
     const { toast } = useToast();
 
@@ -116,6 +116,9 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, isSp
                 </div>
 
                 <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" className="rounded-full" onClick={toggleSpeakerMute}>
+                        {isSpeakerMuted ? <VolumeX/> : <Volume2 />}
+                    </Button>
                     <Button variant="ghost" size="icon" className="rounded-full" onClick={onToggleCollapse}>
                         {isSpeakerLayoutCollapsed ? <ChevronDown /> : <ChevronUp />}
                     </Button>
