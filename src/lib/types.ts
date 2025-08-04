@@ -233,6 +233,7 @@ export interface Notification {
     read: boolean;
     callId?: string;
     callType?: 'video' | 'audio';
+    link?: string;
 }
 
 export interface Post {

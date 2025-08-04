@@ -2,7 +2,7 @@
 // Bu, bir kullanıcının profil sayfasını oluşturan sunucu bileşenidir.
 // Sayfa yüklendiğinde sunucuda çalışır, veritabanından gerekli verileri
 // (kullanıcı profili, gönderi sayısı vb.) çeker ve sayfayı oluşturur.
-import { doc, getDoc, collection, query, where, getCountFromServer, limit } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getCountFromServer, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { notFound } from 'next/navigation';
 import ProfileHeader from '@/components/profile/ProfileHeader';
@@ -15,9 +15,10 @@ import SavedPostsGrid from '@/components/profile/SavedPostsGrid';
 import { cookies } from 'next/headers';
 import { cn } from '@/lib/utils';
 import UserPostsGrid from '@/components/profile/UserPostsGrid';
+import type { UserProfile } from '@/lib/types';
 
 interface UserProfilePageProps {
-  params: { id: string };
+  params: { uid: string };
 }
 
 async function getAuthenticatedUser() {
@@ -32,26 +33,36 @@ async function getAuthenticatedUser() {
     }
 }
 
-async function findUserByUniqueTag(tag: number) {
+async function findUserByUidOrTag(identifier: string): Promise<UserProfile | null> {
+    const isNumeric = /^\d+$/.test(identifier);
     const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('uniqueTag', '==', tag), limit(1));
+    let q;
+
+    if (isNumeric) {
+        // Search by uniqueTag
+        const numericTag = parseInt(identifier, 10);
+        q = query(usersRef, where('uniqueTag', '==', numericTag), limit(1));
+    } else {
+        // Search by UID
+        const userDoc = await getDoc(doc(usersRef, identifier));
+        if (userDoc.exists()) {
+            return { uid: userDoc.id, ...userDoc.data() } as UserProfile;
+        }
+        return null;
+    }
+
     const querySnapshot = await getDocs(q);
     if (querySnapshot.empty) {
         return null;
     }
     const userDoc = querySnapshot.docs[0];
-    return { uid: userDoc.id, ...userDoc.data() };
+    return { uid: userDoc.id, ...userDoc.data() } as UserProfile;
 }
 
 
 export default async function UserProfilePage({ params }: UserProfilePageProps) {
-  const numericId = parseInt(params.id, 10);
-  if (isNaN(numericId)) {
-      notFound();
-  }
-
   const authUser = await getAuthenticatedUser();
-  const profileUserData = await findUserByUniqueTag(numericId);
+  const profileUserData = await findUserByUidOrTag(params.uid);
 
   if (!profileUserData) {
     notFound();

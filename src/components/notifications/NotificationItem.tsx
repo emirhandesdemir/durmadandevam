@@ -40,8 +40,15 @@ export default function NotificationItem({ notification }: NotificationItemProps
         return;
     }
     if (notification.type === 'diamond_transfer') return; // Diamond transfer notifications are not clickable
+    
+    // Default navigation based on link property
+    if (notification.link) {
+      router.push(notification.link);
+      return;
+    }
+    
+    // Fallback for older notifications without a link property
     if (notification.postId) {
-      // TODO: Implement opening a post dialog/modal
       console.log("Navigating to post:", notification.postId);
     } else if (['follow', 'mention', 'follow_accept', 'referral_bonus'].includes(notification.type)) {
        router.push(profileLink);
@@ -104,7 +111,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
     <div 
       className={cn(
         "flex items-center gap-4 p-3 rounded-lg transition-colors group",
-        !['diamond_transfer', 'referral_bonus', 'complete_profile'].includes(notification.type) && "cursor-pointer hover:bg-muted/50",
+        "cursor-pointer hover:bg-muted/50",
         !notification.read && "bg-primary/5"
       )}
       onClick={handleWrapperClick}

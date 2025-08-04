@@ -33,6 +33,7 @@ interface CreateNotificationArgs {
   callType?: 'video' | 'audio';
   profileEmoji?: string | null;
   senderUniqueTag?: number;
+  link?: string;
 }
 
 interface BroadcastNotificationArgs {
@@ -88,10 +89,43 @@ export async function createNotification(data: CreateNotificationArgs) {
   const recipientUserRef = doc(db, 'users', data.recipientId);
   const notificationsColRef = collection(recipientUserRef, "notifications");
 
+  // Determine link based on notification type
+  let link = '/notifications';
+  switch (data.type) {
+    case 'like':
+    case 'comment':
+    case 'mention':
+    case 'retweet':
+        link = data.postId ? `/post/${data.postId}` : '/notifications'; // Future-proofing for post detail page
+        break;
+    case 'follow':
+    case 'follow_accept':
+    case 'referral_bonus':
+    case 'diamond_transfer':
+        link = data.senderUniqueTag ? `/profile/${data.senderUniqueTag}` : (data.senderId ? `/profile/${data.senderId}` : '/home');
+        break;
+    case 'room_invite':
+        link = `/rooms/${data.roomId}`;
+        break;
+    case 'dm_message':
+        link = `/dm/${data.chatId}`;
+        break;
+    case 'call_incoming':
+        link = `/call/${data.callId}`;
+        break;
+    case 'call_missed':
+        link = '/dm';
+        break;
+    case 'complete_profile':
+        link = '/profile/edit';
+        break;
+  }
+  
   try {
     // This document creation will trigger the `sendPushNotification` Cloud Function.
     await addDoc(notificationsColRef, {
       ...data,
+      link: data.link || link,
       photoURL: data.senderAvatar || null,
       senderAvatarFrame: data.senderAvatarFrame || '',
       createdAt: serverTimestamp(),
