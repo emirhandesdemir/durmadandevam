@@ -11,6 +11,8 @@ import { getAuth } from '../firebaseAdmin';
 import { deleteRoomWithSubcollections } from '../firestoreUtils';
 import { updateUserPosts, updateUserComments, updateUserDmMessages } from './propagationActions';
 import { logTransaction } from './transactionActions';
+import { sendEmailVerification, verifyPasswordResetCode, confirmPasswordReset, updateEmail, sendEmailVerification as sendClientEmailVerification, verifyBeforeUpdateEmail } from 'firebase/auth';
+
 
 export async function assignMissingUniqueTag(userId: string) {
     if (!userId) throw new Error("User ID is required.");
@@ -32,6 +34,7 @@ export async function assignMissingUniqueTag(userId: string) {
                 currentTag = counterDoc.data().userTag || 1000;
             }
         } catch (e) {
+            // Counter document doesn't exist, it will be created.
             console.warn("Counter document not found, will create it.");
         }
         
@@ -48,14 +51,38 @@ export async function assignMissingUniqueTag(userId: string) {
 
 export async function sendVerificationEmail(userId: string) {
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
-    
-    // Note: Firebase client SDK handles sending the email. 
-    // This server action is a placeholder for potential future logic,
-    // like logging the request or checking for abuse.
-    // The actual email sending is initiated from the client.
-    
+    // This server action is a placeholder for potential future logic.
+    // The actual email sending is initiated from the client-side `sendEmailVerification` call.
     console.log(`Verification email request for user: ${userId}`);
     return { success: true };
+}
+
+export async function changeUserEmail(userId: string, isVerified: boolean, newEmail: string) {
+    if (!userId || !newEmail) {
+        throw new Error("Kullanıcı ID ve yeni e-posta adresi gereklidir.");
+    }
+    const auth = getAuth();
+    
+    try {
+        if (isVerified) {
+            // If the current email is verified, send a verification link to the *new* email.
+            // Firebase Admin SDK doesn't support this directly. This must be handled on the client.
+            // This action will now just trigger the client to do it.
+            return { success: true, needsClientAction: true };
+
+        } else {
+            // If the current email is not verified, we can change it directly without verification.
+            await auth.updateUser(userId, { email: newEmail });
+            await updateDoc(doc(db, 'users', userId), { email: newEmail });
+            return { success: true, needsClientAction: false };
+        }
+    } catch (error: any) {
+        console.error("E-posta değiştirilirken hata oluştu:", error);
+        if (error.code === 'auth/email-already-exists') {
+            return { success: false, error: "Bu e-posta adresi zaten başka bir hesap tarafından kullanılıyor." };
+        }
+        return { success: false, error: "E-posta güncellenirken bir hata oluştu." };
+    }
 }
 
 export async function changeUniqueTag(userId: string, newTag: number) {
@@ -147,14 +174,15 @@ export async function updateUserProfile(updates: {
                     if (counterDoc.exists()) {
                         newTag = (counterDoc.data().userTag || 1000) + 1;
                     }
-                    transaction.set(counterRef, { userTag: newTag }, { merge: true });
                 } catch(e) {
-                     transaction.set(counterRef, { userTag: newTag }, { merge: true });
+                     // Counter doc doesn't exist, it will be created.
                 }
+                
+                transaction.set(counterRef, { userTag: newTag }, { merge: true });
                 
                 const initialData: UserProfile = {
                     uid: userId,
-                    uniqueTag: newTag,
+                    uniqueTag: newTag, // Assign the new tag here
                     email: updates.email!,
                     emailVerified: false,
                     username: updates.username!,
@@ -386,9 +414,8 @@ export async function getSavedPosts(userId: string): Promise<Post[]> {
         throw new Error("Kullanıcı bulunamadı.");
     }
 
-    const savedPostIds: string[] = userSnap.data().savedPosts || [];
+    const savedPostIds: string[] = userSnap.data().savedPosts;
 
-    // FIX: Explicitly handle the case where savedPostIds is undefined or not an array.
     if (!Array.isArray(savedPostIds) || savedPostIds.length === 0) {
         return [];
     }
