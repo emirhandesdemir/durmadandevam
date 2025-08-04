@@ -111,9 +111,7 @@ export async function sendMessage(
   
   let finalImageUrl: string | undefined;
   if (imageUrl) {
-      // FIX: Use a path that is allowed by Storage Rules.
-      // The `posts` path is generally configured to allow authenticated writes.
-      const imagePath = `posts/${chatId}/${uuidv4()}.jpg`;
+      const imagePath = `dm_uploads/${sender.uid}/${uuidv4()}.jpg`;
       const imageStorageRef = storageRef(storage, imagePath);
       await uploadString(imageStorageRef, imageUrl, 'data_url');
       finalImageUrl = await getDownloadURL(imageStorageRef);
@@ -121,7 +119,7 @@ export async function sendMessage(
 
   let finalAudioUrl: string | undefined;
   if (audio?.dataUrl) {
-      const audioPath = `dms/${chatId}/audio/${uuidv4()}.webm`;
+      const audioPath = `dm_uploads/${sender.uid}/audio/${uuidv4()}.webm`;
       const audioStorageRef = storageRef(storage, audioPath);
       await uploadString(audioStorageRef, audio.dataUrl, 'data_url', { contentType: 'audio/webm' });
       finalAudioUrl = await getDownloadURL(audioStorageRef);

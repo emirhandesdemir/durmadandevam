@@ -65,7 +65,11 @@ export default function ImagePreviewSheet({ file, setFile, chatId, sender, recei
 
     useEffect(() => {
         if(file){
-            drawOnCanvas();
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                drawOnCanvas();
+            };
         }
     }, [file, drawOnCanvas]);
 
