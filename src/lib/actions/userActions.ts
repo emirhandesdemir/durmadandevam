@@ -108,10 +108,16 @@ export async function updateUserProfile(updates: {
         if (!userDoc.exists()) {
             if (isNewUser) {
                 const counterRef = doc(db, 'config', 'counters');
-                const counterDoc = await transaction.get(counterRef);
+                let counterDoc;
+                try {
+                    counterDoc = await transaction.get(counterRef);
+                } catch (e) {
+                    console.error("Counter document does not exist, will create it.", e);
+                    counterDoc = null;
+                }
                 
                 let currentTag = 1000;
-                if (counterDoc.exists()) {
+                if (counterDoc && counterDoc.exists()) {
                     currentTag = counterDoc.data().userTag || 1000;
                 } else {
                     transaction.set(counterRef, { userTag: 1000 });
@@ -120,12 +126,9 @@ export async function updateUserProfile(updates: {
                 const newTag = currentTag + 1;
                 transaction.update(counterRef, { userTag: newTag });
                 
-                const isAdminEmail = updates.email === 'admin@example.com';
-                const userRole = isAdminEmail ? 'admin' : 'user';
-
                 const initialData: UserProfile = {
                     uid: userId,
-                    uniqueTag: newTag,
+                    uniqueTag: newTag, // **FIXED: Assign the generated tag**
                     email: updates.email!,
                     emailVerified: false,
                     username: updates.username!,
@@ -137,7 +140,7 @@ export async function updateUserProfile(updates: {
                     country: null,
                     gender: undefined,
                     interests: [],
-                    role: userRole,
+                    role: 'user', // **FIXED: Removed admin assignment logic**
                     createdAt: serverTimestamp() as any,
                     lastActionTimestamp: serverTimestamp() as any,
                     diamonds: 50,
@@ -147,18 +150,18 @@ export async function updateUserProfile(updates: {
                     referredBy: updates.referredBy || null,
                     referralCount: 0,
                     postCount: 0,
-                    followers: [], // Initialize as empty array
-                    following: [], // Initialize as empty array
+                    followers: [],
+                    following: [],
                     blockedUsers: [],
-                    savedPosts: [], // Initialize as empty array
+                    savedPosts: [],
                     hiddenPostIds: [],
                     privateProfile: false,
                     acceptsFollowRequests: true,
-                    followRequests: [], // Initialize as empty array
+                    followRequests: [],
                     selectedBubble: '',
-                    selectedAvatarFrame: '', // Initialize
+                    selectedAvatarFrame: '',
                     isBanned: false,
-                    profileEmoji: null, // Initialize
+                    profileEmoji: null,
                     reportCount: 0,
                     isOnline: true,
                     lastSeen: serverTimestamp() as any,

@@ -150,7 +150,7 @@ export default function ProfilePageClient() {
                     <SettingsHeader title="Diğer" />
                      <SettingsLink href="/guide" icon={HelpCircle} title="Uygulama Kılavuzu" />
                      <SettingsLink onClick={() => setShowDeleteConfirm(true)} icon={Trash2} title="Hesabı Sil" />
-                     <SettingsLink onClick={() => handleLogout()} icon={LogOut} title="Çıkış Yap" />
+                     <SettingsLink onClick={() => handleLogout(false)} icon={LogOut} title="Çıkış Yap" />
                 </div>
 
             </div>
