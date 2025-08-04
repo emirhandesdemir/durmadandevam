@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Timer, Loader2, Undo2, Palette } from 'lucide-react';
+import { Send, Timer, Loader2, Undo2, Palette, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { sendMessage } from '@/lib/actions/dmActions';
 import { useToast } from '@/hooks/use-toast';
@@ -44,11 +44,9 @@ export default function ImagePreviewSheet({ file, setFile, chatId, sender, recei
         const img = new Image();
         img.src = URL.createObjectURL(file);
         img.onload = () => {
-            // Set canvas dimensions to match the image, scaled to fit the screen
             const maxWidth = window.innerWidth;
             const maxHeight = window.innerHeight;
             let ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
-            // Ensure the canvas isn't excessively large on desktop
             if (img.width * ratio > 800) {
                 ratio = 800 / img.width;
             }
@@ -58,18 +56,13 @@ export default function ImagePreviewSheet({ file, setFile, chatId, sender, recei
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             
-            // Save initial state for undo
             setHistory([ctx.getImageData(0, 0, canvas.width, canvas.height)]);
         };
     }, [file]);
 
     useEffect(() => {
         if(file){
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => {
-                drawOnCanvas();
-            };
+            drawOnCanvas();
         }
     }, [file, drawOnCanvas]);
 
@@ -112,12 +105,11 @@ export default function ImagePreviewSheet({ file, setFile, chatId, sender, recei
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
         ctx.closePath();
-        // Save state for undo
         setHistory(prev => [...prev, ctx.getImageData(0, 0, canvas.width, canvas.height)]);
     };
     
     const handleUndo = () => {
-        if (history.length <= 1) return; // Keep the initial image state
+        if (history.length <= 1) return; 
         
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -169,8 +161,13 @@ export default function ImagePreviewSheet({ file, setFile, chatId, sender, recei
     return (
         <Sheet open={!!file} onOpenChange={(open) => !open && handleClose()}>
             <SheetContent side="bottom" className="h-full w-full p-0 bg-black flex flex-col justify-between gap-0">
-                {/* Drawing Tools */}
-                <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
+                 {/* Header Controls */}
+                <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
+                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-black/50 text-white" onClick={handleClose}>
+                        <X />
+                    </Button>
+                </div>
+                 <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
                      <div className="p-1.5 rounded-2xl bg-black/50 backdrop-blur-sm flex flex-col gap-1.5">
                         {drawingColors.map(color => (
                             <button key={color} onClick={() => setDrawingColor(color)} className={cn("h-7 w-7 rounded-full border-2", drawingColor === color ? 'border-white' : 'border-transparent')} style={{ backgroundColor: color }} />
