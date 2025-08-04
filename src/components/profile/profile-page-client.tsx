@@ -15,8 +15,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import Link from 'next/link';
 import { updateUserProfile } from "@/lib/actions/userActions";
 import { sendPasswordResetEmail } from "firebase/auth";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
-import { deleteUserAccount } from "@/lib/actions/userActions";
+import DeleteAccountDialog from './DeleteAccountDialog';
 import { Gem, BadgeCheck } from 'lucide-react';
 import { useRouter } from "next/navigation";
 
@@ -52,7 +51,7 @@ export default function ProfilePageClient() {
     const router = useRouter();
 
     const [isSaving, setIsSaving] = useState(false);
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false);
 
     const isPremium = userData?.premiumUntil && userData.premiumUntil.toDate() > new Date();
 
@@ -85,24 +84,6 @@ export default function ProfilePageClient() {
             toast({ variant: 'destructive', description: "Şifre sıfırlama e-postası gönderilirken bir hata oluştu."});
         }
     }
-    
-    const handleDeleteAccount = async () => {
-        if (!user) return;
-        setIsSaving(true);
-        try {
-            const result = await deleteUserAccount(user.uid);
-            if (result.success) {
-                toast({ title: "Hesabınız Silindi", description: "Tüm verileriniz kalıcı olarak silindi." });
-            } else {
-                throw new Error(result.error);
-            }
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: "Hata", description: error.message || "Hesap silinirken bir hata oluştu." });
-        } finally {
-            setIsSaving(false);
-        }
-    }
-    
 
     if (loading || !user || !userData) {
         return (
@@ -149,33 +130,16 @@ export default function ProfilePageClient() {
                 <div className="border-b">
                     <SettingsHeader title="Diğer" />
                      <SettingsLink href="/guide" icon={HelpCircle} title="Uygulama Kılavuzu" />
-                     <SettingsLink onClick={() => setShowDeleteConfirm(true)} icon={Trash2} title="Hesabı Sil" />
+                     <SettingsLink onClick={() => setIsDeleteAccountOpen(true)} icon={Trash2} title="Hesabı Sil" />
                      <SettingsLink onClick={() => handleLogout(false)} icon={LogOut} title="Çıkış Yap" />
                 </div>
 
             </div>
             
-             <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2"><ShieldAlert/>Hesabını Silmek Üzeresin</AlertDialogTitle>
-                        <AlertDialogDescription>
-                           Bu işlem geri alınamaz. Hesabını silmek istediğinden emin misin? Tüm gönderilerin, yorumların, takipçilerin ve diğer verilerin kalıcı olarak silinecektir.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>İptal</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={handleDeleteAccount}
-                            className="bg-destructive hover:bg-destructive/80"
-                            disabled={isSaving}
-                        >
-                            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                            Evet, Hesabımı Sil
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+             <DeleteAccountDialog
+                isOpen={isDeleteAccountOpen}
+                onOpenChange={setIsDeleteAccountOpen}
+            />
         </>
     );
 }
