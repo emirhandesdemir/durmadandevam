@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Send, Bell, Search, Settings, LogOut } from "lucide-react";
+import { Send, Bell, Search, Settings, LogOut, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
 import UserSearchDialog from "../search/UserSearchDialog";
@@ -74,6 +74,12 @@ export default function Header({}: HeaderProps) {
                             <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>{userData?.username}</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
+                                 <DropdownMenuItem asChild>
+                                    <Link href={`/profile/${user?.uid}`}>
+                                        <User className="mr-2 h-4 w-4" />
+                                        <span>Profil</span>
+                                    </Link>
+                                </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
                                     <Link href={`/profile`}>
                                         <Settings className="mr-2 h-4 w-4" />
