@@ -111,20 +111,28 @@ export async function updateUserProfile(updates: {
                 // Create the document for a new user.
                 const counterRef = doc(db, 'config', 'counters');
                 const counterDoc = await transaction.get(counterRef);
-                const currentTag = counterDoc.exists() ? counterDoc.data().userTag || 1000 : 1000;
+                
+                let currentTag = 1000;
+                if (counterDoc.exists()) {
+                    currentTag = counterDoc.data().userTag || 1000;
+                } else {
+                    // If counter doc doesn't exist, create it.
+                    transaction.set(counterRef, { userTag: 1000 });
+                }
+
                 const newTag = currentTag + 1;
                 transaction.update(counterRef, { userTag: newTag });
                 
                 const isAdminEmail = updates.email === 'admin@example.com';
                 const userRole = isAdminEmail ? 'admin' : 'user';
 
-                const initialData = {
-                    uid: userId, uniqueTag: newTag, email: updates.email, emailVerified: false,
-                    username: updates.username, username_lowercase: updates.username?.toLowerCase(), 
-                    photoURL: updates.photoURL, 
+                const initialData: Omit<UserProfile, 'postCount' | 'giftLevel' | 'totalDiamondsSent' | 'referralCount' | 'hasUnreadNotifications' | 'reportCount' | 'isOnline' | 'isFirstPremium' | 'profileCompletionAwarded' | 'profileCompletionNotificationSent'> & { postCount: number, giftLevel: number, totalDiamondsSent: number, referralCount: number, hasUnreadNotifications: boolean, reportCount: number, isOnline: boolean, isFirstPremium: boolean, profileCompletionAwarded: boolean, profileCompletionNotificationSent: boolean } = {
+                    uid: userId, uniqueTag: newTag, email: updates.email!, emailVerified: false,
+                    username: updates.username!, username_lowercase: updates.username?.toLowerCase(), 
+                    photoURL: updates.photoURL || null, 
                     bio: null, age: null, city: null, country: null,
-                    gender: null, interests: [], role: userRole,
-                    createdAt: serverTimestamp(), lastActionTimestamp: serverTimestamp(),
+                    gender: undefined, interests: [], role: userRole,
+                    createdAt: serverTimestamp() as any, lastActionTimestamp: serverTimestamp() as any,
                     diamonds: 50, // Initial diamond reward
                     profileValue: 0, giftLevel: 0, totalDiamondsSent: 0,
                     referredBy: updates.referredBy || null, referralCount: 0, postCount: 0,
@@ -132,7 +140,7 @@ export async function updateUserProfile(updates: {
                     hiddenPostIds: [], privateProfile: false, acceptsFollowRequests: true,
                     followRequests: [], selectedBubble: '', selectedAvatarFrame: '', isBanned: false,
                     profileEmoji: null,
-                    reportCount: 0, isOnline: true, lastSeen: serverTimestamp(),
+                    reportCount: 0, isOnline: true, lastSeen: serverTimestamp() as any,
                     premiumUntil: null, isFirstPremium: false,
                     unlimitedRoomCreationUntil: null, profileCompletionNotificationSent: false,
                     profileCompletionAwarded: false, location: null,

@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessagesSquare, Plus, Compass } from 'lucide-react';
+import { Home, MessagesSquare, Plus, Compass, Store } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMemo, useState } from 'react';
@@ -25,6 +25,7 @@ export default function BottomNav() {
         { id: 'rooms', href: '/rooms', icon: MessagesSquare, label: 'Odalar' },
         { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
         { id: 'explore', action: () => setIsExploreOpen(true), icon: Compass, label: 'Keşfet'},
+        { id: 'store', href: '/store', icon: Store, label: 'Mağaza' },
       ]
   }, [user]);
 
@@ -35,7 +36,7 @@ export default function BottomNav() {
   return (
     <>
       <div className="fixed bottom-0 left-0 right-0 z-50 w-full border-t bg-background/95 backdrop-blur-sm">
-          <nav className="mx-auto grid h-16 max-w-lg grid-cols-4 items-center">
+          <nav className="mx-auto grid h-16 max-w-lg grid-cols-5 items-center">
               {navItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = item.href && pathname.startsWith(item.href);

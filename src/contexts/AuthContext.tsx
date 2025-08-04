@@ -191,7 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   return (
       <AuthContext.Provider value={value}>
-        {loading ? <AnimatedLogoLoader fullscreen /> : children}
+        {children}
       </AuthContext.Provider>
   );
 }
