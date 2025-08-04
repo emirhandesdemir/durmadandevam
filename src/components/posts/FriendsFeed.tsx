@@ -22,9 +22,10 @@ export default function FriendsFeed() {
     const followingIds = useMemo(() => userData?.following || [], [userData]);
 
     useEffect(() => {
-        if (authLoading || !userData) {
-            // Wait for auth and user data to be loaded.
-            if (!authLoading) setLoading(false);
+        // Wait for auth and user data to be loaded.
+        if (authLoading) return;
+        if (!userData) {
+            setLoading(false);
             return;
         }
 

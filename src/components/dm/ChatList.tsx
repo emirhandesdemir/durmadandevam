@@ -30,7 +30,7 @@ export default function ChatList({ selectedChatId }: ChatListProps) {
 
   useEffect(() => {
     // CRITICAL FIX: Ensure user and user.uid are defined before proceeding.
-    if (!user?.uid) {
+    if (!user || !user.uid) {
       setLoading(false);
       return;
     }
