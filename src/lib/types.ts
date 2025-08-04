@@ -129,7 +129,7 @@ export interface UserProfile {
     email: string;
     emailVerified: boolean;
     username: string;
-    username_lowercase?: string;
+    username_lowercase: string;
     photoURL: string | null;
     profileEmoji?: string | null;
     bio: string | null;
@@ -194,7 +194,6 @@ export interface Report {
     reporterId: string;
     reporterUsername: string;
     reportedUserId: string;
-    reportedUserUniqueTag?: number;
     reportedUsername: string;
     reason: string;
     details: string;

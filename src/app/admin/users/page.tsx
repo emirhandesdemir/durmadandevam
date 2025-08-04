@@ -7,6 +7,10 @@ import { db } from "@/lib/firebase";
 import { Users, Loader2 } from "lucide-react";
 import UsersTable from "@/components/admin/UsersTable";
 import type { UserProfile } from '@/lib/types';
+import { Input } from "@/components/ui/input";
+import { useDebounce } from "@/hooks/useDebounce";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 
 /**
@@ -18,6 +22,10 @@ import type { UserProfile } from '@/lib/types';
 export default function UserManagerPage() {
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'user'>('all');
+    const [genderFilter, setGenderFilter] = useState<'all' | 'male' | 'female'>('all');
+    const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
     useEffect(() => {
         // 'users' koleksiyonunu dinlemek için bir sorgu oluştur, oluşturulma tarihine göre sırala.
@@ -42,6 +50,18 @@ export default function UserManagerPage() {
         return () => unsubscribe();
     }, []);
 
+    const filteredUsers = users.filter(user => {
+        const searchMatch = debouncedSearchTerm.length > 0 
+            ? user.username.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) || 
+              user.email.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+            : true;
+        
+        const roleMatch = roleFilter === 'all' || user.role === roleFilter;
+        const genderMatch = genderFilter === 'all' || user.gender === genderFilter;
+
+        return searchMatch && roleMatch && genderMatch;
+    });
+
     return (
         <div>
             <div className="flex items-center gap-4">
@@ -54,13 +74,32 @@ export default function UserManagerPage() {
                 </div>
             </div>
 
-            <div className="mt-8">
+            <div className="mt-8 flex flex-col md:flex-row gap-4">
+                 <Input 
+                    placeholder="Kullanıcı adı veya e-posta ile ara..." 
+                    value={searchTerm} 
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="max-w-sm"
+                 />
+                 <div className="flex items-center gap-2">
+                    <Button variant={genderFilter === 'all' ? 'default' : 'outline'} onClick={() => setGenderFilter('all')}>Tümü</Button>
+                    <Button variant={genderFilter === 'male' ? 'default' : 'outline'} onClick={() => setGenderFilter('male')}>Erkek</Button>
+                    <Button variant={genderFilter === 'female' ? 'default' : 'outline'} onClick={() => setGenderFilter('female')}>Kadın</Button>
+                 </div>
+                 <div className="flex items-center gap-2">
+                    <Button variant={roleFilter === 'all' ? 'default' : 'outline'} onClick={() => setRoleFilter('all')}>Tüm Roller</Button>
+                    <Button variant={roleFilter === 'admin' ? 'default' : 'outline'} onClick={() => setRoleFilter('admin')}>Admin</Button>
+                    <Button variant={roleFilter === 'user' ? 'default' : 'outline'} onClick={() => setRoleFilter('user')}>Kullanıcı</Button>
+                 </div>
+            </div>
+
+            <div className="mt-4">
                 {loading ? (
                     <div className="flex justify-center py-12">
                         <Loader2 className="h-10 w-10 animate-spin text-primary" />
                     </div>
                 ) : (
-                    <UsersTable users={users} />
+                    <UsersTable users={filteredUsers} />
                 )}
             </div>
         </div>
