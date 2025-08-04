@@ -21,7 +21,14 @@ export default function SavedPostsGrid({ userId }: SavedPostsGridProps) {
     const isOwnProfile = currentUserData?.uid === userId;
 
     useEffect(() => {
-        if (!isOwnProfile || !userId) {
+        // FIX: Ensure both auth is complete and the current user's data is available.
+        if (authLoading || !currentUserData) {
+             // If auth is done but there's no user data, they're likely logged out.
+            if (!authLoading) setLoading(false);
+            return;
+        }
+
+        if (!isOwnProfile) {
             setLoading(false);
             return;
         }
@@ -31,7 +38,7 @@ export default function SavedPostsGrid({ userId }: SavedPostsGridProps) {
         getSavedPosts(userId)
             .then(setSavedPosts)
             .finally(() => setLoading(false));
-    }, [userId, isOwnProfile]);
+    }, [userId, isOwnProfile, currentUserData, authLoading]);
 
     if (authLoading || loading) {
         return <div className="flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin" /></div>;

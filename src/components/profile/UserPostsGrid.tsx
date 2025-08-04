@@ -32,7 +32,10 @@ export default function UserPostsGrid({ profileUser }: UserPostsGridProps) {
     const amIBlockedByThisUser = useMemo(() => profileUser?.blockedUsers?.includes(currentUserData?.uid || ''), [profileUser, currentUserData]);
 
     useEffect(() => {
-        if (authLoading || !profileUser) return;
+        // FIX: Explicitly wait for auth to finish before doing anything
+        if (authLoading) return;
+        
+        // No need to check for profileUser, it's a required prop.
 
         if (!canViewContent || amIBlockedByThisUser) {
             setLoading(false);

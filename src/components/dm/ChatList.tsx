@@ -29,12 +29,13 @@ export default function ChatList({ selectedChatId }: ChatListProps) {
   const isSelectionMode = selectedChatIds.length > 0;
 
   useEffect(() => {
-    // CRITICAL FIX: Ensure user and user.uid are defined before proceeding.
-    if (!user || !user.uid) {
+    // FIX: Add explicit check for user and user.uid before running the query.
+    if (!user?.uid) {
       setLoading(false);
       return;
     }
 
+    setLoading(true);
     const metadataRef = collection(db, 'directMessagesMetadata');
     const q = query(metadataRef, where('participantUids', 'array-contains', user.uid));
 
@@ -44,8 +45,8 @@ export default function ChatList({ selectedChatId }: ChatListProps) {
         ...doc.data(),
       } as DirectMessageMetadata));
 
+      // This sort logic requires user.uid, which is now guaranteed to be present.
       chatsData.sort((a, b) => {
-        // This sort logic requires user.uid, which is now guaranteed to be present.
         const aIsPinned = a.pinnedBy?.includes(user.uid);
         const bIsPinned = b.pinnedBy?.includes(user.uid);
         if (aIsPinned !== bIsPinned) return aIsPinned ? -1 : 1;
@@ -66,7 +67,8 @@ export default function ChatList({ selectedChatId }: ChatListProps) {
 
   const filteredChats = useMemo(() => {
     return chats.filter(chat => {
-      const partnerId = chat.participantUids.find(uid => uid !== user?.uid);
+      if (!user?.uid) return false;
+      const partnerId = chat.participantUids.find(uid => uid !== user.uid);
       if (!partnerId) return false;
       const partnerInfo = chat.participantInfo[partnerId];
       return partnerInfo?.username.toLowerCase().includes(searchTerm.toLowerCase());

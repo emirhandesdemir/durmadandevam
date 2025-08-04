@@ -25,13 +25,19 @@ export async function assignMissingUniqueTag(userId: string) {
             // User doesn't exist or already has a tag, so do nothing.
             return { success: true, message: 'No action needed.' };
         }
-
-        let counterDoc = await transaction.get(counterRef);
+        
         let currentTag = 1000;
-        if (counterDoc.exists()) {
-            currentTag = counterDoc.data().userTag || 1000;
-        } else {
-            transaction.set(counterRef, { userTag: 1000 });
+        try {
+            const counterDoc = await transaction.get(counterRef);
+            if (counterDoc.exists()) {
+                currentTag = counterDoc.data().userTag || 1000;
+            } else {
+                // If counter doesn't exist, create it within the transaction
+                transaction.set(counterRef, { userTag: 1000 });
+            }
+        } catch (e) {
+             // Handle case where config collection might not exist yet
+             transaction.set(counterRef, { userTag: 1000 });
         }
         
         const newTag = currentTag + 1;
@@ -138,19 +144,24 @@ export async function updateUserProfile(updates: {
         if (!userDoc.exists()) {
             if (isNewUser) {
                 const counterRef = doc(db, 'config', 'counters');
-                let counterDoc = await transaction.get(counterRef);
+                let newTag = 1000;
                 
-                let currentTag = 1000;
-                if (counterDoc.exists()) {
-                    currentTag = counterDoc.data().userTag || 1000;
+                try {
+                    const counterDoc = await transaction.get(counterRef);
+                    if (counterDoc.exists()) {
+                        newTag = (counterDoc.data().userTag || 1000) + 1;
+                    } else {
+                        transaction.set(counterRef, { userTag: newTag });
+                    }
+                    transaction.update(counterRef, { userTag: newTag });
+                } catch(e) {
+                    // Counter doc doesn't exist, create it.
+                    transaction.set(counterRef, { userTag: newTag });
                 }
-                
-                const newTag = currentTag + 1;
-                transaction.update(counterRef, { userTag: newTag });
                 
                 const initialData: UserProfile = {
                     uid: userId,
-                    uniqueTag: newTag,
+                    uniqueTag: newTag, // FIX: Assign the generated tag
                     email: updates.email!,
                     emailVerified: false,
                     username: updates.username!,
@@ -384,6 +395,7 @@ export async function getSavedPosts(userId: string): Promise<Post[]> {
 
     const savedPostIds: string[] = userSnap.data().savedPosts || [];
 
+    // FIX: Explicitly handle the case where savedPostIds is undefined or not an array.
     if (!Array.isArray(savedPostIds) || savedPostIds.length === 0) {
         return [];
     }

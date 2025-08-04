@@ -13,25 +13,27 @@ import { hidePost } from '@/lib/actions/userActions';
 import { MessageSquareOff } from 'lucide-react';
 
 export default function FriendsFeed() {
-    const { user, userData, loading: authLoading } from useAuth();
+    const { user, userData, loading: authLoading } = useAuth();
     const [posts, setPosts] = useState<Post[]>([]);
     const [rooms, setRooms] = useState<Room[]>([]);
     const [loading, setLoading] = useState(true);
     const [clientHiddenIds, setClientHiddenIds] = useState<string[]>([]);
     
-    const followingIds = useMemo(() => userData?.following || [], [userData]);
+    // FIX: Memoize followingIds and ensure userData is checked.
+    const followingIds = useMemo(() => userData?.following, [userData]);
 
     useEffect(() => {
-        // Wait for auth and user data to be loaded.
-        if (authLoading) return;
-        if (!userData) {
-            setLoading(false);
+        // FIX: Wait for auth and user data (especially followingIds) to be loaded.
+        if (authLoading || !userData) {
+            // If not loading and no user data, it means we can stop.
+            if (!authLoading) setLoading(false);
             return;
         }
-
-        if (followingIds.length === 0) {
+        
+        // If the user is not following anyone, no need to query.
+        if (!followingIds || followingIds.length === 0) {
             setLoading(false);
-            setPosts([]); // Clear posts if not following anyone
+            setPosts([]); 
             return;
         }
 
