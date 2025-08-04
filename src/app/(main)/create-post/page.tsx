@@ -1,9 +1,2 @@
-// Bu sayfa artık sadece NewPostForm bileşenini render ediyor.
-// Tüm layout ve stil mantığı, daha iyi bir yapı için NewPostForm'un içine taşındı.
-import NewPostForm from "@/components/posts/NewPostForm";
-
-export default function CreatePostPage() {
-  return (
-    <NewPostForm />
-  );
-}
+// This file is no longer needed and has been removed to fix a ChunkLoadError.
+// The content has been merged into src/app/(main)/create/page.tsx.
