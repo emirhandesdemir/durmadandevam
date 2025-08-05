@@ -20,7 +20,7 @@ export default function PersistentVoiceBar() {
   }, [isMinimized, pathname, router, activeRoom]);
 
   // The bar should only be visible if the user is in a room AND has minimized it.
-  if (!isMinimized) {
+  if (!isMinimized || !activeRoom) {
     return null;
   }
 

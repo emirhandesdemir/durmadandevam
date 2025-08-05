@@ -26,7 +26,10 @@ function AudioElement({ stream, isMuted }: { stream: MediaStream, isMuted: boole
 
     useEffect(() => {
         if (audioRef.current && stream) {
-            audioRef.current.srcObject = stream;
+            // Check if the stream is different to avoid unnecessary re-assignments
+            if(audioRef.current.srcObject !== stream) {
+                audioRef.current.srcObject = stream;
+            }
             audioRef.current.muted = isMuted;
         }
     }, [stream, isMuted]);
