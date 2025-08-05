@@ -7,7 +7,7 @@ import { db } from '@/lib/firebase';
 import { notFound } from 'next/navigation';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import { Separator } from '@/components/ui/separator';
-import { deepSerialize } from '@/lib/server-utils';
+import { deepSerialize, findUserByUniqueTag } from '@/lib/server-utils';
 import { Grid3x3, Bookmark, List } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getAuth } from '@/lib/firebaseAdmin';
@@ -19,7 +19,7 @@ import type { UserProfile } from '@/lib/types';
 import UserPostsFeed from '@/components/profile/UserPostsFeed';
 
 interface UserProfilePageProps {
-  params: { uid: string };
+  params: { uid: string }; // uid is now the uniqueTag
 }
 
 async function getAuthenticatedUser() {
@@ -34,19 +34,17 @@ async function getAuthenticatedUser() {
     }
 }
 
-async function findUserByUid(uid: string): Promise<UserProfile | null> {
-    if (!uid || uid === 'undefined') return null;
-    const userDoc = await getDoc(doc(db, 'users', uid));
-    if (userDoc.exists()) {
-        return { uid: userDoc.id, ...userDoc.data() } as UserProfile;
-    }
-    return null;
-}
-
-
 export default async function UserProfilePage({ params }: UserProfilePageProps) {
   const authUser = await getAuthenticatedUser();
-  const profileUserData = await findUserByUid(params.uid);
+  
+  // The param is the numeric uniqueTag, convert it to a number.
+  const uniqueTag = parseInt(params.uid, 10);
+  if (isNaN(uniqueTag)) {
+      notFound();
+  }
+
+  // Use the new function to find the user by their unique tag.
+  const profileUserData = await findUserByUniqueTag(uniqueTag);
 
   if (!profileUserData) {
     notFound();

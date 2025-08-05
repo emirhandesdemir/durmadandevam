@@ -32,7 +32,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
   });
 
   const isSystemNotification = notification.senderId.startsWith('system');
-  const profileLink = `/profile/${notification.senderId}`;
+  const profileLink = `/profile/${notification.senderUniqueTag || notification.senderId}`;
 
   const handleWrapperClick = () => {
     if (notification.type === 'complete_profile') {
@@ -98,7 +98,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
       case 'room_invite': return <> <span className="font-bold">{notification.senderUsername}</span> seni <span className="font-semibold">{notification.roomName}</span> odasına davet etti.</>;
       case 'dm_message': return <> <span className="font-bold">{notification.senderUsername}</span> sana bir mesaj gönderdi: <span className="text-foreground/80 italic">"{notification.messageText}"</span></>;
       case 'diamond_transfer': return <> <span className="font-bold">{notification.senderUsername}</span> sana <strong className="text-cyan-400">{notification.diamondAmount} elmas</strong> gönderdi!</>;
-      case 'retweet': return <> <span className="font-bold">{notification.senderUsername}</span> gönderini retweetledi.</>;
+      case 'retweet': return <> <span className="font-bold">{notification.senderUsername}</span> gönderinizi retweetledi.</>;
       case 'referral_bonus': return <> <span className="font-bold">{notification.senderUsername}</span> davetinle katıldı ve sana <strong className="text-cyan-400">{notification.diamondAmount} elmas</strong> kazandırdı! 🎉</>;
       case 'call_incoming': return <> <span className="font-bold">{notification.senderUsername}</span> sizi arıyor...</>;
       case 'call_missed': return <> <span className="font-bold">{notification.senderUsername}</span> sizi aradı.</>;

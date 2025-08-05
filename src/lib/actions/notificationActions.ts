@@ -101,7 +101,7 @@ export async function createNotification(data: Omit<CreateNotificationArgs, 'id'
     case 'follow_accept':
     case 'referral_bonus':
     case 'diamond_transfer':
-        link = data.senderUniqueTag ? `/profile/${data.senderUniqueTag}` : (data.senderId ? `/profile/${data.senderId}` : '/home');
+        link = data.senderId ? `/profile/${data.senderId}` : '/home';
         break;
     case 'room_invite':
         link = `/rooms/${data.roomId}`;

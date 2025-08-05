@@ -72,3 +72,23 @@ export async function findUserByUsername(username: string): Promise<UserProfile 
     const userDoc = querySnapshot.docs[0];
     return deepSerialize({ uid: userDoc.id, ...userDoc.data() } as UserProfile);
 }
+
+/**
+ * Finds a user by their numeric unique tag.
+ * This should be used for resolving profile page URLs.
+ * @param uniqueTag The numeric tag to search for.
+ * @returns UserProfile object or null.
+ */
+export async function findUserByUniqueTag(uniqueTag: number): Promise<UserProfile | null> {
+    if (!uniqueTag || isNaN(uniqueTag)) return null;
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('uniqueTag', '==', uniqueTag), limit(1));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+        return null;
+    }
+
+    const userDoc = querySnapshot.docs[0];
+    return deepSerialize({ uid: userDoc.id, ...userDoc.data() } as UserProfile);
+}
