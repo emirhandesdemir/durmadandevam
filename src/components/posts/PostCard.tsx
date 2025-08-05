@@ -241,7 +241,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
             <article className={cn("relative flex flex-col bg-background", !isStandalone && "border-b")}>
                  {showLikeAnimation && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-                        <span className="text-6xl drop-shadow-lg animate-like-pop">❤️‍🔥</span>
+                        <span className="text-6xl drop-shadow-lg animate-like-pop">🔥</span>
                     </div>
                 )}
                 <div className="flex items-center gap-3 p-4">
