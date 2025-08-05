@@ -24,7 +24,8 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
     const { 
         isConnected, 
         isConnecting, 
-        joinRoom, 
+        isListening,
+        joinToSpeak, 
         self, 
         toggleSelfMute,
         isSpeakerMuted,
@@ -79,7 +80,14 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
 
                     <ChatMessageInput room={room} />
                     
-                    {isConnected ? (
+                    {isListening && !isConnected && (
+                        <Button onClick={() => joinToSpeak()} disabled={isConnecting} className="rounded-full font-semibold px-4 bg-gradient-to-r from-red-500 to-blue-600 text-white shadow-lg hover:scale-105 transition-transform shrink-0">
+                            {isConnecting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Mic className="mr-2 h-5 w-5" />}
+                            Konuşmak İçin Katıl
+                        </Button>
+                    )}
+
+                    {isConnected && (
                         <>
                              <Button onClick={toggleSelfMute} variant="secondary" size="icon" className="rounded-full flex-shrink-0">
                                 {self?.isMuted ? <MicOff className="h-5 w-5 text-destructive"/> : <Mic className="h-5 w-5" />}
@@ -119,17 +127,7 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
                                 </PopoverContent>
                             </Popover>
                         </>
-                    ) : (
-                         <Button onClick={() => joinRoom({ muted: true })} variant="ghost" size="icon" className="rounded-full flex-shrink-0">
-                            <Volume2 className="h-5 w-5" />
-                        </Button>
                     )}
-                     {!isConnected && (
-                        <Button onClick={() => joinRoom()} disabled={isConnecting} className="rounded-full font-semibold px-4 bg-gradient-to-r from-red-500 to-blue-600 text-white shadow-lg hover:scale-105 transition-transform shrink-0">
-                            {isConnecting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Mic className="mr-2 h-5 w-5" />}
-                            Sese Katıl
-                        </Button>
-                     )}
                 </div>
             </footer>
              <GiftPanel 

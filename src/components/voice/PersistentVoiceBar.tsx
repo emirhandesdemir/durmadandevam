@@ -9,18 +9,17 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 export default function PersistentVoiceBar() {
-  const { isConnected, isMinimized, self, activeRoom, toggleSelfMute, leaveRoom, expandRoom, isConnecting, isSpeakerMuted, toggleSpeakerMute } = useVoiceChat();
+  const { isListening, isConnected, isMinimized, self, activeRoom, toggleSelfMute, leaveRoom, expandRoom, isConnecting, isSpeakerMuted, toggleSpeakerMute } = useVoiceChat();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    // If the bar is minimized but we are still on the room page, redirect to home.
     if (isMinimized && activeRoom && pathname.startsWith(`/rooms/${activeRoom.id}`)) {
       router.replace('/home');
     }
   }, [isMinimized, pathname, router, activeRoom]);
 
-  if (!isConnected || !isMinimized || !activeRoom) {
+  if (!isListening || !isMinimized || !activeRoom) {
     return null;
   }
 
@@ -45,19 +44,21 @@ export default function PersistentVoiceBar() {
                 </button>
                 <div className="flex-1 overflow-hidden">
                     <p className="font-bold text-sm truncate">{activeRoom.name}</p>
-                    <p className="text-xs text-muted-foreground">Sesli sohbettesin...</p>
+                    <p className="text-xs text-muted-foreground">{isConnected ? "Sesli sohbettesin..." : "Dinliyorsun..."}</p>
                 </div>
             </div>
             <div className="flex items-center gap-1">
-                <Button onClick={toggleSelfMute} variant="secondary" size="icon" className="rounded-full h-11 w-11">
-                    {isConnecting ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : self?.isMuted ? (
-                        <MicOff className="h-5 w-5 text-destructive" />
-                    ) : (
-                        <Mic className="h-5 w-5" />
-                    )}
-                </Button>
+                {isConnected && (
+                    <Button onClick={toggleSelfMute} variant="secondary" size="icon" className="rounded-full h-11 w-11">
+                        {isConnecting ? (
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : self?.isMuted ? (
+                            <MicOff className="h-5 w-5 text-destructive" />
+                        ) : (
+                            <Mic className="h-5 w-5" />
+                        )}
+                    </Button>
+                )}
                 <Button onClick={toggleSpeakerMute} variant="secondary" size="icon" className="rounded-full h-11 w-11">
                     {isSpeakerMuted ? <VolumeX className="h-5 w-5"/> : <Volume2 className="h-5 w-5" />}
                 </Button>
