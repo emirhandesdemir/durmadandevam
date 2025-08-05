@@ -13,7 +13,8 @@ import {
     Timestamp,
     deleteDoc,
     setDoc,
-    arrayUnion
+    arrayUnion,
+    getDocs
 } from 'firebase/firestore';
 import type { Room, VoiceParticipant, PlaylistTrack } from '../types';
 import { addSystemMessage } from './roomActions';
@@ -64,7 +65,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo, options?: { 
             const voiceCount = roomData.voiceParticipantsCount || 0;
             if (voiceCount >= roomData.maxParticipants) throw new Error("Sesli sohbet dolu.");
             
-            const participantData: Omit<VoiceParticipant, 'isSpeaker'> = {
+            const participantData: Omit<VoiceParticipant, 'isSpeaking'> = {
                 uid: user.uid,
                 username: userData.username || 'Anonim',
                 photoURL: userData.photoURL || null,
