@@ -178,6 +178,13 @@ export interface UserProfile {
         latitude: number;
         longitude: number;
     }
+    sessions?: {
+        [key: string]: {
+            lastSeen: Timestamp;
+            ipAddress?: string;
+            userAgent?: string;
+        }
+    }
 }
 
 export interface ProfileViewer {

@@ -7,10 +7,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, ChevronLeft, KeyRound, MailWarning, MailCheck, ShieldCheck } from "lucide-react";
 import { useState, useCallback } from "react";
 import Link from 'next/link';
-import { updateUserProfile, sendVerificationEmail as sendVerificationEmailAction, changeUserEmail } from "@/lib/actions/userActions";
+import { updateUserProfile } from "@/lib/actions/userActions";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { sendEmailVerification, updateEmail, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
+import { sendEmailVerification, updateEmail, reauthenticateWithCredential, EmailAuthProvider, verifyBeforeUpdateEmail } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
@@ -53,13 +53,14 @@ export default function SecuritySettingsPage() {
         }
         setIsChangingEmail(true);
         try {
-            // Re-authenticate user first
+            // Re-authenticate user first for security
             const credential = EmailAuthProvider.credential(user.email!, password);
             await reauthenticateWithCredential(user, credential);
             
-            // If re-authentication is successful, proceed to update email
+            // If re-auth is successful, send verification to the new email
             await verifyBeforeUpdateEmail(user, newEmail);
 
+            // Also update the email in our Firestore database
             await updateUserProfile({ userId: user.uid, email: newEmail });
             await refreshUserData();
             
@@ -72,16 +73,19 @@ export default function SecuritySettingsPage() {
             setPassword('');
         } catch (e: any) {
             let message = "E-posta güncellenirken bir hata oluştu.";
-            if (e.code === 'auth/invalid-credential') {
+            if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password') {
                 message = "Mevcut şifreniz yanlış.";
             } else if (e.code === 'auth/email-already-in-use') {
                  message = "Bu e-posta adresi zaten kullanımda.";
+            } else if (e.code === 'auth/too-many-requests') {
+                message = "Çok fazla deneme yapıldı. Lütfen daha sonra tekrar deneyin.";
             }
             toast({ variant: 'destructive', title: "Hata", description: message });
         } finally {
             setIsChangingEmail(false);
         }
     };
+
 
     if (loading || !userData) {
         return <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;

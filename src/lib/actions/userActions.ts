@@ -57,78 +57,6 @@ export async function sendVerificationEmail(userId: string) {
     return { success: true };
 }
 
-export async function changeUserEmail(userId: string, isVerified: boolean, newEmail: string) {
-    if (!userId || !newEmail) {
-        throw new Error("Kullanıcı ID ve yeni e-posta adresi gereklidir.");
-    }
-    const auth = getAuth();
-    
-    try {
-        if (isVerified) {
-            // If the current email is verified, send a verification link to the *new* email.
-            // Firebase Admin SDK doesn't support this directly. This must be handled on the client.
-            // This action will now just trigger the client to do it.
-            return { success: true, needsClientAction: true };
-
-        } else {
-            // If the current email is not verified, we can change it directly without verification.
-            await auth.updateUser(userId, { email: newEmail });
-            await updateDoc(doc(db, 'users', userId), { email: newEmail });
-            return { success: true, needsClientAction: false };
-        }
-    } catch (error: any) {
-        console.error("E-posta değiştirilirken hata oluştu:", error);
-        if (error.code === 'auth/email-already-exists') {
-            return { success: false, error: "Bu e-posta adresi zaten başka bir hesap tarafından kullanılıyor." };
-        }
-        return { success: false, error: "E-posta güncellenirken bir hata oluştu." };
-    }
-}
-
-export async function changeUniqueTag(userId: string, newTag: number) {
-    if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
-    if (!newTag || typeof newTag !== 'number' || newTag < 1000) {
-        throw new Error("Geçersiz ID formatı.");
-    }
-
-    const userRef = doc(db, 'users', userId);
-    const usersRef = collection(db, 'users');
-    const cost = 1000;
-
-    // Check for uniqueness
-    const q = query(usersRef, where('uniqueTag', '==', newTag));
-    const snapshot = await getDocs(q);
-    if (!snapshot.empty) {
-        throw new Error("Bu ID zaten başka bir kullanıcı tarafından alınmış.");
-    }
-
-    return await runTransaction(db, async (transaction) => {
-        const userDoc = await transaction.get(userRef);
-        if (!userDoc.exists()) {
-            throw new Error("Kullanıcı bulunamadı.");
-        }
-
-        const userData = userDoc.data();
-        if ((userData.diamonds || 0) < cost) {
-            throw new Error(`ID değiştirmek için ${cost} elmasa ihtiyacınız var.`);
-        }
-        
-        transaction.update(userRef, { 
-            diamonds: increment(-cost),
-            uniqueTag: newTag
-        });
-
-        await logTransaction(transaction, userId, {
-            type: 'user_perk', // A new transaction type
-            amount: -cost,
-            description: `Kullanıcı ID'si değiştirildi: @${newTag}`
-        });
-
-        return { success: true };
-    });
-}
-
-
 export async function updateUserProfile(updates: {
     userId: string;
     isNewUser?: boolean;
@@ -602,4 +530,11 @@ export async function unblockUser(blockerId: string, targetId: string) {
     } catch (error: any) {
         return { success: false, error: "Engelleme kaldırılamadı: " + error.message };
     }
+}
+
+export async function changeUserPassword(userId: string, currentPasswordPlainText: string, newPasswordPlainText: string) {
+    // This function requires client-side reauthentication and cannot be safely performed with just the Admin SDK.
+    // The client should reauthenticate and then call `updatePassword`.
+    // We will throw an error here to indicate this action should be handled on the client.
+     throw new Error("Password change must be initiated from the client with reauthentication.");
 }

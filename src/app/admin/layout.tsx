@@ -44,7 +44,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
   // If all checks pass, render the admin layout.
   return (
-    <div className="flex h-screen bg-muted/40">
+    <div className="flex h-screen bg-muted/40 overflow-hidden">
       <Sidebar isSidebarOpen={isSidebarOpen} setSidebarOpen={setSidebarOpen} />
       
       <div className="flex flex-1 flex-col overflow-hidden">
