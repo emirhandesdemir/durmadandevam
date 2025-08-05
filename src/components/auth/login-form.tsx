@@ -30,6 +30,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff, HelpCircle } from "lucide-react";
 import { Separator } from "../ui/separator";
+import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Geçersiz e-posta adresi." }),
@@ -38,6 +39,7 @@ const formSchema = z.object({
 
 export default function LoginForm() {
     const { toast } = useToast();
+    const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
     const [isResetting, setIsResetting] = useState(false); 
     const [showPassword, setShowPassword] = useState(false);
@@ -71,7 +73,7 @@ export default function LoginForm() {
         } catch (error: any) {
             console.error("Giriş hatası", error);
             let errorMessage = "Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.";
-            if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+            if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
                 errorMessage = "E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edip tekrar deneyin.";
             } else if (error.code === 'auth/too-many-requests') {
                 errorMessage = "Çok fazla hatalı deneme yapıldı. Lütfen daha sonra tekrar deneyin.";
@@ -104,7 +106,9 @@ export default function LoginForm() {
             await sendPasswordResetEmail(auth, email);
             toast({
                 title: "E-posta Gönderildi",
-                description: "Şifrenizi sıfırlamak için e-posta kutunuzu kontrol edin."
+                description: "Şifre sıfırlama talimatları için e-postanızı kontrol edin. Gelen kutusunda bulamazsanız spam klasörünü kontrol etmeyi unutmayın.",
+                duration: 10000,
+                action: (<Button onClick={() => router.push('/reset-password')}>Şifremi Sıfırla</Button>)
             });
         } catch (error: any) {
             console.error("Şifre sıfırlama hatası", error);

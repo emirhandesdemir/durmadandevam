@@ -98,7 +98,6 @@ export default function ProfilePageClient() {
                     <SettingsHeader title="Gizlilik ve Güvenlik" />
                     <SettingsLink href="/profile/privacy" icon={Lock} title="Hesap Gizliliği" value={userData.privateProfile ? 'Gizli' : 'Herkese Açık'}/>
                     <SettingsLink href="/profile/security" icon={KeyRound} title="E-posta & Şifre" />
-                    <SettingsLink href="/profile/sessions" icon={Server} title="Oturum Yönetimi" />
                 </div>
 
                  <div className="border-b">

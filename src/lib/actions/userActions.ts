@@ -14,6 +14,38 @@ import { logTransaction } from './transactionActions';
 import { sendEmailVerification, verifyPasswordResetCode, confirmPasswordReset, updateEmail, sendEmailVerification as sendClientEmailVerification, verifyBeforeUpdateEmail } from 'firebase/auth';
 
 
+export async function resetPasswordWithCode(code: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+    if (!code || !newPassword) {
+        return { success: false, error: 'Kod ve yeni şifre gereklidir.' };
+    }
+    try {
+        const auth = getAuth();
+        // Verify the code first to get the user's email. It also checks if the code is valid.
+        const email = await auth.verifyPasswordResetCode(code);
+        
+        // If the code is valid, proceed to reset the password.
+        await auth.confirmPasswordReset(code, newPassword);
+
+        return { success: true };
+    } catch (error: any) {
+        console.error("Şifre sıfırlama hatası (sunucu):", error);
+        if (error.code === 'auth/expired-action-code') {
+            return { success: false, error: 'Doğrulama kodunun süresi dolmuş. Lütfen yeni bir tane isteyin.' };
+        }
+        if (error.code === 'auth/invalid-action-code') {
+            return { success: false, error: 'Doğrulama kodu geçersiz. Lütfen doğru girdiğinizden emin olun.' };
+        }
+        if (error.code === 'auth/user-disabled') {
+            return { success: false, error: 'Bu kullanıcı hesabı askıya alınmıştır.' };
+        }
+         if (error.code === 'auth/user-not-found') {
+            return { success: false, error: 'Bu kodla ilişkili kullanıcı bulunamadı.' };
+        }
+        return { success: false, error: 'Şifre sıfırlanırken bilinmeyen bir hata oluştu.' };
+    }
+}
+
+
 export async function assignMissingUniqueTag(userId: string) {
     if (!userId) throw new Error("User ID is required.");
 
@@ -555,6 +587,17 @@ export async function revokeAllSessions(userId: string) {
     try {
         const auth = getAuth();
         await auth.revokeRefreshTokens(userId);
+        // Also update the session data in Firestore for immediate UI feedback if needed
+        const userRef = doc(db, 'users', userId);
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists() && userDoc.data().sessions?.current) {
+            const currentSession = userDoc.data().sessions.current;
+            await updateDoc(userRef, {
+                sessions: {
+                    current: currentSession
+                }
+            });
+        }
         return { success: true };
     } catch (error: any) {
         console.error("Oturumlar sonlandırılırken hata:", error);

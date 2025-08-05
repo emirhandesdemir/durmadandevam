@@ -47,13 +47,13 @@ export default function SecuritySettingsPage() {
     };
     
     const handleChangeEmail = async () => {
-        if (!user || !newEmail.trim() || !password.trim()) {
+        if (!user || !user.email || !newEmail.trim() || !password.trim()) {
             toast({ variant: 'destructive', description: "Yeni e-posta ve şifre boş olamaz."});
             return;
         }
         setIsChangingEmail(true);
         try {
-            const credential = EmailAuthProvider.credential(user.email!, password);
+            const credential = EmailAuthProvider.credential(user.email, password);
             await reauthenticateWithCredential(user, credential);
             
             await verifyBeforeUpdateEmail(user, newEmail);
