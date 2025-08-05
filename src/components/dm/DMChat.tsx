@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, query, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, Timestamp, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { UserProfile, DirectMessage } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -39,6 +39,7 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [isUnblocking, setIsUnblocking] = useState(false);
+  const [isPartnerTyping, setIsPartnerTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -47,7 +48,7 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
     const messagesRef = collection(db, 'directMessages', chatId, 'messages');
     const q = query(messagesRef, orderBy('createdAt', 'asc'));
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribeMessages = onSnapshot(q, (snapshot) => {
       const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DirectMessage));
       setMessages(msgs);
       setLoading(false);
@@ -55,9 +56,26 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
       console.error("Mesajlar alınırken hata:", error);
       setLoading(false);
     });
+    
+    // Partnerin yazma durumunu dinle
+    const metadataRef = doc(db, 'directMessagesMetadata', chatId);
+    const unsubscribeMetadata = onSnapshot(metadataRef, (doc) => {
+        if (doc.exists() && user) {
+            const data = doc.data();
+            const partnerTypingTimestamp = data.typingStatus?.[partner.uid] as Timestamp | undefined;
+            if (partnerTypingTimestamp && (Timestamp.now().seconds - partnerTypingTimestamp.seconds) < 5) {
+                setIsPartnerTyping(true);
+            } else {
+                setIsPartnerTyping(false);
+            }
+        }
+    });
 
-    return () => unsubscribe();
-  }, [chatId]);
+    return () => {
+        unsubscribeMessages();
+        unsubscribeMetadata();
+    }
+  }, [chatId, user, partner.uid]);
 
   useEffect(() => {
     // Yeni mesaj geldiğinde en alta kaydır
@@ -91,9 +109,23 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
   if (!user || !userData) return null;
 
   const isPartnerPremium = partner.premiumUntil && new Date((partner.premiumUntil as any)?.seconds * 1000 || partner.premiumUntil) > new Date();
+  
+  const getSubtext = () => {
+    if (isPartnerTyping) {
+        return <span className="text-primary font-semibold animate-pulse">yazıyor...</span>;
+    }
+    if (partner.isOnline) {
+        return <span className="text-green-500 font-semibold">Çevrimiçi</span>;
+    }
+    if (partner.lastSeen) {
+        return `Son görülme: ${formatDistanceToNow(new Date((partner.lastSeen as any)?.seconds * 1000 || partner.lastSeen), { addSuffix: true, locale: tr })}`;
+    }
+    return 'Çevrimdışı';
+  }
+
 
   return (
-    <div className="flex flex-col h-full bg-background pb-16 md:pb-0">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <header className="flex items-center gap-4 p-3 border-b shrink-0">
         <Button asChild variant="ghost" size="icon" className="md:hidden rounded-full">
@@ -107,7 +139,7 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
                         <AvatarFallback>{partner.profileEmoji || partner.username.charAt(0)}</AvatarFallback>
                     </Avatar>
                 </div>
-                {partner.isOnline && (
+                {partner.isOnline && !isPartnerTyping && (
                     <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" aria-label="Çevrimiçi" />
                 )}
             </div>
@@ -116,14 +148,7 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
                   {partner.username}
                   {isPartnerPremium && <Crown className="h-4 w-4 text-amber-500"/>}
                 </h2>
-                <p className="text-xs text-muted-foreground">
-                    {partner.isOnline 
-                        ? <span className="text-green-500 font-semibold">Çevrimiçi</span>
-                        : partner.lastSeen 
-                            ? `Son görülme: ${formatDistanceToNow(new Date((partner.lastSeen as any)?.seconds * 1000 || partner.lastSeen), { addSuffix: true, locale: tr })}`
-                            : 'Çevrimdışı'
-                    }
-                </p>
+                <p className="text-xs text-muted-foreground">{getSubtext()}</p>
             </div>
         </Link>
       </header>
