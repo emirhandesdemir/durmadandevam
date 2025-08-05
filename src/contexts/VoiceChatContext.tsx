@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { collection, onSnapshot, doc, serverTimestamp, query, where, deleteDoc, addDoc, getDoc, updateDoc, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Room, VoiceParticipant, PlaylistTrack } from '../types';
-import { joinVoiceChat, leaveVoice, toggleSelfMute as toggleMuteAction, toggleScreenShare as toggleScreenShareAction, toggleVideo as toggleVideoAction, updateLastActive } from '@/lib/actions/voiceActions';
+import { joinVoiceChat, leaveVoice as leaveVoiceAction, toggleSelfMute as toggleMuteAction, toggleScreenShare as toggleScreenShareAction, toggleVideo as toggleVideoAction, updateLastActive } from '@/lib/actions/voiceActions';
 import { leaveRoom, addTrackToPlaylist as addTrackAction, removeTrackFromPlaylist as removeTrackAction, controlPlayback as controlPlaybackAction } from '@/lib/actions/roomActions';
 import { useToast } from '@/hooks/use-toast';
 import { usePathname, useRouter } from 'next/navigation';
@@ -34,7 +34,8 @@ interface VoiceChatContextType {
     participants: VoiceParticipant[];
     self: VoiceParticipant | null;
     isConnecting: boolean;
-    isConnected: boolean;
+    isConnected: boolean; // Is actively speaking
+    isListening: boolean; // Is connected but not sending stream
     isMinimized: boolean;
     isSpeakerMuted: boolean;
     remoteAudioStreams: Record<string, MediaStream>;
@@ -49,7 +50,7 @@ interface VoiceChatContextType {
     startVideo: () => Promise<void>;
     stopVideo: () => Promise<void>;
     switchCamera: () => Promise<void>;
-    joinVoice: (options?: { muted: boolean }) => Promise<void>;
+    joinToSpeak: (options?: { muted: boolean }) => Promise<void>;
     leaveRoom: () => Promise<void>;
     leaveVoice: () => Promise<void>;
     toggleSelfMute: () => Promise<void>;
@@ -76,6 +77,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const pathname = usePathname();
 
     const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
+    const [isListening, setIsListening] = useState(false);
     const [isMinimized, setIsMinimized] = useState(false);
     const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
 
@@ -143,6 +145,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         videoSenderRef.current = {};
         iceCandidateQueue.current = {};
         setIsConnecting(false);
+        setIsListening(false);
     }, [localStream, localScreenStream]);
     
     const sendSignal = useCallback(async (to: string, type: string, data: any) => {
@@ -153,6 +156,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     // Speaking detection logic
     const setupSpeakingDetection = useCallback((stream: MediaStream, callback: (isSpeaking: boolean) => void) => {
+        if (typeof window.AudioContext === 'undefined') return () => {};
         if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
             audioContextRef.current = new AudioContext();
         }
@@ -217,7 +221,11 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                     console.error("Error adding local track:", e);
                 }
             });
+        } else {
+             pc.addTransceiver('audio', { direction: 'recvonly' });
+             pc.addTransceiver('video', { direction: 'recvonly' });
         }
+
         if (localScreenStream) {
             localScreenStream.getTracks().forEach(track => {
                 try {
@@ -231,7 +239,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         return pc;
     }, [localStream, localScreenStream, sendSignal, setupSpeakingDetection]);
 
-    const joinVoice = useCallback(async (options?: { muted: boolean }) => {
+    const joinToSpeak = useCallback(async (options?: { muted: boolean }) => {
         if (!user || !activeRoomId || isConnected || isConnecting) return;
         
         setIsConnecting(true);
@@ -251,10 +259,15 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 setParticipants(prev => prev.map(p => p.uid === user.uid ? { ...p, isSpeaking } : p));
             });
 
-            const result = await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: user.displayName || 'Biri', photoURL: user.photoURL }, { initialMuteState: options?.muted ?? false });
-            if (!result.success) {
-                throw new Error(result.error || 'Sesli sohbete katılamadınız.');
+            // If already listening, upgrade connections. Otherwise, join fresh.
+            if(isListening) {
+                for (const peerId in peerConnections.current) {
+                    const pc = peerConnections.current[peerId];
+                    stream.getTracks().forEach(track => pc.addTrack(track, stream));
+                }
             }
+            
+            await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: user.displayName || 'Biri', photoURL: user.photoURL }, { initialMuteState: options?.muted ?? false });
 
         } catch (error: any) {
             toast({ variant: "destructive", title: "Katılım Başarısız", description: error.message });
@@ -262,12 +275,12 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         } finally {
             setIsConnecting(false);
         }
-    }, [user, activeRoomId, isConnected, isConnecting, toast, _cleanupAndResetState, facingMode, setupSpeakingDetection]);
+    }, [user, activeRoomId, isConnected, isConnecting, toast, _cleanupAndResetState, facingMode, setupSpeakingDetection, isListening]);
     
     const leaveVoice = useCallback(async () => {
         if (!user || !activeRoomId) return;
         if(isConnected) {
-           await leaveVoice(activeRoomId, user.uid);
+           await leaveVoiceAction(activeRoomId, user.uid);
         }
         await _cleanupAndResetState();
     }, [user, activeRoomId, isConnected, _cleanupAndResetState]);
@@ -276,11 +289,13 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         if (!user || !activeRoomId) return;
         const currentRoomId = activeRoomId;
         setActiveRoomId(null);
-        await leaveVoice(currentRoomId, user.uid);
+        if(isConnected) {
+            await leaveVoiceAction(currentRoomId, user.uid);
+        }
         await leaveRoom(currentRoomId, user.uid, user.displayName || 'Biri');
         await _cleanupAndResetState();
         router.push('/rooms');
-    }, [user, activeRoomId, _cleanupAndResetState, router]);
+    }, [user, activeRoomId, isConnected, _cleanupAndResetState, router]);
 
     const stopScreenShare = useCallback(async () => {
         if (!user || !activeRoomId || !localScreenStream) return;
@@ -450,7 +465,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             setActiveRoom(null);
             setParticipants([]);
             setLivePlaylist([]);
-            if(isConnected) {
+            if(isConnected || isListening) {
                 _cleanupAndResetState();
             }
             return;
@@ -487,11 +502,11 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         });
 
         return () => { roomUnsub(); participantsUnsub(); playlistUnsub(); };
-    }, [user, activeRoomId, pathname, router, toast, isConnected, _cleanupAndResetState]);
+    }, [user, activeRoomId, pathname, router, toast, isConnected, _cleanupAndResetState, isListening]);
     
     // Manage peer connections based on participant list
     useEffect(() => {
-        if (!user || !isConnected) return;
+        if (!user || (!isListening && !isConnected)) return;
 
         const myId = user.uid;
         const currentPeerIds = new Set(Object.keys(peerConnections.current));
@@ -500,17 +515,16 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             if (p.uid === myId) return;
 
             if (currentPeerIds.has(p.uid)) {
-                // Connection exists, remove from set so we don't close it
                 currentPeerIds.delete(p.uid);
             } else {
-                // New participant, create a connection and an offer
                 const pc = createPeerConnection(p.uid);
                 peerConnections.current[p.uid] = pc;
-
-                pc.createOffer()
-                    .then(offer => pc.setLocalDescription(offer))
-                    .then(() => sendSignal(p.uid, 'offer', pc.localDescription!.toJSON()))
-                    .catch(e => console.error(`Error creating offer for ${p.uid}:`, e));
+                if(isConnected) { // If I'm speaking, I initiate the offer
+                    pc.createOffer()
+                        .then(offer => pc.setLocalDescription(offer))
+                        .then(() => sendSignal(p.uid, 'offer', pc.localDescription!.toJSON()))
+                        .catch(e => console.error(`Error creating offer for ${p.uid}:`, e));
+                }
             }
         });
 
@@ -518,23 +532,15 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         currentPeerIds.forEach(peerId => {
             peerConnections.current[peerId]?.close();
             delete peerConnections.current[peerId];
-            setRemoteAudioStreams(prev => {
-                const newState = { ...prev };
-                delete newState[peerId];
-                return newState;
-            });
-            setRemoteVideoStreams(prev => {
-                const newState = { ...prev };
-                delete newState[peerId];
-                return newState;
-            });
+            setRemoteAudioStreams(prev => { const newState = { ...prev }; delete newState[peerId]; return newState; });
+            setRemoteVideoStreams(prev => { const newState = { ...prev }; delete newState[peerId]; return newState; });
         });
 
-    }, [participants, user, isConnected, createPeerConnection, sendSignal]);
+    }, [participants, user, isConnected, createPeerConnection, sendSignal, isListening]);
 
     // Signal listener effect
     useEffect(() => {
-        if (!isConnected || !user || !activeRoomId) return;
+        if (!user || !activeRoomId) return;
 
         const q = query(collection(db, `rooms/${activeRoomId}/signals`), where('to', '==', user.uid), orderBy('createdAt', 'asc'));
         const unsubscribe = onSnapshot(q, async (snapshot) => {
@@ -544,17 +550,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                     const from = signal.from;
                     let pc = peerConnections.current[from];
 
-                    if (signal.type === 'offer') {
-                        if (pc) {
-                            console.warn("Existing PC found for offer, closing and recreating.");
-                            pc.close();
-                        }
-                        pc = createPeerConnection(from);
-                        peerConnections.current[from] = pc;
-                    }
-
                     if (!pc) {
-                        console.error(`No peer connection for signal from ${from}, creating one now.`);
                         pc = createPeerConnection(from);
                         peerConnections.current[from] = pc;
                     }
@@ -579,7 +575,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                            if (pc.remoteDescription) {
                                 await pc.addIceCandidate(new RTCIceCandidate(signal.data));
                            } else {
-                               // Queue the candidate if remote description isn't set yet
                                if (!iceCandidateQueue.current[from]) {
                                    iceCandidateQueue.current[from] = [];
                                }
@@ -595,11 +590,19 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         });
         
         return () => unsubscribe();
-    }, [isConnected, user, activeRoomId, sendSignal, createPeerConnection]);
+    }, [user, activeRoomId, sendSignal, createPeerConnection]);
+
+    // Effect to automatically join as a listener when entering a room
+    useEffect(() => {
+        if (activeRoomId && user && !isListening && !isConnected) {
+            setIsListening(true);
+        }
+    }, [activeRoomId, user, isListening, isConnected]);
+
 
     const value = {
-        activeRoom, participants, self, isConnecting, isConnected, isMinimized, isSpeakerMuted, remoteAudioStreams, remoteScreenStreams, remoteVideoStreams, localStream, isSharingScreen, isSharingVideo,
-        setActiveRoomId, joinVoice, leaveRoom: handleLeaveRoom, leaveVoice, toggleSelfMute, toggleSpeakerMute, minimizeRoom, expandRoom, startScreenShare, stopScreenShare, startVideo, stopVideo, switchCamera,
+        activeRoom, participants, self, isConnecting, isConnected, isListening, isMinimized, isSpeakerMuted, remoteAudioStreams, remoteScreenStreams, remoteVideoStreams, localStream, isSharingScreen, isSharingVideo,
+        setActiveRoomId, joinToSpeak, leaveRoom: handleLeaveRoom, leaveVoice, toggleSelfMute, toggleSpeakerMute, minimizeRoom, expandRoom, startScreenShare, stopScreenShare, startVideo, stopVideo, switchCamera,
         livePlaylist, currentTrack, isCurrentUserDj, isDjActive,
         addTrackToPlaylist, removeTrackFromPlaylist, togglePlayback, skipTrack
     };

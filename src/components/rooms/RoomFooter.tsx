@@ -25,8 +25,9 @@ interface RoomFooterProps {
 export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: RoomFooterProps) {
     const { 
         isConnected, 
-        isConnecting, 
-        joinVoice,
+        isConnecting,
+        isListening,
+        joinToSpeak, 
         leaveVoice,
         self, 
         toggleSelfMute,
@@ -99,9 +100,9 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
                                 {canJoinToSpeak && (
                                     <>
                                         {!isConnected && (
-                                            <Button onClick={() => joinVoice()} disabled={isConnecting} className="rounded-full font-semibold px-4 bg-gradient-to-r from-red-500 to-blue-600 text-white shadow-lg hover:scale-105 transition-transform shrink-0">
+                                            <Button onClick={() => joinToSpeak()} disabled={isConnecting} className="rounded-full font-semibold px-4 bg-gradient-to-r from-red-500 to-blue-600 text-white shadow-lg hover:scale-105 transition-transform shrink-0">
                                                 {isConnecting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Mic className="mr-2 h-5 w-5" />}
-                                                Sese Katıl
+                                                Konuşmak İçin Katıl
                                             </Button>
                                         )}
 
