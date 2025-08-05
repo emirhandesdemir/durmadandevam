@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Room } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { sendRoomMessage } from '@/lib/actions/roomActions';
+import { cn } from '@/lib/utils';
 
 
 interface ChatMessageInputProps {
@@ -22,6 +23,7 @@ export default function ChatMessageInput({ room }: ChatMessageInputProps) {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const isParticipant = room.participants.some(p => p.uid === currentUser?.uid);
+  const isEventRoom = room.type === 'event';
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,13 +60,13 @@ export default function ChatMessageInput({ room }: ChatMessageInputProps) {
   
   return (
     <div className='w-full'>
-        <form onSubmit={handleSendMessage} className="flex w-full items-center space-x-2 bg-muted rounded-full p-1.5">
+        <form onSubmit={handleSendMessage} className={cn("flex w-full items-center space-x-2  p-1.5", isEventRoom ? "bg-black/40 rounded-full" : "bg-muted rounded-full")}>
             <Input
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Bir mesaj yaz... (+temizle, +duyuru)"
+                placeholder="Bir mesaj yaz..."
                 autoComplete="off"
-                className="flex-1 bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground"
+                className={cn("flex-1 bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground", isEventRoom && "placeholder:text-white/70 text-white")}
                 disabled={isSending}
             />
             <Button type="submit" size="icon" disabled={!message.trim() || isSending} className="rounded-full flex-shrink-0 h-9 w-9 bg-primary shadow-lg transition-transform hover:scale-110">

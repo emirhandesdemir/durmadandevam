@@ -34,12 +34,14 @@ export default function PersistentVoiceBar() {
   return (
     <AnimatePresence>
       <motion.div
+        drag
+        dragMomentum={false}
         initial={{ y: 100 }}
         animate={{ y: 0 }}
         exit={{ y: 100 }}
         transition={{ type: 'spring', stiffness: 400, damping: 40 }}
         // Position the bar above the main bottom nav
-        className="fixed bottom-20 sm:bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-sm z-40"
+        className="fixed bottom-20 sm:bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-sm z-40 cursor-grab active:cursor-grabbing"
       >
         <div className="flex items-center justify-between gap-2 p-2 rounded-2xl bg-card text-card-foreground shadow-2xl border border-primary/20 backdrop-blur-lg">
            <div className="flex items-center gap-2 overflow-hidden flex-1">

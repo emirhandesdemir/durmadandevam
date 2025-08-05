@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import MusicPlayerDialog from '../voice/MusicPlayerDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import GiftPanel from '../gifts/GiftPanel';
+import { cn } from '@/lib/utils';
 
 
 interface RoomFooterProps {
@@ -38,12 +39,15 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
         stopVideo,
         switchCamera,
     } = useVoiceChat();
-    const { user } = useAuth();
+    const { user, userData } = useAuth();
     const [showVideoConfirm, setShowVideoConfirm] = useState(false);
     const [isMusicPlayerOpen, setIsMusicPlayerOpen] = useState(false);
     const [isGiftPanelOpen, setIsGiftPanelOpen] = useState(false);
     
     const isHost = user?.uid === room?.createdBy.uid;
+    const isAdmin = userData?.role === 'admin';
+    const isEventRoom = room.type === 'event';
+
 
     const handleScreenShare = () => {
         if (isSharingScreen) {
@@ -68,11 +72,12 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
     const handleStartMindWar = () => {
         onGameLobbyOpen();
     }
-
+    
+    const canJoinToSpeak = !isEventRoom || (isEventRoom && isAdmin);
 
     return (
         <>
-            <footer className="sticky bottom-0 left-0 right-0 z-10 bg-background/80 backdrop-blur-sm border-t p-2">
+            <footer className={cn("sticky bottom-0 left-0 right-0 z-10 p-2 border-t", isEventRoom ? 'bg-black/20' : 'bg-background/80 backdrop-blur-sm')}>
                 <div className="flex w-full items-center space-x-2">
                     <Button variant="ghost" size="icon" className="rounded-full flex-shrink-0" onClick={() => setIsGiftPanelOpen(true)}>
                         <Gift className="h-6 w-6 text-primary" />
@@ -80,7 +85,7 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
 
                     <ChatMessageInput room={room} />
                     
-                    {isListening && !isConnected && (
+                    {isListening && !isConnected && canJoinToSpeak && (
                         <Button onClick={() => joinToSpeak()} disabled={isConnecting} className="rounded-full font-semibold px-4 bg-gradient-to-r from-red-500 to-blue-600 text-white shadow-lg hover:scale-105 transition-transform shrink-0">
                             {isConnecting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Mic className="mr-2 h-5 w-5" />}
                             Konuşmak İçin Katıl

@@ -31,6 +31,7 @@ import ActiveGameArea from '@/components/game/ActiveGameArea';
 import MindWarLobby from '@/components/games/mindwar/MindWarLobby';
 import MindWarMainUI from '@/components/games/mindwar/MindWarMainUI';
 import EntryEffectManager from '@/components/rooms/EntryEffectManager';
+import EventWelcomeDialog from '@/components/rooms/EventWelcomeDialog';
 
 
 export default function RoomPage() {
@@ -51,6 +52,7 @@ export default function RoomPage() {
     const [isSpeakerLayoutCollapsed, setIsSpeakerLayoutCollapsed] = useState(false);
     const [isGiveawayDialogOpen, setIsGiveawayDialogOpen] = useState(false);
     const [isGameLobbyOpen, setIsGameLobbyOpen] = useState(false);
+    const [showEventWelcome, setShowEventWelcome] = useState(false);
     const chatScrollRef = useRef<HTMLDivElement>(null);
     
     // --- Game State ---
@@ -63,8 +65,16 @@ export default function RoomPage() {
 
     useEffect(() => {
         if (roomId) setActiveRoomId(roomId);
+        
+        // Show welcome dialog for event rooms on first load
+        const welcomeKey = `seen_welcome_${roomId}`;
+        if (room?.type === 'event' && !sessionStorage.getItem(welcomeKey)) {
+            setShowEventWelcome(true);
+            sessionStorage.setItem(welcomeKey, 'true');
+        }
+
         return () => setActiveRoomId(null);
-    }, [roomId, setActiveRoomId]);
+    }, [roomId, setActiveRoomId, room?.type]);
 
     // Firestore Listeners (Room, Messages, Games)
     useEffect(() => {
@@ -228,6 +238,7 @@ export default function RoomPage() {
     return (
         <>
             <EntryEffectManager participants={participants} />
+            <EventWelcomeDialog isOpen={showEventWelcome} onOpenChange={setShowEventWelcome} room={room} />
             <div className={cn("flex flex-col h-full bg-background text-foreground", room.type === 'event' && 'event-room-bg')}>
                  <RoomHeader 
                     room={room} 

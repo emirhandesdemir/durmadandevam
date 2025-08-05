@@ -409,4 +409,7 @@
                 radial-gradient(circle at bottom right, hsl(var(--primary)), transparent 40%),
                 hsl(var(--background));
   }
+  .event-chat-bar {
+      @apply bg-black/40 border-t-white/20;
+  }
 }
