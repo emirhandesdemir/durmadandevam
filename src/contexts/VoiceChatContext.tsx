@@ -101,6 +101,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const lastActiveUpdateTimestamp = useRef<number>(0);
     const audioContextRef = useRef<AudioContext | null>(null);
     const speakingDetectionInterval = useRef<NodeJS.Timeout | null>(null);
+    const iceCandidateQueue = useRef<Record<string, RTCIceCandidateInit[]>>({});
+
 
     const self = useMemo(() => participants.find(p => p.uid === user?.uid), [participants, user?.uid]);
     const isConnected = !!self;
@@ -141,6 +143,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         setRemoteVideoStreams({});
         screenSenderRef.current = {};
         videoSenderRef.current = {};
+        iceCandidateQueue.current = {};
         setIsConnecting(false);
         setIsListening(false);
     }, [localStream, localScreenStream]);
@@ -256,24 +259,13 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 throw new Error(result.error || 'Sesli sohbete katılamadınız.');
             }
 
-            // Proactively create offers for existing participants
-            participants.forEach(otherUser => {
-                if (otherUser.uid === user.uid || peerConnections.current[otherUser.uid]) return;
-                const pc = createPeerConnection(otherUser.uid);
-                peerConnections.current[otherUser.uid] = pc;
-                pc.createOffer()
-                  .then(offer => pc.setLocalDescription(offer))
-                  .then(() => sendSignal(otherUser.uid, 'offer', pc.localDescription!.toJSON()))
-                  .catch(e => console.error("Proactive offer failed for", otherUser.uid, e));
-            });
-
         } catch (error: any) {
             toast({ variant: "destructive", title: "Katılım Başarısız", description: error.message });
             await _cleanupAndResetState();
         } finally {
             setIsConnecting(false);
         }
-    }, [user, activeRoomId, isConnected, isConnecting, toast, _cleanupAndResetState, facingMode, createPeerConnection, sendSignal, setupSpeakingDetection, participants]);
+    }, [user, activeRoomId, isConnected, isConnecting, toast, _cleanupAndResetState, facingMode, setupSpeakingDetection]);
     
     const leaveVoiceOnly = useCallback(async () => {
         if (!user || !activeRoomId) return;
@@ -505,19 +497,44 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (!user || !isConnected) return;
 
-        const currentPeerIds = Object.keys(peerConnections.current);
-        const participantIds = participants.map(p => p.uid);
-        
-        // Remove connections for users who have left
-        const leftParticipantIds = currentPeerIds.filter(id => !participantIds.includes(id) && id !== user.uid);
-        leftParticipantIds.forEach(id => {
-            peerConnections.current[id]?.close();
-            delete peerConnections.current[id];
-            setRemoteAudioStreams(p => { const s = {...p}; delete s[id]; return s; });
-            setRemoteVideoStreams(p => { const s = {...p}; delete s[id]; return s; });
+        const myId = user.uid;
+        const currentPeerIds = new Set(Object.keys(peerConnections.current));
+
+        participants.forEach(p => {
+            if (p.uid === myId) return;
+
+            if (currentPeerIds.has(p.uid)) {
+                // Connection exists, remove from set so we don't close it
+                currentPeerIds.delete(p.uid);
+            } else {
+                // New participant, create a connection and an offer
+                const pc = createPeerConnection(p.uid);
+                peerConnections.current[p.uid] = pc;
+
+                pc.createOffer()
+                    .then(offer => pc.setLocalDescription(offer))
+                    .then(() => sendSignal(p.uid, 'offer', pc.localDescription!.toJSON()))
+                    .catch(e => console.error(`Error creating offer for ${p.uid}:`, e));
+            }
         });
 
-    }, [participants, user, isConnected]);
+        // Close connections for participants who have left
+        currentPeerIds.forEach(peerId => {
+            peerConnections.current[peerId]?.close();
+            delete peerConnections.current[peerId];
+            setRemoteAudioStreams(prev => {
+                const newState = { ...prev };
+                delete newState[peerId];
+                return newState;
+            });
+            setRemoteVideoStreams(prev => {
+                const newState = { ...prev };
+                delete newState[peerId];
+                return newState;
+            });
+        });
+
+    }, [participants, user, isConnected, createPeerConnection, sendSignal]);
 
     // Signal listener effect
     useEffect(() => {
@@ -529,45 +546,52 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 if (change.type === 'added') {
                     const signal = change.doc.data();
                     const from = signal.from;
-
                     let pc = peerConnections.current[from];
 
-                    // If we get an offer, create a peer connection if it doesn't exist
-                    if (signal.type === 'offer' && !pc) {
-                         pc = createPeerConnection(from);
-                         peerConnections.current[from] = pc;
+                    if (signal.type === 'offer') {
+                        if (pc) {
+                            console.warn("Existing PC found for offer, closing and recreating.");
+                            pc.close();
+                        }
+                        pc = createPeerConnection(from);
+                        peerConnections.current[from] = pc;
                     }
 
+                    if (!pc) {
+                        console.error(`No peer connection for signal from ${from}, creating one now.`);
+                        pc = createPeerConnection(from);
+                        peerConnections.current[from] = pc;
+                    }
+                    
+                    try {
+                        if (signal.type === 'offer') {
+                            await pc.setRemoteDescription(new RTCSessionDescription(signal.data));
+                            const answer = await pc.createAnswer();
+                            await pc.setLocalDescription(answer);
+                            await sendSignal(from, 'answer', pc.localDescription!.toJSON());
 
-                    if (pc) {
-                        try {
-                            if (signal.type === 'offer') {
-                                if (pc.signalingState !== "stable") {
-                                    console.warn(`PC for ${from} not in stable state for offer, current state: ${pc.signalingState}, resetting...`);
-                                     // Create a fresh peer connection
-                                    pc.close();
-                                    pc = createPeerConnection(from);
-                                    peerConnections.current[from] = pc;
-                                }
-                                await pc.setRemoteDescription(new RTCSessionDescription(signal.data));
-                                const answer = await pc.createAnswer();
-                                await pc.setLocalDescription(answer);
-                                await sendSignal(from, 'answer', pc.localDescription!.toJSON());
-                                
-                            } else if (signal.type === 'answer') {
-                                if (pc.signalingState === 'have-local-offer') {
-                                     await pc.setRemoteDescription(new RTCSessionDescription(signal.data));
-                                } else {
-                                    console.warn(`Received answer from ${from} but not in have-local-offer state. State: ${pc.signalingState}`);
-                                }
-                            } else if (signal.type === 'ice-candidate') {
-                                if (pc.remoteDescription) {
-                                    await pc.addIceCandidate(new RTCIceCandidate(signal.data));
-                                }
+                            // Process any queued ICE candidates for this peer
+                            if (iceCandidateQueue.current[from]) {
+                                iceCandidateQueue.current[from].forEach(candidate => pc.addIceCandidate(new RTCIceCandidate(candidate)));
+                                delete iceCandidateQueue.current[from];
                             }
-                        } catch (error) {
-                             console.error(`Error handling signal type ${signal.type} from ${from}:`, error);
+                        } else if (signal.type === 'answer') {
+                           if (pc.signalingState === "have-local-offer") {
+                                await pc.setRemoteDescription(new RTCSessionDescription(signal.data));
+                           }
+                        } else if (signal.type === 'ice-candidate') {
+                           if (pc.remoteDescription) {
+                                await pc.addIceCandidate(new RTCIceCandidate(signal.data));
+                           } else {
+                               // Queue the candidate if remote description isn't set yet
+                               if (!iceCandidateQueue.current[from]) {
+                                   iceCandidateQueue.current[from] = [];
+                               }
+                               iceCandidateQueue.current[from].push(signal.data);
+                           }
                         }
+                    } catch (error) {
+                         console.error(`Error handling signal type ${signal.type} from ${from}:`, error);
                     }
                     await deleteDoc(change.doc.ref);
                 }
