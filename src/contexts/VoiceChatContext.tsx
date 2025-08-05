@@ -194,12 +194,13 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     const handleLeaveRoom = useCallback(async () => {
         if (!user || !activeRoomId) return;
-        if(isConnected) {
-            await leaveVoice(activeRoomId, user.uid);
-        }
+        const currentRoomId = activeRoomId;
+        setActiveRoomId(null);
+        await leaveVoice(currentRoomId, user.uid);
+        await leaveRoom(currentRoomId, user.uid, user.displayName || 'Biri');
         _cleanupAndResetState();
         router.push('/rooms');
-    }, [user, activeRoomId, isConnected, _cleanupAndResetState, router]);
+    }, [user, activeRoomId, _cleanupAndResetState, router]);
 
     const stopScreenShare = useCallback(async () => {
         if (!user || !activeRoomId || !localScreenStream) return;

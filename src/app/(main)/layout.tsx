@@ -144,7 +144,7 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
   const isHomePage = pathname === '/home';
   
   return (
-    <VoiceChatProvider>
+    <>
       <PremiumWelcomeManager />
       <VoiceAudioPlayer />
       <div className="relative flex h-screen w-full flex-col bg-background overflow-hidden">
@@ -196,11 +196,15 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
           )}
         </AnimatePresence>
       </div>
-       <PersistentVoiceBar />
-    </VoiceChatProvider>
+      <PersistentVoiceBar />
+    </>
   );
 }
 
 export default function MainAppLayout({ children }: { children: React.ReactNode }) {
-  return <MainAppLayoutContent>{children}</MainAppLayoutContent>;
+  return (
+      <VoiceChatProvider>
+         <MainAppLayoutContent>{children}</MainAppLayoutContent>
+      </VoiceChatProvider>
+  );
 }
