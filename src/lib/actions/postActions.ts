@@ -73,6 +73,7 @@ export async function createPost(postData: {
     commentsDisabled?: boolean;
     likesHidden?: boolean;
     backgroundStyle?: string;
+    videoThumbnailUrl?: string | null;
 }) {
     const newPostRef = doc(collection(db, 'posts'));
     const userRef = doc(db, 'users', postData.uid);
@@ -95,6 +96,7 @@ export async function createPost(postData: {
             text: postData.text,
             imageUrl: postData.imageUrl,
             videoUrl: postData.videoUrl,
+            videoThumbnailUrl: postData.videoThumbnailUrl || null,
             backgroundStyle: postData.backgroundStyle || '',
             editedWithAI: false,
             language: postData.language,
@@ -163,8 +165,8 @@ export async function deletePost(postId: string) {
             }
             if (postData.videoUrl) {
                  try {
-                    const videoStorageRef = storageRef(storage, postData.videoUrl);
-                    await deleteObject(videoStorageRef);
+                    const videoRef = storageRef(storage, postData.videoUrl);
+                    await deleteObject(videoRef);
                 } catch (error) {
                     if ((error as any).code !== 'storage/object-not-found') {
                         console.error("Storage videosu silinirken hata oluştu:", error);

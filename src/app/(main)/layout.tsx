@@ -140,7 +140,7 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/') || pathname.startsWith('/matchmaking/') || pathname.startsWith('/live');
+  const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/') || pathname.startsWith('/matchmaking/') || pathname.startsWith('/live') || pathname.startsWith('/explore');
   const isHomePage = pathname === '/home';
   
   return (

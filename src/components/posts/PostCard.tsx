@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Post } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck, Sparkles, Repeat, EyeOff, MessageCircleOff, HeartOff, Bookmark, ShieldAlert, Clapperboard } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck, Sparkles, Repeat, EyeOff, MessageCircleOff, HeartOff, Bookmark, ShieldAlert, Clapperboard, Play } from "lucide-react";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -99,6 +99,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     const [postToRetweet, setPostToRetweet] = useState<Post | null>(null);
     const [isReportOpen, setIsReportOpen] = useState(false);
     const [showLikeAnimation, setShowLikeAnimation] = useState(false);
+    const [isPlaying, setIsPlaying] = useState(false);
 
     const [editingCommentsDisabled, setEditingCommentsDisabled] = useState(post.commentsDisabled ?? false);
     const [editingLikesHidden, setEditingLikesHidden] = useState(post.likesHidden ?? false);
@@ -120,6 +121,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     const createdAtDate = safeParseTimestamp(post.createdAt);
     const timeAgo = createdAtDate.getTime() !== 0 ? formatDistanceToNow(createdAtDate, { addSuffix: true, locale: tr }) : "az önce";
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
 
     // Use current user data if it's their own post for real-time updates
     const postUserPhoto = isOwner ? currentUserData?.photoURL : post.userPhotoURL;
@@ -235,6 +237,18 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     
     const handleHide = () => onHide?.(post.id);
 
+    const togglePlay = () => {
+        if (videoRef.current) {
+            if (videoRef.current.paused) {
+                videoRef.current.play();
+                setIsPlaying(true);
+            } else {
+                videoRef.current.pause();
+                setIsPlaying(false);
+            }
+        }
+    };
+
     return (
         <>
             <article className={cn("relative flex flex-col bg-background", !isStandalone && "border-b")}>
@@ -291,9 +305,16 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                         />
                     </div>
                 )}
-                {post.videoUrl && !isEditing && (
-                    <div className="relative w-full bg-black">
-                         <video src={post.videoUrl} controls className="w-full max-h-[80vh] object-contain"/>
+                 {post.videoUrl && !isEditing && (
+                    <div className="relative w-full bg-black cursor-pointer" onClick={togglePlay}>
+                        <video ref={videoRef} src={post.videoUrl} poster={post.videoThumbnailUrl} onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} className="w-full max-h-[80vh] object-contain" playsInline loop/>
+                        {!isPlaying && (
+                             <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
+                                <div className="p-4 bg-black/50 rounded-full">
+                                    <Play className="h-8 w-8 text-white fill-white"/>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
                  {(post.backgroundStyle && !post.imageUrl && !post.videoUrl) && (

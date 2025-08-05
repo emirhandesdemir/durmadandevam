@@ -215,6 +215,7 @@ export interface Notification {
     recipientId: string;
     senderId: string;
     senderUsername: string;
+    senderUniqueTag?: number;
     photoURL: string | null;
     profileEmoji?: string | null;
     senderAvatarFrame?: string;
@@ -231,12 +232,14 @@ export interface Notification {
     read: boolean;
     callId?: string;
     callType?: 'video' | 'audio';
+    link?: string;
 }
 
 export interface Post {
     id: string;
     uid: string;
     username: string;
+    userUniqueTag?: number;
     userPhotoURL: string | null;
     userAvatarFrame?: string;
     userRole?: 'admin' | 'user';
@@ -245,6 +248,7 @@ export interface Post {
     text: string;
     imageUrl?: string | null;
     videoUrl?: string | null;
+    videoThumbnailUrl?: string | null;
     backgroundStyle?: string;
     createdAt: Timestamp | { seconds: number; nanoseconds: number } | string;
     likes: string[];
