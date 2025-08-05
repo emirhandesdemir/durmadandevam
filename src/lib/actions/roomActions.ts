@@ -2,12 +2,12 @@
 'use server';
 
 import { db, storage } from '@/lib/firebase';
-import { deleteRoomWithSubcollections, deleteCollection } from '@/lib/firestoreUtils';
+import { deleteRoomWithSubcollections, deleteCollection } from '../firestoreUtils';
 import { doc, getDoc, collection, addDoc, serverTimestamp, Timestamp, writeBatch, arrayUnion, arrayRemove, updateDoc, runTransaction, increment, setDoc, query, where, getDocs, orderBy, deleteField, limit } from 'firebase/firestore';
 import type { FirestoreTransaction } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { createNotification } from './notificationActions';
-import type { Room, Message, PlaylistTrack, UserProfile } from '../types';
+import type { Room, Message, PlaylistTrack, UserProfile, Announcement } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { revalidatePath } from 'next/cache';
 import { generateRoomResponse } from '@/ai/flows/roomChatFlow';
@@ -227,6 +227,21 @@ export async function createEventRoom(
     };
 
     await setDoc(newRoomRef, newRoom);
+
+    // Create a global announcement
+    const announcementsRef = collection(db, 'announcements');
+    const announcementData: Omit<Announcement, 'id'> = {
+        roomId: newRoomRef.id,
+        roomName: newRoom.name,
+        hostUsername: newRoom.createdBy.username,
+        message: 'Yeni bir etkinlik başladı! Harika ödüller için hemen katıl!',
+        rewardAmount: 50,
+        createdAt: serverTimestamp() as Timestamp,
+        expiresAt: Timestamp.fromMillis(Date.now() + 10 * 60 * 1000), // Announcement lasts for 10 minutes
+    };
+    await addDoc(announcementsRef, announcementData);
+
+
     return { success: true, roomId: newRoomRef.id };
 }
 
@@ -417,47 +432,65 @@ export async function joinRoom(roomId: string, userInfo: UserInfo) {
     const roomRef = doc(db, "rooms", roomId);
     const userRef = doc(db, 'users', userInfo.uid);
 
-    const roomSnap = await getDoc(roomRef);
-    if (!roomSnap.exists()) throw new Error("Oda bulunamadı.");
-    const roomData = roomSnap.data();
-    
-    const isExpired = roomData.expiresAt && (roomData.expiresAt as Timestamp).toDate() < new Date() && roomData.type !== 'event';
-    if(isExpired) throw new Error("Bu odanın süresi dolmuş.");
+    return await runTransaction(db, async (transaction) => {
+        const [roomSnap, userSnap] = await Promise.all([
+            transaction.get(roomRef),
+            transaction.get(userRef)
+        ]);
+        
+        if (!roomSnap.exists()) throw new Error("Oda bulunamadı.");
+        if (!userSnap.exists()) throw new Error("Katılan kullanıcı verisi bulunamadı.");
+        
+        const roomData = roomSnap.data();
+        const userData = userSnap.data();
+        
+        const isExpired = roomData.expiresAt && (roomData.expiresAt as Timestamp).toDate() < new Date() && roomData.type !== 'event';
+        if(isExpired) throw new Error("Bu odanın süresi dolmuş.");
 
-    const isFull = (roomData.participants?.length || 0) >= roomData.maxParticipants;
-    if (isFull) throw new Error("Bu oda dolu.");
+        const isFull = (roomData.participants?.length || 0) >= roomData.maxParticipants;
+        if (isFull) throw new Error("Bu oda dolu.");
 
-    const isParticipant = roomData.participants?.some((p: any) => p.uid === userInfo.uid);
-    if (isParticipant) return { success: true, message: "Zaten katılımcı." };
+        const isParticipant = roomData.participants?.some((p: any) => p.uid === userInfo.uid);
 
-    const batch = writeBatch(db);
-    batch.update(roomRef, {
-        participants: arrayUnion({
-            uid: userInfo.uid,
-            username: userInfo.username || "Anonim",
-            photoURL: userInfo.photoURL || null
-        })
+        // Grant event reward if applicable
+        if (roomData.type === 'event' && !userData.claimedEventRewards?.includes(roomId)) {
+            transaction.update(userRef, { 
+                diamonds: increment(50),
+                claimedEventRewards: arrayUnion(roomId)
+            });
+            await logTransaction(transaction, userInfo.uid, {
+                type: 'event_reward',
+                amount: 50,
+                description: `${roomData.name} etkinliğine katılım ödülü`,
+                roomId: roomId,
+            });
+        }
+
+        if (isParticipant) return { success: true, message: "Zaten katılımcı." };
+
+        transaction.update(roomRef, {
+            participants: arrayUnion({
+                uid: userInfo.uid,
+                username: userInfo.username || "Anonim",
+                photoURL: userInfo.photoURL || null
+            })
+        });
+
+        let welcomeMessage = `👋 Hoş geldin, ${userInfo.username}!`;
+        
+        if(userData.giftLevel && userData.giftLevel > 0) {
+            welcomeMessage = `🔥 Seviye ${userData.giftLevel} Hediye Lideri ${userInfo.username} odaya katıldı! 🔥`;
+        }
+
+        const messagesRef = collection(db, "rooms", roomId, "messages");
+        transaction.set(doc(messagesRef), {
+            type: 'system',
+            text: welcomeMessage,
+            createdAt: serverTimestamp()
+        });
+
+        return { success: true };
     });
-    
-    const userSnap = await getDoc(userRef);
-    if (!userSnap.exists()) throw new Error("Katılan kullanıcı verisi bulunamadı.");
-
-    const userData = userSnap.data();
-    let welcomeMessage = `👋 Hoş geldin, ${userInfo.username}!`;
-    
-    // Check giftLevel for special welcome message
-    if(userData.giftLevel && userData.giftLevel > 0) {
-        welcomeMessage = `🔥 Seviye ${userData.giftLevel} Hediye Lideri ${userInfo.username} odaya katıldı! 🔥`;
-    }
-
-    const messagesRef = collection(db, "rooms", roomId, "messages");
-    batch.set(doc(messagesRef), {
-        type: 'system',
-        text: welcomeMessage,
-        createdAt: serverTimestamp()
-    });
-    await batch.commit();
-    return { success: true };
 }
 
 export async function leaveRoom(roomId: string, userId: string, username: string) {

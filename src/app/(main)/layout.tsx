@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { VoiceChatProvider, useVoiceChat } from "@/contexts/VoiceChatContext";
 import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
 import PersistentVoiceBar from "@/components/voice/PersistentVoiceBar";
+import EventAnnouncementHandler from "@/components/common/EventAnnouncementHandler";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -146,6 +147,7 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <>
       <PremiumWelcomeManager />
+      <EventAnnouncementHandler />
       <VoiceAudioPlayer />
       <div className="relative flex h-screen w-full flex-col bg-background overflow-hidden">
         <PwaInstallBar />

@@ -1,9 +1,20 @@
 // src/lib/types.ts
 import { Timestamp } from "firebase/firestore";
 
+export interface Announcement {
+    id: string;
+    roomId: string;
+    roomName: string;
+    hostUsername: string;
+    message: string;
+    rewardAmount: number;
+    createdAt: Timestamp;
+    expiresAt: Timestamp;
+}
+
 export interface Transaction {
     id: string;
-    type: 'diamond_purchase' | 'gift_sent' | 'gift_received' | 'profile_value_conversion' | 'room_creation' | 'room_perk' | 'admin_grant' | 'ad_reward' | 'referral_bonus' | 'live_gift' | 'user_perk';
+    type: 'diamond_purchase' | 'gift_sent' | 'gift_received' | 'profile_value_conversion' | 'room_creation' | 'room_perk' | 'admin_grant' | 'ad_reward' | 'referral_bonus' | 'live_gift' | 'user_perk' | 'event_reward';
     amount: number;
     description: string;
     relatedUserId?: string | null;
@@ -192,6 +203,7 @@ export interface UserProfile {
         }
     };
     feedSettings?: FeedSettings;
+    claimedEventRewards?: string[];
 }
 
 export interface ProfileViewer {
