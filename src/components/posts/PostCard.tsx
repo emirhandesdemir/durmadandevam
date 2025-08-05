@@ -307,7 +307,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1">
                              <Button variant="ghost" size="icon" className="rounded-full group" onClick={handleLike} disabled={!currentUser}>
-                                <span className={cn("text-2xl transition-all duration-200 group-hover:scale-110", !optimisticLiked && "grayscale")}>❤️‍🔥</span>
+                                <span className={cn("text-2xl transition-all duration-200 group-hover:scale-110", !optimisticLiked && "grayscale")}>🔥</span>
                             </Button>
                             {!post.commentsDisabled && (<Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary" onClick={() => setShowComments(true)}><MessageCircle className="h-6 w-6" /></Button>)}
                             <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-green-500/10 hover:text-green-500" onClick={handleRetweet} disabled={!currentUser || isOwner}><Repeat className="h-6 w-6" /></Button>
