@@ -24,20 +24,22 @@ const serviceAccount = getServiceAccount();
 
 // This function ensures that the Firebase Admin app is initialized only once.
 function getFirebaseAdminApp(): App {
-  if (getApps().length > 0) {
-    return getApp();
+  const appName = "firebase-admin-app";
+  const existingApp = getApps().find(app => app.name === appName);
+  if (existingApp) {
+    return existingApp;
   }
   
   if (!serviceAccount) {
     // If we can't get a service account, we initialize without credentials.
     // This will allow the app to build, but server-side auth will fail at runtime
     // until the .env variable is set.
-    return initializeApp();
+    return initializeApp(undefined, appName);
   }
   
   return initializeApp({
     credential: credential.cert(serviceAccount),
-  });
+  }, appName);
 }
 
 function getAuth(): Auth {

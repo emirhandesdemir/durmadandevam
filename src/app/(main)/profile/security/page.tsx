@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, ChevronLeft, KeyRound, MailWarning, MailCheck, ShieldCheck, Server, LogOut } from "lucide-react";
 import { useState, useCallback } from "react";
 import Link from 'next/link';
-import { updateEmail, reauthenticateWithCredential, EmailAuthProvider, verifyBeforeUpdateEmail, sendPasswordResetEmail } from "firebase/auth";
+import { reauthenticateWithCredential, EmailAuthProvider, verifyBeforeUpdateEmail, sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -189,6 +189,22 @@ export default function SecuritySettingsPage() {
                         <Button onClick={handlePasswordReset} disabled={isResettingPassword}>
                             {isResettingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                             Şifre Sıfırlama E-postası Gönder
+                        </Button>
+                    </CardContent>
+                 </Card>
+                 
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Oturum Yönetimi</CardTitle>
+                         <CardDescription>
+                            Hesabınıza giriş yapılmış olan aktif oturumları yönetin.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button asChild>
+                            <Link href="/profile/sessions">
+                                <Server className="mr-2 h-4 w-4"/> Oturumları Görüntüle
+                            </Link>
                         </Button>
                     </CardContent>
                  </Card>

@@ -106,6 +106,8 @@ export async function sendVerificationEmail(userId: string) {
         if (!userRecord.email) {
             return { success: false, error: 'Kullanıcının kayıtlı bir e-posta adresi yok.' };
         }
+        // This generates the link and triggers Firebase's built-in email sender
+        // if the email templates are configured properly.
         await auth.generateEmailVerificationLink(userRecord.email);
         return { success: true };
     } catch (error: any) {
