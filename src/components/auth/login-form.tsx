@@ -106,7 +106,7 @@ export default function LoginForm() {
             await sendPasswordResetEmail(auth, email);
             toast({
                 title: "E-posta Gönderildi",
-                description: "Şifre sıfırlama talimatları için e-postanızı kontrol edin. Gelen kutusunda bulamazsanız spam klasörünü kontrol etmeyi unutmayın.",
+                description: `Şifre sıfırlama talimatları için ${email} adresini kontrol edin.`,
                 duration: 10000,
                 action: (<Button onClick={() => router.push(`/reset-password?email=${encodeURIComponent(email)}`)}>Şifremi Sıfırla</Button>)
             });

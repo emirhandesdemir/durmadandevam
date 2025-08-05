@@ -9,6 +9,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
+import { sendPasswordResetEmail, confirmPasswordReset } from 'firebase/auth';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -29,11 +30,9 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
-import { resetPasswordWithCode, sendPasswordResetLink } from "@/lib/actions/userActions";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Lütfen geçerli bir e-posta adresi girin."}),
-  code: z.string().min(1, { message: "Doğrulama kodu boş olamaz." }),
   newPassword: z.string().min(6, { message: "Yeni şifre en az 6 karakter olmalıdır." }),
 });
 
@@ -46,6 +45,8 @@ export default function ResetPasswordPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [timeLeft, setTimeLeft] = useState(180); // 3 minutes in seconds
     const [canResend, setCanResend] = useState(false);
+
+    const oobCode = searchParams.get('oobCode');
 
     useEffect(() => {
         if (timeLeft === 0) {
@@ -64,28 +65,37 @@ export default function ResetPasswordPage() {
         resolver: zodResolver(formSchema),
         defaultValues: {
             email: searchParams.get('email') || "",
-            code: "",
             newPassword: "",
         },
     });
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
+        if (!oobCode) {
+            toast({
+                title: "Hata",
+                description: "Geçersiz şifre sıfırlama linki. Lütfen e-postanızdaki linki tekrar kontrol edin.",
+                variant: "destructive",
+            });
+            return;
+        }
         setIsLoading(true);
         try {
-            const result = await resetPasswordWithCode(values.code, values.newPassword);
-            if (result.success) {
-                toast({
-                    title: "Başarılı!",
-                    description: "Şifreniz başarıyla değiştirildi. Şimdi giriş yapabilirsiniz.",
-                });
-                router.push('/login');
-            } else {
-                throw new Error(result.error || "Bilinmeyen bir hata oluştu.");
-            }
+            await confirmPasswordReset(auth, oobCode, values.newPassword);
+            toast({
+                title: "Başarılı!",
+                description: "Şifreniz başarıyla değiştirildi. Şimdi giriş yapabilirsiniz.",
+            });
+            router.push('/login');
         } catch (error: any) {
+            let errorMessage = "Şifre sıfırlanırken bir hata oluştu.";
+            if(error.code === 'auth/expired-action-code') {
+                errorMessage = "Şifre sıfırlama linkinin süresi dolmuş. Lütfen yeni bir tane isteyin.";
+            } else if (error.code === 'auth/invalid-action-code') {
+                 errorMessage = "Şifre sıfırlama linki geçersiz. Lütfen tekrar deneyin.";
+            }
             toast({
                 title: "Şifre Sıfırlama Başarısız",
-                description: error.message,
+                description: errorMessage,
                 variant: "destructive",
             });
         } finally {
@@ -101,13 +111,12 @@ export default function ResetPasswordPage() {
         }
         setIsResending(true);
         try {
-             const result = await sendPasswordResetLink(email);
-             if (!result.success) throw new Error(result.error);
-             toast({ title: "Kod Tekrar Gönderildi", description: "Lütfen e-posta kutunuzu kontrol edin."});
+             await sendPasswordResetEmail(auth, email);
+             toast({ title: "Yeni Link Gönderildi", description: `Lütfen ${email} adresini kontrol edin.`});
              setTimeLeft(180);
              setCanResend(false);
         } catch (error: any) {
-             toast({ variant: 'destructive', description: "Kod gönderilirken bir hata oluştu." });
+             toast({ variant: 'destructive', description: "E-posta gönderilirken bir hata oluştu." });
         } finally {
             setIsResending(false);
         }
@@ -121,7 +130,7 @@ export default function ResetPasswordPage() {
                         <Image src="/icons/icon.svg" alt="HiweWalk Logo" width={64} height={64} className="h-16 w-16 mx-auto" />
                         <CardTitle className="text-3xl font-bold">Şifreni Sıfırla</CardTitle>
                         <CardDescription>
-                            E-postanıza gelen doğrulama kodunu ve yeni şifrenizi girin.
+                            Lütfen e-posta adresinizi ve yeni şifrenizi girin.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -135,19 +144,6 @@ export default function ResetPasswordPage() {
                                             <FormLabel>E-posta Adresi</FormLabel>
                                             <FormControl>
                                                 <Input type="email" placeholder="ornek@eposta.com" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="code"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Doğrulama Kodu</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="E-postadaki kod" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -177,14 +173,17 @@ export default function ResetPasswordPage() {
                                         </FormItem>
                                     )}
                                 />
-                                {canResend ? (
-                                    <Button type="button" variant="secondary" className="w-full" onClick={handleResendCode} disabled={isResending}>
-                                        {isResending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-                                        Kodu Tekrar Gönder
-                                    </Button>
-                                ) : (
-                                    <p className="text-xs text-center text-muted-foreground">Yeni kod istemek için {timeLeft} saniye bekleyin.</p>
-                                )}
+                                <div className="text-center text-xs text-muted-foreground">
+                                    {canResend ? (
+                                        <Button type="button" variant="link" className="p-0 h-auto" onClick={handleResendCode} disabled={isResending}>
+                                            {isResending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                            Yeni şifre sıfırlama e-postası gönder
+                                        </Button>
+                                    ) : (
+                                        <span>Yeni bir e-posta istemek için {timeLeft} saniye bekleyin.</span>
+                                    )}
+                                </div>
+                                
                                 <Button type="submit" className="w-full text-lg font-semibold" disabled={isLoading}>
                                     {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
                                     Şifreyi Değiştir

@@ -32,7 +32,7 @@ export default function SecuritySettingsPage() {
             await sendEmailVerification(user);
             toast({
                 title: "Doğrulama E-postası Gönderildi",
-                description: "Lütfen e-posta kutunuzu kontrol edin ve linke tıklayarak hesabınızı doğrulayın.",
+                description: `Lütfen ${user.email} adresini kontrol edin ve linke tıklayarak hesabınızı doğrulayın.`,
                 duration: 7000,
             });
         } catch (error: any) {
@@ -90,7 +90,7 @@ export default function SecuritySettingsPage() {
             await sendPasswordResetEmail(auth, user.email);
             toast({
                 title: 'E-posta Gönderildi',
-                description: 'Şifrenizi sıfırlamak için e-posta kutunuzu kontrol edin.'
+                description: `Şifrenizi sıfırlamak için ${user.email} adresini kontrol edin.`
             });
         } catch (error: any) {
              toast({ variant: 'destructive', title: 'Hata', description: error.message });
@@ -139,7 +139,7 @@ export default function SecuritySettingsPage() {
                     </CardContent>
                      {!userData.emailVerified && (
                          <CardFooter>
-                            <Button onClick={handleSendVerification} disabled={isVerifying} size="sm">
+                            <Button onClick={handleSendVerification} size="sm">
                                 {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                                 Doğrulama E-postasını Tekrar Gönder
                             </Button>
