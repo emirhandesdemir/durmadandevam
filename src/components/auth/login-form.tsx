@@ -108,7 +108,7 @@ export default function LoginForm() {
                 title: "E-posta Gönderildi",
                 description: "Şifre sıfırlama talimatları için e-postanızı kontrol edin. Gelen kutusunda bulamazsanız spam klasörünü kontrol etmeyi unutmayın.",
                 duration: 10000,
-                action: (<Button onClick={() => router.push('/reset-password')}>Şifremi Sıfırla</Button>)
+                action: (<Button onClick={() => router.push(`/reset-password?email=${encodeURIComponent(email)}`)}>Şifremi Sıfırla</Button>)
             });
         } catch (error: any) {
             console.error("Şifre sıfırlama hatası", error);
