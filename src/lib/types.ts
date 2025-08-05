@@ -135,7 +135,6 @@ export interface ThemeSettings {
 }
 
 export interface AppSettings {
-    batterySaver: boolean;
     dataSaver: boolean;
     disableAnimations: boolean;
 }
@@ -274,10 +273,8 @@ export interface Post {
     emailVerified?: boolean;
     text: string;
     imageUrl?: string | null;
-    imageSize?: number; // in bytes
     videoUrl?: string | null;
     videoThumbnailUrl?: string | null;
-    videoSize?: number; // in bytes
     backgroundStyle?: string;
     createdAt: Timestamp | { seconds: number; nanoseconds: number } | string;
     likes: string[];
@@ -602,4 +599,11 @@ export interface BotActivityLog {
     targetPostId?: string;
     details: string;
     timestamp: Timestamp;
+}
+
+
+export interface FeedSettings {
+  showOnlyFollowing: boolean;
+  hideLikedPosts: boolean;
+  hideVideos: boolean;
 }

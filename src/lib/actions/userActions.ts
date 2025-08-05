@@ -94,7 +94,9 @@ export async function updateUserProfile(updates: {
     profileCompletionAwarded?: boolean;
     sessionInfo?: { lastSeen: any, ipAddress?: string, userAgent?: string };
     appSettings?: Partial<AppSettings>;
-    dataSaved?: number;
+    animatedNav?: boolean;
+    selectedBubble?: string;
+    selectedAvatarFrame?: string;
 }) {
     const { userId, isNewUser, sessionInfo, ...otherUpdates } = updates;
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
@@ -117,10 +119,6 @@ export async function updateUserProfile(updates: {
             updatesForDb[`appSettings.${key}`] = value;
         });
     }
-     if (updates.dataSaved) {
-        updatesForDb.dataSaved = increment(updates.dataSaved);
-    }
-
 
     let userExists = false;
 
@@ -191,7 +189,6 @@ export async function updateUserProfile(updates: {
                     location: null,
                     sessions: sessionInfo ? { current: sessionInfo } : {},
                     appSettings: {
-                        batterySaver: false,
                         dataSaver: false,
                         disableAnimations: false,
                     },

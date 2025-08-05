@@ -27,8 +27,8 @@ export default function AppSettingsPage() {
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
     
+    // Local state for optimistic UI updates
     const [settings, setSettings] = useState<AppSettings>({
-        batterySaver: userData?.appSettings?.batterySaver ?? false,
         dataSaver: userData?.appSettings?.dataSaver ?? false,
         disableAnimations: userData?.appSettings?.disableAnimations ?? false,
     });
@@ -84,13 +84,6 @@ export default function AppSettingsPage() {
                     <CardContent className="space-y-6">
                          <div className="flex items-center justify-between">
                             <div>
-                                <Label htmlFor="battery-saver" className="font-semibold flex items-center gap-2"><BatteryCharging className="h-4 w-4"/> Pil Tasarrufu</Label>
-                                <p className="text-xs text-muted-foreground pl-6">Arka plan animasyonları ve efektleri devre dışı bırakılır.</p>
-                            </div>
-                            <Switch id="battery-saver" checked={settings.batterySaver} onCheckedChange={(val) => handleSettingChange('batterySaver', val)} />
-                        </div>
-                         <div className="flex items-center justify-between">
-                            <div>
                                 <Label htmlFor="data-saver" className="font-semibold flex items-center gap-2"><Wifi className="h-4 w-4"/> Veri Tasarrufu</Label>
                                 <p className="text-xs text-muted-foreground pl-6">Resim ve video kalitesini düşürerek veri kullanımını azaltır.</p>
                             </div>
@@ -99,7 +92,7 @@ export default function AppSettingsPage() {
                          <div className="flex items-center justify-between">
                             <div>
                                 <Label htmlFor="disable-animations" className="font-semibold flex items-center gap-2"><Sparkles className="h-4 w-4"/> Arayüz Animasyonlarını Kapat</Label>
-                                <p className="text-xs text-muted-foreground pl-6">Sayfa geçişleri ve diğer arayüz animasyonlarını kapatır.</p>
+                                <p className="text-xs text-muted-foreground pl-6">Sayfa geçişleri, kaydırma efektleri ve diğer görsel efektleri kapatarak arayüzü hızlandırır ve pil tasarrufu sağlar.</p>
                             </div>
                             <Switch id="disable-animations" checked={settings.disableAnimations} onCheckedChange={(val) => handleSettingChange('disableAnimations', val)} />
                         </div>

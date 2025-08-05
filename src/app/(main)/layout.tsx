@@ -112,10 +112,10 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
   const [isScrolling, setIsScrolling] = useState(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const animatedNavEnabled = userData?.animatedNav ?? true;
+  const disableAnimations = userData?.appSettings?.disableAnimations ?? false;
 
   const handleScroll = useCallback(() => {
-    if (!animatedNavEnabled) return;
+    if (disableAnimations) return;
     setIsScrolling(true);
     if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
@@ -123,7 +123,7 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
     scrollTimeoutRef.current = setTimeout(() => {
         setIsScrolling(false);
     }, 250);
-  }, [animatedNavEnabled]);
+  }, [disableAnimations]);
 
 
   useEffect(() => {
@@ -156,7 +156,7 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
           {!isFullPageLayout && (
              <motion.header
               initial={{ y: 0 }}
-              animate={{ y: animatedNavEnabled && isScrolling ? -100 : 0 }}
+              animate={{ y: !disableAnimations && isScrolling ? -100 : 0 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
               className="absolute top-0 left-0 right-0 z-40"
             >
@@ -189,7 +189,7 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
          {!isFullPageLayout && (
             <motion.div
               initial={{ y: 0 }}
-              animate={{ y: animatedNavEnabled && isScrolling ? 100 : 0 }}
+              animate={{ y: !disableAnimations && isScrolling ? 100 : 0 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
               className="absolute bottom-0 left-0 right-0 z-30"
             >

@@ -209,16 +209,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
     const isPublicPage = isAuthPage || pathname.startsWith('/guide') || pathname.startsWith('/terms') || pathname.startsWith('/privacy');
-    const isRootPage = pathname === '/';
 
     if (user && userData) {
-        if (isAuthPage || isRootPage) {
+        if (isAuthPage) {
             router.replace('/home');
         }
     } else {
-        if (!isPublicPage && !isRootPage) {
-            router.replace('/login');
-        } else if (isRootPage) {
+        if (!isPublicPage && pathname !== '/') {
             router.replace('/login');
         }
     }
@@ -228,7 +225,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   return (
       <AuthContext.Provider value={value}>
-        {loading ? <AnimatedLogoLoader fullscreen /> : children}
+        {loading && pathname === '/' ? <AnimatedLogoLoader fullscreen /> : children}
       </AuthContext.Provider>
   );
 }

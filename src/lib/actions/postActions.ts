@@ -74,9 +74,6 @@ export async function createPost(postData: {
     commentsDisabled?: boolean;
     likesHidden?: boolean;
     backgroundStyle?: string;
-    videoThumbnailUrl?: string | null;
-    imageSize?: number;
-    videoSize?: number;
 }) {
     const newPostRef = doc(collection(db, 'posts'));
     const userRef = doc(db, 'users', postData.uid);
@@ -99,10 +96,7 @@ export async function createPost(postData: {
             userGender: postData.userGender,
             text: postData.text,
             imageUrl: postData.imageUrl,
-            imageSize: postData.imageSize || 0,
             videoUrl: postData.videoUrl,
-            videoThumbnailUrl: postData.videoThumbnailUrl || null,
-            videoSize: postData.videoSize || 0,
             backgroundStyle: postData.backgroundStyle || '',
             editedWithAI: false,
             language: postData.language,
@@ -124,13 +118,6 @@ export async function createPost(postData: {
 
         if (postCount === 0 && !postData.videoUrl) {
             userUpdates.diamonds = increment(50);
-        }
-
-        if (appSettings?.dataSaver && (postData.imageSize || postData.videoSize)) {
-            const originalSize = (postData.imageSize || 0) + (postData.videoSize || 0);
-            const savedRatio = 0.4; // Simulate 40% saving
-            const dataSaved = Math.round(originalSize * savedRatio);
-            userUpdates.dataSaved = increment(dataSaved);
         }
         
         transaction.update(userRef, userUpdates);
