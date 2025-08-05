@@ -128,7 +128,7 @@ export default function VoiceUserIcon({
   const iconBadgePos = size === 'lg' ? "bottom-1 right-1 p-2" : "bottom-0 right-0 p-1.5";
   const iconSize = size === 'lg' ? "h-5 w-5" : "h-4 w-4";
   
-  const speakingRing = participant.isSpeaker;
+  const speakingRing = participant.isSpeaking;
   
   const avatarContent = (
     <div className={cn("relative z-[1] border-2 transition-all duration-300 w-full h-full rounded-full overflow-hidden",
@@ -166,7 +166,7 @@ export default function VoiceUserIcon({
 
        <div className="flex flex-col items-center gap-1">
             <div className="flex items-center justify-center gap-1.5 w-full">
-                <p className={cn("font-bold text-foreground truncate", nameSize, size === 'lg' ? 'max-w-[120px]' : 'max-w-[60px]')}>{participant.username}</p>
+                <p className={cn("font-bold truncate transition-colors", nameSize, speakingRing ? 'text-green-400' : 'text-foreground', size === 'lg' ? 'max-w-[120px]' : 'max-w-[60px]')}>{participant.username}</p>
                  {isParticipantAdmin ? (
                        <TooltipProvider delayDuration={0}>
                           <Tooltip>

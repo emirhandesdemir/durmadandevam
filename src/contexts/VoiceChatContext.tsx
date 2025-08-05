@@ -99,8 +99,9 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const screenSenderRef = useRef<Record<string, RTCRtpSender>>({});
     const videoSenderRef = useRef<Record<string, RTCRtpSender>>({});
     const lastActiveUpdateTimestamp = useRef<number>(0);
-    const audioWorkletNodeRef = useRef<AudioWorkletNode | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
+    const speakingThreshold = -50; // dB
+    const speakingDetectionInterval = useRef<NodeJS.Timeout | null>(null);
 
     const self = useMemo(() => participants.find(p => p.uid === user?.uid), [participants, user?.uid]);
     const isConnected = !!self;
@@ -120,6 +121,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     // Teardown logic
     const _cleanupAndResetState = useCallback(async () => {
+        if(speakingDetectionInterval.current) clearInterval(speakingDetectionInterval.current);
+        speakingDetectionInterval.current = null;
         Object.values(peerConnections.current).forEach(pc => pc.close());
         peerConnections.current = {};
         
@@ -129,11 +132,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         setLocalScreenStream(null);
         setIsSharingVideo(false);
 
-        if(audioWorkletNodeRef.current) {
-            audioWorkletNodeRef.current.disconnect();
-            audioWorkletNodeRef.current = null;
-        }
-        if(audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
             await audioContextRef.current.close();
             audioContextRef.current = null;
         }
@@ -152,6 +151,42 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         const signalsRef = collection(db, `rooms/${activeRoomId}/signals`);
         await addDoc(signalsRef, { to, from: user.uid, type, data, createdAt: serverTimestamp() });
     }, [activeRoomId, user]);
+
+    // Speaking detection logic
+    const setupSpeakingDetection = useCallback((stream: MediaStream, callback: (isSpeaking: boolean) => void) => {
+        if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
+            audioContextRef.current = new AudioContext();
+        }
+        const audioContext = audioContextRef.current;
+        const source = audioContext.createMediaStreamSource(stream);
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 512;
+        analyser.minDecibels = -120;
+        analyser.maxDecibels = 0;
+        analyser.smoothingTimeConstant = 0.4;
+        source.connect(analyser);
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        
+        const checkSpeaking = () => {
+            analyser.getByteFrequencyData(dataArray);
+            let sum = 0;
+            for(const amplitude of dataArray) {
+                sum += amplitude * amplitude;
+            }
+            const volume = Math.sqrt(sum / dataArray.length);
+            callback(volume > 30); // Empirical value
+        };
+
+        if (speakingDetectionInterval.current) clearInterval(speakingDetectionInterval.current);
+        speakingDetectionInterval.current = setInterval(checkSpeaking, 200);
+
+        return () => {
+            if(speakingDetectionInterval.current) clearInterval(speakingDetectionInterval.current);
+            source.disconnect();
+        };
+
+    }, []);
     
     const createPeerConnection = useCallback((otherUserId: string): RTCPeerConnection => {
         const pc = new RTCPeerConnection(ICE_SERVERS);
@@ -163,15 +198,17 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         };
         
         pc.ontrack = event => {
+            const stream = event.streams[0];
             if (event.track.kind === 'audio') {
-                setRemoteAudioStreams(p => ({ ...p, [otherUserId]: event.streams[0] }));
+                setRemoteAudioStreams(p => ({ ...p, [otherUserId]: stream }));
+                setupSpeakingDetection(stream, (isSpeaking) => {
+                    setParticipants(prev => prev.map(p => p.uid === otherUserId ? { ...p, isSpeaking } : p));
+                });
             } else if (event.track.kind === 'video') {
-                 // Differentiate between camera and screen share based on stream id or track label in a real app
-                setRemoteVideoStreams(p => ({ ...p, [otherUserId]: event.streams[0] }));
+                 setRemoteVideoStreams(p => ({ ...p, [otherUserId]: stream }));
             }
         };
 
-        // Add local tracks if they exist
         if (localStream) {
             localStream.getTracks().forEach(track => {
                 pc.addTrack(track, localStream);
@@ -184,7 +221,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         }
 
         return pc;
-    }, [localStream, localScreenStream, sendSignal]);
+    }, [localStream, localScreenStream, sendSignal, setupSpeakingDetection]);
 
     const joinToSpeak = useCallback(async (options?: { muted: boolean }) => {
         if (!user || !activeRoomId || isConnected || isConnecting) return;
@@ -202,13 +239,16 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             }
             
             setLocalStream(stream);
+            setupSpeakingDetection(stream, (isSpeaking) => {
+                setParticipants(prev => prev.map(p => p.uid === user.uid ? { ...p, isSpeaking } : p));
+            });
+
 
             const result = await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: user.displayName || 'Biri', photoURL: user.photoURL }, { initialMuteState: options?.muted ?? false });
             if (!result.success) {
                 throw new Error(result.error || 'Sesli sohbete katılamadınız.');
             }
 
-            // Proactively create offers to all existing peers
             const participantsSnapshot = await getDocs(collection(db, 'rooms', activeRoomId, 'voiceParticipants'));
             participantsSnapshot.docs.forEach(doc => {
                 const otherUser = doc.data() as VoiceParticipant;
@@ -229,7 +269,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         } finally {
             setIsConnecting(false);
         }
-    }, [user, activeRoomId, isConnected, isConnecting, toast, _cleanupAndResetState, facingMode, createPeerConnection, sendSignal]);
+    }, [user, activeRoomId, isConnected, isConnecting, toast, _cleanupAndResetState, facingMode, createPeerConnection, sendSignal, setupSpeakingDetection]);
     
     const leaveVoiceOnly = useCallback(async () => {
         if (!user || !activeRoomId) return;
@@ -439,7 +479,11 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         });
 
         const participantsUnsub = onSnapshot(collection(db, "rooms", activeRoomId, "voiceParticipants"), snapshot => {
-            const fetched = snapshot.docs.map(d => d.data() as VoiceParticipant);
+            const fetched = snapshot.docs.map(d => {
+                const data = d.data() as VoiceParticipant;
+                // Add a default isSpeaking property if it doesn't exist
+                return { isSpeaking: false, ...data };
+            });
             setParticipants(fetched);
             if (isConnected && user && !fetched.some(p => p.uid === user.uid)) {
                 toast({ title: "Bağlantı Kesildi", description: "Sesten ayrıldınız veya atıldınız." });
@@ -493,10 +537,12 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                     if (pc) {
                         try {
                             if (signal.type === 'offer') {
-                                await pc.setRemoteDescription(new RTCSessionDescription(signal.data));
-                                const answer = await pc.createAnswer();
-                                await pc.setLocalDescription(answer);
-                                await sendSignal(from, 'answer', pc.localDescription!.toJSON());
+                                if (pc.signalingState === "stable") {
+                                    await pc.setRemoteDescription(new RTCSessionDescription(signal.data));
+                                    const answer = await pc.createAnswer();
+                                    await pc.setLocalDescription(answer);
+                                    await sendSignal(from, 'answer', pc.localDescription!.toJSON());
+                                }
                             } else if (signal.type === 'answer') {
                                 if (pc.signalingState === 'have-local-offer') {
                                      await pc.setRemoteDescription(new RTCSessionDescription(signal.data));
