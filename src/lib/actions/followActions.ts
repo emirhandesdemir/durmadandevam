@@ -55,6 +55,7 @@ export async function followUser(currentUserId: string, targetUserId: string, cu
         requestedAt: serverTimestamp(),
       };
       
+      // FIX: Ensure followRequests array exists before checking it
       const existingRequests = targetUserData.followRequests || [];
       const requestExists = existingRequests.some((req: any) => req.uid === currentUserId);
       
@@ -72,6 +73,9 @@ export async function followUser(currentUserId: string, targetUserId: string, cu
       });
     }
   });
+  
+  const currentUserDoc = await getDoc(currentUserRef);
+
 
   if (!isPrivate) {
     await createNotification({
@@ -82,12 +86,12 @@ export async function followUser(currentUserId: string, targetUserId: string, cu
         profileEmoji: currentUserInfo.profileEmoji,
         senderAvatarFrame: currentUserInfo.userAvatarFrame,
         type: 'follow',
-        senderUniqueTag: targetUserUniqueTag,
+        senderUniqueTag: currentUserDoc.data()?.uniqueTag,
     });
   }
 
   revalidatePath(`/profile/${targetUserUniqueTag}`);
-  revalidatePath(`/profile/${currentUserDoc.data().uniqueTag}`);
+  revalidatePath(`/profile/${currentUserDoc.data()?.uniqueTag}`);
 }
 
 export async function unfollowUser(currentUserId: string, targetUserId: string) {
@@ -127,7 +131,10 @@ export async function handleFollowRequest(currentUserId: string, requesterId: st
     const currentUserData = currentUserDoc.data();
     const requesterData = requesterDoc.data();
 
-    const requestToRemove = currentUserData.followRequests?.find((req: any) => req.uid === requesterId);
+    // FIX: Ensure followRequests array exists before checking it
+    const existingRequests = currentUserData.followRequests || [];
+    const requestToRemove = existingRequests.find((req: any) => req.uid === requesterId);
+
     if (requestToRemove) {
       transaction.update(currentUserRef, {
         followRequests: arrayRemove(requestToRemove),

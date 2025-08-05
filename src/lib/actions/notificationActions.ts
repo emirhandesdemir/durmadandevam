@@ -10,6 +10,7 @@ import {
   updateDoc,
   getDoc,
   deleteDoc,
+  Timestamp,
 } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
 import { assignMissingUniqueTag } from './userActions';
@@ -29,8 +30,6 @@ interface CreateNotificationArgs {
   roomId?: string;
   roomName?: string;
   diamondAmount?: number;
-  createdAt: Timestamp;
-  read: boolean;
   callId?: string;
   callType?: 'video' | 'audio';
   profileEmoji?: string | null;
@@ -77,9 +76,7 @@ export async function triggerProfileCompletionNotification(userId: string) {
                 senderAvatar: 'https://placehold.co/100x100.png',
                 type: 'complete_profile',
             });
-            await updateDoc(userRef, {
-                profileCompletionNotificationSent: true
-            });
+            await updateDoc(userRef, { profileCompletionNotificationSent: true });
         }
     }
 }
