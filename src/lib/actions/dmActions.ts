@@ -111,9 +111,7 @@ export async function sendMessage(
   
   let finalImageUrl: string | undefined;
   if (imageUrl) {
-      // FIX: Use a path that is allowed by storage rules.
-      // Assuming storage rules allow users to write to their own UID folder.
-      const imagePath = `dm_uploads/${sender.uid}/${uuidv4()}.jpg`;
+      const imagePath = `dm_uploads/${sender.uid}/${chatId}_${uuidv4()}.jpg`;
       const imageStorageRef = storageRef(storage, imagePath);
       await uploadString(imageStorageRef, imageUrl, 'data_url');
       finalImageUrl = await getDownloadURL(imageStorageRef);

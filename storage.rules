@@ -2,38 +2,35 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Genel Kural: Varsayılan olarak tüm okuma ve yazma işlemlerini reddet.
-    match /{allPaths=**} {
-      allow read, write: if false;
+    
+    // Public read for default avatars
+    match /default_avatars/{allPaths=**} {
+      allow read;
     }
 
-    // Kullanıcı Avatarları
-    // Kullanıcılar sadece kendi avatarlarını (kendi UID'leri altındaki) yazabilirler.
-    // Herkes avatarları okuyabilir.
+    // User can only write to their own avatar path
     match /avatars/{userId}/{allPaths=**} {
-      allow read: if true;
+      allow read;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Post images can be read by anyone, but only created by authenticated users
+    match /upload/posts/{userId}/{allPaths=**} {
+      allow read;
       allow write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Gönderi Medyası (Resimler, Videolar)
-    // Sadece giriş yapmış kullanıcılar 'upload/' klasörüne dosya yükleyebilir.
-    // Herkes gönderi medyalarını okuyabilir.
-    match /upload/{allPaths=**} {
-        allow read: if true;
-        allow write: if request.auth != null;
+    // DM uploads: User can write to their own folder, and read if they are part of the chat.
+    // The filename contains the chatId for read access verification.
+    match /dm_uploads/{userId}/{chatId}_{allPaths=**} {
+      allow read: if request.auth != null && get(/databases/$(database)/documents/directMessagesMetadata/$(chatId)).data.participantUids[request.auth.uid] == request.auth.uid;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
-    
-    // DM Medyası (Resimler, Sesli Mesajlar)
-    // Sadece sohbetin katılımcıları ilgili sohbetin klasörüne dosya yükleyebilir, okuyabilir ve silebilir.
-    match /dm_uploads/{chatId}/{allPaths=**} {
-        allow read, write, delete: if request.auth != null && exists(/databases/$(database)/documents/directMessagesMetadata/$(chatId)) && request.auth.uid in get(/databases/$(database)/documents/directMessagesMetadata/$(chatId)).data.participantUids;
-    }
-    
-    // Oda Müziği
-    // Sadece giriş yapmış kullanıcılar müzik yükleyebilir.
+
+    // Room audio uploads
     match /music/{roomId}/{allPaths=**} {
-        allow read: if true;
-        allow write: if request.auth != null;
+      allow read: if request.auth != null && exists(/databases/$(database)/documents/rooms/$(roomId));
+      allow write: if request.auth != null && get(/databases/$(database)/documents/rooms/$(roomId)).data.participants[request.auth.uid] == request.auth.uid;
     }
   }
 }
