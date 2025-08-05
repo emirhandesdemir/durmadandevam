@@ -2,35 +2,38 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    
-    // Allow public read access to all files. This is generally safe for profile
-    // pictures, post images, etc., as the URLs are not guessable.
+    // Genel Kural: Varsayılan olarak tüm okuma ve yazma işlemlerini reddet.
     match /{allPaths=**} {
-      allow read;
+      allow read, write: if false;
     }
 
-    // Allow users to write to their own avatar directory.
-    match /avatars/{userId}/{fileName} {
+    // Kullanıcı Avatarları
+    // Kullanıcılar sadece kendi avatarlarını (kendi UID'leri altındaki) yazabilirler.
+    // Herkes avatarları okuyabilir.
+    match /avatars/{userId}/{allPaths=**} {
+      allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
     }
-
-    // Allow users to write to their own post upload directory.
-    match /upload/posts/{userId}/{fileName} {
-        allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Allow users to write to a DM chat's storage if they are a participant.
-    // The {chatId} is a combination of two user UIDs, e.g., "uid1_uid2".
-    // This rule checks if the authenticated user's UID is part of the chatId string.
-    match /dms/{chatId}/{allPaths=**} {
-        allow write: if request.auth != null && request.auth.uid in chatId.split('_');
-    }
-
-     // Allow users to upload music to a room's storage.
-     // For simplicity, allowing any authenticated user to upload.
-     // In a production app, you might restrict this to room participants.
-     match /music/{roomId}/{fileName} {
+    
+    // Gönderi Medyası (Resimler, Videolar)
+    // Sadece giriş yapmış kullanıcılar 'upload/' klasörüne dosya yükleyebilir.
+    // Herkes gönderi medyalarını okuyabilir.
+    match /upload/{allPaths=**} {
+        allow read: if true;
         allow write: if request.auth != null;
-     }
+    }
+    
+    // DM Medyası (Resimler, Sesli Mesajlar)
+    // Sadece sohbetin katılımcıları ilgili sohbetin klasörüne dosya yükleyebilir, okuyabilir ve silebilir.
+    match /dm_uploads/{chatId}/{allPaths=**} {
+        allow read, write, delete: if request.auth != null && exists(/databases/$(database)/documents/directMessagesMetadata/$(chatId)) && request.auth.uid in get(/databases/$(database)/documents/directMessagesMetadata/$(chatId)).data.participantUids;
+    }
+    
+    // Oda Müziği
+    // Sadece giriş yapmış kullanıcılar müzik yükleyebilir.
+    match /music/{roomId}/{allPaths=**} {
+        allow read: if true;
+        allow write: if request.auth != null;
+    }
   }
 }
