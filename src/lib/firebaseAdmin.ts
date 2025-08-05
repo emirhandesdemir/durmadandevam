@@ -9,7 +9,7 @@ function getServiceAccount(): ServiceAccount | undefined {
     if (!serviceAccountString) {
         // In a production environment, you should throw an error here.
         // For development, we can allow it to proceed, though server-side auth will fail.
-        console.warn("FIREBASE_SERVICE_ACCOUNT environment variable is not set. Server-side authentication will not work.");
+        console.warn("FIREBASE_SERVICE_ACCOUNT environment variable is not set. Server-side features like email sending might not work. Please check your project settings.");
         return undefined;
     }
     try {
