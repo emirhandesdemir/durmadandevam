@@ -24,7 +24,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notificationActions";
 import { findUserByUsername } from "../server-utils";
-import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject, uploadString } from 'firebase/storage';
+import { ref as storageRef, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
 
 
@@ -88,7 +88,7 @@ export async function createPost(postData: {
         const newPostData = {
             uid: postData.uid,
             username: postData.username,
-            userPhotoURL: postData.userPhotoURL,
+            userPhotoURL: postData.userPhotoURL || null,
             userAvatarFrame: postData.userAvatarFrame || '',
             userRole: postData.userRole,
             userGender: postData.userGender,
@@ -317,7 +317,7 @@ export async function retweetPost(
         const newPostData = {
             uid: retweeter.uid,
             username: retweeter.username,
-            userPhotoURL: retweeter.userPhotoURL,
+            userPhotoURL: retweeter.photoURL,
             userAvatarFrame: retweeter.userAvatarFrame,
             userRole: retweeter.userRole,
             userGender: retweeter.userGender,
