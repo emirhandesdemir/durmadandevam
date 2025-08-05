@@ -120,11 +120,16 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
                             </Popover>
                         </>
                     ) : (
-                         <Button onClick={() => joinRoom()} disabled={isConnecting} className="rounded-full font-semibold px-4 bg-gradient-to-r from-red-500 to-blue-600 text-white shadow-lg hover:scale-105 transition-transform shrink-0">
+                         <Button onClick={() => joinRoom({ muted: true })} variant="ghost" size="icon" className="rounded-full flex-shrink-0">
+                            <Volume2 className="h-5 w-5" />
+                        </Button>
+                    )}
+                     {!isConnected && (
+                        <Button onClick={() => joinRoom()} disabled={isConnecting} className="rounded-full font-semibold px-4 bg-gradient-to-r from-red-500 to-blue-600 text-white shadow-lg hover:scale-105 transition-transform shrink-0">
                             {isConnecting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Mic className="mr-2 h-5 w-5" />}
                             Sese Katıl
                         </Button>
-                    )}
+                     )}
                 </div>
             </footer>
              <GiftPanel 

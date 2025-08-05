@@ -15,10 +15,10 @@ export default function PersistentVoiceBar() {
 
   useEffect(() => {
     // If the bar is minimized but we are still on the room page, redirect to home.
-    if (isMinimized && pathname.startsWith('/rooms/')) {
+    if (isMinimized && activeRoom && pathname.startsWith(`/rooms/${activeRoom.id}`)) {
       router.replace('/home');
     }
-  }, [isMinimized, pathname, router]);
+  }, [isMinimized, pathname, router, activeRoom]);
 
   if (!isConnected || !isMinimized || !activeRoom) {
     return null;
