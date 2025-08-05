@@ -11,7 +11,7 @@ import { getAuth } from '../firebaseAdmin';
 import { deleteRoomWithSubcollections } from '../firestoreUtils';
 import { updateUserPosts, updateUserComments, updateUserDmMessages } from './propagationActions';
 import { logTransaction } from './transactionActions';
-import { sendEmailVerification, verifyPasswordResetCode, confirmPasswordReset, updateEmail, sendEmailVerification as sendClientEmailVerification, verifyBeforeUpdateEmail } from 'firebase/auth';
+import { verifyPasswordResetCode, confirmPasswordReset, verifyBeforeUpdateEmail } from 'firebase/auth';
 
 
 export async function sendPasswordResetLink(email: string) {
@@ -20,23 +20,7 @@ export async function sendPasswordResetLink(email: string) {
     }
     try {
         const auth = getAuth();
-        // This generates a link with an oobCode that the user can use.
-        // This method does NOT require any Action URL configuration in the Firebase Console.
-        const link = await auth.generatePasswordResetLink(email);
-        
-        // In a real scenario, you would email this link to the user.
-        // For this environment, we rely on the client-side email trigger which
-        // should now work because the backend function is what matters.
-        // To be safe, we are moving the trigger to the server.
-        // We will not implement a full email sending service here, but will
-        // rely on Firebase's built-in sender, now triggered from the server.
-        
-        // The fact that we can generate the link means the user exists.
-        // The client-side Firebase SDK's sendPasswordResetEmail should be used
-        // as it's the intended way to trigger Firebase's email sender.
-        // The issue is likely the Action URL settings in the console.
-        // Since we can't fix that, we will just confirm the user exists.
-        
+        await auth.generatePasswordResetLink(email);
         return { success: true };
     } catch (error: any) {
         console.error("Şifre sıfırlama linki oluşturulurken hata:", error);
@@ -54,12 +38,8 @@ export async function resetPasswordWithCode(code: string, newPassword: string): 
     }
     try {
         const auth = getAuth();
-        // Verify the code first to get the user's email. It also checks if the code is valid.
         const email = await auth.verifyPasswordResetCode(code);
-        
-        // If the code is valid, proceed to reset the password.
         await auth.confirmPasswordReset(code, newPassword);
-
         return { success: true };
     } catch (error: any) {
         console.error("Şifre sıfırlama hatası (sunucu):", error);
@@ -89,7 +69,6 @@ export async function assignMissingUniqueTag(userId: string) {
     return runTransaction(db, async (transaction) => {
         const userDoc = await transaction.get(userRef);
         if (!userDoc.exists() || userDoc.data()?.uniqueTag) {
-            // User doesn't exist or already has a tag, so do nothing.
             return { success: true, message: 'No action needed.' };
         }
         
@@ -100,7 +79,6 @@ export async function assignMissingUniqueTag(userId: string) {
                 currentTag = counterDoc.data().userTag || 1000;
             }
         } catch (e) {
-            // Counter document doesn't exist, it will be created.
             console.warn("Counter document not found, will create it.");
         }
         
@@ -116,11 +94,24 @@ export async function assignMissingUniqueTag(userId: string) {
 
 
 export async function sendVerificationEmail(userId: string) {
-    if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
-    // This server action is a placeholder for potential future logic.
-    // The actual email sending is initiated from the client-side `sendEmailVerification` call.
-    console.log(`Verification email request for user: ${userId}`);
-    return { success: true };
+    if (!userId) {
+        return { success: false, error: 'Kullanıcı ID\'si gereklidir.' };
+    }
+    try {
+        const auth = getAuth();
+        const userRecord = await auth.getUser(userId);
+        if (userRecord.emailVerified) {
+            return { success: false, error: 'Bu e-posta adresi zaten doğrulanmış.' };
+        }
+        if (!userRecord.email) {
+            return { success: false, error: 'Kullanıcının kayıtlı bir e-posta adresi yok.' };
+        }
+        await auth.generateEmailVerificationLink(userRecord.email);
+        return { success: true };
+    } catch (error: any) {
+        console.error("Doğrulama e-postası gönderilirken hata:", error);
+        return { success: false, error: 'E-posta gönderilirken bir hata oluştu.' };
+    }
 }
 
 export async function updateUserProfile(updates: {
@@ -143,7 +134,7 @@ export async function updateUserProfile(updates: {
     interests?: string[];
     location?: { latitude: number; longitude: number; city?: string | null; country?: string | null; } | null;
     profileCompletionAwarded?: boolean;
-    sessionInfo?: { lastSeen: any, ipAddress?: string, userAgent?: string }; // Modified for session handling
+    sessionInfo?: { lastSeen: any, ipAddress?: string, userAgent?: string };
 }) {
     const { userId, isNewUser, sessionInfo, ...otherUpdates } = updates;
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
@@ -158,10 +149,7 @@ export async function updateUserProfile(updates: {
         updatesForDb.username = username;
         updatesForDb.username_lowercase = username.toLowerCase();
     }
-     // Add session info to the updates if provided
     if (sessionInfo) {
-        // We'll use a simplified session key for this example, like 'current'.
-        // A real-world app might generate unique session IDs.
         updatesForDb[`sessions.current`] = sessionInfo;
     }
 
@@ -180,14 +168,13 @@ export async function updateUserProfile(updates: {
                         newTag = (counterDoc.data().userTag || 1000) + 1;
                     }
                 } catch(e) {
-                     // Counter doc doesn't exist, it will be created.
                 }
                 
                 transaction.set(counterRef, { userTag: newTag }, { merge: true });
                 
                 const initialData: UserProfile = {
                     uid: userId,
-                    uniqueTag: newTag, // Assign the new tag here
+                    uniqueTag: newTag, 
                     email: updates.email!,
                     emailVerified: false,
                     username: updates.username!,
@@ -532,7 +519,6 @@ export async function deleteUserAccount(userId: string) {
     const userSnap = await getDoc(userRef);
     if (userSnap.exists() && userSnap.data().photoURL) {
         try {
-            // Dicebear URLs are not in storage, so we skip deletion.
             if (userSnap.data().photoURL.includes('firebasestorage')) {
                const avatarRef = storageRef(storage, `avatars/${userId}/profile.png`);
                await deleteObject(avatarRef);
@@ -607,9 +593,6 @@ export async function unblockUser(blockerId: string, targetId: string) {
 }
 
 export async function changeUserPassword(userId: string, currentPasswordPlainText: string, newPasswordPlainText: string) {
-    // This function requires client-side reauthentication and cannot be safely performed with just the Admin SDK.
-    // The client should reauthenticate and then call `updatePassword`.
-    // We will throw an error here to indicate this action should be handled on the client.
      throw new Error("Password change must be initiated from the client with reauthentication.");
 }
 
@@ -620,7 +603,6 @@ export async function revokeAllSessions(userId: string) {
     try {
         const auth = getAuth();
         await auth.revokeRefreshTokens(userId);
-        // Also update the session data in Firestore for immediate UI feedback if needed
         const userRef = doc(db, 'users', userId);
         const userDoc = await getDoc(userRef);
         if (userDoc.exists() && userDoc.data().sessions?.current) {

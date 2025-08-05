@@ -7,25 +7,20 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, ChevronLeft, KeyRound, MailWarning, MailCheck, ShieldCheck, Server, LogOut } from "lucide-react";
 import { useState, useCallback } from "react";
 import Link from 'next/link';
-import { updateUserProfile, revokeAllSessions } from "@/lib/actions/userActions";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { sendEmailVerification, updateEmail, reauthenticateWithCredential, EmailAuthProvider, verifyBeforeUpdateEmail } from "firebase/auth";
+import { updateEmail, reauthenticateWithCredential, EmailAuthProvider, verifyBeforeUpdateEmail, sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { format } from "date-fns";
-import { tr } from 'date-fns/locale';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { updateUserProfile, sendVerificationEmail, sendPasswordResetLink } from "@/lib/actions/userActions";
 
 
 export default function SecuritySettingsPage() {
     const { user, userData, loading, refreshUserData } = useAuth();
     const { toast } = useToast();
-    const [isSaving, setIsSaving] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
     const [isChangingEmail, setIsChangingEmail] = useState(false);
-    const [isRevoking, setIsRevoking] = useState(false);
-    const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
+    const [isResettingPassword, setIsResettingPassword] = useState(false);
     
     const [newEmail, setNewEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -34,7 +29,8 @@ export default function SecuritySettingsPage() {
         if (!user || userData?.emailVerified) return;
         setIsVerifying(true);
         try {
-            await sendEmailVerification(user);
+            const result = await sendVerificationEmail(user.uid);
+            if (!result.success) throw new Error(result.error);
             toast({
                 title: "Doğrulama E-postası Gönderildi",
                 description: "Lütfen e-posta kutunuzu kontrol edin ve linke tıklayarak hesabınızı doğrulayın.",
@@ -52,26 +48,23 @@ export default function SecuritySettingsPage() {
     };
     
     const handleChangeEmail = async () => {
-        if (!user || !newEmail.trim() || !password.trim()) {
+        if (!user || !user.email || !newEmail.trim() || !password.trim()) {
             toast({ variant: 'destructive', description: "Yeni e-posta ve şifre boş olamaz."});
             return;
         }
         setIsChangingEmail(true);
         try {
-            // Re-authenticate user first for security
-            const credential = EmailAuthProvider.credential(user.email!, password);
+            const credential = EmailAuthProvider.credential(user.email, password);
             await reauthenticateWithCredential(user, credential);
             
-            // If re-auth is successful, send verification to the new email
             await verifyBeforeUpdateEmail(user, newEmail);
 
-            // Also update the email in our Firestore database
             await updateUserProfile({ userId: user.uid, email: newEmail });
             await refreshUserData();
             
             toast({
                 title: "E-posta Güncelleme Başlatıldı",
-                description: `E-posta adresinizi doğrulamak için ${newEmail} adresine bir link gönderildi. Lütfen onaylayın.`,
+                description: `E-posta adresinizi doğrulamak için ${newEmail} adresine bir link gönderildi. Lütfen onaylayın. Onayladıktan sonra yeni e-postanızla giriş yapmanız gerekecektir.`,
                 duration: 10000,
             });
             setNewEmail('');
@@ -90,28 +83,23 @@ export default function SecuritySettingsPage() {
             setIsChangingEmail(false);
         }
     };
-
-    const handleRevokeAll = async () => {
-        if (!user) return;
-        setIsRevoking(true);
-        setShowRevokeConfirm(false);
+    
+    const handlePasswordReset = async () => {
+        if (!user?.email) return;
+        setIsResettingPassword(true);
         try {
-            await revokeAllSessions(user.uid);
+            const result = await sendPasswordResetLink(user.email);
+            if (!result.success) throw new Error(result.error);
             toast({
-                title: "Başarılı!",
-                description: "Diğer tüm cihazlardaki oturumlarınız sonlandırıldı. Güvenlik nedeniyle bu cihazdan da çıkış yapılıyor.",
-                duration: 6000,
+                title: 'E-posta Gönderildi',
+                description: 'Şifrenizi sıfırlamak için e-posta kutunuzu kontrol edin.'
             });
-             // Log out from the current device for full security
-            setTimeout(() => auth.signOut(), 3000);
         } catch (error: any) {
-             toast({ variant: 'destructive', title: "Hata", description: error.message });
+             toast({ variant: 'destructive', title: 'Hata', description: error.message });
         } finally {
-             setIsRevoking(false);
+            setIsResettingPassword(false);
         }
-    };
-
-    const currentSession = userData?.sessions?.current;
+    }
 
 
     if (loading || !userData) {
@@ -124,7 +112,7 @@ export default function SecuritySettingsPage() {
                 <Button asChild variant="ghost" className="rounded-full">
                     <Link href="/profile"><ChevronLeft className="mr-2 h-4 w-4"/> Geri</Link>
                 </Button>
-                 <h1 className="text-lg font-semibold">Hesap Güvenliği</h1>
+                 <h1 className="text-lg font-semibold">E-posta &amp; Şifre</h1>
                  <div className="w-10"></div>
             </header>
             <div className="p-4 space-y-6">
@@ -153,38 +141,12 @@ export default function SecuritySettingsPage() {
                     </CardContent>
                      {!userData.emailVerified && (
                          <CardFooter>
-                            <Button onClick={handleSendVerification} disabled={isVerifying}>
+                            <Button onClick={handleSendVerification} disabled={isVerifying} size="sm">
                                 {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                                 Doğrulama E-postasını Tekrar Gönder
                             </Button>
                         </CardFooter>
                      )}
-                </Card>
-
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Oturum Yönetimi</CardTitle>
-                        <CardDescription>
-                             Aktif oturumlarınızı yönetin ve tanımadığınız cihazlardan çıkış yapın.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {currentSession && (
-                            <div className="p-3 rounded-md border bg-muted/50">
-                                <p className="font-semibold text-green-600">Mevcut Oturum</p>
-                                <p className="text-sm text-muted-foreground">{currentSession.userAgent}</p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    Son Aktif: {format(new Date(currentSession.lastSeen.seconds * 1000), 'PPpp', { locale: tr })}
-                                </p>
-                            </div>
-                        )}
-                    </CardContent>
-                     <CardFooter>
-                        <Button onClick={() => setShowRevokeConfirm(true)} disabled={isRevoking} variant="destructive">
-                            {isRevoking ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <LogOut className="mr-2 h-4 w-4" />}
-                            Diğer Tüm Oturumları Kapat
-                        </Button>
-                    </CardFooter>
                 </Card>
 
                  <Card>
@@ -211,27 +173,26 @@ export default function SecuritySettingsPage() {
                      <CardFooter>
                         <Button onClick={handleChangeEmail} disabled={isChangingEmail || !newEmail || !password}>
                             {isChangingEmail && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                            E-postayı Değiştir
+                            E-postayı Değiştirme İsteği Gönder
                         </Button>
                     </CardFooter>
                 </Card>
+                
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Şifreyi Değiştir</CardTitle>
+                         <CardDescription>
+                            Şifrenizi değiştirmek için kayıtlı e-posta adresinize bir sıfırlama bağlantısı göndereceğiz.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button onClick={handlePasswordReset} disabled={isResettingPassword}>
+                            {isResettingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                            Şifre Sıfırlama E-postası Gönder
+                        </Button>
+                    </CardContent>
+                 </Card>
             </div>
-            <AlertDialog open={showRevokeConfirm} onOpenChange={setShowRevokeConfirm}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Tüm Oturumları Kapat?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Bu işlem, mevcut oturumunuz hariç tüm cihazlardaki oturumlarınızı sonlandıracaktır. Devam etmek istediğinizden emin misiniz?
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>İptal</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleRevokeAll} className="bg-destructive hover:bg-destructive/90">
-                            Evet, Kapat
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
         </div>
     );
 };
