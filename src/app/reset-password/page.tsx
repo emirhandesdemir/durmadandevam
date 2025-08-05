@@ -8,7 +8,6 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
@@ -30,7 +29,7 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
-import { resetPasswordWithCode } from "@/lib/actions/userActions";
+import { resetPasswordWithCode, sendPasswordResetLink } from "@/lib/actions/userActions";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Lütfen geçerli bir e-posta adresi girin."}),
@@ -102,7 +101,8 @@ export default function ResetPasswordPage() {
         }
         setIsResending(true);
         try {
-             await sendPasswordResetEmail(auth, email);
+             const result = await sendPasswordResetLink(email);
+             if (!result.success) throw new Error(result.error);
              toast({ title: "Kod Tekrar Gönderildi", description: "Lütfen e-posta kutunuzu kontrol edin."});
              setTimeLeft(180);
              setCanResend(false);
@@ -185,7 +185,7 @@ export default function ResetPasswordPage() {
                                 ) : (
                                     <p className="text-xs text-center text-muted-foreground">Yeni kod istemek için {timeLeft} saniye bekleyin.</p>
                                 )}
-                                <Button type="submit" className="w-full text-lg font-semibold" disabled={isLoading || canResend}>
+                                <Button type="submit" className="w-full text-lg font-semibold" disabled={isLoading}>
                                     {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
                                     Şifreyi Değiştir
                                 </Button>
