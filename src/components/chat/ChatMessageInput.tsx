@@ -47,7 +47,7 @@ export default function ChatMessageInput({ room, isExpanded, onFocus, onBlur }: 
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || !currentUser || !userData || !isParticipant || isSending) return;
+    if (!message.trim() || !currentUser || !userData || isSending) return;
 
     setIsSending(true);
     
@@ -74,10 +74,6 @@ export default function ChatMessageInput({ room, isExpanded, onFocus, onBlur }: 
         setIsSending(false);
     }
   };
-
-  if (!isParticipant) {
-    return <p className="w-full text-center text-sm text-muted-foreground px-4">Mesaj göndermek için odaya katılmalısınız.</p>;
-  }
   
   return (
     <motion.div layout transition={{ type: 'spring', stiffness: 300, damping: 30 }} className="flex-1">
