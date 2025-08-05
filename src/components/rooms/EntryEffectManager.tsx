@@ -4,7 +4,6 @@
 import { useState, useEffect, useRef } from 'react';
 import type { VoiceParticipant } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
 import { AnimatedCastle } from '@/components/gifts/GiftAnimations';
 
 interface EntryEffectManagerProps {
@@ -13,43 +12,35 @@ interface EntryEffectManagerProps {
 
 export default function EntryEffectManager({ participants }: EntryEffectManagerProps) {
     const [justJoined, setJustJoined] = useState<VoiceParticipant | null>(null);
-    const prevParticipantIds = useRef<Set<string>>(new Set(participants.map(p => p.uid)));
-    const activeEffectTimeout = useRef<NodeJS.Timeout | null>(null);
+    const prevParticipantIds = useRef<Set<string>>(new Set());
+
+    useEffect(() => {
+        // Initialize the ref with the initial participants on mount
+        prevParticipantIds.current = new Set(participants.map(p => p.uid));
+    }, []);
 
     useEffect(() => {
         const currentIds = new Set(participants.map(p => p.uid));
         
-        // Find a new participant who wasn't there before
+        // Find a new participant who wasn't there in the previous render
         const newParticipant = participants.find(p => 
             !prevParticipantIds.current.has(p.uid) && 
             p.giftLevel >= 3
         );
 
-        if (newParticipant && !justJoined) { // Only trigger if there isn't an active effect
+        if (newParticipant) {
             setJustJoined(newParticipant);
-
-            // Clear any existing timer before setting a new one
-            if (activeEffectTimeout.current) {
-                clearTimeout(activeEffectTimeout.current);
-            }
-
-            activeEffectTimeout.current = setTimeout(() => {
+            const timer = setTimeout(() => {
                 setJustJoined(null);
-                activeEffectTimeout.current = null;
-            }, 5000); // Effect duration
+            }, 5000); // Effect duration: 5 seconds
+
+            return () => clearTimeout(timer); // Cleanup on unmount or if effect re-runs
         }
         
-        // Update the set of previous participants for the next render
+        // IMPORTANT: Update the previous IDs state for the next render *after* checking.
         prevParticipantIds.current = currentIds;
 
-        // Cleanup the timer when the component unmounts
-        return () => {
-            if (activeEffectTimeout.current) {
-                clearTimeout(activeEffectTimeout.current);
-            }
-        };
-
-    }, [participants, justJoined]);
+    }, [participants]);
 
     return (
         <AnimatePresence>

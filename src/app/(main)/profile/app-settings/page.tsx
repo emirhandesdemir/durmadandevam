@@ -4,8 +4,8 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ChevronLeft, BatteryCharging, Wifi, Sparkles, Database } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Loader2, ChevronLeft, BatteryCharging, Wifi, Sparkles, Database, Mic } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import Link from 'next/link';
 import { updateUserProfile } from "@/lib/actions/userActions";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -20,6 +20,65 @@ const formatBytes = (bytes: number, decimals = 2) => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+const AudioVisualizer = () => {
+    const [volume, setVolume] = useState(0);
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const analyserRef = useRef<AnalyserNode | null>(null);
+    const animationFrameRef = useRef<number | null>(null);
+    const streamRef = useRef<MediaStream | null>(null);
+    
+    const startTest = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        streamRef.current = stream;
+        const audioContext = new AudioContext();
+        audioContextRef.current = audioContext;
+        const analyser = audioContext.createAnalyser();
+        analyserRef.current = analyser;
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+        analyser.fftSize = 512;
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        
+        const draw = () => {
+          analyser.getByteFrequencyData(dataArray);
+          const avg = dataArray.reduce((acc, val) => acc + val, 0) / bufferLength;
+          setVolume(avg);
+          animationFrameRef.current = requestAnimationFrame(draw);
+        };
+        draw();
+      } catch (err) {
+        console.error("Mic test error:", err);
+      }
+    };
+
+    const stopTest = () => {
+        if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+        if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
+        if (audioContextRef.current && audioContextRef.current.state !== 'closed') audioContextRef.current.close();
+        setVolume(0);
+    };
+
+    useEffect(() => {
+        return () => stopTest(); // Cleanup on unmount
+    }, []);
+
+    return (
+        <div className="flex items-center gap-4">
+            <div className="w-full h-10 bg-muted rounded-lg relative overflow-hidden">
+                <div 
+                    className="absolute left-0 top-0 h-full bg-primary transition-all duration-75"
+                    style={{ width: `${Math.min(100, volume * 1.5)}%` }}
+                />
+            </div>
+            <Button onMouseDown={startTest} onMouseUp={stopTest} onMouseLeave={stopTest} onTouchStart={startTest} onTouchEnd={stopTest}>
+                Mikrofonu Test Et
+            </Button>
+        </div>
+    );
 }
 
 export default function AppSettingsPage() {
@@ -96,6 +155,15 @@ export default function AppSettingsPage() {
                             </div>
                             <Switch id="disable-animations" checked={settings.disableAnimations} onCheckedChange={(val) => handleSettingChange('disableAnimations', val)} />
                         </div>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Mic className="h-5 w-5"/>Ses ve Mikrofon Testi</CardTitle>
+                        <CardDescription>Sesli sohbete katılmadan önce mikrofonunuzun çalıştığından emin olun. Konuştuğunuzda aşağıdaki çubuk hareket etmelidir.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <AudioVisualizer />
                     </CardContent>
                 </Card>
                  <Card className="bg-secondary">
