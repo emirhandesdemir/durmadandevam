@@ -114,11 +114,13 @@ export async function updateUserProfile(updates: {
         updatesForDb[`sessions.current`] = sessionInfo;
     }
 
+    let userExists = false;
 
     await runTransaction(db, async (transaction) => {
         const userDoc = await transaction.get(userRef);
+        userExists = userDoc.exists();
 
-        if (!userDoc.exists()) {
+        if (!userExists) {
             if (isNewUser) {
                 const counterRef = doc(db, 'config', 'counters');
                 let newTag = 1000;
@@ -202,20 +204,24 @@ export async function updateUserProfile(updates: {
         }
     });
 
-    const propagationUpdates: { [key: string]: any } = {};
-    if (username) propagationUpdates.username = username;
-    if (photoURL !== undefined) propagationUpdates.userPhotoURL = photoURL;
-    if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
+    // IMPORTANT: Only propagate updates if the user already existed.
+    // This prevents the "NOT_FOUND" error on user creation.
+    if (userExists) {
+        const propagationUpdates: { [key: string]: any } = {};
+        if (username) propagationUpdates.username = username;
+        if (photoURL !== undefined) propagationUpdates.userPhotoURL = photoURL;
+        if (updates.selectedAvatarFrame !== undefined) propagationUpdates.userAvatarFrame = updates.selectedAvatarFrame;
 
-    if (Object.keys(propagationUpdates).length > 0) {
-        try {
-            await Promise.all([
-                updateUserPosts(userId, propagationUpdates),
-                updateUserComments(userId, propagationUpdates),
-                updateUserDmMessages(userId, propagationUpdates),
-            ]);
-        } catch(err) {
-            console.error("Propagation error:", err);
+        if (Object.keys(propagationUpdates).length > 0) {
+            try {
+                await Promise.all([
+                    updateUserPosts(userId, propagationUpdates),
+                    updateUserComments(userId, propagationUpdates),
+                    updateUserDmMessages(userId, propagationUpdates),
+                ]);
+            } catch(err) {
+                console.error("Propagation error:", err);
+            }
         }
     }
 

@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Post } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck, Sparkles, Repeat, EyeOff, MessageCircleOff, HeartOff, Bookmark, ShieldAlert, Clapperboard, Play } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck, Sparkles, Repeat, EyeOff, MessageCircleOff, HeartOff, Bookmark, ShieldAlert, Clapperboard, Play, Share2 } from "lucide-react";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -330,7 +330,9 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                                 <span className={cn("text-2xl transition-all duration-200 group-hover:scale-110", !optimisticLiked && "grayscale")}>❤️‍🔥</span>
                             </Button>
                             {!post.commentsDisabled && (<Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary" onClick={() => setShowComments(true)}><MessageCircle className="h-6 w-6" /></Button>)}
-                            <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-green-500/10 hover:text-green-500" onClick={handleRetweet} disabled={!currentUser || isOwner}><Repeat className="h-6 w-6" /></Button>
+                             <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-indigo-500/10 hover:text-indigo-500" onClick={handleRetweet} disabled={!currentUser}>
+                                <Share2 className="h-6 w-6" />
+                            </Button>
                         </div>
                         <Button variant="ghost" size="icon" className={cn("rounded-full text-muted-foreground hover:bg-sky-500/10 hover:text-sky-500", optimisticSaved && "text-sky-500")} onClick={handleSave} disabled={!currentUser}><Bookmark className={cn("h-6 w-6", optimisticSaved && "fill-current")} /></Button>
                     </div>
