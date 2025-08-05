@@ -77,8 +77,9 @@ export async function updateUserProfile(updates: {
     interests?: string[];
     location?: { latitude: number; longitude: number; city?: string | null; country?: string | null; } | null;
     profileCompletionAwarded?: boolean;
+    sessionInfo?: { lastSeen: any, ipAddress?: string, userAgent?: string }; // Modified for session handling
 }) {
-    const { userId, isNewUser, ...otherUpdates } = updates;
+    const { userId, isNewUser, sessionInfo, ...otherUpdates } = updates;
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
 
     const userRef = doc(db, 'users', userId);
@@ -91,6 +92,13 @@ export async function updateUserProfile(updates: {
         updatesForDb.username = username;
         updatesForDb.username_lowercase = username.toLowerCase();
     }
+     // Add session info to the updates if provided
+    if (sessionInfo) {
+        // We'll use a simplified session key for this example, like 'current'.
+        // A real-world app might generate unique session IDs.
+        updatesForDb[`sessions.current`] = sessionInfo;
+    }
+
 
     await runTransaction(db, async (transaction) => {
         const userDoc = await transaction.get(userRef);
@@ -159,6 +167,7 @@ export async function updateUserProfile(updates: {
                     profileCompletionAwarded: false,
                     location: null,
                     hasUnreadNotifications: false,
+                    sessions: sessionInfo ? { current: sessionInfo } : {},
                  };
                 transaction.set(userRef, initialData);
             } else {
@@ -537,4 +546,18 @@ export async function changeUserPassword(userId: string, currentPasswordPlainTex
     // The client should reauthenticate and then call `updatePassword`.
     // We will throw an error here to indicate this action should be handled on the client.
      throw new Error("Password change must be initiated from the client with reauthentication.");
+}
+
+export async function revokeAllSessions(userId: string) {
+    if (!userId) {
+        throw new Error("Kullanıcı ID'si gerekli.");
+    }
+    try {
+        const auth = getAuth();
+        await auth.revokeRefreshTokens(userId);
+        return { success: true };
+    } catch (error: any) {
+        console.error("Oturumlar sonlandırılırken hata:", error);
+        return { success: false, error: "Oturumlar sonlandırılamadı." };
+    }
 }

@@ -7,7 +7,7 @@ import { doc, onSnapshot, setDoc, serverTimestamp, updateDoc, getDoc } from 'fir
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { FeatureFlags, UserProfile, ThemeSettings } from '@/lib/types';
-import { assignMissingUniqueTag } from '@/lib/actions/userActions';
+import { assignMissingUniqueTag, updateUserProfile } from '@/lib/actions/userActions';
 import { createNotification } from '@/lib/actions/notificationActions';
 import i18n from '@/lib/i18n';
 import AnimatedLogoLoader from '@/components/common/AnimatedLogoLoader';
@@ -108,6 +108,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(currentUser);
       const token = await currentUser?.getIdToken();
       await setSessionCookie(token || null);
+
+      if (currentUser) {
+        // Update session info on login/token refresh
+        updateUserProfile({
+            userId: currentUser.uid,
+            sessionInfo: {
+                lastSeen: serverTimestamp(),
+                userAgent: navigator.userAgent,
+            }
+        }).catch(console.error);
+      }
+
     });
 
     return () => {

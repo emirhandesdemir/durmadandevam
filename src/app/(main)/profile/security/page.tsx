@@ -4,15 +4,18 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ChevronLeft, KeyRound, MailWarning, MailCheck, ShieldCheck } from "lucide-react";
+import { Loader2, ChevronLeft, KeyRound, MailWarning, MailCheck, ShieldCheck, Server, LogOut } from "lucide-react";
 import { useState, useCallback } from "react";
 import Link from 'next/link';
-import { updateUserProfile } from "@/lib/actions/userActions";
+import { updateUserProfile, revokeAllSessions } from "@/lib/actions/userActions";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { sendEmailVerification, updateEmail, reauthenticateWithCredential, EmailAuthProvider, verifyBeforeUpdateEmail } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { format } from "date-fns";
+import { tr } from 'date-fns/locale';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 
 export default function SecuritySettingsPage() {
@@ -21,6 +24,8 @@ export default function SecuritySettingsPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
     const [isChangingEmail, setIsChangingEmail] = useState(false);
+    const [isRevoking, setIsRevoking] = useState(false);
+    const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
     
     const [newEmail, setNewEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -86,6 +91,28 @@ export default function SecuritySettingsPage() {
         }
     };
 
+    const handleRevokeAll = async () => {
+        if (!user) return;
+        setIsRevoking(true);
+        setShowRevokeConfirm(false);
+        try {
+            await revokeAllSessions(user.uid);
+            toast({
+                title: "Başarılı!",
+                description: "Diğer tüm cihazlardaki oturumlarınız sonlandırıldı. Güvenlik nedeniyle bu cihazdan da çıkış yapılıyor.",
+                duration: 6000,
+            });
+             // Log out from the current device for full security
+            setTimeout(() => auth.signOut(), 3000);
+        } catch (error: any) {
+             toast({ variant: 'destructive', title: "Hata", description: error.message });
+        } finally {
+             setIsRevoking(false);
+        }
+    };
+
+    const currentSession = userData?.sessions?.current;
+
 
     if (loading || !userData) {
         return <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -136,6 +163,32 @@ export default function SecuritySettingsPage() {
 
                  <Card>
                     <CardHeader>
+                        <CardTitle>Oturum Yönetimi</CardTitle>
+                        <CardDescription>
+                             Aktif oturumlarınızı yönetin ve tanımadığınız cihazlardan çıkış yapın.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {currentSession && (
+                            <div className="p-3 rounded-md border bg-muted/50">
+                                <p className="font-semibold text-green-600">Mevcut Oturum</p>
+                                <p className="text-sm text-muted-foreground">{currentSession.userAgent}</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Son Aktif: {format(new Date(currentSession.lastSeen.seconds * 1000), 'PPpp', { locale: tr })}
+                                </p>
+                            </div>
+                        )}
+                    </CardContent>
+                     <CardFooter>
+                        <Button onClick={() => setShowRevokeConfirm(true)} disabled={isRevoking} variant="destructive">
+                            {isRevoking ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <LogOut className="mr-2 h-4 w-4" />}
+                            Diğer Tüm Oturumları Kapat
+                        </Button>
+                    </CardFooter>
+                </Card>
+
+                 <Card>
+                    <CardHeader>
                         <CardTitle>E-posta Adresini Değiştir</CardTitle>
                         <CardDescription>
                              Yeni bir e-posta adresi tanımlayın. Güvenlik nedeniyle mevcut şifrenizi girmeniz gerekmektedir.
@@ -163,6 +216,22 @@ export default function SecuritySettingsPage() {
                     </CardFooter>
                 </Card>
             </div>
+            <AlertDialog open={showRevokeConfirm} onOpenChange={setShowRevokeConfirm}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Tüm Oturumları Kapat?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Bu işlem, mevcut oturumunuz hariç tüm cihazlardaki oturumlarınızı sonlandıracaktır. Devam etmek istediğinizden emin misiniz?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>İptal</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleRevokeAll} className="bg-destructive hover:bg-destructive/90">
+                            Evet, Kapat
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };

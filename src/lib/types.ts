@@ -177,7 +177,7 @@ export interface UserProfile {
     location?: {
         latitude: number;
         longitude: number;
-    }
+    };
     sessions?: {
         [key: string]: {
             lastSeen: Timestamp;
