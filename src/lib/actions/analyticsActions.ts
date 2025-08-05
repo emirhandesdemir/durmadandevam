@@ -179,3 +179,19 @@ export async function getTopDiamondHolders(): Promise<Partial<UserProfile>[]> {
     // Bu işlem, "only plain objects can be passed to Client Components" hatasını önler.
     return deepSerialize(users);
 }
+
+export async function getPopularUsers(): Promise<UserProfile[]> {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, orderBy('followers', 'desc'), limit(10));
+    const snapshot = await getDocs(q);
+    const users = snapshot.docs.map(doc => doc.data() as UserProfile);
+    return deepSerialize(users);
+}
+
+export async function getTopFollowedUsers(): Promise<UserProfile[]> {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, orderBy('followers', 'desc'), limit(10));
+    const snapshot = await getDocs(q);
+    const users = snapshot.docs.map(doc => doc.data() as UserProfile);
+    return deepSerialize(users);
+}

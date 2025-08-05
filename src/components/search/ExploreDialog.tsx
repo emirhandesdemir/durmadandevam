@@ -11,7 +11,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Loader2, Users, Flame, Star } from 'lucide-react';
-import { getSuggestedUsers, getPopularUsers, getTopFollowedUsers } from '@/lib/actions/userActions';
+import { getPopularUsers, getTopFollowedUsers } from '@/lib/actions/analyticsActions';
 import type { UserProfile } from '@/lib/types';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -64,8 +64,8 @@ export default function ExploreDialog({ isOpen, onOpenChange }: ExploreDialogPro
         getPopularUsers(),
         getTopFollowedUsers(),
       ]).then(([popular, followed]) => {
-        setPopularUsers(popular);
-        setTopFollowed(followed);
+        setPopularUsers(popular as UserProfile[]);
+        setTopFollowed(followed as UserProfile[]);
         setLoading(false);
       }).catch(err => {
         console.error("Failed to load explore data:", err);

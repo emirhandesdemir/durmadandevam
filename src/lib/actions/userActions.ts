@@ -561,3 +561,40 @@ export async function revokeAllSessions(userId: string) {
         return { success: false, error: "Oturumlar sonlandırılamadı." };
     }
 }
+
+export async function changeUniqueTag(userId: string, newTag: number) {
+    if (!userId || !newTag) throw new Error("Gerekli parametreler eksik.");
+    
+    const userRef = doc(db, 'users', userId);
+    const cost = 1000;
+
+    return await runTransaction(db, async (transaction) => {
+        const tagQuery = query(collection(db, 'users'), where('uniqueTag', '==', newTag), limit(1));
+        const tagSnapshot = await transaction.get(tagQuery);
+        if (!tagSnapshot.empty) {
+            throw new Error(`@${newTag} ID'si zaten kullanımda.`);
+        }
+        
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) throw new Error("Kullanıcı bulunamadı.");
+        const userData = userDoc.data();
+        
+        if ((userData.diamonds || 0) < cost) {
+            throw new Error(`Kullanıcı ID'nizi değiştirmek için ${cost} elmas gereklidir.`);
+        }
+
+        transaction.update(userRef, { 
+            diamonds: increment(-cost),
+            uniqueTag: newTag
+        });
+
+        await logTransaction(transaction, userId, {
+            type: 'user_perk',
+            amount: -cost,
+            description: `Kullanıcı ID'sini @${newTag} olarak değiştirme`,
+        });
+
+        revalidatePath(`/profile/${userId}`);
+        return { success: true };
+    });
+}
