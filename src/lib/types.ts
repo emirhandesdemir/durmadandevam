@@ -435,7 +435,7 @@ export interface DirectMessage {
   id: string;
   senderId: string;
   receiverId: string;
-  type?: 'user' | 'call';
+  type?: 'user' | 'call' | 'shared_post';
   text?: string;
   imageUrl?: string;
   imageType?: 'permanent' | 'timed';
@@ -453,6 +453,12 @@ export interface DirectMessage {
   callData?: {
       status: 'started' | 'ended' | 'missed' | 'declined';
       duration?: string;
+  };
+   sharedPostData?: {
+      postId: string;
+      postText?: string;
+      postImageUrl?: string;
+      postOwnerUsername: string;
   };
 }
 
@@ -488,7 +494,7 @@ export interface Message {
   text?: string;
   imageUrl?: string;
   videoUrl?: string;
-  type?: 'system' | 'game' | 'portal' | 'user' | 'gameInvite' | 'gift' | 'announcement';
+  type?: 'system' | 'game' | 'portal' | 'user' | 'gameInvite' | 'gift' | 'announcement' | 'shared_post';
   createdAt: Timestamp;
   selectedBubble?: string;
   selectedAvatarFrame?: string;
@@ -500,7 +506,13 @@ export interface Message {
       senderLevel?: number;
       receiverName?: string | null;
       giftId: string;
-  }
+  },
+  sharedPostData?: {
+      postId: string;
+      postText?: string;
+      postImageUrl?: string;
+      postOwnerUsername: string;
+  };
 }
 
 export interface Call {

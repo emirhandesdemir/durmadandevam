@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Post } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck, Sparkles, Repeat, EyeOff, MessageCircleOff, HeartOff, Bookmark, ShieldAlert, Clapperboard, Play, Share2 } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit, Loader2, BadgeCheck, Sparkles, Repeat, EyeOff, MessageCircleOff, HeartOff, Bookmark, ShieldAlert, Clapperboard, Play, Share2, Send, MessageSquare } from "lucide-react";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -41,6 +41,9 @@ import ReportDialog from '../common/ReportDialog';
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
 import AvatarWithFrame from "../common/AvatarWithFrame";
+import { useVoiceChat } from "@/contexts/VoiceChatContext";
+import SharePostDialog from "./SharePostDialog";
+import { sendRoomMessage } from "@/lib/actions/roomActions";
 
 interface PostCardProps {
     post: Post;
@@ -84,6 +87,7 @@ const safeParseTimestamp = (timestamp: any): Date => {
 
 export default function PostCard({ post, isStandalone = false, onHide }: PostCardProps) {
     const { user: currentUser, userData: currentUserData } = useAuth();
+    const { activeRoom } = useVoiceChat();
     const { toast } = useToast();
 
     const [optimisticLiked, setOptimisticLiked] = useState(post.likes?.includes(currentUser?.uid || ''));
@@ -100,6 +104,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     const [isReportOpen, setIsReportOpen] = useState(false);
     const [showLikeAnimation, setShowLikeAnimation] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
+    const [isShareOpen, setIsShareOpen] = useState(false);
 
     const [editingCommentsDisabled, setEditingCommentsDisabled] = useState(post.commentsDisabled ?? false);
     const [editingLikesHidden, setEditingLikesHidden] = useState(post.likesHidden ?? false);
@@ -249,6 +254,29 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
         }
     };
 
+    const handleShareToRoom = async () => {
+        if (!currentUser || !currentUserData || !activeRoom) return;
+        try {
+            await sendRoomMessage(activeRoom.id, {
+                 uid: currentUser.uid,
+                 displayName: currentUserData.username,
+                 photoURL: currentUserData.photoURL,
+                 selectedAvatarFrame: currentUserData.selectedAvatarFrame,
+                 role: currentUserData.role,
+            }, `https://hiwewalkbeta.netlify.app/post/${post.id} adlı gönderiyi paylaştı:`);
+
+             await sendRoomMessage(activeRoom.id, {
+                 uid: 'system', // or a special user for shared content
+                 displayName: 'System',
+                 photoURL: '',
+            }, `shared_post:${post.id}`);
+
+            toast({ description: "Gönderi odaya gönderildi." });
+        } catch (error: any) {
+            toast({ variant: 'destructive', description: "Gönderi odaya gönderilemedi." });
+        }
+    };
+
     return (
         <>
             <article className={cn("relative flex flex-col bg-background", !isStandalone && "border-b")}>
@@ -330,9 +358,24 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                                 <span className={cn("text-2xl transition-all duration-200 group-hover:scale-110", !optimisticLiked && "grayscale")}>❤️‍🔥</span>
                             </Button>
                             {!post.commentsDisabled && (<Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary" onClick={() => setShowComments(true)}><MessageCircle className="h-6 w-6" /></Button>)}
-                             <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-indigo-500/10 hover:text-indigo-500" onClick={handleRetweet} disabled={!currentUser}>
-                                <Share2 className="h-6 w-6" />
-                            </Button>
+                             <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-indigo-500/10 hover:text-indigo-500" disabled={!currentUser}><Share2 className="h-6 w-6" /></Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                     <DropdownMenuItem onSelect={() => setIsShareOpen(true)}>
+                                        <Send className="mr-2 h-4 w-4"/> Sohbetlere Gönder
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={handleRetweet} disabled={isOwner || !!post.retweetOf}>
+                                        <Repeat className="mr-2 h-4 w-4"/> Alıntıla
+                                    </DropdownMenuItem>
+                                    {activeRoom && (
+                                        <DropdownMenuItem onSelect={handleShareToRoom}>
+                                            <MessageSquare className="mr-2 h-4 w-4"/> Odaya Gönder
+                                        </DropdownMenuItem>
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                         <Button variant="ghost" size="icon" className={cn("rounded-full text-muted-foreground hover:bg-sky-500/10 hover:text-sky-500", optimisticSaved && "text-sky-500")} onClick={handleSave} disabled={!currentUser}><Bookmark className={cn("h-6 w-6", optimisticSaved && "fill-current")} /></Button>
                     </div>
@@ -376,6 +419,11 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
             {isReportOpen && (
               <ReportDialog isOpen={isReportOpen} onOpenChange={setIsReportOpen} target={{ type: 'post', id: post.id, user: { id: post.uid, name: post.username } }}/>
             )}
+             <SharePostDialog
+                isOpen={isShareOpen}
+                onOpenChange={setIsShareOpen}
+                post={post}
+            />
         </>
     );
 }

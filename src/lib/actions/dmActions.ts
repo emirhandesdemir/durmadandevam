@@ -20,6 +20,7 @@ import {
   addDoc,
   arrayUnion,
   arrayRemove,
+  setDoc,
 } from 'firebase/firestore';
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { revalidatePath } from 'next/cache';
@@ -27,6 +28,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getChatId } from '../utils';
 import { deleteChatWithSubcollections } from '../firestoreUtils';
 import { createNotification } from './notificationActions';
+import type { Post } from '../types';
 
 interface UserInfo {
   uid: string;
@@ -76,10 +78,11 @@ export async function sendMessage(
     imageUrl?: string; 
     imageType?: 'permanent' | 'timed';
     audio?: { dataUrl: string, duration: number };
+    sharedPost?: Post;
   }
 ) {
-  const { text, imageUrl, imageType, audio } = content;
-  if (!text?.trim() && !imageUrl && !audio) {
+  const { text, imageUrl, imageType, audio, sharedPost } = content;
+  if (!text?.trim() && !imageUrl && !audio && !sharedPost) {
     throw new Error('Mesaj içeriği boş olamaz.');
   }
 
@@ -137,7 +140,7 @@ export async function sendMessage(
       createdAt: serverTimestamp(),
       read: false,
       edited: false,
-      type: 'user',
+      type: sharedPost ? 'shared_post' : 'user',
       text: text || '',
     };
     if (finalImageUrl) {
@@ -151,10 +154,19 @@ export async function sendMessage(
         messageData.audioUrl = finalAudioUrl;
         messageData.audioDuration = audio.duration;
     }
+    if(sharedPost) {
+        messageData.sharedPostData = {
+            postId: sharedPost.id,
+            postText: sharedPost.text || '',
+            postImageUrl: sharedPost.imageUrl || null,
+            postOwnerUsername: sharedPost.username,
+        };
+    }
     
     let lastMessageText: string;
     if (finalAudioUrl) lastMessageText = '🎤 Sesli Mesaj';
     else if (finalImageUrl) lastMessageText = '📷 Fotoğraf';
+    else if (sharedPost) lastMessageText = `↪️ ${sharedPost.username}'in gönderisini paylaştı`;
     else lastMessageText = text ? (text.length > 30 ? text.substring(0, 27) + '...' : text) : 'Mesaj';
 
     transaction.set(newMessageRef, messageData);
@@ -181,17 +193,20 @@ export async function sendMessage(
     }
   });
 
-  await createNotification({
-    recipientId: receiver.uid,
-    senderId: sender.uid,
-    senderUsername: sender.username,
-    senderAvatar: sender.photoURL,
-    profileEmoji: sender.profileEmoji,
-    senderAvatarFrame: sender.selectedAvatarFrame,
-    type: 'dm_message',
-    messageText: text || (finalImageUrl ? '📷 Fotoğraf' : '🎤 Sesli Mesaj'),
-    chatId: chatId,
-  });
+  if (!sharedPost) { // Don't send push for shared posts for now to avoid spam
+    await createNotification({
+      recipientId: receiver.uid,
+      senderId: sender.uid,
+      senderUsername: sender.username,
+      senderAvatar: sender.photoURL,
+      profileEmoji: sender.profileEmoji,
+      senderAvatarFrame: sender.selectedAvatarFrame,
+      type: 'dm_message',
+      messageText: text || (finalImageUrl ? '📷 Fotoğraf' : '🎤 Sesli Mesaj'),
+      chatId: chatId,
+    });
+  }
+
 
   revalidatePath(`/dm/${chatId}`);
   revalidatePath('/dm');
