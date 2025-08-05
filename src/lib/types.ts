@@ -164,6 +164,7 @@ export interface UserProfile {
     privateProfile: boolean;
     acceptsFollowRequests: boolean;
     showOnlineStatus: boolean;
+    showActiveRoom?: boolean;
     animatedNav?: boolean;
     followers: string[];
     following: string[];
@@ -193,7 +194,6 @@ export interface UserProfile {
     activeMatchmakingChatId: string | null;
     activeRoomId?: string | null;
     activeRoomName?: string | null;
-    showActiveRoom?: boolean;
     location?: {
         latitude: number;
         longitude: number;

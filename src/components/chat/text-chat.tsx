@@ -10,8 +10,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, Pin, Trash2, Bot, Bell } from 'lucide-react';
-import type { Message, Room } from '@/lib/types';
+import { Loader2, Pin, Trash2, Bot, Bell, FileText, Image as ImageIcon } from 'lucide-react';
+import type { Message, Room, Post } from '@/lib/types';
 import PortalMessageCard from './PortalMessageCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { Button } from '../ui/button';
@@ -21,6 +21,9 @@ import { useToast } from '@/hooks/use-toast';
 import GameInviteMessage from '../game/GameInviteMessage';
 import GiftMessage from '../gifts/GiftMessage';
 import AvatarWithFrame from '../common/AvatarWithFrame';
+import { useState } from 'react';
+import PostViewerDialog from '../posts/PostViewerDialog';
+
 
 interface TextChatProps {
   messages: Message[];
@@ -42,9 +45,34 @@ function AnnouncementMessageCard({ message }: { message: Message }) {
     );
 }
 
+const SharedPostCard = ({ postData, onClick }: { postData: NonNullable<Message['sharedPostData']>; onClick: () => void }) => {
+    return (
+        <button onClick={onClick} className="w-full text-left">
+            <div className="p-3 rounded-xl bg-muted/80 hover:bg-muted transition-colors">
+                <div className="flex items-center gap-2 mb-2">
+                     <FileText className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-xs font-semibold text-muted-foreground">
+                        <span className="font-bold text-foreground">{postData.postOwnerUsername}</span> adlı kullanıcının gönderisi
+                    </p>
+                </div>
+                <div className="flex items-start gap-3">
+                    {postData.postImageUrl && (
+                        <div className="relative h-20 w-20 flex-shrink-0 rounded-md bg-secondary overflow-hidden">
+                            <Image src={postData.postImageUrl} alt="Paylaşılan gönderi" fill sizes="80px" className="object-cover"/>
+                        </div>
+                    )}
+                    <p className="text-sm text-foreground/90 line-clamp-3">{postData.postText}</p>
+                </div>
+            </div>
+        </button>
+    );
+};
+
+
 export default function TextChat({ messages, loading, room }: TextChatProps) {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const isHost = currentUser?.uid === room.createdBy.uid;
 
   const handlePinMessage = async (messageId: string) => {
@@ -70,6 +98,7 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
   if (!currentUser) return null;
 
   return (
+    <>
     <div className="space-y-4 p-4">
       {loading && (
         <div className="flex justify-center py-10">
@@ -109,6 +138,19 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
 
         if (msg.type === 'portal') {
             return <PortalMessageCard key={msg.id} message={msg} />;
+        }
+        
+        if (msg.type === 'shared_post' && msg.sharedPostData) {
+            return (
+                 <SharedPostCard 
+                    key={msg.id} 
+                    postData={msg.sharedPostData} 
+                    onClick={async () => {
+                         const postDoc = await getDoc(doc(db, "posts", msg.sharedPostData!.postId));
+                         if(postDoc.exists()) setSelectedPost({ id: postDoc.id, ...postDoc.data() } as Post)
+                    }} 
+                />
+            )
         }
         
         const isCurrentUser = msg.uid === currentUser.uid;
@@ -196,5 +238,15 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
         );
       })}
     </div>
+    {selectedPost && (
+        <PostViewerDialog 
+            post={selectedPost} 
+            open={!!selectedPost} 
+            onOpenChange={(open) => {
+                if (!open) setSelectedPost(null)
+            }}
+        />
+    )}
+    </>
   );
 }
