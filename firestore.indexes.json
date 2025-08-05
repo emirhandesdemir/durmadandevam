@@ -146,6 +146,16 @@
           "order": "ASCENDING"
         }
       ]
+    },
+     {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "followers",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": [

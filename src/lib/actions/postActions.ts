@@ -373,6 +373,22 @@ export async function getRecentImagePosts(userId: string, imageLimit: number = 3
         limit(imageLimit)
     );
 
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    try {
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching recent image posts (likely requires index):", error);
+        // Fallback to a simpler query if the index is missing
+        const fallbackQuery = query(
+            postsRef,
+            where('uid', '==', userId),
+            orderBy('createdAt', 'desc'),
+            limit(10) // Fetch more to find images
+        );
+        const fallbackSnapshot = await getDocs(fallbackQuery);
+        return fallbackSnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .filter(post => !!post.imageUrl)
+            .slice(0, imageLimit);
+    }
 }
