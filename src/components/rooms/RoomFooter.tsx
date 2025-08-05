@@ -3,7 +3,7 @@
 
 import { Button } from '@/components/ui/button';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
-import { Mic, MicOff, Settings, Loader2, ScreenShareOff, ScreenShare, Music, Camera, CameraOff, SwitchCamera, Gamepad2, Gift, BrainCircuit, Volume2, VolumeX, MoreHorizontal } from 'lucide-react';
+import { Mic, MicOff, Settings, Loader2, ScreenShareOff, ScreenShare, Music, Camera, CameraOff, SwitchCamera, Gamepad2, Gift, BrainCircuit, Volume2, VolumeX, MoreHorizontal, PhoneOff } from 'lucide-react';
 import ChatMessageInput from '../chat/ChatMessageInput';
 import type { Room } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
@@ -26,8 +26,8 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
     const { 
         isConnected, 
         isConnecting, 
-        isListening,
-        joinToSpeak, 
+        joinVoice,
+        leaveVoice,
         self, 
         toggleSelfMute,
         isSpeakerMuted,
@@ -96,52 +96,60 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
                                     </Button>
                                 )}
 
-                                {isListening && !isConnected && canJoinToSpeak && (
-                                    <Button onClick={() => joinToSpeak()} disabled={isConnecting} className="rounded-full font-semibold px-4 bg-gradient-to-r from-red-500 to-blue-600 text-white shadow-lg hover:scale-105 transition-transform shrink-0">
-                                        {isConnecting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Mic className="mr-2 h-5 w-5" />}
-                                        Konuşmak İçin Katıl
-                                    </Button>
-                                )}
-
-                                {isConnected && (
+                                {canJoinToSpeak && (
                                     <>
-                                        <Button onClick={toggleSelfMute} variant="secondary" size="icon" className="rounded-full flex-shrink-0">
-                                            {self?.isMuted ? <MicOff className="h-5 w-5 text-destructive"/> : <Mic className="h-5 w-5" />}
-                                        </Button>
-                                        <Button onClick={toggleSpeakerMute} variant="secondary" size="icon" className="rounded-full flex-shrink-0">
-                                            {isSpeakerMuted ? <VolumeX className="h-5 w-5"/> : <Volume2 className="h-5 w-5" />}
-                                        </Button>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <Button variant="secondary" size="icon" className="rounded-full flex-shrink-0">
-                                                    <MoreHorizontal className="h-5 w-5" />
+                                        {!isConnected && (
+                                            <Button onClick={() => joinVoice()} disabled={isConnecting} className="rounded-full font-semibold px-4 bg-gradient-to-r from-red-500 to-blue-600 text-white shadow-lg hover:scale-105 transition-transform shrink-0">
+                                                {isConnecting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Mic className="mr-2 h-5 w-5" />}
+                                                Sese Katıl
+                                            </Button>
+                                        )}
+
+                                        {isConnected && (
+                                            <>
+                                                <Button onClick={toggleSelfMute} variant="secondary" size="icon" className="rounded-full flex-shrink-0">
+                                                    {self?.isMuted ? <MicOff className="h-5 w-5 text-destructive"/> : <Mic className="h-5 w-5" />}
                                                 </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent align="end" side="top" className="w-auto p-2">
-                                                <div className="flex items-center gap-1 bg-background rounded-full">
-                                                    <Button onClick={handleVideoToggle} variant="ghost" size="icon" className="rounded-full">
-                                                        {isSharingVideo ? <CameraOff className="text-destructive"/> : <Camera />}
-                                                    </Button>
-                                                    <Button onClick={switchCamera} variant="ghost" size="icon" className="rounded-full" disabled={!isSharingVideo}>
-                                                        <SwitchCamera />
-                                                    </Button>
-                                                    <Button onClick={handleScreenShare} variant="ghost" size="icon" className="rounded-full">
-                                                        {isSharingScreen ? <ScreenShareOff className="text-destructive"/> : <ScreenShare />}
-                                                    </Button>
-                                                    <Button onClick={handleMusicButtonClick} variant="ghost" size="icon" className="rounded-full">
-                                                        <Music />
-                                                    </Button>
-                                                    <Button onClick={onGameLobbyOpen} variant="ghost" size="icon" className="rounded-full">
-                                                        <BrainCircuit />
-                                                    </Button>
-                                                    {isHost && (
-                                                        <Button onClick={onGiveawayOpen} variant="ghost" size="icon" className="rounded-full text-yellow-400">
-                                                            <Gift />
+                                                <Button onClick={leaveVoice} variant="destructive" size="icon" className="rounded-full flex-shrink-0">
+                                                    <PhoneOff className="h-5 w-5"/>
+                                                </Button>
+                                                
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <Button variant="secondary" size="icon" className="rounded-full flex-shrink-0">
+                                                            <MoreHorizontal className="h-5 w-5" />
                                                         </Button>
-                                                    )}
-                                                </div>
-                                            </PopoverContent>
-                                        </Popover>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent align="end" side="top" className="w-auto p-2">
+                                                        <div className="flex items-center gap-1 bg-background rounded-full">
+                                                            <Button onClick={toggleSpeakerMute} variant="ghost" size="icon" className="rounded-full flex-shrink-0">
+                                                                {isSpeakerMuted ? <VolumeX className="h-5 w-5"/> : <Volume2 className="h-5 w-5" />}
+                                                            </Button>
+                                                            <Button onClick={handleVideoToggle} variant="ghost" size="icon" className="rounded-full">
+                                                                {isSharingVideo ? <CameraOff className="text-destructive"/> : <Camera />}
+                                                            </Button>
+                                                            <Button onClick={switchCamera} variant="ghost" size="icon" className="rounded-full" disabled={!isSharingVideo}>
+                                                                <SwitchCamera />
+                                                            </Button>
+                                                            <Button onClick={handleScreenShare} variant="ghost" size="icon" className="rounded-full">
+                                                                {isSharingScreen ? <ScreenShareOff className="text-destructive"/> : <ScreenShare />}
+                                                            </Button>
+                                                            <Button onClick={handleMusicButtonClick} variant="ghost" size="icon" className="rounded-full">
+                                                                <Music />
+                                                            </Button>
+                                                            <Button onClick={onGameLobbyOpen} variant="ghost" size="icon" className="rounded-full">
+                                                                <BrainCircuit />
+                                                            </Button>
+                                                            {isHost && (
+                                                                <Button onClick={onGiveawayOpen} variant="ghost" size="icon" className="rounded-full text-yellow-400">
+                                                                    <Gift />
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    </PopoverContent>
+                                                </Popover>
+                                            </>
+                                        )}
                                     </>
                                 )}
                              </motion.div>
