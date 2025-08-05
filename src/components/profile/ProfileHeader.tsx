@@ -3,7 +3,7 @@
 
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff, UserCheck, Crown, Bookmark, Copy, Shield, BadgeCheck, Star, Gift } from 'lucide-react';
+import { MessageCircle, Settings, Gem, MoreHorizontal, ShieldOff, UserCheck, Crown, Bookmark, Copy, Shield, BadgeCheck, Star, Gift, Users } from 'lucide-react';
 import FollowButton from './FollowButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
@@ -19,6 +19,7 @@ import ReportDialog from '../common/ReportDialog';
 import { Loader2 } from 'lucide-react';
 import { Separator } from '../ui/separator';
 import ProfileGiftDialog from './ProfileGiftDialog';
+import { joinRoom } from '@/lib/actions/roomActions';
 
 interface UserProfile {
   uid: string;
@@ -36,6 +37,9 @@ interface UserProfile {
   giftLevel?: number;
   role?: 'admin' | 'user';
   emailVerified?: boolean;
+  activeRoomId?: string | null;
+  activeRoomName?: string | null;
+  showActiveRoom?: boolean;
 }
 
 interface ProfileHeaderProps {
@@ -61,11 +65,30 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
   const [isBlocking, setIsBlocking] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [isGiftOpen, setIsGiftOpen] = useState(false);
+  const [isJoiningRoom, setIsJoiningRoom] = useState(false);
 
   const isOwnProfile = currentUserAuth?.uid === profileUser.uid;
   const amIBlockedByThisUser = profileUser.blockedUsers?.includes(currentUserAuth?.uid || '');
   const haveIBlockedThisUser = currentUserData?.blockedUsers?.includes(profileUser.uid);
   const isPremium = profileUser.premiumUntil && new Date(profileUser.premiumUntil.seconds * 1000) > new Date();
+
+  const handleJoinActiveRoom = async () => {
+    if (!profileUser.activeRoomId || !currentUserData) return;
+    setIsJoiningRoom(true);
+    try {
+        await joinRoom(profileUser.activeRoomId, {
+            uid: currentUserData.uid,
+            username: currentUserData.username,
+            photoURL: currentUserData.photoURL,
+        });
+        router.push(`/rooms/${profileUser.activeRoomId}`);
+    } catch (error: any) {
+        toast({ variant: 'destructive', description: error.message });
+    } finally {
+        setIsJoiningRoom(false);
+    }
+  };
+
 
   const handleStatClick = (type: 'followers' | 'following') => {
     setDialogType(type);
@@ -139,6 +162,19 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
           )}
         </div>
         
+        {!isOwnProfile && profileUser.showActiveRoom && profileUser.activeRoomId && (
+            <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20">
+                <div className="text-sm">
+                    <p className="text-muted-foreground">Şu anda bu odada:</p>
+                    <p className="font-bold truncate">{profileUser.activeRoomName}</p>
+                </div>
+                <Button onClick={handleJoinActiveRoom} disabled={isJoiningRoom}>
+                    {isJoiningRoom ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                    Katıl
+                </Button>
+            </div>
+        )}
+
         <div className="space-y-2">
             <p className="text-sm font-semibold text-muted-foreground">Rozetler</p>
              <div className="flex flex-wrap gap-2">

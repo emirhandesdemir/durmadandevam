@@ -163,6 +163,7 @@ export interface UserProfile {
     privateProfile: boolean;
     acceptsFollowRequests: boolean;
     showOnlineStatus: boolean;
+    animatedNav?: boolean;
     followers: string[];
     following: string[];
     followRequests: FollowRequest[];
@@ -189,6 +190,9 @@ export interface UserProfile {
     selectedBubble: string;
     selectedAvatarFrame: string;
     activeMatchmakingChatId: string | null;
+    activeRoomId?: string | null;
+    activeRoomName?: string | null;
+    showActiveRoom?: boolean;
     location?: {
         latitude: number;
         longitude: number;
@@ -245,7 +249,7 @@ export interface Notification {
     photoURL: string | null;
     profileEmoji?: string | null;
     senderAvatarFrame?: string;
-    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile' | 'system';
+    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile' | 'system' | 'event_reward';
     postId?: string | null;
     postImage?: string | null;
     commentText?: string;
@@ -506,7 +510,7 @@ export interface Message {
       senderLevel?: number;
       receiverName?: string | null;
       giftId: string;
-  },
+  };
   sharedPostData?: {
       postId: string;
       postText?: string;

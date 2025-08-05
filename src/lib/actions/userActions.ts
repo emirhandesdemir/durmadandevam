@@ -89,6 +89,7 @@ export async function updateUserProfile(updates: {
     privateProfile?: boolean;
     acceptsFollowRequests?: boolean;
     showOnlineStatus?: boolean;
+    showActiveRoom?: boolean;
     interests?: string[];
     location?: { latitude: number; longitude: number; city?: string | null; country?: string | null; } | null;
     profileCompletionAwarded?: boolean;
@@ -174,6 +175,7 @@ export async function updateUserProfile(updates: {
                     privateProfile: false,
                     acceptsFollowRequests: true,
                     showOnlineStatus: true,
+                    showActiveRoom: true,
                     isBanned: false,
                     reportCount: 0,
                     isOnline: true,

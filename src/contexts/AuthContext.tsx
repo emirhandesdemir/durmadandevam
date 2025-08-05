@@ -23,6 +23,7 @@ interface AuthContextType {
   loading: boolean;
   handleLogout: (isBan?: boolean) => Promise<void>;
   refreshUserData: () => Promise<void>;
+  refreshFeed: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -34,6 +35,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   handleLogout: async () => {},
   refreshUserData: async () => {},
+  refreshFeed: () => {},
 });
 
 async function setSessionCookie(idToken: string | null) {
@@ -62,10 +64,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [themeSettings, setThemeSettings] = useState<ThemeSettings | null>(null);
   const [totalUnreadDms, setTotalUnreadDms] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [feedKey, setFeedKey] = useState(0); // Add this state
 
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
+  
+  const refreshFeed = useCallback(() => {
+    setFeedKey(prev => prev + 1);
+  }, []);
 
   const handleLogout = useCallback(async (isBan: boolean = false) => {
     try {
@@ -207,25 +214,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (loading) return;
 
-    const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
-    const isPublicPage = isAuthPage || pathname.startsWith('/guide') || pathname.startsWith('/terms') || pathname.startsWith('/privacy');
+    const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/reset-password');
+    const isPublicPage = isAuthPage || pathname === '/' || pathname.startsWith('/guide') || pathname.startsWith('/terms') || pathname.startsWith('/privacy');
 
     if (user && userData) {
-        if (isAuthPage) {
+        if (isAuthPage || pathname === '/') {
             router.replace('/home');
         }
     } else {
-        if (!isPublicPage && pathname !== '/') {
-            router.replace('/login');
+        if (!isPublicPage) {
+            router.replace('/');
         }
     }
   }, [user, userData, loading, pathname, router]);
 
-  const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms, refreshUserData };
+  const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms, refreshUserData, refreshFeed, feedKey };
   
   return (
       <AuthContext.Provider value={value}>
-        {loading && pathname === '/' ? <AnimatedLogoLoader fullscreen /> : children}
+        {loading && (pathname === '/' || (!user && !pathname.startsWith('/login'))) ? <AnimatedLogoLoader fullscreen /> : children}
       </AuthContext.Provider>
   );
 }

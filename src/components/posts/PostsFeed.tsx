@@ -12,7 +12,7 @@ import { hidePost } from '@/lib/actions/userActions';
 import { MessageSquareOff } from 'lucide-react';
 
 export default function PostsFeed() {
-    const { user, userData, loading: authLoading } = useAuth();
+    const { user, userData, loading: authLoading, feedKey } = useAuth(); // Get feedKey from context
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
     const [clientHiddenIds, setClientHiddenIds] = useState<string[]>([]);
@@ -36,7 +36,7 @@ export default function PostsFeed() {
             unsubPosts();
         };
 
-    }, []);
+    }, [feedKey]); // Add feedKey to dependency array
     
     const combinedFeed = useMemo(() => {
         const allHiddenIds = new Set([...(userData?.hiddenPostIds || []), ...clientHiddenIds]);

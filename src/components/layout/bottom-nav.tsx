@@ -12,18 +12,18 @@ import { useVoiceChat } from '@/contexts/VoiceChatContext';
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, refreshFeed } = useAuth();
   
   const navItems = useMemo(() => {
     if (!user) return [];
     return [
-        { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
+        { id: 'home', href: '/home', icon: Home, label: 'Anasayfa', action: pathname === '/home' ? refreshFeed : undefined },
         { id: 'rooms', href: '/rooms', icon: MessagesSquare, label: 'Odalar' },
         { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
         { id: 'explore', href: '/explore', icon: Compass, label: 'Keşfet'},
         { id: 'store', href: '/store', icon: Store, label: 'Mağaza' },
       ]
-  }, [user]);
+  }, [user, pathname, refreshFeed]);
 
   if (!user) {
     return null;
@@ -53,6 +53,18 @@ export default function BottomNav() {
 
                   const commonClasses = "flex h-full flex-col items-center justify-center gap-1 transition-colors";
 
+                  if (item.action) {
+                      return (
+                          <button
+                            key={item.id}
+                            onClick={item.action}
+                            className={cn(commonClasses, isCreateButton ? '' : (isActive ? 'text-primary' : 'text-muted-foreground hover:text-primary'))}
+                          >
+                              {content}
+                          </button>
+                      )
+                  }
+
                   if (item.href) {
                       return (
                         <Link
@@ -65,16 +77,7 @@ export default function BottomNav() {
                       );
                   }
 
-                  return (
-                      <button 
-                        key={item.id}
-                        // @ts-ignore
-                        onClick={item.action}
-                        className={cn(commonClasses, 'text-muted-foreground hover:text-primary')}
-                      >
-                         {content}
-                      </button>
-                  );
+                  return null;
               })}
           </nav>
       </div>

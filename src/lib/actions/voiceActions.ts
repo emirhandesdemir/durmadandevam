@@ -107,6 +107,7 @@ export async function joinVoiceChat(roomId: string, user: UserInfo, options?: { 
             }
 
             transaction.set(userVoiceRef, participantData);
+            transaction.update(userDbRef, { activeRoomId: roomId, activeRoomName: roomData.name });
             transaction.update(roomRef, { voiceParticipantsCount: increment(1) });
             transaction.set(voiceStatsRef, { totalUsers: increment(1) }, { merge: true });
         });
@@ -128,6 +129,7 @@ export async function leaveVoice(roomId: string, userId: string) {
 
     const roomRef = doc(db, 'rooms', roomId);
     const userVoiceRef = doc(db, 'rooms', roomId, 'voiceParticipants', userId);
+    const userDbRef = doc(db, 'users', userId);
 
     try {
         await runTransaction(db, async (transaction) => {
@@ -138,6 +140,7 @@ export async function leaveVoice(roomId: string, userId: string) {
                 transaction.delete(userVoiceRef);
                 transaction.update(roomRef, { voiceParticipantsCount: increment(-1) });
                 transaction.set(voiceStatsRef, { totalUsers: increment(-1) }, { merge: true });
+                transaction.update(userDbRef, { activeRoomId: null, activeRoomName: null });
             }
         });
         return { success: true };

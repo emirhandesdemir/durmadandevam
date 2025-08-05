@@ -17,7 +17,7 @@ function isMouseEvent(event: Event): event is MouseEvent {
 export const useLongPress = (
   onLongPress: (event: Event) => void,
   onClick: (event: Event) => void,
-  { delay = 300 } = {}
+  { delay = 400 } = {}
 ) => {
   const timeout = useRef<NodeJS.Timeout>();
   const longPressTriggered = useRef(false);

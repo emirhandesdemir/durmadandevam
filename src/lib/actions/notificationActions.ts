@@ -20,7 +20,7 @@ interface CreateNotificationArgs {
   senderUsername: string;
   senderAvatar: string | null;
   senderAvatarFrame?: string;
-  type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile' | 'system';
+  type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile' | 'system' | 'event_reward';
   postId?: string | null;
   postImage?: string | null;
   commentText?: string;
@@ -29,6 +29,8 @@ interface CreateNotificationArgs {
   roomId?: string;
   roomName?: string;
   diamondAmount?: number;
+  createdAt: Timestamp;
+  read: boolean;
   callId?: string;
   callType?: 'video' | 'audio';
   profileEmoji?: string | null;
@@ -82,7 +84,7 @@ export async function triggerProfileCompletionNotification(userId: string) {
     }
 }
 
-export async function createNotification(data: CreateNotificationArgs) {
+export async function createNotification(data: Omit<CreateNotificationArgs, 'id' | 'createdAt' | 'read'>) {
   // Don't send notifications for self-actions
   if (data.senderId === data.recipientId) return;
   
@@ -118,6 +120,9 @@ export async function createNotification(data: CreateNotificationArgs) {
         break;
     case 'complete_profile':
         link = '/profile/edit';
+        break;
+    case 'event_reward':
+        link = '/rooms';
         break;
   }
   

@@ -190,8 +190,13 @@ async function addBotMessage(roomId: string, text: string) {
 export async function createEventRoom(
     creatorId: string,
     roomData: { name: string, description: string, language: string },
-    creatorInfo: { username: string, photoURL: string | null, role: string, selectedAvatarFrame?: string }
+    creatorInfo: { username: string, photoURL: string | null, role: string, selectedAvatarFrame?: string },
+    pin: string
 ) {
+    if (process.env.ADMIN_PIN !== pin) {
+        throw new Error("Geçersiz Yönetici PIN'i.");
+    }
+    
     if (!creatorId) throw new Error("Kullanıcı ID'si gerekli.");
     if (creatorInfo.role !== 'admin') throw new Error("Bu işlemi yapma yetkiniz yok.");
 
@@ -245,14 +250,44 @@ export async function createEventRoom(
     return { success: true, roomId: newRoomRef.id };
 }
 
-export async function deleteEventRoom(roomId: string, adminId: string) {
-    if (!roomId || !adminId) throw new Error("Gerekli bilgiler eksik.");
+export async function deleteEventRoom(roomId: string, adminId: string, pin: string) {
+    if (!roomId || !adminId || !pin) throw new Error("Gerekli bilgiler eksik.");
     
+    if (process.env.ADMIN_PIN !== pin) {
+        throw new Error("Geçersiz Yönetici PIN'i.");
+    }
+
     const adminUserDoc = await getDoc(doc(db, 'users', adminId));
     if (!adminUserDoc.exists() || adminUserDoc.data().role !== 'admin') {
         throw new Error("Bu işlemi yapma yetkiniz yok.");
     }
     
+    const roomRef = doc(db, 'rooms', roomId);
+    const roomSnap = await getDoc(roomRef);
+    if (!roomSnap.exists()) return { success: true };
+
+    const roomData = roomSnap.data() as Room;
+    const participantsToReward = roomData.participants || [];
+    const rewardAmount = 10;
+    
+    const batch = writeBatch(db);
+    
+    for (const participant of participantsToReward) {
+        const userRef = doc(db, 'users', participant.uid);
+        batch.update(userRef, { diamonds: increment(rewardAmount) });
+        await createNotification({
+            recipientId: participant.uid,
+            senderId: 'system-event',
+            senderUsername: 'HiweWalk Etkinlik',
+            senderAvatar: null,
+            type: 'event_reward',
+            messageText: `Katıldığınız için teşekkürler! Bizden katılım için ${rewardAmount} elmas kazandınız.`,
+            diamondAmount: rewardAmount,
+            link: '/rooms'
+        });
+    }
+
+    await batch.commit();
     await deleteRoomWithSubcollections(roomId);
     
     return { success: true };
@@ -260,7 +295,7 @@ export async function deleteEventRoom(roomId: string, adminId: string) {
 
 export async function createRoom(
     userId: string,
-    roomData: { name: string, description: string, language: string },
+    roomData: { name: string, description: string, language: string, type?: 'public' | 'event' },
     creatorInfo: { username: string, photoURL: string | null, role: string, selectedAvatarFrame?: string }
 ) {
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
@@ -285,13 +320,15 @@ export async function createRoom(
         const newRoomRef = doc(collection(db, 'rooms'));
         const durationInMs = 15 * 60 * 1000;
         
+        const isEvent = isAdmin && roomData.type === 'event';
+        
         const newRoom: Partial<Room> = {
             name: roomData.name,
             description: roomData.description,
             language: roomData.language,
-            type: isAdmin ? 'event' : 'public',
+            type: isEvent ? 'event' : 'public',
             createdAt: serverTimestamp() as Timestamp,
-            expiresAt: isAdmin ? null : Timestamp.fromMillis(Date.now() + durationInMs),
+            expiresAt: isEvent ? null : Timestamp.fromMillis(Date.now() + durationInMs),
             createdBy: {
                 uid: userId,
                 username: creatorInfo.username,
@@ -305,7 +342,7 @@ export async function createRoom(
                 username: creatorInfo.username,
                 photoURL: creatorInfo.photoURL
             }],
-            maxParticipants: 9,
+            maxParticipants: isEvent ? 50 : 9,
             voiceParticipantsCount: 0,
             autoQuizEnabled: true,
             nextGameTimestamp: Timestamp.fromMillis(Date.now() + 5 * 60 * 1000),
@@ -320,7 +357,7 @@ export async function createRoom(
 
         transaction.set(newRoomRef, newRoom);
 
-        if (!isAdmin && !isUnlimited) {
+        if (!isAdmin && !isUnlimited && !isEvent) {
             transaction.update(userRef, { 
                 diamonds: increment(-roomCost),
             });
