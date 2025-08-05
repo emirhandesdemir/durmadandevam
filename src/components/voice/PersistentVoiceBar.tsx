@@ -19,6 +19,7 @@ export default function PersistentVoiceBar() {
     }
   }, [isMinimized, pathname, router, activeRoom]);
 
+  // CORRECTED LOGIC: The bar should only be visible if the user is in a room AND has minimized it.
   if (!isListening || !isMinimized || !activeRoom) {
     return null;
   }
@@ -35,6 +36,7 @@ export default function PersistentVoiceBar() {
         animate={{ y: 0 }}
         exit={{ y: 100 }}
         transition={{ type: 'spring', stiffness: 400, damping: 40 }}
+        // Position the bar above the main bottom nav
         className="fixed bottom-16 sm:bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-sm z-40"
       >
         <div className="flex items-center justify-between gap-2 p-2 rounded-2xl bg-card text-card-foreground shadow-2xl border border-primary/20 backdrop-blur-lg">

@@ -185,7 +185,7 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
         </main>
         
         <AnimatePresence>
-         {!isFullPageLayout && !isMinimized && (
+         {!isFullPageLayout && (
             <motion.div
               initial={{ y: 0 }}
               animate={{ y: animatedNavEnabled && isScrolling ? 100 : 0 }}
