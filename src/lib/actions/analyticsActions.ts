@@ -181,12 +181,32 @@ export async function getTopDiamondHolders(): Promise<Partial<UserProfile>[]> {
 
 export async function getPopularUsers(): Promise<UserProfile[]> {
     const usersRef = collection(db, 'users');
-    // For "popular", let's use a combination of followers and profile value.
-    // This requires a more complex logic, for now we will sort by followers.
-    const q = query(usersRef, orderBy('followers', 'desc'), limit(20));
+    // Fetch a larger pool of popular users to sort them on the server
+    const q = query(usersRef, orderBy('followers', 'desc'), limit(50));
     const snapshot = await getDocs(q);
+    
     const users = snapshot.docs.map(doc => doc.data() as UserProfile);
-    return deepSerialize(users);
+
+    // Custom sorting logic
+    users.sort((a, b) => {
+        const aHasPhoto = !!a.photoURL && !a.photoURL.startsWith('avatar-');
+        const bHasPhoto = !!b.photoURL && !b.photoURL.startsWith('avatar-');
+        const aIsWoman = a.gender === 'female';
+        const bIsWoman = b.gender === 'female';
+
+        // Priority 1: Woman with photo
+        if (aIsWoman && aHasPhoto && !(bIsWoman && bHasPhoto)) return -1;
+        if (!(aIsWoman && aHasPhoto) && (bIsWoman && bHasPhoto)) return 1;
+
+        // Priority 2: Anyone with photo
+        if (aHasPhoto && !bHasPhoto) return -1;
+        if (!aHasPhoto && bHasPhoto) return 1;
+
+        // If both are in the same category, maintain popularity sort
+        return (b.followers?.length || 0) - (a.followers?.length || 0);
+    });
+
+    return deepSerialize(users.slice(0, 20)); // Return the top 20 after sorting
 }
 
 export async function getTopFollowedUsers(): Promise<UserProfile[]> {
