@@ -152,7 +152,6 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                     uid: currentUser.uid,
                     displayName: currentUserData.username || 'Biri',
                     photoURL: currentUserData.photoURL || null,
-                    profileEmoji: currentUserData.profileEmoji || null,
                     userAvatarFrame: currentUserData.selectedAvatarFrame || '',
                 }
             );
@@ -241,7 +240,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
             <article className={cn("relative flex flex-col bg-background", !isStandalone && "border-b")}>
                  {showLikeAnimation && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-                        <span className="text-6xl drop-shadow-lg animate-like-pop">🔥</span>
+                        <span className="text-6xl drop-shadow-lg animate-like-pop">❤️‍🔥</span>
                     </div>
                 )}
                 <div className="flex items-center gap-3 p-4">
@@ -307,7 +306,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1">
                              <Button variant="ghost" size="icon" className="rounded-full group" onClick={handleLike} disabled={!currentUser}>
-                                <span className={cn("text-2xl transition-all duration-200 group-hover:scale-110", !optimisticLiked && "grayscale")}>🔥</span>
+                                <span className={cn("text-2xl transition-all duration-200 group-hover:scale-110", !optimisticLiked && "grayscale")}>❤️‍🔥</span>
                             </Button>
                             {!post.commentsDisabled && (<Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary" onClick={() => setShowComments(true)}><MessageCircle className="h-6 w-6" /></Button>)}
                             <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-green-500/10 hover:text-green-500" onClick={handleRetweet} disabled={!currentUser || isOwner}><Repeat className="h-6 w-6" /></Button>

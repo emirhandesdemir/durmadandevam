@@ -67,7 +67,7 @@ export async function createPost(postData: {
     userRole?: 'admin' | 'user';
     userGender?: 'male' | 'female';
     text: string;
-    imageUrl: string | null; // This will now be a public URL
+    imageUrl: string | null;
     videoUrl: string | null;
     language: string;
     commentsDisabled?: boolean;
@@ -93,7 +93,7 @@ export async function createPost(postData: {
             userRole: postData.userRole,
             userGender: postData.userGender,
             text: postData.text,
-            imageUrl: postData.imageUrl, // Use the public download URL
+            imageUrl: postData.imageUrl,
             videoUrl: postData.videoUrl,
             backgroundStyle: postData.backgroundStyle || '',
             editedWithAI: false,
@@ -129,9 +129,6 @@ export async function createPost(postData: {
     });
 
     revalidatePath('/home');
-    if (postData.videoUrl) {
-      revalidatePath('/surf');
-    }
     if (postData.uid) {
         revalidatePath(`/profile/${postData.uid}`);
     }
@@ -164,12 +161,21 @@ export async function deletePost(postId: string) {
                     }
                 }
             }
+            if (postData.videoUrl) {
+                 try {
+                    const videoStorageRef = storageRef(storage, postData.videoUrl);
+                    await deleteObject(videoStorageRef);
+                } catch (error) {
+                    if ((error as any).code !== 'storage/object-not-found') {
+                        console.error("Storage videosu silinirken hata oluştu:", error);
+                    }
+                }
+            }
 
             transaction.delete(postRef);
             transaction.update(userRef, { postCount: increment(-1) });
         });
         revalidatePath('/home');
-        revalidatePath('/surf');
     } catch (error) {
         console.error("Gönderi silinirken hata oluştu:", error);
         throw new Error("Gönderi silinemedi.");
@@ -189,7 +195,6 @@ export async function updatePost(postId: string, updates: { text?: string; comme
         const postData = postSnap.data();
         revalidatePath('/home');
         revalidatePath(`/profile/${postData.uid}`);
-        revalidatePath('/surf');
     }
 }
 
@@ -232,7 +237,6 @@ export async function likePost(
         }
     });
     revalidatePath('/home');
-    revalidatePath('/surf');
     revalidatePath(`/profile/*`);
 }
 
@@ -271,7 +275,6 @@ export async function toggleSavePost(postId: string, userId: string) {
     });
 
     revalidatePath('/home');
-    revalidatePath('/surf');
     revalidatePath(`/profile/${userId}`);
 }
 
