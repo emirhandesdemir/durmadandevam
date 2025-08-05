@@ -553,10 +553,6 @@ export async function unblockUser(blockerId: string, targetId: string) {
     }
 }
 
-export async function changeUserPassword(userId: string, currentPasswordPlainText: string, newPasswordPlainText: string) {
-     throw new Error("Password change must be initiated from the client with reauthentication.");
-}
-
 export async function revokeAllSessions(userId: string) {
     if (!userId) {
         throw new Error("Kullanıcı ID'si gerekli.");

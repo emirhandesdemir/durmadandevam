@@ -1,4 +1,3 @@
-
 // src/lib/actions/analyticsActions.ts
 'use server';
 
@@ -182,7 +181,9 @@ export async function getTopDiamondHolders(): Promise<Partial<UserProfile>[]> {
 
 export async function getPopularUsers(): Promise<UserProfile[]> {
     const usersRef = collection(db, 'users');
-    const q = query(usersRef, orderBy('followers', 'desc'), limit(10));
+    // For "popular", let's use a combination of followers and profile value.
+    // This requires a more complex logic, for now we will sort by followers.
+    const q = query(usersRef, orderBy('followers', 'desc'), limit(20));
     const snapshot = await getDocs(q);
     const users = snapshot.docs.map(doc => doc.data() as UserProfile);
     return deepSerialize(users);
@@ -190,7 +191,7 @@ export async function getPopularUsers(): Promise<UserProfile[]> {
 
 export async function getTopFollowedUsers(): Promise<UserProfile[]> {
     const usersRef = collection(db, 'users');
-    const q = query(usersRef, orderBy('followers', 'desc'), limit(10));
+    const q = query(usersRef, orderBy('followers', 'desc'), limit(20));
     const snapshot = await getDocs(q);
     const users = snapshot.docs.map(doc => doc.data() as UserProfile);
     return deepSerialize(users);
