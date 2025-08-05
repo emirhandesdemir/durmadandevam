@@ -22,6 +22,8 @@ import RoomManagementDialog from './RoomManagementDialog';
 import { Progress } from '../ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+
 
 interface RoomHeaderProps {
   room: Room;
@@ -32,6 +34,7 @@ interface RoomHeaderProps {
 }
 
 export default function RoomHeader({ room, isHost, onParticipantListToggle, isSpeakerLayoutCollapsed, onToggleCollapse }: RoomHeaderProps) {
+    const { userData } = useAuth();
     const [isInviteOpen, setIsInviteOpen] = useState(false);
     const [isPortalDialogOpen, setIsPortalDialogOpen] = useState(false);
     const [isManagementOpen, setIsManagementOpen] = useState(false);
@@ -40,6 +43,9 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, isSp
     const { leaveRoom, minimizeRoom, isSpeakerMuted, toggleSpeakerMute } = useVoiceChat();
     const router = useRouter();
     const { toast } = useToast();
+
+    const isAdmin = userData?.role === 'admin';
+    const canManage = isHost || isAdmin;
 
 
     useEffect(() => {
@@ -116,6 +122,11 @@ export default function RoomHeader({ room, isHost, onParticipantListToggle, isSp
                 </div>
 
                 <div className="flex items-center gap-1">
+                     {canManage && (
+                        <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setIsManagementOpen(true)}>
+                            <Settings />
+                        </Button>
+                    )}
                     <Button variant="ghost" size="icon" className="rounded-full" onClick={onToggleCollapse}>
                         {isSpeakerLayoutCollapsed ? <ChevronDown /> : <ChevronUp />}
                     </Button>
