@@ -134,10 +134,10 @@ export interface ThemeSettings {
     defaultMode?: 'light' | 'dark' | 'system';
 }
 
-export interface FeedSettings {
-    showOnlyFollowing: boolean;
-    hideLikedPosts: boolean;
-    hideVideos: boolean;
+export interface AppSettings {
+    batterySaver: boolean;
+    dataSaver: boolean;
+    disableAnimations: boolean;
 }
 
 export interface UserProfile {
@@ -164,7 +164,6 @@ export interface UserProfile {
     privateProfile: boolean;
     acceptsFollowRequests: boolean;
     showOnlineStatus: boolean;
-    animatedNav?: boolean;
     followers: string[];
     following: string[];
     followRequests: FollowRequest[];
@@ -203,6 +202,8 @@ export interface UserProfile {
         }
     };
     feedSettings?: FeedSettings;
+    appSettings?: AppSettings;
+    dataSaved?: number; // in bytes
     claimedEventRewards?: string[];
 }
 
@@ -273,8 +274,10 @@ export interface Post {
     emailVerified?: boolean;
     text: string;
     imageUrl?: string | null;
+    imageSize?: number; // in bytes
     videoUrl?: string | null;
     videoThumbnailUrl?: string | null;
+    videoSize?: number; // in bytes
     backgroundStyle?: string;
     createdAt: Timestamp | { seconds: number; nanoseconds: number } | string;
     likes: string[];

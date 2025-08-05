@@ -132,6 +132,9 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
     const postUserPhoto = isOwner ? currentUserData?.photoURL : post.userPhotoURL;
     const postUserAvatarFrame = isOwner ? currentUserData?.selectedAvatarFrame : post.userAvatarFrame;
     const postUsername = isOwner ? currentUserData?.username : post.username;
+    
+    // Data Saver
+    const dataSaverEnabled = currentUserData?.appSettings?.dataSaver ?? false;
 
     useEffect(() => {
         setEditedText(post.text || '');
@@ -258,15 +261,7 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
         if (!currentUser || !currentUserData || !activeRoom) return;
         try {
             await sendRoomMessage(activeRoom.id, {
-                 uid: currentUser.uid,
-                 displayName: currentUserData.username,
-                 photoURL: currentUserData.photoURL,
-                 selectedAvatarFrame: currentUserData.selectedAvatarFrame,
-                 role: currentUserData.role,
-            }, `https://hiwewalkbeta.netlify.app/post/${post.id} adlı gönderiyi paylaştı:`);
-
-             await sendRoomMessage(activeRoom.id, {
-                 uid: 'system', // or a special user for shared content
+                 uid: 'system',
                  displayName: 'System',
                  photoURL: '',
             }, `shared_post:${post.id}`);
@@ -330,12 +325,23 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                             src={post.imageUrl} alt={post.text || "Gönderi resmi"} width={800} height={1000}
                             sizes="(max-width: 768px) 100vw, 50vw" placeholder="blur" blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
                             className="h-auto w-full max-h-[80vh] object-cover" onContextMenu={(e) => e.preventDefault()}
+                            quality={dataSaverEnabled ? 50 : 75}
                         />
                     </div>
                 )}
                  {post.videoUrl && !isEditing && (
                     <div className="relative w-full bg-black cursor-pointer" onClick={togglePlay}>
-                        <video ref={videoRef} src={post.videoUrl} poster={post.videoThumbnailUrl} onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} className="w-full max-h-[80vh] object-contain" playsInline loop/>
+                        <video 
+                            ref={videoRef} 
+                            src={post.videoUrl} 
+                            poster={post.videoThumbnailUrl} 
+                            onPlay={() => setIsPlaying(true)} 
+                            onPause={() => setIsPlaying(false)} 
+                            className="w-full max-h-[80vh] object-contain" 
+                            playsInline 
+                            loop
+                            preload={dataSaverEnabled ? "none" : "metadata"}
+                        />
                         {!isPlaying && (
                              <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
                                 <div className="p-4 bg-black/50 rounded-full">
@@ -358,24 +364,8 @@ export default function PostCard({ post, isStandalone = false, onHide }: PostCar
                                 <span className={cn("text-2xl transition-all duration-200 group-hover:scale-110", !optimisticLiked && "grayscale")}>❤️‍🔥</span>
                             </Button>
                             {!post.commentsDisabled && (<Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary" onClick={() => setShowComments(true)}><MessageCircle className="h-6 w-6" /></Button>)}
-                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-indigo-500/10 hover:text-indigo-500" disabled={!currentUser}><Share2 className="h-6 w-6" /></Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent>
-                                     <DropdownMenuItem onSelect={() => setIsShareOpen(true)}>
-                                        <Send className="mr-2 h-4 w-4"/> Sohbetlere Gönder
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onSelect={handleRetweet} disabled={isOwner || !!post.retweetOf}>
-                                        <Repeat className="mr-2 h-4 w-4"/> Alıntıla
-                                    </DropdownMenuItem>
-                                    {activeRoom && (
-                                        <DropdownMenuItem onSelect={handleShareToRoom}>
-                                            <MessageSquare className="mr-2 h-4 w-4"/> Odaya Gönder
-                                        </DropdownMenuItem>
-                                    )}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                            <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-green-500/10 hover:text-green-500" onClick={handleRetweet} disabled={!currentUser || isOwner}><Repeat className="h-6 w-6" /></Button>
+                             <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-indigo-500/10 hover:text-indigo-500" onClick={() => setIsShareOpen(true)} disabled={!currentUser}><Share2 className="h-6 w-6" /></Button>
                         </div>
                         <Button variant="ghost" size="icon" className={cn("rounded-full text-muted-foreground hover:bg-sky-500/10 hover:text-sky-500", optimisticSaved && "text-sky-500")} onClick={handleSave} disabled={!currentUser}><Bookmark className={cn("h-6 w-6", optimisticSaved && "fill-current")} /></Button>
                     </div>

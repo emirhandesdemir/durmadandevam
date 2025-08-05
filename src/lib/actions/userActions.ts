@@ -2,7 +2,7 @@
 'use server';
 
 import { db, storage } from '@/lib/firebase';
-import type { Post, Report, UserProfile } from '../types';
+import type { AppSettings, Post, Report, UserProfile } from '../types';
 import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, limit, writeBatch, serverTimestamp, increment, arrayRemove, addDoc, collectionGroup, deleteDoc, setDoc, runTransaction, Timestamp } from 'firebase/firestore';
 import { ref as storageRef, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { deepSerialize } from '../server-utils';
@@ -89,13 +89,12 @@ export async function updateUserProfile(updates: {
     privateProfile?: boolean;
     acceptsFollowRequests?: boolean;
     showOnlineStatus?: boolean;
-    animatedNav?: boolean;
-    selectedBubble?: string;
-    selectedAvatarFrame?: string;
     interests?: string[];
     location?: { latitude: number; longitude: number; city?: string | null; country?: string | null; } | null;
     profileCompletionAwarded?: boolean;
     sessionInfo?: { lastSeen: any, ipAddress?: string, userAgent?: string };
+    appSettings?: Partial<AppSettings>;
+    dataSaved?: number;
 }) {
     const { userId, isNewUser, sessionInfo, ...otherUpdates } = updates;
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
@@ -113,6 +112,15 @@ export async function updateUserProfile(updates: {
     if (sessionInfo) {
         updatesForDb[`sessions.current`] = sessionInfo;
     }
+    if (updates.appSettings) {
+        Object.entries(updates.appSettings).forEach(([key, value]) => {
+            updatesForDb[`appSettings.${key}`] = value;
+        });
+    }
+     if (updates.dataSaved) {
+        updatesForDb.dataSaved = increment(updates.dataSaved);
+    }
+
 
     let userExists = false;
 
@@ -168,11 +176,7 @@ export async function updateUserProfile(updates: {
                     privateProfile: false,
                     acceptsFollowRequests: true,
                     showOnlineStatus: true,
-                    animatedNav: true,
-                    selectedBubble: '',
-                    selectedAvatarFrame: '',
                     isBanned: false,
-                    profileEmoji: null,
                     reportCount: 0,
                     isOnline: true,
                     lastSeen: serverTimestamp() as any,
@@ -181,8 +185,17 @@ export async function updateUserProfile(updates: {
                     unlimitedRoomCreationUntil: null,
                     profileCompletionNotificationSent: false,
                     profileCompletionAwarded: false,
+                    selectedBubble: '',
+                    selectedAvatarFrame: '',
+                    activeMatchmakingChatId: null,
                     location: null,
                     sessions: sessionInfo ? { current: sessionInfo } : {},
+                    appSettings: {
+                        batterySaver: false,
+                        dataSaver: false,
+                        disableAnimations: false,
+                    },
+                    dataSaved: 0,
                  };
                 transaction.set(userRef, initialData);
             } else {

@@ -28,6 +28,9 @@ export default function UserPostsGrid({ profileUser }: UserPostsGridProps) {
         if (!profileUser?.followers || !currentUserData?.uid) return false;
         return profileUser.followers.includes(currentUserData.uid);
     }, [profileUser, currentUserData]);
+    
+    // Data Saver
+    const dataSaverEnabled = currentUserData?.appSettings?.dataSaver ?? false;
 
     const canViewContent = useMemo(() => !profileUser?.privateProfile || isFollower || isOwnProfile || isAdmin, [profileUser, isFollower, isOwnProfile, isAdmin]);
     const amIBlockedByThisUser = useMemo(() => profileUser?.blockedUsers?.includes(currentUserData?.uid || ''), [profileUser, currentUserData]);
@@ -113,6 +116,7 @@ export default function UserPostsGrid({ profileUser }: UserPostsGridProps) {
                                 sizes="(max-width: 768px) 33vw, 25vw"
                                 className="object-cover"
                                 onContextMenu={(e) => e.preventDefault()}
+                                quality={dataSaverEnabled ? 50 : 75}
                             />
                         ) : (
                              <div className={`w-full h-full flex items-center justify-center p-2 text-primary-foreground ${post.backgroundStyle || 'bg-muted'}`}>

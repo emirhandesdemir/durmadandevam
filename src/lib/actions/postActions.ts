@@ -26,6 +26,7 @@ import { createNotification } from "./notificationActions";
 import { findUserByUsername } from "../server-utils";
 import { ref as storageRef, deleteObject, uploadString, getDownloadURL, uploadBytes } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
+import { AppSettings } from "../types";
 
 
 async function handlePostMentions(postId: string, text: string, sender: { uid: string; displayName: string | null; photoURL: string | null; userAvatarFrame?: string }) {
@@ -74,6 +75,8 @@ export async function createPost(postData: {
     likesHidden?: boolean;
     backgroundStyle?: string;
     videoThumbnailUrl?: string | null;
+    imageSize?: number;
+    videoSize?: number;
 }) {
     const newPostRef = doc(collection(db, 'posts'));
     const userRef = doc(db, 'users', postData.uid);
@@ -85,6 +88,7 @@ export async function createPost(postData: {
         
         const userData = userSnap.data();
         const postCount = userData.postCount || 0;
+        const appSettings = userData.appSettings as AppSettings;
         
         const newPostData = {
             uid: postData.uid,
@@ -95,8 +99,10 @@ export async function createPost(postData: {
             userGender: postData.userGender,
             text: postData.text,
             imageUrl: postData.imageUrl,
+            imageSize: postData.imageSize || 0,
             videoUrl: postData.videoUrl,
             videoThumbnailUrl: postData.videoThumbnailUrl || null,
+            videoSize: postData.videoSize || 0,
             backgroundStyle: postData.backgroundStyle || '',
             editedWithAI: false,
             language: postData.language,
@@ -118,6 +124,13 @@ export async function createPost(postData: {
 
         if (postCount === 0 && !postData.videoUrl) {
             userUpdates.diamonds = increment(50);
+        }
+
+        if (appSettings?.dataSaver && (postData.imageSize || postData.videoSize)) {
+            const originalSize = (postData.imageSize || 0) + (postData.videoSize || 0);
+            const savedRatio = 0.4; // Simulate 40% saving
+            const dataSaved = Math.round(originalSize * savedRatio);
+            userUpdates.dataSaved = increment(dataSaved);
         }
         
         transaction.update(userRef, userUpdates);

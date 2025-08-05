@@ -4,7 +4,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Palette, Loader2, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2, Sliders, Wallet, HelpCircle, EyeOff, Bookmark, History, Bell, Globe, ChevronRight, Lock, KeyRound, Store, Server, ListFilter } from "lucide-react";
+import { LogOut, Palette, Loader2, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2, Sliders, Wallet, HelpCircle, EyeOff, Bookmark, History, Bell, Globe, ChevronRight, Lock, KeyRound, Store, Server, ListFilter, AppWindow } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { auth, db } from "@/lib/firebase";
@@ -112,8 +112,13 @@ export default function ProfilePageClient() {
                 </div>
 
                 <div className="border-b">
+                    <SettingsHeader title="Uygulama" />
+                    <SettingsLink href="/profile/app-settings" icon={AppWindow} title="Uygulama Ayarları" />
+                    <SettingsLink href="/guide" icon={HelpCircle} title="Uygulama Kılavuzu" />
+                </div>
+
+                <div className="border-b">
                     <SettingsHeader title="Diğer" />
-                     <SettingsLink href="/guide" icon={HelpCircle} title="Uygulama Kılavuzu" />
                      <SettingsLink onClick={() => setIsDeleteAccountOpen(true)} icon={Trash2} title="Hesabı Sil" />
                      <SettingsLink onClick={() => handleLogout(false)} icon={LogOut} title="Çıkış Yap" />
                 </div>
