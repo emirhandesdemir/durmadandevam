@@ -85,8 +85,8 @@ function getCroppedImg(
 const ASPECT_RATIOS = [
     { name: '16:9', value: 16/9, icon: RectangleHorizontal },
     { name: '4:3', value: 4/3, icon: RectangleHorizontal },
-    { name: 'Square', value: 1, icon: Square },
-    { name: 'Free', value: undefined, icon: CropIcon },
+    { name: 'Kare', value: 1, icon: Square },
+    { name: 'Serbest', value: undefined, icon: CropIcon },
 ];
 
 export default function ImageCropperDialog({
