@@ -198,6 +198,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         
         pc.ontrack = event => {
             const stream = event.streams[0];
+            if (!stream) return;
             if (event.track.kind === 'audio') {
                 setRemoteAudioStreams(p => ({ ...p, [otherUserId]: stream }));
                 setupSpeakingDetection(stream, (isSpeaking) => {
@@ -210,12 +211,20 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
         if (localStream) {
             localStream.getTracks().forEach(track => {
-                pc.addTrack(track, localStream);
+                try {
+                   pc.addTrack(track, localStream);
+                } catch (e) {
+                    console.error("Error adding local track:", e);
+                }
             });
         }
         if (localScreenStream) {
             localScreenStream.getTracks().forEach(track => {
-                 screenSenderRef.current[otherUserId] = pc.addTrack(track, localScreenStream);
+                try {
+                    screenSenderRef.current[otherUserId] = pc.addTrack(track, localScreenStream);
+                } catch (e) {
+                     console.error("Error adding screen share track:", e);
+                }
             });
         }
 
@@ -467,9 +476,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                     toast({ variant: 'destructive', title: 'Oda Bulunamadı', description: 'Bu oda artık mevcut değil veya süresi dolmuş.' });
                     router.push('/rooms');
                  }
-                 setActiveRoom(null);
-                 setParticipants([]);
-                 _cleanupAndResetState();
+                 setActiveRoomId(null); // This will trigger the cleanup effect
             }
         });
 
@@ -502,7 +509,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         const participantIds = participants.map(p => p.uid);
         
         // Remove connections for users who have left
-        const leftParticipantIds = currentPeerIds.filter(id => !participantIds.includes(id));
+        const leftParticipantIds = currentPeerIds.filter(id => !participantIds.includes(id) && id !== user.uid);
         leftParticipantIds.forEach(id => {
             peerConnections.current[id]?.close();
             delete peerConnections.current[id];
@@ -536,8 +543,11 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                         try {
                             if (signal.type === 'offer') {
                                 if (pc.signalingState !== "stable") {
-                                    console.warn(`PC for ${from} not in stable state for offer, current state: ${pc.signalingState}`);
-                                    // Potentially reset the connection or handle this state
+                                    console.warn(`PC for ${from} not in stable state for offer, current state: ${pc.signalingState}, resetting...`);
+                                     // Create a fresh peer connection
+                                    pc.close();
+                                    pc = createPeerConnection(from);
+                                    peerConnections.current[from] = pc;
                                 }
                                 await pc.setRemoteDescription(new RTCSessionDescription(signal.data));
                                 const answer = await pc.createAnswer();

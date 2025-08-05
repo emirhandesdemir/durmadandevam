@@ -13,28 +13,43 @@ interface EntryEffectManagerProps {
 
 export default function EntryEffectManager({ participants }: EntryEffectManagerProps) {
     const [justJoined, setJustJoined] = useState<VoiceParticipant | null>(null);
-    const prevParticipantIds = useRef<Set<string>>(new Set());
+    const prevParticipantIds = useRef<Set<string>>(new Set(participants.map(p => p.uid)));
+    const activeEffectTimeout = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         const currentIds = new Set(participants.map(p => p.uid));
         
-        if (prevParticipantIds.current.size > 0) {
-            for (const p of participants) {
-                // If a user is new and has a high gift level, trigger the effect
-                if (!prevParticipantIds.current.has(p.uid) && p.giftLevel >= 3) {
-                    setJustJoined(p);
-                    const timer = setTimeout(() => {
-                        setJustJoined(null);
-                    }, 5000); // Effect duration
-                    
-                    // We only show one effect at a time to avoid chaos
-                    return () => clearTimeout(timer);
-                }
+        // Find a new participant who wasn't there before
+        const newParticipant = participants.find(p => 
+            !prevParticipantIds.current.has(p.uid) && 
+            p.giftLevel >= 3
+        );
+
+        if (newParticipant && !justJoined) { // Only trigger if there isn't an active effect
+            setJustJoined(newParticipant);
+
+            // Clear any existing timer before setting a new one
+            if (activeEffectTimeout.current) {
+                clearTimeout(activeEffectTimeout.current);
             }
+
+            activeEffectTimeout.current = setTimeout(() => {
+                setJustJoined(null);
+                activeEffectTimeout.current = null;
+            }, 5000); // Effect duration
         }
         
+        // Update the set of previous participants for the next render
         prevParticipantIds.current = currentIds;
-    }, [participants]);
+
+        // Cleanup the timer when the component unmounts
+        return () => {
+            if (activeEffectTimeout.current) {
+                clearTimeout(activeEffectTimeout.current);
+            }
+        };
+
+    }, [participants, justJoined]);
 
     return (
         <AnimatePresence>
