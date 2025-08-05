@@ -15,7 +15,7 @@ interface UserListItemProps {
 export default function UserListItem({ user, currentUserData }: UserListItemProps) {
   return (
     <div className="flex items-center justify-between p-2 rounded-lg hover:bg-muted">
-      <Link href={`/profile/${user.uniqueTag}`} className="flex items-center gap-3 group">
+      <Link href={`/profile/${user.uid}`} className="flex items-center gap-3 group">
          <div className={cn("avatar-frame-wrapper", user.selectedAvatarFrame)}>
             <Avatar className="relative z-[1] h-10 w-10">
                 <AvatarImage src={user.photoURL || undefined} />

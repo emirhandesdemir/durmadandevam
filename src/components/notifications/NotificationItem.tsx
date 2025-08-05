@@ -32,7 +32,7 @@ export default function NotificationItem({ notification }: NotificationItemProps
   });
 
   const isSystemNotification = notification.senderId.startsWith('system');
-  const profileLink = `/profile/${notification.senderUniqueTag || notification.senderId}`;
+  const profileLink = `/profile/${notification.senderId}`;
 
   const handleWrapperClick = () => {
     if (notification.type === 'complete_profile') {
