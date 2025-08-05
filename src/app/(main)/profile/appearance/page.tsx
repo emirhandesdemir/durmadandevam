@@ -26,6 +26,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { bubbleStyles } from "@/lib/bubbles";
 import { avatarFrames } from "@/lib/frames";
 import AvatarWithFrame from "@/components/common/AvatarWithFrame";
+import { Switch } from "@/components/ui/switch";
 
 const AppearanceSettingsPage = () => {
     const { userData, loading, refreshUserData } = useAuth();
