@@ -4,7 +4,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Palette, Loader2, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2, Sliders, Wallet, HelpCircle, EyeOff, Bookmark, History, Bell, Globe, ChevronRight, Lock, KeyRound, Store } from "lucide-react";
+import { LogOut, Palette, Loader2, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2, Sliders, Wallet, HelpCircle, EyeOff, Bookmark, History, Bell, Globe, ChevronRight, Lock, KeyRound, Store, Server } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { auth, db } from "@/lib/firebase";
@@ -97,7 +97,8 @@ export default function ProfilePageClient() {
                  <div className="border-b">
                     <SettingsHeader title="Gizlilik ve Güvenlik" />
                     <SettingsLink href="/profile/privacy" icon={Lock} title="Hesap Gizliliği" value={userData.privateProfile ? 'Gizli' : 'Herkese Açık'}/>
-                    <SettingsLink href="/profile/security" icon={KeyRound} title="Hesap Güvenliği" />
+                    <SettingsLink href="/profile/security" icon={KeyRound} title="E-posta & Şifre" />
+                    <SettingsLink href="/profile/sessions" icon={Server} title="Oturum Yönetimi" />
                 </div>
 
                  <div className="border-b">

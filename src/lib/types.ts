@@ -123,6 +123,13 @@ export interface ThemeSettings {
     defaultMode?: 'light' | 'dark' | 'system';
 }
 
+export interface UserSession {
+    id: string; // e.g., 'current' or a unique session ID
+    lastSeen: Timestamp;
+    ipAddress?: string;
+    userAgent?: string;
+}
+
 export interface UserProfile {
     uid: string;
     uniqueTag: number;
@@ -178,7 +185,7 @@ export interface UserProfile {
         latitude: number;
         longitude: number;
     };
-    sessions?: {
+    sessions: {
         [key: string]: {
             lastSeen: Timestamp;
             ipAddress?: string;

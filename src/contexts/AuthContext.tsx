@@ -48,6 +48,13 @@ async function setSessionCookie(idToken: string | null) {
   }
 }
 
+function getIpAddress() {
+    // This is a placeholder as we can't get the real IP from the client reliably.
+    // In a real production app, you might get this from a server-side API call
+    // or during server-side rendering if you have access to request headers.
+    return '0.0.0.0';
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserProfile | null>(null);
@@ -115,7 +122,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             userId: currentUser.uid,
             sessionInfo: {
                 lastSeen: serverTimestamp(),
-                userAgent: navigator.userAgent,
+                userAgent: navigator.userAgent || 'Unknown',
+                ipAddress: getIpAddress()
             }
         }).catch(console.error);
       }
@@ -169,9 +177,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         setLoading(false);
       } else {
-        // User is authenticated, but their document doesn't exist yet.
-        // This is a normal state during the very first moments of signup.
-        // We keep loading until the document is created by the `updateUserProfile` action.
         console.log("Waiting for user document to be created...");
         setLoading(true);
       }
@@ -207,12 +212,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const isRootPage = pathname === '/';
 
     if (user && userData) {
-        // Logged-in user
         if (isAuthPage || isRootPage) {
             router.replace('/home');
         }
     } else {
-        // Logged-out user
         if (!isPublicPage && !isRootPage) {
             router.replace('/login');
         } else if (isRootPage) {
