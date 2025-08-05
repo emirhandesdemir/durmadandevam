@@ -23,6 +23,7 @@ import { Button } from "../ui/button";
 import { useState } from "react";
 import { updateModerators } from "@/lib/actions/roomActions";
 import { useToast } from "@/hooks/use-toast";
+import { Virtuoso } from 'react-virtuoso';
 
 
 interface ParticipantListSheetProps {
@@ -60,63 +61,63 @@ export default function ParticipantListSheet({ isOpen, onOpenChange, room }: Par
       
     return (
         <Sheet open={isOpen} onOpenChange={onOpenChange}>
-            <SheetContent className="flex flex-col bg-card border-l">
-                <SheetHeader className="text-left">
+            <SheetContent className="flex flex-col bg-card border-l p-0">
+                <SheetHeader className="text-left p-6 pb-2">
                     <SheetTitle>Katılımcılar ({room?.participants?.length || 0})</SheetTitle>
                     <SheetDescription>
                         Bu odada bulunan tüm kullanıcılar.
                     </SheetDescription>
                 </SheetHeader>
-                <ScrollArea className="flex-1 -mx-6 px-6">
-                    <div className="space-y-4 py-4">
-                        {displayedParticipants?.map(p => {
-                            const isParticipantHost = p.uid === room.createdBy.uid;
-                            const isParticipantModerator = room.moderators?.includes(p.uid);
-                            const isParticipantAdminRole = room.createdBy.role === 'admin' && p.uid === room.createdBy.uid;
-                            
-                            let roleLabel = null;
-                            if (isParticipantAdminRole || (room.type === 'event' && isParticipantHost)) {
-                                roleLabel = <><Shield className="h-3 w-3 text-destructive" /><span>Yönetici</span></>;
-                            } else if (isParticipantHost) {
-                                roleLabel = <><Crown className="h-3 w-3 text-yellow-500" /><span>Oda Sahibi</span></>;
-                            } else if (isParticipantModerator) {
-                                roleLabel = <><Shield className="h-3 w-3 text-blue-500" /><span>Moderatör</span></>;
-                            }
+                 <Virtuoso
+                    style={{ height: '100%' }}
+                    data={displayedParticipants}
+                    itemContent={(index, p) => {
+                       const isParticipantHost = p.uid === room.createdBy.uid;
+                        const isParticipantModerator = room.moderators?.includes(p.uid);
+                        const isParticipantAdminRole = room.createdBy.role === 'admin' && p.uid === room.createdBy.uid;
+                        
+                        let roleLabel = null;
+                        if (isParticipantAdminRole || (room.type === 'event' && isParticipantHost)) {
+                            roleLabel = <><Shield className="h-3 w-3 text-destructive" /><span>Yönetici</span></>;
+                        } else if (isParticipantHost) {
+                            roleLabel = <><Crown className="h-3 w-3 text-yellow-500" /><span>Oda Sahibi</span></>;
+                        } else if (isParticipantModerator) {
+                            roleLabel = <><Shield className="h-3 w-3 text-blue-500" /><span>Moderatör</span></>;
+                        }
 
-                            return (
-                                <div key={p.uid} className="flex items-center gap-4">
-                                    <Avatar>
-                                        <AvatarImage src={p.photoURL || undefined} />
-                                        <AvatarFallback>{p.username.charAt(0).toUpperCase()}</AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex-1">
-                                        <p className="font-medium text-foreground">{p.username}</p>
-                                        {roleLabel && (
-                                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                                {roleLabel}
-                                            </div>
-                                        )}
-                                    </div>
-                                    {isHost && !isParticipantHost && (
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" disabled={processingId === p.uid}>
-                                                     {processingId === p.uid ? <Loader2 className="h-4 w-4 animate-spin"/> : <MoreVertical className="h-4 w-4" />}
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent>
-                                                <DropdownMenuItem onClick={() => handleModeratorToggle(p.uid, !!isParticipantModerator)}>
-                                                    {isParticipantModerator ? <UserX className="mr-2 h-4 w-4"/> : <UserCog className="mr-2 h-4 w-4"/> }
-                                                    <span>{isParticipantModerator ? 'Moderatörlükten Al' : 'Moderatör Yap'}</span>
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                        return (
+                             <div key={p.uid} className="flex items-center gap-4 px-6 py-2">
+                                <Avatar>
+                                    <AvatarImage src={p.photoURL || undefined} />
+                                    <AvatarFallback>{p.username.charAt(0).toUpperCase()}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1">
+                                    <p className="font-medium text-foreground">{p.username}</p>
+                                    {roleLabel && (
+                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                            {roleLabel}
+                                        </div>
                                     )}
                                 </div>
-                            )
-                        })}
-                    </div>
-                </ScrollArea>
+                                {isHost && !isParticipantHost && (
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" disabled={processingId === p.uid}>
+                                                 {processingId === p.uid ? <Loader2 className="h-4 w-4 animate-spin"/> : <MoreVertical className="h-4 w-4" />}
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent>
+                                            <DropdownMenuItem onClick={() => handleModeratorToggle(p.uid, !!isParticipantModerator)}>
+                                                {isParticipantModerator ? <UserX className="mr-2 h-4 w-4"/> : <UserCog className="mr-2 h-4 w-4"/> }
+                                                <span>{isParticipantModerator ? 'Moderatörlükten Al' : 'Moderatör Yap'}</span>
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                )}
+                            </div>
+                        )
+                    }}
+                />
             </SheetContent>
         </Sheet>
     )

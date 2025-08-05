@@ -11,19 +11,39 @@ import type { Room } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { sendRoomMessage } from '@/lib/actions/roomActions';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 
 interface ChatMessageInputProps {
   room: Room;
+  isExpanded: boolean;
+  onFocus: () => void;
+  onBlur: () => void;
 }
 
-export default function ChatMessageInput({ room }: ChatMessageInputProps) {
+export default function ChatMessageInput({ room, isExpanded, onFocus, onBlur }: ChatMessageInputProps) {
   const { user: currentUser, userData } = useAuth();
   const { toast } = useToast();
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const isParticipant = room.participants.some(p => p.uid === currentUser?.uid);
   const isEventRoom = room.type === 'event';
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+        const target = event.target as HTMLElement;
+        if (inputRef.current && !inputRef.current.parentElement?.contains(target)) {
+            onBlur();
+        }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => {
+        document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [onBlur]);
+
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,6 +61,7 @@ export default function ChatMessageInput({ room }: ChatMessageInputProps) {
         }, message);
         
         setMessage('');
+        onBlur(); // Collapse after sending
 
     } catch (error: any) {
         console.error("Mesaj gönderilirken hata: ", error);
@@ -59,11 +80,13 @@ export default function ChatMessageInput({ room }: ChatMessageInputProps) {
   }
   
   return (
-    <div className='w-full'>
-        <form onSubmit={handleSendMessage} className={cn("flex w-full items-center space-x-2  p-1.5", isEventRoom ? "bg-black/40 rounded-full" : "bg-muted rounded-full")}>
+    <motion.div layout transition={{ type: 'spring', stiffness: 300, damping: 30 }} className="flex-1">
+        <form onSubmit={handleSendMessage} className={cn("flex w-full items-center space-x-2 p-1 transition-all duration-300", isEventRoom ? "bg-black/40 rounded-full" : "bg-muted rounded-full")}>
             <Input
+                ref={inputRef}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
+                onFocus={onFocus}
                 placeholder="Bir mesaj yaz..."
                 autoComplete="off"
                 className={cn("flex-1 bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground", isEventRoom && "placeholder:text-white/70 text-white")}
@@ -74,6 +97,6 @@ export default function ChatMessageInput({ room }: ChatMessageInputProps) {
                 <span className="sr-only">Gönder</span>
             </Button>
         </form>
-    </div>
+    </motion.div>
   );
 }

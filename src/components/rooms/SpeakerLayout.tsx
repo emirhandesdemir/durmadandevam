@@ -22,7 +22,7 @@ export default function SpeakerLayout({ room }: SpeakerLayoutProps) {
         ...(host ? [host] : []),
         ...moderators,
         ...otherParticipants
-    ];
+    ].slice(0, 12); // Limit to 12 visible participants for performance
 
     return (
         <div className="flex justify-center p-3">

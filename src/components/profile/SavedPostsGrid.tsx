@@ -1,3 +1,4 @@
+// src/components/profile/SavedPostsGrid.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -21,9 +22,7 @@ export default function SavedPostsGrid({ userId }: SavedPostsGridProps) {
     const isOwnProfile = currentUserData?.uid === userId;
 
     useEffect(() => {
-        // FIX: Ensure both auth is complete and the current user's data is available.
         if (authLoading || !currentUserData) {
-             // If auth is done but there's no user data, they're likely logged out.
             if (!authLoading) setLoading(false);
             return;
         }
@@ -32,9 +31,15 @@ export default function SavedPostsGrid({ userId }: SavedPostsGridProps) {
             setLoading(false);
             return;
         }
+        
+        // Ensure savedPosts array exists before trying to fetch
+        if (!currentUserData.savedPosts || currentUserData.savedPosts.length === 0) {
+            setSavedPosts([]);
+            setLoading(false);
+            return;
+        }
 
         setLoading(true);
-        // The getSavedPosts action now safely handles undefined savedPosts arrays.
         getSavedPosts(userId)
             .then(setSavedPosts)
             .finally(() => setLoading(false));

@@ -28,49 +28,11 @@ export async function sendRoomMessage(roomId: string, user: { uid: string; displ
     if (!roomId || !user?.uid || !text.trim()) {
         throw new Error("Gerekli bilgiler eksik.");
     }
-    
+
     const roomRef = doc(db, 'rooms', roomId);
-    const roomDoc = await getDoc(roomRef);
-    if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
-    const roomData = roomDoc.data() as Room;
-
-    const isHost = roomData.createdBy.uid === user.uid;
-    const isModerator = roomData.moderators.includes(user.uid);
-    const canUseCommands = isHost || isModerator;
-
-    // Command Handling
-    if (text.startsWith('+') && canUseCommands) {
-        const [command, ...args] = text.split(' ');
-        const content = args.join(' ');
-
-        if (command === '+temizle') {
-            const messagesRef = collection(db, 'rooms', roomId, 'messages');
-            const q = query(messagesRef, where('type', '==', 'user'));
-            const messagesToDelete = await getDocs(q);
-            const batch = writeBatch(db);
-            messagesToDelete.forEach(doc => batch.delete(doc.ref));
-            await batch.commit();
-            await addSystemMessage(roomId, `🧹 Sohbet, ${user.displayName} tarafından temizlendi.`);
-            return { success: true };
-        }
-
-        if (command === '+duyuru') {
-            if (!content) throw new Error("Duyuru içeriği boş olamaz.");
-            const messagesRef = collection(db, 'rooms', roomId, 'messages');
-            const newDocRef = await addDoc(messagesRef, {
-                type: 'announcement',
-                uid: user.uid,
-                username: user.displayName,
-                text: content,
-                createdAt: serverTimestamp(),
-            });
-            await pinMessage(roomId, newDocRef.id, user.uid);
-            return { success: true };
-        }
-    }
     
-    // Regular message
-    await addDoc(collection(db, 'rooms', roomId, 'messages'), {
+    // Fire and forget the main message sending for faster UI response
+    addDoc(collection(db, 'rooms', roomId, 'messages'), {
         uid: user.uid,
         username: user.displayName || 'Anonim',
         photoURL: user.photoURL,
@@ -81,9 +43,55 @@ export async function sendRoomMessage(roomId: string, user: { uid: string; displ
         selectedAvatarFrame: user.selectedAvatarFrame || '',
         role: user.role || 'user',
     });
-    
-    // Don't await this, let it run in the background
-    triggerBotResponse(roomId, user.uid, text);
+
+    // Run background tasks without blocking the return
+    (async () => {
+        try {
+            const roomDoc = await getDoc(roomRef);
+            if (!roomDoc.exists()) return;
+            const roomData = roomDoc.data() as Room;
+
+            const isHost = roomData.createdBy.uid === user.uid;
+            const isModerator = roomData.moderators.includes(user.uid);
+            const canUseCommands = isHost || isModerator;
+
+            // Command Handling
+            if (text.startsWith('+') && canUseCommands) {
+                const [command, ...args] = text.split(' ');
+                const content = args.join(' ');
+
+                if (command === '+temizle') {
+                    const messagesRef = collection(db, 'rooms', roomId, 'messages');
+                    const q = query(messagesRef, where('type', '==', 'user'));
+                    const messagesToDelete = await getDocs(q);
+                    const batch = writeBatch(db);
+                    messagesToDelete.forEach(doc => batch.delete(doc.ref));
+                    await batch.commit();
+                    await addSystemMessage(roomId, `🧹 Sohbet, ${user.displayName} tarafından temizlendi.`);
+                    return;
+                }
+
+                if (command === '+duyuru') {
+                    if (!content) return; // Don't throw, just ignore
+                    const messagesRef = collection(db, 'rooms', roomId, 'messages');
+                    const newDocRef = await addDoc(messagesRef, {
+                        type: 'announcement',
+                        uid: user.uid,
+                        username: user.displayName,
+                        text: content,
+                        createdAt: serverTimestamp(),
+                    });
+                    await pinMessage(roomId, newDocRef.id, user.uid);
+                    return;
+                }
+            }
+
+            // AI bot response
+            await triggerBotResponse(roomId, user.uid, text);
+        } catch (e) {
+            console.error("Error in background message processing:", e);
+        }
+    })();
 
     revalidatePath(`/rooms/${roomId}`);
     return { success: true };
@@ -488,6 +496,8 @@ export async function joinRoom(roomId: string, userInfo: UserInfo) {
         if (isFull) throw new Error("Bu oda dolu.");
 
         const isParticipant = roomData.participants?.some((p: any) => p.uid === userInfo.uid);
+        
+        if (isParticipant) return { success: true, message: "Zaten katılımcı." };
 
         // Grant event reward if applicable
         if (roomData.type === 'event' && !userData.claimedEventRewards?.includes(roomId)) {
@@ -502,9 +512,7 @@ export async function joinRoom(roomId: string, userInfo: UserInfo) {
                 roomId: roomId,
             });
         }
-
-        if (isParticipant) return { success: true, message: "Zaten katılımcı." };
-
+        
         transaction.update(roomRef, {
             participants: arrayUnion({
                 uid: userInfo.uid,
@@ -523,7 +531,8 @@ export async function joinRoom(roomId: string, userInfo: UserInfo) {
         transaction.set(doc(messagesRef), {
             type: 'system',
             text: welcomeMessage,
-            createdAt: serverTimestamp()
+            createdAt: serverTimestamp(),
+            isJoinMessage: true, // Flag to prevent duplicate messages
         });
 
         return { success: true };
