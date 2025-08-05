@@ -32,11 +32,13 @@ interface ParticipantListSheetProps {
 }
 
 export default function ParticipantListSheet({ isOpen, onOpenChange, room }: ParticipantListSheetProps) {
-    const { user } = useAuth();
+    const { user, userData } = useAuth();
     const { toast } = useToast();
     const [processingId, setProcessingId] = useState<string | null>(null);
 
     const isHost = user?.uid === room?.createdBy.uid;
+    const isAdmin = userData?.role === 'admin';
+    const isCurrentUserAdmin = isHost || room.moderators?.includes(user?.uid || '') || isAdmin;
 
     const handleModeratorToggle = async (targetUserId: string, isCurrentlyModerator: boolean) => {
         if (!isHost) return;
@@ -51,6 +53,11 @@ export default function ParticipantListSheet({ isOpen, onOpenChange, room }: Par
         }
     }
     
+    // Filter participants based on room type and user role
+    const displayedParticipants = room.type === 'event' && !isCurrentUserAdmin
+      ? room.participants.filter(p => p.uid === room.createdBy.uid || room.moderators.includes(p.uid))
+      : room.participants;
+      
     return (
         <Sheet open={isOpen} onOpenChange={onOpenChange}>
             <SheetContent className="flex flex-col bg-card border-l">
@@ -62,9 +69,19 @@ export default function ParticipantListSheet({ isOpen, onOpenChange, room }: Par
                 </SheetHeader>
                 <ScrollArea className="flex-1 -mx-6 px-6">
                     <div className="space-y-4 py-4">
-                        {room?.participants?.map(p => {
+                        {displayedParticipants?.map(p => {
                             const isParticipantHost = p.uid === room.createdBy.uid;
                             const isParticipantModerator = room.moderators?.includes(p.uid);
+                            const isParticipantAdminRole = room.createdBy.role === 'admin' && p.uid === room.createdBy.uid;
+                            
+                            let roleLabel = null;
+                            if (isParticipantAdminRole || (room.type === 'event' && isParticipantHost)) {
+                                roleLabel = <><Shield className="h-3 w-3 text-destructive" /><span>Yönetici</span></>;
+                            } else if (isParticipantHost) {
+                                roleLabel = <><Crown className="h-3 w-3 text-yellow-500" /><span>Oda Sahibi</span></>;
+                            } else if (isParticipantModerator) {
+                                roleLabel = <><Shield className="h-3 w-3 text-blue-500" /><span>Moderatör</span></>;
+                            }
 
                             return (
                                 <div key={p.uid} className="flex items-center gap-4">
@@ -74,10 +91,11 @@ export default function ParticipantListSheet({ isOpen, onOpenChange, room }: Par
                                     </Avatar>
                                     <div className="flex-1">
                                         <p className="font-medium text-foreground">{p.username}</p>
-                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                           {isParticipantHost && <><Crown className="h-3 w-3 text-yellow-500" /><span>Oda Sahibi</span></>}
-                                           {isParticipantModerator && !isParticipantHost && <><Shield className="h-3 w-3 text-blue-500" /><span>Moderatör</span></>}
-                                        </div>
+                                        {roleLabel && (
+                                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                                {roleLabel}
+                                            </div>
+                                        )}
                                     </div>
                                     {isHost && !isParticipantHost && (
                                         <DropdownMenu>

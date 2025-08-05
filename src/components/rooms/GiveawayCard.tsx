@@ -40,6 +40,10 @@ export default function GiveawayCard({ giveaway, roomId, isHost }: GiveawayCardP
 
   const handleDrawWinner = async () => {
     if (!user || !isHost) return;
+    if (participantCount === 0) {
+        toast({ variant: 'destructive', description: "Çekilişi başlatmak için en az 1 katılımcı olmalıdır." });
+        return;
+    }
     setIsProcessing(true);
     try {
       await drawGiveawayWinner(roomId, user.uid);
@@ -70,11 +74,11 @@ export default function GiveawayCard({ giveaway, roomId, isHost }: GiveawayCardP
           <PartyPopper className="h-10 w-10 text-yellow-500 mx-auto animate-pulse" />
           <p className="font-bold text-lg">Çekiliş Sona Erdi!</p>
           <div className="flex flex-col items-center gap-2">
-            <Avatar className="h-16 w-16 border-4 border-yellow-400">
+            <Avatar className="h-20 w-20 border-4 border-yellow-400">
               <AvatarImage src={giveaway.winner.photoURL || undefined} />
-              <AvatarFallback>{giveaway.winner.username.charAt(0)}</AvatarFallback>
+              <AvatarFallback className="text-2xl">{giveaway.winner.username.charAt(0)}</AvatarFallback>
             </Avatar>
-            <p><strong className="text-primary">{giveaway.winner.username}</strong> kazandı!</p>
+            <p className="text-xl"><strong className="text-primary">{giveaway.winner.username}</strong> kazandı!</p>
             <p className="font-semibold text-muted-foreground">Ödül: {giveaway.prize}</p>
           </div>
         </CardContent>

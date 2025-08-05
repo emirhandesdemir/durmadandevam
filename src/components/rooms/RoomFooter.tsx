@@ -73,15 +73,17 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
         onGameLobbyOpen();
     }
     
-    const canJoinToSpeak = !isEventRoom || (isEventRoom && isAdmin);
+    const canJoinToSpeak = !isEventRoom || (isEventRoom && (isHost || isAdmin));
 
     return (
         <>
             <footer className={cn("sticky bottom-0 left-0 right-0 z-10 p-2 border-t", isEventRoom ? 'bg-black/20' : 'bg-background/80 backdrop-blur-sm')}>
                 <div className="flex w-full items-center space-x-2">
-                    <Button variant="ghost" size="icon" className="rounded-full flex-shrink-0" onClick={() => setIsGiftPanelOpen(true)}>
-                        <Gift className="h-6 w-6 text-primary" />
-                    </Button>
+                     {!isEventRoom && (
+                        <Button variant="ghost" size="icon" className="rounded-full flex-shrink-0" onClick={() => setIsGiftPanelOpen(true)}>
+                            <Gift className="h-6 w-6 text-primary" />
+                        </Button>
+                    )}
 
                     <ChatMessageInput room={room} />
                     
