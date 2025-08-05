@@ -15,6 +15,7 @@ import { VoiceChatProvider, useVoiceChat } from "@/contexts/VoiceChatContext";
 import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
 import PersistentVoiceBar from "@/components/voice/PersistentVoiceBar";
 import EventAnnouncementHandler from "@/components/common/EventAnnouncementHandler";
+import InAppNotificationHandler, { useInAppNotification } from "@/components/common/InAppNotificationHandler";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -107,6 +108,7 @@ function PwaInstallBar() {
 function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
   const { user, userData, loading } = useAuth();
   const { isMinimized } = useVoiceChat();
+  const { activeNotification } = useInAppNotification();
   const pathname = usePathname();
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const [isScrolling, setIsScrolling] = useState(false);
@@ -156,8 +158,10 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
           {!isFullPageLayout && (
              <motion.header
               initial={{ y: 0 }}
-              animate={{ y: !disableAnimations && isScrolling ? -100 : 0 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
+              animate={{ 
+                y: (!disableAnimations && isScrolling) || activeNotification ? -100 : 0
+              }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
               className="absolute top-0 left-0 right-0 z-40"
             >
               <Header />
@@ -165,6 +169,8 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
           )}
         </AnimatePresence>
         
+         <InAppNotificationHandler />
+
         <main
             ref={mainScrollRef}
             className={cn(

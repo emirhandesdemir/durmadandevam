@@ -21,6 +21,7 @@ import {
   arrayUnion,
   arrayRemove,
   setDoc,
+  limit,
 } from 'firebase/firestore';
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { revalidatePath } from 'next/cache';
@@ -28,7 +29,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { getChatId } from '../utils';
 import { deleteChatWithSubcollections } from '../firestoreUtils';
 import { createNotification } from './notificationActions';
-import type { Post } from '../types';
+import type { Post, UserProfile } from '../types';
+import { deepSerialize } from '../server-utils';
 
 interface UserInfo {
   uid: string;
@@ -141,7 +143,7 @@ export async function sendMessage(
       read: false,
       edited: false,
       type: sharedPost ? 'shared_post' : 'user',
-      text: text || '',
+      text: text || (sharedPost ? "Bir gönderi paylaştı:" : ""),
     };
     if (finalImageUrl) {
         messageData.imageUrl = finalImageUrl;
@@ -193,25 +195,50 @@ export async function sendMessage(
     }
   });
 
-  if (!sharedPost) { // Don't send push for shared posts for now to avoid spam
-    await createNotification({
-      recipientId: receiver.uid,
-      senderId: sender.uid,
-      senderUsername: sender.username,
-      senderAvatar: sender.photoURL,
-      profileEmoji: sender.profileEmoji,
-      senderAvatarFrame: sender.selectedAvatarFrame,
-      type: 'dm_message',
-      messageText: text || (finalImageUrl ? '📷 Fotoğraf' : '🎤 Sesli Mesaj'),
-      chatId: chatId,
-    });
-  }
+  // Create notification if the receiver is not currently in the chat.
+  await createNotification({
+    recipientId: receiver.uid,
+    senderId: sender.uid,
+    senderUsername: sender.username,
+    senderAvatar: sender.photoURL,
+    profileEmoji: sender.profileEmoji,
+    senderAvatarFrame: sender.selectedAvatarFrame,
+    type: 'dm_message',
+    messageText: text || (finalImageUrl ? '📷 Fotoğraf' : (finalAudioUrl ? '🎤 Sesli Mesaj' : (sharedPost ? 'Bir gönderi paylaştı' : 'Mesaj'))),
+    chatId: chatId,
+  });
 
 
   revalidatePath(`/dm/${chatId}`);
   revalidatePath('/dm');
 }
 
+export async function getRecentDmUsers(userId: string, count: number): Promise<Pick<UserProfile, 'uid' | 'username' | 'photoURL'>[]> {
+    if (!userId) return [];
+    
+    const q = query(
+        collection(db, 'directMessagesMetadata'),
+        where('participantUids', 'array-contains', userId),
+        orderBy('lastMessage.timestamp', 'desc'),
+        limit(count)
+    );
+    
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return [];
+
+    const users: Pick<UserProfile, 'uid' | 'username' | 'photoURL'>[] = snapshot.docs.map(doc => {
+        const data = doc.data();
+        const partnerId = data.participantUids.find((uid: string) => uid !== userId);
+        const partnerInfo = data.participantInfo[partnerId];
+        return {
+            uid: partnerId,
+            username: partnerInfo.username,
+            photoURL: partnerInfo.photoURL
+        };
+    });
+
+    return deepSerialize(users);
+}
 
 export async function markImageAsOpened(chatId: string, messageId: string, viewerId: string) {
     const messageRef = doc(db, 'directMessages', chatId, 'messages', messageId);
@@ -322,7 +349,8 @@ export async function deleteMessage(chatId: string, messageId: string, senderId:
             audioDuration: null,
             deleted: true,
             edited: false,
-            reactions: {}
+            reactions: {},
+            sharedPostData: null,
         });
     });
 
@@ -417,4 +445,24 @@ export async function deleteDirectMessage(chatId: string, currentUserId: string)
 
     revalidatePath('/dm');
     return { success: true };
+}
+
+export async function updateTypingStatus(chatId: string, userId: string, isTyping: boolean) {
+    if (!chatId || !userId) return;
+
+    const metadataRef = doc(db, 'directMessagesMetadata', chatId);
+    try {
+        if (isTyping) {
+            await updateDoc(metadataRef, {
+                [`typingStatus.${userId}`]: serverTimestamp(),
+            });
+        } else {
+             await updateDoc(metadataRef, {
+                [`typingStatus.${userId}`]: null,
+            });
+        }
+    } catch (e) {
+        // It's not critical if this fails, so just log it.
+        console.warn("Could not update typing status:", e);
+    }
 }

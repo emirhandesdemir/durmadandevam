@@ -2,7 +2,7 @@
 'use client';
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowRight, Users, XCircle, Zap, Gift, Crown, Info, Star } from "lucide-react";
+import { ArrowRight, Users, XCircle, Zap, Gift, Crown, Info, Star, Reply } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,7 @@ import AvatarWithFrame from "../common/AvatarWithFrame";
 import useLongPress from "@/hooks/useLongPress";
 import { useState } from "react";
 import RoomPreviewDialog from "./RoomPreviewDialog";
+import { useVoiceChat } from "@/contexts/VoiceChatContext";
 
 interface RoomListItemProps {
     room: Room;
@@ -31,6 +32,7 @@ const gradientClasses = [
 
 export default function RoomListItem({ room }: RoomListItemProps) {
     const { user: currentUser } = useAuth();
+    const { activeRoom } = useVoiceChat();
     const router = useRouter();
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     
@@ -44,6 +46,7 @@ export default function RoomListItem({ room }: RoomListItemProps) {
     const isExpired = room.expiresAt && (room.expiresAt as Timestamp).toDate() < new Date() && room.type !== 'event';
 
     const hasPortal = room.portalExpiresAt && (room.portalExpiresAt as Timestamp).toMillis() > Date.now();
+    const isInThisRoom = activeRoom?.id === room.id;
 
     if (isExpired) {
         return null;
@@ -122,6 +125,10 @@ export default function RoomListItem({ room }: RoomListItemProps) {
                              {isDisabled ? (
                                 <>
                                     <XCircle className="mr-2 h-4 w-4" /> Oda Dolu
+                                </>
+                             ) : isInThisRoom ? (
+                                <>
+                                    <Reply className="mr-2 h-4 w-4" /> Odaya Geri Dön
                                 </>
                             ) : (
                                 <>

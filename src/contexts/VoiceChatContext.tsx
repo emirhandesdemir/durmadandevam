@@ -166,6 +166,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             if (event.track.kind === 'audio') {
                 setRemoteAudioStreams(p => ({ ...p, [otherUserId]: event.streams[0] }));
             } else if (event.track.kind === 'video') {
+                 // Differentiate between camera and screen share based on stream id or track label in a real app
                 setRemoteVideoStreams(p => ({ ...p, [otherUserId]: event.streams[0] }));
             }
         };
@@ -475,7 +476,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (!isListening || !user || !activeRoomId) return;
 
-        const q = query(collection(db, `rooms/${activeRoomId}/signals`), where('to', '==', user.uid));
+        const q = query(collection(db, `rooms/${activeRoomId}/signals`), where('to', '==', user.uid), orderBy('createdAt', 'asc'));
         const unsubscribe = onSnapshot(q, async (snapshot) => {
             for (const change of snapshot.docChanges()) {
                 if (change.type === 'added') {

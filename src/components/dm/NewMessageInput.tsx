@@ -6,13 +6,14 @@ import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { sendMessage } from '@/lib/actions/dmActions';
+import { sendMessage, updateTypingStatus } from '@/lib/actions/dmActions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Send, Loader2, ImagePlus, Mic, Trash2, StopCircle, Play, Pause } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { UserInfo } from './DMChat'; // Assuming UserInfo is exported from DMChat
 import ImagePreviewSheet from './ImagePreviewSheet';
+import { useDebounce } from '@/hooks/useDebounce';
 
 
 const messageSchema = z.object({
@@ -111,7 +112,22 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
     const [isSubmitting, setIsSubmitting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textValue = watch('text');
+    const debouncedTextValue = useDebounce(textValue, 500); // For typing indicator
     const showMicButton = !textValue?.trim() && !fileToSend && recordingStatus === 'idle';
+
+    // Typing indicator logic
+    useEffect(() => {
+        if (debouncedTextValue) {
+            updateTypingStatus(chatId, sender.uid, true);
+            const timer = setTimeout(() => {
+                updateTypingStatus(chatId, sender.uid, false);
+            }, 3000); // Typing status expires after 3 seconds
+            return () => clearTimeout(timer);
+        } else {
+            updateTypingStatus(chatId, sender.uid, false);
+        }
+    }, [debouncedTextValue, chatId, sender.uid]);
+
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0];
@@ -188,6 +204,7 @@ export default function NewMessageInput({ chatId, sender, receiver }: NewMessage
     
     const onSubmit: SubmitHandler<MessageFormValues> = async (data) => {
         setIsSubmitting(true);
+        updateTypingStatus(chatId, sender.uid, false);
         try {
             if (audioBlob && recordingStatus === 'preview') {
                 const reader = new FileReader();
