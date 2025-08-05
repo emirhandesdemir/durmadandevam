@@ -21,7 +21,7 @@ interface GiftPanelProps {
 }
 
 export default function GiftPanel({ isOpen, onOpenChange, room }: GiftPanelProps) {
-  const { user, userData } = useAuth();
+  const { user, userData, refreshUserData } = useAuth();
   const { toast } = useToast();
   const [selectedGiftId, setSelectedGiftId] = useState<string | null>(null);
   const [selectedReceiverId, setSelectedReceiverId] = useState<string | null>(null); // null for room
@@ -48,6 +48,7 @@ export default function GiftPanel({ isOpen, onOpenChange, room }: GiftPanelProps
             receiverId: selectedReceiverId,
             giftId: selectedGift.id,
         });
+        await refreshUserData();
         toast({ description: 'Hediye başarıyla gönderildi!' });
         onOpenChange(false);
     } catch (error: any) {

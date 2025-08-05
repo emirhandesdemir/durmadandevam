@@ -37,7 +37,7 @@ interface RoomManagementDialogProps {
 }
 
 export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomManagementDialogProps) {
-  const { user, userData } = useAuth();
+  const { user, userData, refreshUserData } = useAuth();
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -84,6 +84,7 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
       setIsExtending(true);
       try {
           await extendRoomTime(room.id, user.uid);
+          await refreshUserData();
           toast({
               title: "Süre Uzatıldı!",
               description: "Odanızın süresi 20 dakika uzatıldı."
@@ -104,6 +105,7 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
     setIsIncreasingLimit(true);
     try {
         await increaseParticipantLimit(room.id, user.uid);
+        await refreshUserData();
         toast({
             title: "Limit Artırıldı!",
             description: "Katılımcı limiti 1 artırıldı."
@@ -124,6 +126,7 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
     setIsExtending30Days(true);
     try {
         await extendRoomFor30Days(room.id, user.uid);
+        await refreshUserData();
         toast({
             title: "Oda Uzatıldı!",
             description: "Odanızın süresi 30 gün olarak ayarlandı."

@@ -14,7 +14,7 @@ export interface Announcement {
 
 export interface Transaction {
     id: string;
-    type: 'diamond_purchase' | 'gift_sent' | 'gift_received' | 'profile_value_conversion' | 'room_creation' | 'room_perk' | 'admin_grant' | 'ad_reward' | 'referral_bonus' | 'live_gift' | 'user_perk' | 'event_reward';
+    type: 'diamond_purchase' | 'gift_sent' | 'gift_received' | 'profile_value_conversion' | 'room_creation' | 'room_perk' | 'admin_grant' | 'ad_reward' | 'referral_bonus' | 'live_gift' | 'user_perk' | 'event_reward' | 'email_verification';
     amount: number;
     description: string;
     relatedUserId?: string | null;
@@ -144,6 +144,7 @@ export interface UserProfile {
     uniqueTag: number;
     email: string;
     emailVerified: boolean;
+    emailVerificationAwarded?: boolean;
     username: string;
     username_lowercase?: string;
     photoURL: string | null;
@@ -604,7 +605,6 @@ export interface BotActivityLog {
     details: string;
     timestamp: Timestamp;
 }
-
 
 export interface FeedSettings {
   showOnlyFollowing: boolean;

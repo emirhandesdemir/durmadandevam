@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { onIdTokenChanged, User, signOut } from 'firebase/auth';
-import { doc, onSnapshot, setDoc, serverTimestamp, updateDoc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, serverTimestamp, updateDoc, getDoc, runTransaction, increment } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { FeatureFlags, UserProfile, ThemeSettings } from '@/lib/types';
@@ -23,6 +23,7 @@ interface AuthContextType {
   loading: boolean;
   handleLogout: (isBan?: boolean) => Promise<void>;
   refreshUserData: () => Promise<void>;
+  feedKey: number; // Add this
   refreshFeed: () => void;
 }
 
@@ -35,6 +36,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   handleLogout: async () => {},
   refreshUserData: async () => {},
+  feedKey: 0, // Add this
   refreshFeed: () => {},
 });
 
@@ -64,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [themeSettings, setThemeSettings] = useState<ThemeSettings | null>(null);
   const [totalUnreadDms, setTotalUnreadDms] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [feedKey, setFeedKey] = useState(0); // Add this state
+  const [feedKey, setFeedKey] = useState(0);
 
   const router = useRouter();
   const pathname = usePathname();
@@ -155,6 +157,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return;
     }
+    
+    let previousEmailVerifiedState = userData?.emailVerified;
 
     const userDocRef = doc(db, 'users', user.uid);
     const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
@@ -167,20 +171,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!data.uniqueTag) {
             assignMissingUniqueTag(user.uid).catch(console.error);
         }
+        
+        // Check for email verification award
+        if (data.emailVerified && !data.emailVerificationAwarded && previousEmailVerifiedState === false) {
+             runTransaction(db, async (transaction) => {
+                transaction.update(userDocRef, {
+                    diamonds: increment(15),
+                    emailVerificationAwarded: true
+                });
+             }).then(() => {
+                toast({
+                    title: 'Tebrikler! 🎉',
+                    description: 'E-postanı doğruladığın için 15 elmas kazandın!'
+                });
+             }).catch(console.error);
+        }
+        previousEmailVerifiedState = data.emailVerified;
+
+
         setUserData(data);
         if (data.language && i18n.language !== data.language) {
             i18n.changeLanguage(data.language);
-        }
-        if (!data.bio && !data.profileCompletionNotificationSent) {
-            createNotification({
-                recipientId: user.uid,
-                senderId: 'system-profile',
-                senderUsername: 'HiweWalk',
-                senderAvatar: 'https://placehold.co/100x100.png',
-                type: 'complete_profile',
-            }).then(() => {
-                updateDoc(userDocRef, { profileCompletionNotificationSent: true });
-            });
         }
         setLoading(false);
       } else {
@@ -209,7 +220,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubscribeDms();
       window.removeEventListener("beforeunload", onbeforeunload);
     };
-  }, [user, handleLogout]);
+  }, [user, handleLogout, userData?.emailVerified, toast]);
 
   useEffect(() => {
     if (loading) return;
@@ -228,7 +239,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, userData, loading, pathname, router]);
 
-  const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms, refreshUserData, refreshFeed, feedKey };
+  const value = { user, userData, loading, handleLogout, featureFlags, themeSettings, totalUnreadDms, refreshUserData, feedKey, refreshFeed };
   
   return (
       <AuthContext.Provider value={value}>

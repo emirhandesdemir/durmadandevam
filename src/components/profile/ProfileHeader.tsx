@@ -40,6 +40,7 @@ interface UserProfile {
   activeRoomId?: string | null;
   activeRoomName?: string | null;
   showActiveRoom?: boolean;
+  diamonds?: number;
 }
 
 interface ProfileHeaderProps {
@@ -142,37 +143,45 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
   return (
     <>
       <div className="p-4 space-y-4">
-        <div className="flex items-start gap-4">
-          <Avatar className={cn("h-20 w-20 border-4", isPremium ? "border-amber-400" : "border-background")}>
-            <AvatarImage src={profileUser.photoURL || undefined} />
-            <AvatarFallback className="text-3xl bg-muted">{profileUser.username?.charAt(0).toUpperCase()}</AvatarFallback>
-          </Avatar>
-           <div className="flex-1 space-y-1">
-             <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold">{profileUser.username}</h1>
-                <p className="text-lg text-muted-foreground">@{profileUser.uniqueTag}</p>
-                <Button onClick={copyIdToClipboard} variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground"><Copy className="h-4 w-4"/></Button>
+        <div className="flex items-start justify-between">
+            <div className="flex items-start gap-4">
+                <Avatar className={cn("h-20 w-20 border-4", isPremium ? "border-amber-400" : "border-background")}>
+                    <AvatarImage src={profileUser.photoURL || undefined} />
+                    <AvatarFallback className="text-3xl bg-muted">{profileUser.username?.charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                        <h1 className="text-2xl font-bold">{profileUser.username}</h1>
+                        <p className="text-lg text-muted-foreground">@{profileUser.uniqueTag}</p>
+                        <Button onClick={copyIdToClipboard} variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground"><Copy className="h-4 w-4"/></Button>
+                    </div>
+                    {profileUser.bio && <p className="text-sm text-foreground/80">{profileUser.bio}</p>}
+                </div>
             </div>
-            {profileUser.bio && <p className="text-sm text-foreground/80">{profileUser.bio}</p>}
-          </div>
           {isOwnProfile && (
-             <Button asChild variant="outline" size="icon">
-                <Link href="/profile/edit"><Settings className="h-5 w-5"/></Link>
-            </Button>
+            <div className='flex items-center gap-2'>
+                <div className='flex items-center gap-1.5 p-2 rounded-full bg-muted border font-semibold'>
+                    <Gem className="h-5 w-5 text-cyan-400"/>
+                    <span>{currentUserData?.diamonds?.toLocaleString('tr-TR') || 0}</span>
+                </div>
+                <Button asChild variant="outline" size="icon">
+                    <Link href="/profile"><Settings className="h-5 w-5"/></Link>
+                </Button>
+            </div>
           )}
         </div>
         
         {!isOwnProfile && profileUser.showActiveRoom && profileUser.activeRoomId && (
-            <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20">
-                <div className="text-sm">
+            <button 
+                onClick={handleJoinActiveRoom} disabled={isJoiningRoom}
+                className="w-full flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-colors"
+            >
+                <div className="text-sm text-left">
                     <p className="text-muted-foreground">Şu anda bu odada:</p>
                     <p className="font-bold truncate">{profileUser.activeRoomName}</p>
                 </div>
-                <Button onClick={handleJoinActiveRoom} disabled={isJoiningRoom}>
-                    {isJoiningRoom ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                    Katıl
-                </Button>
-            </div>
+                {isJoiningRoom ? <Loader2 className="h-5 w-5 animate-spin"/> : <span className='font-semibold text-sm'>Katıl</span>}
+            </button>
         )}
 
         <div className="space-y-2">

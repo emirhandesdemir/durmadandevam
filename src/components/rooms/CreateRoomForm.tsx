@@ -29,22 +29,26 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 
 const formSchema = z.object({
   name: z.string().min(3, { message: "Ad en az 3 karakter olmalıdır." }).max(50, {message: "Ad en fazla 50 karakter olabilir."}),
   description: z.string().min(3, { message: "Açıklama en az 3 karakter olmalıdır." }).max(100, {message: "Açıklama en fazla 100 karakter olabilir."}),
+  type: z.enum(['public', 'event']).optional(),
 });
 
 export default function CreateRoomForm() {
     const { toast } = useToast();
     const router = useRouter();
-    const { user, userData } = useAuth();
+    const { user, userData, refreshUserData } = useAuth();
     const { i18n } = useTranslation();
     const [isLoading, setIsLoading] = useState(false);
+    
+    const isAdmin = userData?.role === 'admin';
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
-        defaultValues: { name: "", description: "" },
+        defaultValues: { name: "", description: "", type: "public" },
     });
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -63,6 +67,8 @@ export default function CreateRoomForm() {
                 selectedAvatarFrame: userData.selectedAvatarFrame || '',
             });
             
+            await refreshUserData();
+
             toast({
                 title: 'Oda Oluşturuldu!',
                 description: `"${values.name}" odanız oluşturuldu.`,
@@ -94,6 +100,43 @@ export default function CreateRoomForm() {
             <CardContent>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                        {isAdmin && (
+                            <FormField
+                                control={form.control}
+                                name="type"
+                                render={({ field }) => (
+                                    <FormItem className="space-y-3">
+                                    <FormLabel>Oda Tipi (Admin)</FormLabel>
+                                    <FormControl>
+                                        <RadioGroup
+                                        onValueChange={field.onChange}
+                                        defaultValue={field.value}
+                                        className="flex flex-col space-y-1"
+                                        >
+                                        <FormItem className="flex items-center space-x-3 space-y-0">
+                                            <FormControl>
+                                            <RadioGroupItem value="public" />
+                                            </FormControl>
+                                            <FormLabel className="font-normal">
+                                            Normal Oda (Süreli)
+                                            </FormLabel>
+                                        </FormItem>
+                                        <FormItem className="flex items-center space-x-3 space-y-0">
+                                            <FormControl>
+                                            <RadioGroupItem value="event" />
+                                            </FormControl>
+                                            <FormLabel className="font-normal">
+                                            Etkinlik Odası (Süresiz & PIN Gerekli)
+                                            </FormLabel>
+                                        </FormItem>
+                                        </RadioGroup>
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
+
                         <FormField control={form.control} name="name" render={({ field }) => (
                             <FormItem>
                                 <FormLabel className="ml-4">Oda Adı</FormLabel>
