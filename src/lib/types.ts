@@ -123,11 +123,10 @@ export interface ThemeSettings {
     defaultMode?: 'light' | 'dark' | 'system';
 }
 
-export interface UserSession {
-    id: string; // e.g., 'current' or a unique session ID
-    lastSeen: Timestamp;
-    ipAddress?: string;
-    userAgent?: string;
+export interface FeedSettings {
+    showOnlyFollowing: boolean;
+    hideLikedPosts: boolean;
+    hideVideos: boolean;
 }
 
 export interface UserProfile {
@@ -191,7 +190,8 @@ export interface UserProfile {
             ipAddress?: string;
             userAgent?: string;
         }
-    }
+    };
+    feedSettings?: FeedSettings;
 }
 
 export interface ProfileViewer {
@@ -262,6 +262,7 @@ export interface Post {
     text: string;
     imageUrl?: string | null;
     videoUrl?: string | null;
+    videoThumbnailUrl?: string | null;
     backgroundStyle?: string;
     createdAt: Timestamp | { seconds: number; nanoseconds: number } | string;
     likes: string[];

@@ -8,14 +8,12 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMemo, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import ExploreDialog from '../search/ExploreDialog';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
 
 export default function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [isExploreOpen, setIsExploreOpen] = useState(false);
   const { isMinimized } = useVoiceChat();
   
   const navItems = useMemo(() => {
@@ -24,7 +22,7 @@ export default function BottomNav() {
         { id: 'home', href: '/home', icon: Home, label: 'Anasayfa' },
         { id: 'rooms', href: '/rooms', icon: MessagesSquare, label: 'Odalar' },
         { id: 'create', href: '/create', icon: Plus, label: 'Oluştur'},
-        { id: 'explore', action: () => setIsExploreOpen(true), icon: Compass, label: 'Keşfet'},
+        { id: 'explore', href: '/explore', icon: Compass, label: 'Keşfet'},
         { id: 'store', href: '/store', icon: Store, label: 'Mağaza' },
       ]
   }, [user]);
@@ -72,6 +70,7 @@ export default function BottomNav() {
                   return (
                       <button 
                         key={item.id}
+                        // @ts-ignore
                         onClick={item.action}
                         className={cn(commonClasses, 'text-muted-foreground hover:text-primary')}
                       >
@@ -81,7 +80,6 @@ export default function BottomNav() {
               })}
           </nav>
       </div>
-       <ExploreDialog isOpen={isExploreOpen} onOpenChange={setIsExploreOpen} />
     </>
   );
 }
