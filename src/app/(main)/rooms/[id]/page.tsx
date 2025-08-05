@@ -30,7 +30,6 @@ import GameLobbyDialog from '@/components/game/GameLobbyDialog';
 import ActiveGameArea from '@/components/game/ActiveGameArea';
 import MindWarLobby from '@/components/games/mindwar/MindWarLobby';
 import MindWarMainUI from '@/components/games/mindwar/MindWarMainUI';
-import EntryEffectManager from '@/components/rooms/EntryEffectManager';
 import EventWelcomeDialog from '@/components/rooms/EventWelcomeDialog';
 
 
@@ -237,7 +236,6 @@ export default function RoomPage() {
 
     return (
         <>
-            <EntryEffectManager participants={participants} />
             <EventWelcomeDialog isOpen={showEventWelcome} onOpenChange={setShowEventWelcome} room={room} />
             <div className={cn("flex flex-col h-full bg-background text-foreground", room.type === 'event' && 'event-room-bg')}>
                  <RoomHeader 

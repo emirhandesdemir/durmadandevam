@@ -1,5 +1,181 @@
-// This file is now redundant as its content has been merged into `src/app/(main)/profile/app-settings/page.tsx`.
-// It can be safely removed in a future cleanup.
-export default function RedundantAppSettingsPage() {
-  return null;
+// src/app/(main)/profile/app-settings/page.tsx
+'use client';
+
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2, ChevronLeft, BatteryCharging, Wifi, Sparkles, Database, Mic } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import Link from 'next/link';
+import { updateUserProfile } from "@/lib/actions/userActions";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import type { AppSettings } from "@/lib/types";
+
+const formatBytes = (bytes: number, decimals = 2) => {
+    if (!bytes || bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
+
+const AudioVisualizer = () => {
+    const [volume, setVolume] = useState(0);
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const analyserRef = useRef<AnalyserNode | null>(null);
+    const animationFrameRef = useRef<number | null>(null);
+    const streamRef = useRef<MediaStream | null>(null);
+    
+    const startTest = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        streamRef.current = stream;
+        const audioContext = new AudioContext();
+        audioContextRef.current = audioContext;
+        const analyser = audioContext.createAnalyser();
+        analyserRef.current = analyser;
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+        analyser.fftSize = 512;
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        
+        const draw = () => {
+          analyser.getByteFrequencyData(dataArray);
+          const avg = dataArray.reduce((acc, val) => acc + val, 0) / bufferLength;
+          setVolume(avg);
+          animationFrameRef.current = requestAnimationFrame(draw);
+        };
+        draw();
+      } catch (err) {
+        console.error("Mic test error:", err);
+      }
+    };
+
+    const stopTest = () => {
+        if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+        if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
+        if (audioContextRef.current && audioContextRef.current.state !== 'closed') audioContextRef.current.close();
+        setVolume(0);
+    };
+
+    useEffect(() => {
+        return () => stopTest(); // Cleanup on unmount
+    }, []);
+
+    return (
+        <div className="flex items-center gap-4">
+            <div className="w-full h-10 bg-muted rounded-lg relative overflow-hidden">
+                <div 
+                    className="absolute left-0 top-0 h-full bg-primary transition-all duration-75"
+                    style={{ width: `${Math.min(100, volume * 1.5)}%` }}
+                />
+            </div>
+            <Button onMouseDown={startTest} onMouseUp={stopTest} onMouseLeave={stopTest} onTouchStart={startTest} onTouchEnd={stopTest}>
+                Mikrofonu Test Et
+            </Button>
+        </div>
+    );
+}
+
+export default function AppSettingsPage() {
+    const { userData, loading, refreshUserData } = useAuth();
+    const { toast } = useToast();
+    const [isSaving, setIsSaving] = useState(false);
+    
+    // Local state for optimistic UI updates
+    const [settings, setSettings] = useState<AppSettings>({
+        dataSaver: userData?.appSettings?.dataSaver ?? false,
+        disableAnimations: userData?.appSettings?.disableAnimations ?? false,
+    });
+
+    useEffect(() => {
+        if (userData?.appSettings) {
+            setSettings(userData.appSettings);
+        }
+    }, [userData]);
+    
+    const handleSettingChange = (key: keyof AppSettings, value: boolean) => {
+        setSettings(prev => ({ ...prev, [key]: value }));
+    };
+
+    const handleSave = async () => {
+        if (!userData) return;
+        setIsSaving(true);
+        try {
+            await updateUserProfile({
+                userId: userData.uid,
+                appSettings: settings,
+            });
+            await refreshUserData();
+            toast({ description: "Uygulama ayarlarınız kaydedildi." });
+        } catch (e: any) {
+            toast({ variant: 'destructive', description: "Ayarlar kaydedilemedi." });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    if (loading || !userData) {
+        return <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    }
+
+    return (
+        <div>
+            <header className="flex items-center justify-between p-2 border-b">
+                <Button asChild variant="ghost" className="rounded-full">
+                    <Link href="/profile"><ChevronLeft className="mr-2 h-4 w-4"/> Geri</Link>
+                </Button>
+                <Button onClick={handleSave} disabled={isSaving}>
+                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Kaydet
+                </Button>
+            </header>
+            <div className="p-4 space-y-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Performans ve Tasarruf</CardTitle>
+                        <CardDescription>Uygulamanın performansını, veri ve pil kullanımını kişiselleştirin.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                         <div className="flex items-center justify-between">
+                            <div>
+                                <Label htmlFor="data-saver" className="font-semibold flex items-center gap-2"><Wifi className="h-4 w-4"/> Veri Tasarrufu</Label>
+                                <p className="text-xs text-muted-foreground pl-6">Resim ve video kalitesini düşürerek veri kullanımını azaltır.</p>
+                            </div>
+                            <Switch id="data-saver" checked={settings.dataSaver} onCheckedChange={(val) => handleSettingChange('dataSaver', val)} />
+                        </div>
+                         <div className="flex items-center justify-between">
+                            <div>
+                                <Label htmlFor="disable-animations" className="font-semibold flex items-center gap-2"><Sparkles className="h-4 w-4"/> Arayüz Animasyonlarını Kapat</Label>
+                                <p className="text-xs text-muted-foreground pl-6">Sayfa geçişleri, kaydırma efektleri ve diğer görsel efektleri kapatarak arayüzü hızlandırır ve pil tasarrufu sağlar.</p>
+                            </div>
+                            <Switch id="disable-animations" checked={settings.disableAnimations} onCheckedChange={(val) => handleSettingChange('disableAnimations', val)} />
+                        </div>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Mic className="h-5 w-5"/>Ses ve Mikrofon Testi</CardTitle>
+                        <CardDescription>Sesli sohbete katılmadan önce mikrofonunuzun çalıştığından emin olun. Konuştuğunuzda aşağıdaki çubuk hareket etmelidir.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <AudioVisualizer />
+                    </CardContent>
+                </Card>
+                 <Card className="bg-secondary">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Database className="h-5 w-5"/>Veri Tasarruf Raporu</CardTitle>
+                        <CardDescription>Veri tasarruf modu açıkken bu zamana kadar ne kadar tasarruf yaptığınızı gösterir.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-2xl font-bold text-primary">{formatBytes(userData.dataSaved || 0)}</p>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    );
+};
