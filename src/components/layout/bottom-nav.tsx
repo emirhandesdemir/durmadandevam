@@ -6,15 +6,13 @@ import { usePathname } from 'next/navigation';
 import { Home, MessagesSquare, Plus, Compass, Store } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
 
 export default function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
-  const { toast } = useToast();
-  const { isMinimized } = useVoiceChat();
   
   const navItems = useMemo(() => {
     if (!user) return [];
@@ -27,7 +25,7 @@ export default function BottomNav() {
       ]
   }, [user]);
 
-  if (!user || isMinimized) {
+  if (!user) {
     return null;
   }
   

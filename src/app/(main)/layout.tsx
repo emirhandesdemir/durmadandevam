@@ -11,7 +11,7 @@ import { Download, X } from 'lucide-react';
 import PremiumWelcomeManager from "@/components/common/PremiumWelcomeManager";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from 'framer-motion';
-import { VoiceChatProvider } from "@/contexts/VoiceChatContext";
+import { VoiceChatProvider, useVoiceChat } from "@/contexts/VoiceChatContext";
 import VoiceAudioPlayer from "@/components/voice/VoiceAudioPlayer";
 import PersistentVoiceBar from "@/components/voice/PersistentVoiceBar";
 
@@ -105,6 +105,7 @@ function PwaInstallBar() {
 
 function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
   const { user, userData, loading } = useAuth();
+  const { isMinimized } = useVoiceChat();
   const pathname = usePathname();
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const [isScrolling, setIsScrolling] = useState(false);
@@ -184,7 +185,7 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
         </main>
         
         <AnimatePresence>
-         {!isFullPageLayout && (
+         {!isFullPageLayout && !isMinimized && (
             <motion.div
               initial={{ y: 0 }}
               animate={{ y: animatedNavEnabled && isScrolling ? 100 : 0 }}
