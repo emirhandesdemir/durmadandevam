@@ -56,7 +56,7 @@ export default function RoomList({ searchTerm }: RoomListProps) {
 
   const sortedAndFilteredRooms = useMemo(() => {
     return rooms
-      .filter(room => !room.expiresAt || (room.expiresAt as Timestamp).toMillis() > new Date())
+      .filter(room => !room.expiresAt || (room.expiresAt as Timestamp).toMillis() > Date.now())
       .sort((a, b) => {
           // 1. Events on top
           if (a.type === 'event' && b.type !== 'event') return -1;

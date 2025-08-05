@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2 } from "lucide-react";
+import { Loader2, KeyRound } from "lucide-react";
 
 interface CreateEventRoomDialogProps {
   isOpen: boolean;
@@ -33,6 +33,7 @@ interface CreateEventRoomDialogProps {
 const formSchema = z.object({
   name: z.string().min(5, "Oda adı en az 5 karakter olmalıdır."),
   description: z.string().min(10, "Açıklama en az 10 karakter olmalıdır."),
+  pin: z.string().min(4, "PIN en az 4 karakter olmalıdır."),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -49,6 +50,7 @@ export default function CreateEventRoomDialog({ isOpen, setIsOpen, room }: Creat
     defaultValues: {
       name: room?.name || "",
       description: room?.description || "",
+      pin: "",
     },
   });
 
@@ -60,12 +62,12 @@ export default function CreateEventRoomDialog({ isOpen, setIsOpen, room }: Creat
 
     setIsSubmitting(true);
     try {
-        await createEventRoom(user.uid, { ...data, language: i18n.language }, {
+        await createEventRoom(user.uid, { name: data.name, description: data.description, language: i18n.language }, {
             username: userData.username,
             photoURL: userData.photoURL || null,
             role: userData.role,
             selectedAvatarFrame: userData.selectedAvatarFrame || '',
-        });
+        }, data.pin);
         toast({ title: "Başarılı", description: "Etkinlik odası başarıyla oluşturuldu." });
         setIsOpen(false);
         form.reset();
@@ -82,7 +84,7 @@ export default function CreateEventRoomDialog({ isOpen, setIsOpen, room }: Creat
         <DialogHeader>
           <DialogTitle>{isEditMode ? "Etkinliği Düzenle" : "Yeni Etkinlik Odası Oluştur"}</DialogTitle>
           <DialogDescription>
-            Etkinlik odaları süresizdir ve listede öne çıkarılır.
+            Etkinlik odaları süresizdir ve listede öne çıkarılır. Bu işlemi yapmak için yönetici PIN'ini girmelisiniz.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -109,6 +111,22 @@ export default function CreateEventRoomDialog({ isOpen, setIsOpen, room }: Creat
                   <FormControl>
                     <Textarea placeholder="Bu odada yapılacak etkinlikler hakkında kısa bilgi." {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="pin"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Yönetici PIN'i</FormLabel>
+                   <div className="relative">
+                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
+                    <FormControl>
+                        <Input type="password" placeholder="PIN girin" {...field} className="pl-10" />
+                    </FormControl>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

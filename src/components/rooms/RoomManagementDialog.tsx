@@ -37,7 +37,7 @@ interface RoomManagementDialogProps {
 }
 
 export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomManagementDialogProps) {
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -50,7 +50,11 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
 
 
   if (!room) return null;
+
   const isHost = user?.uid === room.createdBy.uid;
+  const isAdmin = userData?.role === 'admin';
+  const canManage = isHost || isAdmin;
+
 
   const handleDeleteRoom = async () => {
     if (!room || !user) return;
@@ -137,7 +141,7 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
   }
   
   const handleSettingsSave = async () => {
-      if (!room || !user || !isHost) return;
+      if (!room || !user || !canManage) return;
       setIsSavingSettings(true);
       try {
           await updateRoomSettings(room.id, { autoQuizEnabled });
@@ -148,6 +152,8 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
           setIsSavingSettings(false);
       }
   }
+
+  if (!canManage) return null;
 
 
   return (

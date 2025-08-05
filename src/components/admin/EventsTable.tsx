@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { tr } from 'date-fns/locale';
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
-import { MoreHorizontal, Trash2, Eye, Loader2, Users, Gift } from "lucide-react";
+import { MoreHorizontal, Trash2, Eye, Loader2, Users, Gift, KeyRound } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -32,6 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Input } from '@/components/ui/input';
 import { Button } from "@/components/ui/button";
 import { deleteEventRoom } from "@/lib/actions/roomActions";
 import { useAuth } from "@/contexts/AuthContext";
@@ -46,20 +47,22 @@ export default function EventsTable({ rooms, onEdit }: EventsTableProps) {
     const { user } = useAuth();
     const { toast } = useToast();
     const [isProcessing, setIsProcessing] = useState<string | null>(null);
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState<Room | null>(null);
+    const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
+    const [pin, setPin] = useState("");
 
-    const handleDeleteRoom = async (room: Room) => {
-        if (!user) return;
-        setIsProcessing(room.id);
+    const handleDeleteRoom = async () => {
+        if (!user || !roomToDelete || !pin) return;
+        setIsProcessing(roomToDelete.id);
         try {
-            await deleteEventRoom(room.id, user.uid);
-            toast({ title: "Başarılı", description: `"${room.name}" etkinliği silindi.` });
+            await deleteEventRoom(roomToDelete.id, user.uid, pin);
+            toast({ title: "Başarılı", description: `"${roomToDelete.name}" etkinliği silindi.` });
         } catch (error) {
             console.error("Etkinlik odası silinirken hata:", error);
             toast({ title: "Hata", description: "Etkinlik odası silinirken bir hata oluştu.", variant: "destructive" });
         } finally {
-            setShowDeleteConfirm(null);
+            setRoomToDelete(null);
             setIsProcessing(null);
+            setPin("");
         }
     };
 
@@ -106,7 +109,7 @@ export default function EventsTable({ rooms, onEdit }: EventsTableProps) {
                                                 Odayı Görüntüle
                                             </Link>
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => setShowDeleteConfirm(room)} className="text-destructive focus:text-destructive">
+                                        <DropdownMenuItem onClick={() => setRoomToDelete(room)} className="text-destructive focus:text-destructive">
                                             <Trash2 className="mr-2 h-4 w-4" />
                                             Etkinliği Sil
                                         </DropdownMenuItem>
@@ -117,17 +120,27 @@ export default function EventsTable({ rooms, onEdit }: EventsTableProps) {
                     ))}
                 </TableBody>
             </Table>
-            <AlertDialog open={!!showDeleteConfirm} onOpenChange={(open) => !open && setShowDeleteConfirm(null)}>
+            <AlertDialog open={!!roomToDelete} onOpenChange={(open) => !open && setRoomToDelete(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Emin misiniz?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            "{showDeleteConfirm?.name}" etkinliğini kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+                            "{roomToDelete?.name}" etkinliğini kalıcı olarak silmek istediğinizden emin misiniz? Katılımcılara ödülleri dağıtılacak ve bu işlem geri alınamayacaktır. Lütfen yönetici PIN'ini girin.
                         </AlertDialogDescription>
+                         <div className="relative pt-2">
+                            <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
+                            <Input
+                                type="password"
+                                placeholder="Yönetici PIN'i"
+                                value={pin}
+                                onChange={(e) => setPin(e.target.value)}
+                                className="pl-10"
+                            />
+                        </div>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel disabled={!!isProcessing}>İptal</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDeleteRoom(showDeleteConfirm!)} disabled={!!isProcessing} className="bg-destructive hover:bg-destructive/90">
+                        <AlertDialogAction onClick={handleDeleteRoom} disabled={!!isProcessing || !pin} className="bg-destructive hover:bg-destructive/90">
                             {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Sil
                         </AlertDialogAction>
