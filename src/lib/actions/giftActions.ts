@@ -83,6 +83,11 @@ export async function sendGift({ roomId, senderId, senderName, receiverId, giftI
     if (!isAdmin && (senderData.diamonds || 0) < gift.diamondCost) {
       throw new Error('Yetersiz elmas bakiyesi.');
     }
+    
+    // NEW: Check for gift level requirement if sending to a specific user
+    if (receiverId && !isAdmin && (senderData.giftLevel || 0) < 3) {
+      throw new Error("Bir kullanıcıya doğrudan hediye gönderebilmek için 3. Seviye olmalısınız.");
+    }
 
     const newTotalDiamondsSent = (senderData.totalDiamondsSent || 0) + gift.diamondCost;
     const newGiftLevel = getGiftLevel(newTotalDiamondsSent);

@@ -27,12 +27,18 @@ export default function ProfileGiftDialog({ isOpen, onOpenChange, recipient }: P
   
   const selectedGift = giftList.find(g => g.id === selectedGiftId);
   const canAfford = selectedGift ? (userData?.diamonds || 0) >= selectedGift.diamondCost : false;
+  const canSendToUser = (userData?.giftLevel || 0) >= 3;
 
   const handleSendGift = async () => {
     if (!user || !userData || !selectedGift || !recipient) return;
     
     if (!canAfford) {
         toast({ variant: 'destructive', description: "Yetersiz elmas bakiyesi." });
+        return;
+    }
+    
+    if (!canSendToUser) {
+         toast({ variant: 'destructive', description: "Bir kullanıcıya hediye göndermek için 3. Seviye olmalısınız." });
         return;
     }
 
@@ -84,9 +90,9 @@ export default function ProfileGiftDialog({ isOpen, onOpenChange, recipient }: P
         </ScrollArea>
         
         <SheetFooter className="p-4 mt-auto border-t bg-background">
-          <Button onClick={handleSendGift} disabled={!selectedGift || isSending || !canAfford} className="w-full">
+          <Button onClick={handleSendGift} disabled={!selectedGift || isSending || !canAfford || !canSendToUser} className="w-full">
             {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4"/>}
-            {selectedGift ? canAfford ? `${selectedGift.diamondCost} Elmasa Gönder` : 'Yetersiz Bakiye' : 'Hediye Seç'}
+            {!canSendToUser ? "Seviye 3 Gerekli" : selectedGift ? (canAfford ? `${selectedGift.diamondCost} Elmasa Gönder` : 'Yetersiz Bakiye') : 'Hediye Seç'}
           </Button>
         </SheetFooter>
       </SheetContent>

@@ -38,6 +38,7 @@ const guideSections = [
         items: [
             { title: "Elmas Nasıl Kazanılır?", description: "Mağaza sayfasından reklam izleyerek, arkadaşlarınızı davet linkinizle üye yaparak, ilk gönderinizi paylaşarak veya profilinizi tamamlayarak elmas kazanabilirsiniz." },
             { title: "Hediye Gönderme ve Alma", description: "Sohbet odalarında diğer kullanıcılara veya doğrudan odaya hediye gönderebilirsiniz. Size gönderilen hediyeler, 'Profil Değerinizi' artırır." },
+            { title: "Hediye Gönderme Kuralı", description: "Diğer kullanıcılara doğrudan hediye gönderebilmek için en az 3. Hediye Seviyesine ulaşmanız gerekir. Ancak, odaya hediye göndermek için bir seviye kısıtlaması yoktur." },
             { title: "Profil Değerini Elmasa Çevirme", description: "Profilinize gönderilen hediyelerin toplam değeri, 'Profil Değeri' olarak birikir. Bu değeri, Cüzdan sayfanızdan %70 oranında elmasa dönüştürerek harcanabilir bakiye elde edebilirsiniz." },
         ]
     },
