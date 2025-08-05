@@ -3,34 +3,45 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // Public read for default avatars
-    match /default_avatars/{allPaths=**} {
-      allow read;
+    // Allow admin users to read and write all files.
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null && get(/databases/{database}/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // User can only write to their own avatar path
+    // Avatars: Any authenticated user can upload their own avatar.
     match /avatars/{userId}/{allPaths=**} {
-      allow read;
       allow write: if request.auth != null && request.auth.uid == userId;
     }
+    // Avatars: Anyone can read avatars.
+    match /avatars/{userId}/{allPaths=**} {
+        allow read;
+    }
 
-    // Post images can be read by anyone, but only created by authenticated users
+    // Post uploads: Authenticated users can upload to their own folder.
     match /upload/posts/{userId}/{allPaths=**} {
-      allow read;
-      allow write: if request.auth != null && request.auth.uid == userId;
+        allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    // Post uploads: Anyone can read posts.
+    match /upload/posts/{userId}/{allPaths=**} {
+        allow read;
+    }
+
+    // DM uploads: Allow users to write to a chat if they are a participant.
+    match /dm_uploads/{chatId}/{fileName} {
+      allow write: if request.auth != null &&
+                      exists(/databases/$(database)/documents/directMessagesMetadata/$(chatId)) &&
+                      request.auth.uid in get(/databases/$(database)/documents/directMessagesMetadata/$(chatId)).data.participantUids;
+
+      allow read: if request.auth != null &&
+                     exists(/databases/$(database)/documents/directMessagesMetadata/$(chatId)) &&
+                     request.auth.uid in get(/databases/$(database)/documents/directMessagesMetadata/$(chatId)).data.participantUids;
     }
     
-    // DM uploads: User can write to their own folder, and read if they are part of the chat.
-    // The filename contains the chatId for read access verification.
-    match /dm_uploads/{userId}/{chatId}_{allPaths=**} {
-      allow read: if request.auth != null && get(/databases/$(database)/documents/directMessagesMetadata/$(chatId)).data.participantUids[request.auth.uid] == request.auth.uid;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Room audio uploads
-    match /music/{roomId}/{allPaths=**} {
-      allow read: if request.auth != null && exists(/databases/$(database)/documents/rooms/$(roomId));
-      allow write: if request.auth != null && get(/databases/$(database)/documents/rooms/$(roomId)).data.participants[request.auth.uid] == request.auth.uid;
+    // Room music uploads: Only room participants can upload music.
+    match /music/{roomId}/{fileName} {
+        allow read, write: if request.auth != null &&
+                            exists(/databases/$(database)/documents/rooms/$(roomId)) &&
+                            get(/databases/$(database)/documents/rooms/$(roomId)).data.participants.hasAny([request.auth.uid]);
     }
   }
 }

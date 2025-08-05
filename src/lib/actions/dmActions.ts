@@ -111,7 +111,7 @@ export async function sendMessage(
   
   let finalImageUrl: string | undefined;
   if (imageUrl) {
-      const imagePath = `dm_uploads/${sender.uid}/${chatId}_${uuidv4()}.jpg`;
+      const imagePath = `dm_uploads/${chatId}/${uuidv4()}.jpg`;
       const imageStorageRef = storageRef(storage, imagePath);
       await uploadString(imageStorageRef, imageUrl, 'data_url');
       finalImageUrl = await getDownloadURL(imageStorageRef);
