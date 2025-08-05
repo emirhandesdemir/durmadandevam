@@ -111,7 +111,6 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
   const [isScrolling, setIsScrolling] = useState(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Default to true if userData is not loaded or the setting is undefined
   const animatedNavEnabled = userData?.animatedNav ?? true;
 
   const handleScroll = useCallback(() => {

@@ -19,14 +19,16 @@ export default function PersistentVoiceBar() {
     }
   }, [isMinimized, pathname, router, activeRoom]);
 
-  // CORRECTED LOGIC: The bar should only be visible if the user is in a room AND has minimized it.
-  if (!isListening || !isMinimized || !activeRoom) {
+  // The bar should only be visible if the user is in a room AND has minimized it.
+  if (!isMinimized) {
     return null;
   }
 
   const handleExpand = () => {
-    expandRoom();
-    router.push(`/rooms/${activeRoom.id}`);
+    if (activeRoom) {
+        expandRoom();
+        router.push(`/rooms/${activeRoom.id}`);
+    }
   };
 
   return (
@@ -37,7 +39,7 @@ export default function PersistentVoiceBar() {
         exit={{ y: 100 }}
         transition={{ type: 'spring', stiffness: 400, damping: 40 }}
         // Position the bar above the main bottom nav
-        className="fixed bottom-16 sm:bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-sm z-40"
+        className="fixed bottom-20 sm:bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-sm z-40"
       >
         <div className="flex items-center justify-between gap-2 p-2 rounded-2xl bg-card text-card-foreground shadow-2xl border border-primary/20 backdrop-blur-lg">
            <div className="flex items-center gap-2 overflow-hidden flex-1">
@@ -45,7 +47,7 @@ export default function PersistentVoiceBar() {
                     <ArrowUpLeft className="h-5 w-5 text-primary" />
                 </button>
                 <div className="flex-1 overflow-hidden">
-                    <p className="font-bold text-sm truncate">{activeRoom.name}</p>
+                    <p className="font-bold text-sm truncate">{activeRoom?.name || 'Sohbet Odası'}</p>
                     <p className="text-xs text-muted-foreground">{isConnected ? "Sesli sohbettesin..." : "Dinliyorsun..."}</p>
                 </div>
             </div>
