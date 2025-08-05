@@ -595,6 +595,7 @@ export async function changeUniqueTag(userId: string, newTag: number) {
         });
 
         revalidatePath(`/profile/${userId}`);
+        revalidatePath(`/profile/${newTag}`);
         return { success: true };
     });
 }
