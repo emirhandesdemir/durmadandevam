@@ -30,7 +30,7 @@ export default function ChatList({ selectedChatId }: ChatListProps) {
 
   useEffect(() => {
     // FIX: Add explicit check for user and user.uid before running the query.
-    if (!user?.uid) {
+    if (!user || !user.uid) {
       setLoading(false);
       return;
     }
