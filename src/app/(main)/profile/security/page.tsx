@@ -7,12 +7,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, ChevronLeft, KeyRound, MailWarning, MailCheck, ShieldCheck, Server, LogOut } from "lucide-react";
 import { useState, useCallback } from "react";
 import Link from 'next/link';
-import { reauthenticateWithCredential, EmailAuthProvider, verifyBeforeUpdateEmail, sendPasswordResetEmail } from "firebase/auth";
+import { sendEmailVerification, reauthenticateWithCredential, EmailAuthProvider, verifyBeforeUpdateEmail, sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { updateUserProfile, sendVerificationEmail, sendPasswordResetLink } from "@/lib/actions/userActions";
+import { updateUserProfile } from "@/lib/actions/userActions";
 
 
 export default function SecuritySettingsPage() {
@@ -29,8 +29,7 @@ export default function SecuritySettingsPage() {
         if (!user || userData?.emailVerified) return;
         setIsVerifying(true);
         try {
-            const result = await sendVerificationEmail(user.uid);
-            if (!result.success) throw new Error(result.error);
+            await sendEmailVerification(user);
             toast({
                 title: "Doğrulama E-postası Gönderildi",
                 description: "Lütfen e-posta kutunuzu kontrol edin ve linke tıklayarak hesabınızı doğrulayın.",
@@ -88,8 +87,7 @@ export default function SecuritySettingsPage() {
         if (!user?.email) return;
         setIsResettingPassword(true);
         try {
-            const result = await sendPasswordResetLink(user.email);
-            if (!result.success) throw new Error(result.error);
+            await sendPasswordResetEmail(auth, user.email);
             toast({
                 title: 'E-posta Gönderildi',
                 description: 'Şifrenizi sıfırlamak için e-posta kutunuzu kontrol edin.'

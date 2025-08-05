@@ -14,24 +14,6 @@ import { logTransaction } from './transactionActions';
 import { verifyPasswordResetCode, confirmPasswordReset, verifyBeforeUpdateEmail } from 'firebase/auth';
 
 
-export async function sendPasswordResetLink(email: string) {
-    if (!email) {
-        return { success: false, error: 'E-posta adresi gereklidir.' };
-    }
-    try {
-        const auth = getAuth();
-        await auth.generatePasswordResetLink(email);
-        return { success: true };
-    } catch (error: any) {
-        console.error("Şifre sıfırlama linki oluşturulurken hata:", error);
-         if (error.code === 'auth/user-not-found') {
-            return { success: false, error: 'Bu e-posta adresiyle kayıtlı bir kullanıcı bulunamadı.' };
-        }
-        return { success: false, error: 'Şifre sıfırlama e-postası gönderilirken bir hata oluştu.' };
-    }
-}
-
-
 export async function resetPasswordWithCode(code: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
     if (!code || !newPassword) {
         return { success: false, error: 'Kod ve yeni şifre gereklidir.' };
@@ -92,29 +74,6 @@ export async function assignMissingUniqueTag(userId: string) {
     });
 }
 
-
-export async function sendVerificationEmail(userId: string) {
-    if (!userId) {
-        return { success: false, error: 'Kullanıcı ID\'si gereklidir.' };
-    }
-    try {
-        const auth = getAuth();
-        const userRecord = await auth.getUser(userId);
-        if (userRecord.emailVerified) {
-            return { success: false, error: 'Bu e-posta adresi zaten doğrulanmış.' };
-        }
-        if (!userRecord.email) {
-            return { success: false, error: 'Kullanıcının kayıtlı bir e-posta adresi yok.' };
-        }
-        // This generates the link and triggers Firebase's built-in email sender
-        // if the email templates are configured properly.
-        await auth.generateEmailVerificationLink(userRecord.email);
-        return { success: true };
-    } catch (error: any) {
-        console.error("Doğrulama e-postası gönderilirken hata:", error);
-        return { success: false, error: 'E-posta gönderilirken bir hata oluştu.' };
-    }
-}
 
 export async function updateUserProfile(updates: {
     userId: string;

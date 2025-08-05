@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth"; 
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth"; 
 import { auth } from "@/lib/firebase";
 import Image from "next/image";
 
@@ -31,7 +31,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff, HelpCircle } from "lucide-react";
 import { Separator } from "../ui/separator";
 import { useRouter } from "next/navigation";
-import { sendPasswordResetLink } from "@/lib/actions/userActions";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Geçersiz e-posta adresi." }),
@@ -104,10 +103,7 @@ export default function LoginForm() {
 
         setIsResetting(true);
         try {
-            // Use the server action to send the email
-            const result = await sendPasswordResetLink(email);
-            if (!result.success) throw new Error(result.error);
-            
+            await sendPasswordResetEmail(auth, email);
             toast({
                 title: "E-posta Gönderildi",
                 description: "Şifre sıfırlama talimatları için e-postanızı kontrol edin. Gelen kutusunda bulamazsanız spam klasörünü kontrol etmeyi unutmayın.",
@@ -116,9 +112,13 @@ export default function LoginForm() {
             });
         } catch (error: any) {
             console.error("Şifre sıfırlama hatası", error);
+             let errorMessage = "Şifre sıfırlama e-postası gönderilirken bir hata oluştu.";
+            if (error.code === 'auth/user-not-found') {
+                errorMessage = "Bu e-posta adresiyle kayıtlı bir kullanıcı bulunamadı.";
+            }
             toast({
                 title: "Hata",
-                description: error.message,
+                description: errorMessage,
                 variant: "destructive",
             });
         } finally {
