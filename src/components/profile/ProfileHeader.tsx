@@ -149,28 +149,31 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
                     <AvatarImage src={profileUser.photoURL || undefined} />
                     <AvatarFallback className="text-3xl bg-muted">{profileUser.username?.charAt(0).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2">
-                        <h1 className="text-2xl font-bold">{profileUser.username}</h1>
-                        <p className="text-lg text-muted-foreground">@{profileUser.uniqueTag}</p>
-                        <Button onClick={copyIdToClipboard} variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground"><Copy className="h-4 w-4"/></Button>
+                <div className="flex-1 space-y-1 mt-2">
+                    <h1 className="text-2xl font-bold">{profileUser.username}</h1>
+                     <div className="flex items-center gap-1 text-muted-foreground">
+                        <p className="text-base">@{profileUser.uniqueTag}</p>
+                        <Button onClick={copyIdToClipboard} variant="ghost" size="icon" className="h-7 w-7"><Copy className="h-4 w-4"/></Button>
                     </div>
-                    {profileUser.bio && <p className="text-sm text-foreground/80">{profileUser.bio}</p>}
                 </div>
             </div>
-          {isOwnProfile && (
-            <div className='flex items-center gap-2'>
-                <div className='flex items-center gap-1.5 p-2 rounded-full bg-muted border font-semibold'>
-                    <Gem className="h-5 w-5 text-cyan-400"/>
-                    <span>{currentUserData?.diamonds?.toLocaleString('tr-TR') || 0}</span>
+            {isOwnProfile && (
+                 <div className="flex items-center gap-2 mt-2">
+                    <Button asChild size="sm" className="rounded-full">
+                        <Link href="/wallet">
+                            <Gem className="mr-2 h-4 w-4"/>
+                            <span>{currentUserData?.diamonds?.toLocaleString('tr-TR') || 0}</span>
+                        </Link>
+                    </Button>
+                    <Button asChild variant="outline" size="icon" className="rounded-full">
+                        <Link href="/profile"><Settings className="h-5 w-5"/></Link>
+                    </Button>
                 </div>
-                <Button asChild variant="outline" size="icon">
-                    <Link href="/profile"><Settings className="h-5 w-5"/></Link>
-                </Button>
-            </div>
-          )}
+            )}
         </div>
         
+        {profileUser.bio && <p className="text-sm text-foreground/80">{profileUser.bio}</p>}
+
         {!isOwnProfile && profileUser.showActiveRoom && profileUser.activeRoomId && (
             <button 
                 onClick={handleJoinActiveRoom} disabled={isJoiningRoom}
@@ -206,7 +209,7 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
                     <Button variant="outline" size="icon"><MoreHorizontal /></Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => setIsReportOpen(true)}>Şikayet Et</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setIsReportOpen(true)}>Şikayet Et</DropdownMenuItem>
                     <DropdownMenuItem onClick={handleBlockUser} className="text-destructive focus:text-destructive">
                        {isBlocking ? <Loader2 className="animate-spin mr-2"/> : <ShieldOff className="mr-2 h-4 w-4"/>}
                         Engelle
