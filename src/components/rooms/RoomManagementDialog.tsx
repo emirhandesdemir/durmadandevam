@@ -8,33 +8,50 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
     AlertDialogContent,
-    AlertDialogDescription,
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-  } from "@/components/ui/alert-dialog";
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { deleteRoomAsOwner, extendRoomTime, increaseParticipantLimit, extendRoomFor30Days, updateRoomSettings } from "@/lib/actions/roomActions";
-import { Trash2, Loader2, ShieldAlert, Clock, UserPlus, Gem, CalendarDays, Gamepad2, Puzzle, Image, Settings } from "lucide-react";
+import { Trash2, Loader2, ShieldAlert, Clock, UserPlus, Gem, CalendarDays, Puzzle, Settings, Zap } from "lucide-react";
 import type { Room } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
-import { Input } from "../ui/input";
+import OpenPortalDialog from "./OpenPortalDialog";
 
 interface RoomManagementDialogProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   room: Room | null;
 }
+
+const ActionCard = ({ title, description, cost, icon: Icon, action, isLoading, children, variant = 'secondary' }: { title: string, description: string, cost?: number, icon: React.ElementType, action: () => void, isLoading: boolean, children: React.ReactNode, variant?: "secondary" | "destructive" }) => (
+    <div className={`flex items-center justify-between rounded-lg border p-3 ${variant === 'destructive' ? 'border-destructive/30 bg-destructive/5' : 'bg-muted/50'}`}>
+        <div className="flex items-center gap-3">
+            <Icon className={`h-6 w-6 ${variant === 'destructive' ? 'text-destructive' : 'text-primary'}`} />
+            <div>
+                <h4 className="font-bold text-foreground">{title}</h4>
+                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
+                    <p>{description}</p>
+                    {cost !== undefined && <strong className="flex items-center gap-1 text-foreground">· {cost} <Gem className="h-3 w-3 text-cyan-400" /></strong>}
+                </div>
+            </div>
+        </div>
+        <Button size="sm" onClick={action} disabled={isLoading} variant={variant}>
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : children}
+        </Button>
+    </div>
+);
+
 
 export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomManagementDialogProps) {
   const { user, userData, refreshUserData } = useAuth();
@@ -45,6 +62,7 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
   const [isIncreasingLimit, setIsIncreasingLimit] = useState(false);
   const [isExtending30Days, setIsExtending30Days] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isPortalDialogOpen, setIsPortalDialogOpen] = useState(false);
   
   const [autoQuizEnabled, setAutoQuizEnabled] = useState(room?.autoQuizEnabled ?? true);
 
@@ -171,76 +189,42 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
           </DialogHeader>
 
           <div className="py-4 space-y-4">
-            <div className="space-y-2 rounded-lg border p-4">
-                <div className="flex items-center justify-between">
-                    <Label htmlFor="auto-quiz" className="font-semibold flex items-center gap-2">
-                        <Puzzle className="h-4 w-4 text-muted-foreground"/>
-                        Otomatik Quizi Etkinleştir
-                    </Label>
-                    <Switch
-                        id="auto-quiz"
-                        checked={autoQuizEnabled}
-                        onCheckedChange={setAutoQuizEnabled}
-                    />
+             <div>
+                <h3 className="mb-2 text-sm font-semibold text-muted-foreground">Genel Ayarlar</h3>
+                <div className="space-y-2 rounded-lg border p-4">
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="auto-quiz" className="font-semibold flex items-center gap-2">
+                            <Puzzle className="h-4 w-4 text-muted-foreground"/>
+                            Otomatik Quizi Etkinleştir
+                        </Label>
+                        <Switch
+                            id="auto-quiz"
+                            checked={autoQuizEnabled}
+                            onCheckedChange={setAutoQuizEnabled}
+                        />
+                    </div>
+                    <Button size="sm" onClick={handleSettingsSave} disabled={isSavingSettings} className="w-full">
+                        {isSavingSettings && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                        Ayarları Kaydet
+                    </Button>
                 </div>
-                 <Button size="sm" onClick={handleSettingsSave} disabled={isSavingSettings} className="w-full">
-                    {isSavingSettings && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                    Genel Ayarları Kaydet
-                </Button>
-            </div>
-
-             <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <h4 className="font-bold text-foreground">Süreyi Uzat (+20 dk)</h4>
-                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">Maliyet: <strong className="flex items-center gap-1">15 <Gem className="h-3 w-3 text-cyan-400" /></strong></p>
-              </div>
-              <Button variant="secondary" onClick={handleExtendTime} disabled={isExtending}>
-                {isExtending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Clock className="mr-2 h-4 w-4" />}
-                Uzat
-              </Button>
-            </div>
-
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <h4 className="font-bold text-foreground">Katılımcı Artır (+1)</h4>
-                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">Maliyet: <strong className="flex items-center gap-1">5 <Gem className="h-3 w-3 text-cyan-400" /></strong></p>
-              </div>
-              <Button variant="secondary" onClick={handleIncreaseLimit} disabled={isIncreasingLimit}>
-                {isIncreasingLimit ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
-                Artır
-              </Button>
-            </div>
-            
-             <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <h4 className="font-bold text-foreground">Odayı 30 Gün Açık Tut</h4>
-                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">Maliyet: <strong className="flex items-center gap-1">500 <Gem className="h-3 w-3 text-cyan-400" /></strong></p>
-              </div>
-              <Button variant="secondary" onClick={handleExtendFor30Days} disabled={isExtending30Days}>
-                {isExtending30Days ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CalendarDays className="mr-2 h-4 w-4" />}
-                Satın Al
-              </Button>
             </div>
 
             <div>
-                 <h3 className="mb-2 text-lg font-semibold text-destructive">Tehlikeli Alan</h3>
-                <div className="flex items-center justify-between rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-                <div>
-                    <h4 className="font-bold text-destructive">Odayı Kalıcı Olarak Sil</h4>
-                    <p className="text-sm text-destructive/80">Bu işlem geri alınamaz. Odadaki tüm veriler silinecektir.</p>
-                </div>
-                <Button variant="destructive" onClick={() => { setIsOpen(false); setTimeout(() => setShowDeleteConfirm(true), 150); }}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Sil
-                </Button>
+                <h3 className="mb-2 text-sm font-semibold text-muted-foreground">Oda Güçlendirmeleri</h3>
+                <div className="space-y-2">
+                    <ActionCard title="Portal Aç" description="Odanı 5 dk boyunca her yerde duyur" cost={100} icon={Zap} action={() => setIsPortalDialogOpen(true)} isLoading={false}>Aç</ActionCard>
+                    <ActionCard title="Süreyi Uzat" description="Oda kapanma süresine +20 dk ekle" cost={15} icon={Clock} action={handleExtendTime} isLoading={isExtending}>Uzat</ActionCard>
+                    <ActionCard title="Katılımcı Artır" description="Maksimum katılımcı limitini +1 artır" cost={5} icon={UserPlus} action={handleIncreaseLimit} isLoading={isIncreasingLimit}>Artır</ActionCard>
+                    <ActionCard title="Odayı 1 Ay Uzat" description="Odanı 30 gün boyunca açık tut" cost={500} icon={CalendarDays} action={handleExtendFor30Days} isLoading={isExtending30Days}>Satın Al</ActionCard>
                 </div>
             </div>
+
+            <div>
+                 <h3 className="mb-2 text-sm font-semibold text-destructive">Tehlikeli Alan</h3>
+                 <ActionCard title="Odayı Kalıcı Olarak Sil" description="Bu işlem geri alınamaz" icon={Trash2} action={() => setShowDeleteConfirm(true)} isLoading={isDeleting} variant="destructive">Sil</ActionCard>
+            </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsOpen(false)}>
-              Kapat
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
       
@@ -264,6 +248,13 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <OpenPortalDialog
+        isOpen={isPortalDialogOpen}
+        onOpenChange={setIsPortalDialogOpen}
+        roomId={room.id}
+        roomName={room.name}
+      />
     </>
   );
 }

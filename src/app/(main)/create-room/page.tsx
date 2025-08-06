@@ -5,15 +5,15 @@ import { Button } from "@/components/ui/button";
 
 export default function CreateRoomPage() {
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center p-4 bg-background">
+    <main className="relative flex min-h-screen flex-col items-center justify-center p-4 auth-bg">
       <Button
         asChild
         variant="ghost"
-        className="absolute left-4 top-4 md:left-8 md:top-8 rounded-full"
+        className="absolute left-4 top-4 md:left-8 md:top-8 rounded-full bg-black/20 text-white backdrop-blur-sm hover:bg-black/30 hover:text-white"
       >
-        <Link href="/home">
+        <Link href="/rooms">
           <ChevronLeft className="mr-2 h-4 w-4" />
-          Geri Dön
+          Geri
         </Link>
       </Button>
       <div className="w-full animate-in zoom-in-95 duration-500">

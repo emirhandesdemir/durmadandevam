@@ -74,7 +74,6 @@ export default function CreateRoomForm() {
                 description: `"${values.name}" odanız oluşturuldu.`,
             });
             
-            // On success, navigate directly to the new room
             router.push(`/rooms/${result.roomId}`);
 
         } catch (error: any) {
@@ -90,10 +89,10 @@ export default function CreateRoomForm() {
     }
 
     return (
-        <Card className="w-full max-w-lg shadow-xl rounded-3xl border-0 bg-card/80 backdrop-blur-sm">
+        <Card className="w-full max-w-lg mx-auto shadow-2xl rounded-3xl bg-card/80 backdrop-blur-lg border-white/20">
             <CardHeader className="text-center">
-                <CardTitle className="text-3xl font-bold">Yeni Bir Oda Oluştur</CardTitle>
-                <CardDescription className="text-base text-muted-foreground">
+                <CardTitle className="text-3xl font-bold text-white">Yeni Bir Oda Oluştur</CardTitle>
+                <CardDescription className="text-base text-white/80">
                    Arkadaşlarınla sohbet etmek için yeni bir oda başlat.
                 </CardDescription>
             </CardHeader>
@@ -105,13 +104,13 @@ export default function CreateRoomForm() {
                                 control={form.control}
                                 name="type"
                                 render={({ field }) => (
-                                    <FormItem className="space-y-3">
-                                    <FormLabel>Oda Tipi (Admin)</FormLabel>
+                                    <FormItem className="space-y-3 p-4 bg-black/20 rounded-xl">
+                                    <FormLabel className="text-white/90">Oda Tipi (Admin)</FormLabel>
                                     <FormControl>
                                         <RadioGroup
                                         onValueChange={field.onChange}
                                         defaultValue={field.value}
-                                        className="flex flex-col space-y-1"
+                                        className="flex flex-col space-y-1 text-white/80"
                                         >
                                         <FormItem className="flex items-center space-x-3 space-y-0">
                                             <FormControl>
@@ -139,22 +138,20 @@ export default function CreateRoomForm() {
 
                         <FormField control={form.control} name="name" render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="ml-4">Oda Adı</FormLabel>
-                                <FormControl><Input className="rounded-full px-5 py-6" placeholder="ör., Bilim Kurgu Kitap Kulübü" {...field} /></FormControl>
-                                <FormMessage className="ml-4" />
+                                <FormControl><Input className="rounded-full px-5 py-7 bg-black/30 border-white/20 text-white placeholder:text-white/60 text-base" placeholder="Oda Adı..." {...field} /></FormControl>
+                                <FormMessage className="ml-4 text-red-300" />
                             </FormItem>
                         )} />
                         <FormField control={form.control} name="description" render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="ml-4">Açıklama</FormLabel>
-                                <FormControl><Input className="rounded-full px-5 py-6" placeholder="ör., Haftanın kitabı: Dune" {...field} /></FormControl>
-                                <FormMessage className="ml-4" />
+                                <FormControl><Input className="rounded-full px-5 py-7 bg-black/30 border-white/20 text-white placeholder:text-white/60 text-base" placeholder="Açıklama..." {...field} /></FormControl>
+                                <FormMessage className="ml-4 text-red-300" />
                             </FormItem>
                         )} />
                         
-                        <Button type="submit" size="lg" className="w-full rounded-full py-6 text-lg font-semibold bg-gradient-to-r from-red-500 to-blue-600 text-white shadow-lg transition-transform hover:scale-105 disabled:opacity-75" disabled={isLoading}>
+                        <Button type="submit" size="lg" className="w-full rounded-full py-7 text-lg font-semibold bg-gradient-to-r from-pink-500 to-yellow-500 text-white shadow-lg transition-transform hover:scale-105 disabled:opacity-75" disabled={isLoading}>
                              {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-                             Oda Oluştur
+                             Odayı Kur ve Maceraya Başla
                         </Button>
                     </form>
                 </Form>
