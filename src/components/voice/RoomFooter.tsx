@@ -98,15 +98,8 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
 
                                 {canJoinToSpeak && (
                                     <>
-                                        {!isConnected && (
-                                            <Button onClick={() => joinVoice()} disabled={isConnecting} className="rounded-full font-semibold px-4 bg-gradient-to-r from-red-500 to-blue-600 text-white shadow-lg hover:scale-105 transition-transform shrink-0">
-                                                {isConnecting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Mic className="mr-2 h-5 w-5" />}
-                                                Sese Katıl
-                                            </Button>
-                                        )}
-
-                                        {isConnected && (
-                                            <>
+                                        {isConnected ? (
+                                             <>
                                                 <Button onClick={toggleSelfMute} variant="secondary" size="icon" className="rounded-full flex-shrink-0">
                                                     {self?.isMuted ? <MicOff className="h-5 w-5 text-destructive"/> : <Mic className="h-5 w-5" />}
                                                 </Button>
@@ -125,6 +118,7 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
                                                             <Button onClick={toggleSpeakerMute} variant="ghost" size="icon" className="rounded-full flex-shrink-0">
                                                                 {isSpeakerMuted ? <VolumeX className="h-5 w-5"/> : <Volume2 className="h-5 w-5" />}
                                                             </Button>
+                                                            {/*
                                                             <Button onClick={handleVideoToggle} variant="ghost" size="icon" className="rounded-full">
                                                                 {isSharingVideo ? <CameraOff className="text-destructive"/> : <Camera />}
                                                             </Button>
@@ -137,6 +131,7 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
                                                             <Button onClick={handleMusicButtonClick} variant="ghost" size="icon" className="rounded-full">
                                                                 <Music />
                                                             </Button>
+                                                            */}
                                                             <Button onClick={onGameLobbyOpen} variant="ghost" size="icon" className="rounded-full">
                                                                 <BrainCircuit />
                                                             </Button>
@@ -149,6 +144,11 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
                                                     </PopoverContent>
                                                 </Popover>
                                             </>
+                                        ) : (
+                                             <Button onClick={() => joinVoice()} disabled={isConnecting} className="rounded-full font-semibold px-4 bg-gradient-to-r from-red-500 to-blue-600 text-white shadow-lg hover:scale-105 transition-transform shrink-0">
+                                                {isConnecting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Mic className="mr-2 h-5 w-5" />}
+                                                Sese Katıl
+                                            </Button>
                                         )}
                                     </>
                                 )}

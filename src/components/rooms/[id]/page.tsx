@@ -76,7 +76,7 @@ export default function RoomPage() {
         }
 
         return () => setActiveRoomId(null);
-    }, [roomId, room?.type]);
+    }, [roomId, room?.type, setActiveRoomId, joinVoice]);
 
     // Firestore Listeners (Room, Messages, Games)
     useEffect(() => {
@@ -296,5 +296,3 @@ export default function RoomPage() {
         </>
     );
 }
-
-    

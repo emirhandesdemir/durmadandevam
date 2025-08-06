@@ -250,7 +250,7 @@ export interface Notification {
     photoURL: string | null;
     profileEmoji?: string | null;
     senderAvatarFrame?: string;
-    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile' | 'system' | 'event_reward';
+    type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'dm_message' | 'complete_profile' | 'system' | 'event_reward';
     postId?: string | null;
     postImage?: string | null;
     commentText?: string;
@@ -261,8 +261,6 @@ export interface Notification {
     diamondAmount?: number;
     createdAt: Timestamp;
     read: boolean;
-    callId?: string;
-    callType?: 'video' | 'audio';
     link?: string;
 }
 
@@ -520,6 +518,7 @@ export interface Message {
       postOwnerUsername: string;
   };
 }
+
 
 // Admin Analytics Types
 export interface UserGrowthDataPoint {

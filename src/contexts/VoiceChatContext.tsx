@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, onSnapshot, doc, serverTimestamp, query, deleteDoc, addDoc, getDoc, updateDoc, Timestamp, WriteBatch, orderBy, where } from 'firebase/firestore';
+import { collection, onSnapshot, doc, serverTimestamp, query, deleteDoc, addDoc, getDoc, updateDoc, Timestamp, WriteBatch, orderBy, where, collectionGroup } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Room, VoiceParticipant, PlaylistTrack } from '../types';
 import { joinVoiceChat, leaveVoice as leaveVoiceAction, toggleSelfMute as toggleMuteAction, toggleScreenShare as toggleScreenShareAction, toggleVideo as toggleVideoAction } from '@/lib/actions/voiceActions';
@@ -74,7 +74,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [isSharingVideo, setIsSharingVideo] = useState(false);
-    const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
     const [localScreenStream, setLocalScreenStream] = useState<MediaStream | null>(null);
     const [remoteAudioStreams, setRemoteAudioStreams] = useState<Record<string, MediaStream>>({});
     const [remoteVideoStreams, setRemoteVideoStreams] = useState<Record<string, MediaStream>>({});
@@ -124,7 +123,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     const sendSignal = useCallback(async (to: string, type: string, data: any) => {
         if (!activeRoomId || !user) return;
-        const signalsRef = collection(db, `rooms/${activeRoomId}/signals`);
+        const signalsRef = collection(db, 'rooms', activeRoomId, 'signals');
         await addDoc(signalsRef, { to, from: user.uid, type, data, createdAt: serverTimestamp() });
     }, [activeRoomId, user]);
 
@@ -280,7 +279,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     const removeTrackFromPlaylist = useCallback(async (trackId: string) => {
         if (!user || !activeRoomId) return;
-        await removeTrackAction(roomId, trackId, user.uid).catch(e => toast({ variant: 'destructive', description: e.message }));
+        await removeTrackAction(activeRoomId, trackId, user.uid).catch(e => toast({ variant: 'destructive', description: e.message }));
     }, [user, activeRoomId, toast]);
 
     const togglePlayback = useCallback(async () => {
@@ -333,14 +332,19 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         const playlistUnsub = onSnapshot(query(collection(db, "rooms", currentId, "playlist"), orderBy('order')), snapshot => {
             setLivePlaylist(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as PlaylistTrack)));
         });
-
-        const signalUnsub = onSnapshot(query(collection(db, `rooms/${currentId}/signals`), where('to', '==', user.uid)), async snapshot => {
+        
+        const signalsQuery = query(collection(db, "rooms", currentId, "signals"), where('to', '==', user.uid));
+        const signalUnsub = onSnapshot(signalsQuery, async snapshot => {
             for (const change of snapshot.docChanges()) {
                 if (change.type === 'added') {
                     const signal = change.doc.data();
                     const from = signal.from;
                     let pc = peerConnections.current[from];
-                    if (!pc) pc = createPeerConnection(from);
+                    
+                    if (!pc) {
+                         console.warn(`Peer connection for ${from} not found. Creating a new one.`);
+                         pc = createPeerConnection(from);
+                    }
 
                     if (signal.type === 'offer') {
                         console.log(`Received offer from ${from}`);
