@@ -95,7 +95,7 @@
         },
         {
           "fieldPath": "createdAt",
-          "order": "ASCENDING"
+          "order": "DESCENDING"
         }
       ]
     },
@@ -112,6 +112,14 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+        "collectionGroup": "rooms",
+        "queryScope": "COLLECTION",
+        "fields": [
+            { "fieldPath": "createdBy.isPremium", "order": "ASCENDING" },
+            { "fieldPath": "voiceParticipantsCount", "order": "DESCENDING" }
+        ]
     },
     {
       "collectionGroup": "calls",
