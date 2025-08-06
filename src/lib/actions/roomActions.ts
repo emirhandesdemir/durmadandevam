@@ -353,10 +353,11 @@ export async function createRoom(
         const userData = userDoc.data();
         const isAdmin = userData.role === 'admin';
         
+        const hasFreeCreations = (userData.freeRoomCreations || 0) > 0;
         const unlimitedUntil = userData.unlimitedRoomCreationUntil as Timestamp | undefined;
         const isUnlimited = unlimitedUntil && unlimitedUntil.toDate() > new Date();
 
-        if (!isAdmin && !isUnlimited && (userData.diamonds || 0) < roomCost) {
+        if (!isAdmin && !isUnlimited && !hasFreeCreations && (userData.diamonds || 0) < roomCost) {
             throw new Error(`Oda oluşturmak için ${roomCost} elmasa ihtiyacınız var.`);
         }
 
@@ -410,15 +411,17 @@ export async function createRoom(
         transaction.set(newRoomRef, newRoom);
 
         if (!isAdmin && !isUnlimited) {
-            transaction.update(userRef, { 
-                diamonds: increment(-roomCost),
-            });
-            await logTransaction(transaction, userId, {
-                type: 'room_creation',
-                amount: -roomCost,
-                description: `${updates.name} odası oluşturma`,
-                roomId: newRoomRef.id
-            });
+            if (hasFreeCreations) {
+                transaction.update(userRef, { freeRoomCreations: increment(-1) });
+            } else {
+                transaction.update(userRef, { diamonds: increment(-roomCost) });
+                await logTransaction(transaction, userId, {
+                    type: 'room_creation',
+                    amount: -roomCost,
+                    description: `${updates.name} odası oluşturma`,
+                    roomId: newRoomRef.id
+                });
+            }
         }
         
         transaction.update(userRef, { lastActionTimestamp: serverTimestamp() });
@@ -1151,3 +1154,5 @@ export async function muteInRoom(roomId: string, targetUserId: string, mute: boo
         return { success: false, error: "İşlem gerçekleştirilemedi." };
     }
 }
+
+    

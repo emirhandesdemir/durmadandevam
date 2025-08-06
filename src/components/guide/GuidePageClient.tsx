@@ -19,6 +19,7 @@ const guideSections = [
         icon: UserPlus,
         items: [
             { title: "Kayıt Olma ve Giriş Yapma", description: "Uygulamaya e-posta adresiniz ve belirleyeceğiniz bir şifre ile kolayca kayıt olabilirsiniz. Giriş ekranından 'Hemen Kayıt Ol' seçeneğini kullanın." },
+            { title: "Ücretsiz Oda Oluşturma Hakkı", description: "Uygulamaya yeni kayıt olan her kullanıcı, platformu keşfetmesi için 3 adet ücretsiz oda oluşturma hakkı kazanır. Bu haklar bittikten sonra oda oluşturmak elmas gerektirir." },
             { title: "E-posta Doğrulama", description: "Hesap güvenliğiniz için e-postanızı doğrulamanız önemlidir. Ayarlar -> Hesap Güvenliği menüsünden doğrulama e-postasını tekrar gönderebilirsiniz." },
             { title: "Şifre Değiştirme", description: "Şifrenizi unuttuysanız giriş ekranındaki 'Şifremi Unuttum' linkini, mevcut şifrenizi değiştirmek isterseniz Ayarlar -> Hesap Güvenliği menüsündeki 'Şifremi Değiştir' butonunu kullanabilirsiniz." },
         ]
@@ -146,3 +147,5 @@ export default function GuidePageClient({ isPublicPage }: GuidePageClientProps) 
     </div>
   );
 }
+
+    

@@ -45,7 +45,10 @@ export default function CreateRoomForm() {
     const { i18n } = useTranslation();
     const [isLoading, setIsLoading] = useState(false);
     
+    const hasFreeCreations = (userData?.freeRoomCreations || 0) > 0;
     const roomCost = 10;
+    const costText = hasFreeCreations ? "1 Ücretsiz Hak" : `${roomCost} Elmas`;
+
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -123,7 +126,7 @@ export default function CreateRoomForm() {
                     </CardContent>
                     <CardFooter className="flex justify-between items-center">
                          <div className="text-sm text-muted-foreground">
-                            Maliyet: <strong className="text-primary flex items-center gap-1">{roomCost} <Gem className="h-4 w-4" /></strong>
+                            Maliyet: <strong className="text-primary flex items-center gap-1">{costText} {!hasFreeCreations && <Gem className="h-4 w-4" />}</strong>
                         </div>
                         <Button type="submit" disabled={isLoading}>
                              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -135,3 +138,5 @@ export default function CreateRoomForm() {
         </Card>
     );
 }
+
+    
