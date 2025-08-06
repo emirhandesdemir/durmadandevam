@@ -10,7 +10,7 @@ import { createPost } from "@/lib/actions/postActions";
 import { getFollowingForSuggestions } from "@/lib/actions/suggestionActions";
 import type { UserProfile, Post } from "@/lib/types";
 import { checkImageSafety } from "@/lib/actions/moderationActions";
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref as storageRef, uploadString, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -48,8 +48,7 @@ export default function NewPostForm() {
   const [suggestionLoading, setSuggestionLoading] = useState(false);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [commentsDisabled, setCommentsDisabled] = useState(false);
   const [likesHidden, setLikesHidden] = useState(false);
@@ -76,34 +75,33 @@ export default function NewPostForm() {
     }
   }, [searchParams]);
   
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (file.size > 10 * 1024 * 1024) { 
-          toast({ variant: "destructive", title: "Dosya Çok Büyük", description: "Resim boyutu 10MB'dan büyük olamaz." });
-          return;
-      }
-      setVideoFile(null); // Clear video if image is selected
-      setVideoPreviewUrl(null);
-      const reader = new FileReader();
-      reader.onload = () => setImageToCrop(reader.result as string);
-      reader.readAsDataURL(e.target.files[0]);
-    }
-  };
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-        const file = e.target.files[0];
-        if (file.size > 50 * 1024 * 1024) { // 50MB limit for videos
+    if (file.type.startsWith('image/')) {
+        if (file.size > 10 * 1024 * 1024) { // 10MB limit
+            toast({ variant: "destructive", title: "Dosya Çok Büyük", description: "Resim boyutu 10MB'dan büyük olamaz." });
+            return;
+        }
+        setVideoFile(null);
+        setVideoPreviewUrl(null);
+        const reader = new FileReader();
+        reader.onload = () => setImageToCrop(reader.result as string);
+        reader.readAsDataURL(file);
+    } else if (file.type.startsWith('video/')) {
+        if (file.size > 50 * 1024 * 1024) { // 50MB limit
             toast({ variant: "destructive", title: "Video Çok Büyük", description: "Video boyutu 50MB'dan büyük olamaz." });
             return;
         }
-        removeImage(); // Clear image if video is selected
+        removeImage();
         setVideoFile(file);
         setVideoPreviewUrl(URL.createObjectURL(file));
+    } else {
+        toast({ variant: "destructive", description: "Lütfen bir resim veya video dosyası seçin." });
     }
-  };
-  
+};
+
   const handleCropComplete = (croppedDataUrl: string) => {
     setCroppedImage(croppedDataUrl);
     setImageToCrop(null);
@@ -112,16 +110,16 @@ export default function NewPostForm() {
   const removeImage = () => {
       setImageToCrop(null);
       setCroppedImage(null);
-      if(imageInputRef.current) {
-          imageInputRef.current.value = "";
+      if(fileInputRef.current) {
+          fileInputRef.current.value = "";
       }
   }
 
   const removeVideo = () => {
       setVideoFile(null);
       setVideoPreviewUrl(null);
-      if(videoInputRef.current) {
-        videoInputRef.current.value = "";
+      if(fileInputRef.current) {
+        fileInputRef.current.value = "";
       }
   }
 
@@ -355,27 +353,16 @@ export default function NewPostForm() {
         
         <div className="p-2 border-t flex items-center justify-between">
             <div className="flex items-center">
-                <input type="file" ref={imageInputRef} onChange={handleImageChange} accept="image/*" className="hidden" />
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*,video/*" className="hidden" />
                 <Button
                     variant="ghost"
                     size="icon"
                     className="rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-                    onClick={() => imageInputRef.current?.click()}
-                    disabled={isSubmitting || !!videoFile}
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isSubmitting}
                 >
                     <ImageIcon className="h-5 w-5" />
-                    <span className="sr-only">Resim Ekle</span>
-                </Button>
-                <input type="file" ref={videoInputRef} onChange={handleVideoChange} accept="video/*" className="hidden" />
-                 <Button
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-                    onClick={() => videoInputRef.current?.click()}
-                    disabled={isSubmitting || !!croppedImage}
-                >
-                    <Video className="h-5 w-5" />
-                    <span className="sr-only">Video Ekle</span>
+                    <span className="sr-only">Galeri</span>
                 </Button>
             </div>
             <Sheet>
