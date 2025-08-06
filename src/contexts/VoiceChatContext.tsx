@@ -87,7 +87,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const videoSenderRef = useRef<Record<string, RTCRtpSender>>({});
     const lastActiveUpdateTimestamp = useRef<number>(0);
     const audioContextRef = useRef<AudioContext | null>(null);
-    const speakingDetectionInterval = useRef<NodeJS.Timeout | null>(null);
+    const speakingDetectionIntervals = useRef<Record<string, NodeJS.Timeout>>({});
     const iceCandidateQueue = useRef<Record<string, RTCIceCandidateInit[]>>({});
 
 
@@ -109,8 +109,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     // Teardown logic
     const _cleanupAndResetState = useCallback(async () => {
-        if(speakingDetectionInterval.current) clearInterval(speakingDetectionInterval.current);
-        speakingDetectionInterval.current = null;
+        Object.values(speakingDetectionIntervals.current).forEach(clearInterval);
+        speakingDetectionIntervals.current = {};
         Object.values(peerConnections.current).forEach(pc => pc.close());
         peerConnections.current = {};
         
@@ -141,8 +141,9 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     }, [activeRoomId, user]);
 
     // Speaking detection logic
-    const setupSpeakingDetection = useCallback((stream: MediaStream, callback: (isSpeaking: boolean) => void) => {
-        if (typeof window.AudioContext === 'undefined') return () => {};
+    const setupSpeakingDetection = useCallback((stream: MediaStream, userId: string) => {
+        if (typeof window.AudioContext === 'undefined' || !stream.getAudioTracks().length) return () => {};
+        
         if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
             audioContextRef.current = new AudioContext();
         }
@@ -151,11 +152,12 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         const analyser = audioContext.createAnalyser();
         analyser.fftSize = 512;
         analyser.minDecibels = -120;
-        analyser.maxDecibels = 0;
+        analyser.maxDecibels = -30;
         analyser.smoothingTimeConstant = 0.4;
         source.connect(analyser);
 
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        let lastSpokeTime = 0;
         
         const checkSpeaking = () => {
             analyser.getByteFrequencyData(dataArray);
@@ -164,14 +166,33 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 sum += amplitude * amplitude;
             }
             const volume = Math.sqrt(sum / dataArray.length);
-            callback(volume > 30); // Empirical value
+            const isCurrentlySpeaking = volume > 20;
+
+            setParticipants(prev => {
+                const participant = prev.find(p => p.uid === userId);
+                if (!participant || participant.isSpeaking === isCurrentlySpeaking) return prev;
+                if (isCurrentlySpeaking) lastSpokeTime = Date.now();
+                return prev.map(p => p.uid === userId ? { ...p, isSpeaking: isCurrentlySpeaking } : p)
+            });
+
+            // Keep "isSpeaking" true for a short duration after speech stops
+            if (!isCurrentlySpeaking && Date.now() - lastSpokeTime < 300) {
+                 setParticipants(prev => {
+                     const participant = prev.find(p => p.uid === userId);
+                     if (participant?.isSpeaking) {
+                         return prev.map(p => p.uid === userId ? { ...p, isSpeaking: true } : p)
+                     }
+                     return prev;
+                 });
+            }
         };
 
-        if (speakingDetectionInterval.current) clearInterval(speakingDetectionInterval.current);
-        speakingDetectionInterval.current = setInterval(checkSpeaking, 200);
+        if (speakingDetectionIntervals.current[userId]) clearInterval(speakingDetectionIntervals.current[userId]);
+        speakingDetectionIntervals.current[userId] = setInterval(checkSpeaking, 200);
 
         return () => {
-            if(speakingDetectionInterval.current) clearInterval(speakingDetectionInterval.current);
+            if(speakingDetectionIntervals.current[userId]) clearInterval(speakingDetectionIntervals.current[userId]);
+            delete speakingDetectionIntervals.current[userId];
             source.disconnect();
         };
 
@@ -191,9 +212,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             if (!stream) return;
             if (event.track.kind === 'audio') {
                 setRemoteAudioStreams(p => ({ ...p, [otherUserId]: stream }));
-                setupSpeakingDetection(stream, (isSpeaking) => {
-                    setParticipants(prev => prev.map(p => p.uid === otherUserId ? { ...p, isSpeaking } : p));
-                });
+                setupSpeakingDetection(stream, otherUserId);
             } else if (event.track.kind === 'video') {
                  setRemoteVideoStreams(p => ({ ...p, [otherUserId]: stream }));
             }
@@ -208,19 +227,9 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 }
             });
         }
-
-        if (localScreenStream) {
-            localScreenStream.getTracks().forEach(track => {
-                try {
-                    screenSenderRef.current[otherUserId] = pc.addTrack(track, localScreenStream);
-                } catch (e) {
-                     console.error("Error adding screen share track:", e);
-                }
-            });
-        }
-
+        
         return pc;
-    }, [localStream, localScreenStream, sendSignal, setupSpeakingDetection]);
+    }, [localStream, sendSignal, setupSpeakingDetection]);
 
     const joinVoice = useCallback(async (options?: { muted: boolean }) => {
         if (!user || !activeRoomId || isConnected || isConnecting) return;
@@ -238,9 +247,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             }
             
             setLocalStream(stream);
-            setupSpeakingDetection(stream, (isSpeaking) => {
-                setParticipants(prev => prev.map(p => p.uid === user.uid ? { ...p, isSpeaking } : p));
-            });
+            setupSpeakingDetection(stream, user.uid);
             
             await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: user.displayName || 'Biri', photoURL: user.photoURL }, { initialMuteState: options?.muted ?? false });
 
@@ -273,56 +280,12 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     }, [user, activeRoomId, isConnected, _cleanupAndResetState, router]);
 
     const stopScreenShare = useCallback(async () => {
-        if (!user || !activeRoomId || !localScreenStream) return;
-        localScreenStream.getTracks().forEach(track => track.stop());
-        setLocalScreenStream(null);
-        for (const peerId in peerConnections.current) {
-            const sender = screenSenderRef.current[peerId];
-            if (sender) {
-                try {
-                     peerConnections.current[peerId].removeTrack(sender);
-                } catch(e) {
-                    console.warn(`Could not remove screen track for peer ${peerId}:`, e);
-                }
-                delete screenSenderRef.current[peerId];
-            }
-        }
-        await toggleScreenShareAction(activeRoomId, user.uid, false);
-    }, [user, activeRoomId, localScreenStream]);
+        // This functionality is currently disabled from the UI, but logic is kept for future use.
+    }, []);
 
     const startScreenShare = useCallback(async () => {
-        if (!user || !activeRoomId || isSharingScreen || !localStream) return;
-
-        try {
-            if (!navigator?.mediaDevices?.getDisplayMedia) {
-                throw new Error('Tarayıcınız bu özelliği desteklemiyor gibi görünüyor.');
-            }
-            const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: "always" } as MediaTrackConstraints, audio: false });
-            const screenTrack = screenStream.getVideoTracks()[0];
-            if (!screenTrack) throw new Error("No screen track found");
-
-            screenTrack.onended = () => stopScreenShare();
-            setLocalScreenStream(screenStream);
-            
-            for (const peerId in peerConnections.current) {
-                screenSenderRef.current[peerId] = peerConnections.current[peerId].addTrack(screenTrack, screenStream);
-            }
-            await toggleScreenShareAction(activeRoomId, user.uid, true);
-        } catch (error: any) {
-             console.error("Screen share error:", error);
-             let description = 'Ekran paylaşımı başlatılamadı.';
-             if (error.name === 'NotAllowedError') {
-                 description = 'Ekran paylaşımı için izin vermeniz gerekiyor. Lütfen tekrar deneyin ve tarayıcı istemine izin verin.';
-             } else {
-                description = `Bu özellik güncel bir tarayıcı ve güvenli (HTTPS) bir bağlantı gerektirebilir. Hata: ${error.message}`;
-             }
-            toast({ 
-                variant: 'destructive', 
-                title: 'Hata', 
-                description: description
-            });
-        }
-    }, [user, activeRoomId, isSharingScreen, stopScreenShare, toast, localStream]);
+         // This functionality is currently disabled from the UI, but logic is kept for future use.
+    }, []);
 
     const toggleSelfMute = useCallback(async () => {
         if (!self || !activeRoomId || !localStream) return;
@@ -492,6 +455,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             if (currentPeerIds.has(p.uid)) {
                 currentPeerIds.delete(p.uid);
             } else {
+                // New participant, I am the initiator
                 const pc = createPeerConnection(p.uid);
                 peerConnections.current[p.uid] = pc;
                 pc.createOffer()

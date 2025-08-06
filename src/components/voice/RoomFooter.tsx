@@ -196,5 +196,3 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
         </>
     );
 }
-
-    
