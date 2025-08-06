@@ -1,3 +1,4 @@
+
 // src/lib/actions/roomActions.ts
 'use server';
 
@@ -358,7 +359,7 @@ export async function createRoom(
             throw new Error(`Oda oluşturmak için ${roomCost} elmasa ihtiyacınız var.`);
         }
 
-        const existingRoomsQuery = query(collection(db, 'rooms'), where('createdBy.uid', '==', userId));
+        const existingRoomsQuery = query(collection(db, 'rooms'), where('createdBy.uid', '==', userId), orderBy('createdAt', 'desc'));
         const existingRoomsSnapshot = await transaction.get(existingRoomsQuery);
         if (!isAdmin && existingRoomsSnapshot.size >= 4) {
              throw new Error("Aynı anda en fazla 4 odaya sahip olabilirsiniz.");
