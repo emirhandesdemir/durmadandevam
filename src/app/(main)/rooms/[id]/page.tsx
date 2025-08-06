@@ -1,9 +1,7 @@
-
-      
 // src/app/(main)/rooms/[id]/page.tsx
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, onSnapshot, collection, query, orderBy, limit, where, Timestamp, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -33,6 +31,7 @@ import ActiveGameArea from '@/components/game/ActiveGameArea';
 import MindWarLobby from '@/components/games/mindwar/MindWarLobby';
 import MindWarMainUI from '@/components/games/mindwar/MindWarMainUI';
 import EventWelcomeDialog from '@/components/rooms/EventWelcomeDialog';
+import { joinRoom } from '@/lib/actions/roomActions';
 
 
 export default function RoomPage() {
@@ -63,6 +62,7 @@ export default function RoomPage() {
     const [activeMindWarSession, setActiveMindWarSession] = useState<MindWarSession | null>(null);
 
     const isHost = user?.uid === room?.createdBy.uid;
+    const isParticipant = useMemo(() => room?.participants.some(p => p.uid === user?.uid), [room, user]);
 
     useEffect(() => {
         if (roomId) {
@@ -80,6 +80,24 @@ export default function RoomPage() {
         return () => setActiveRoomId(null);
     }, [roomId, room?.type, setActiveRoomId, joinVoice]);
 
+    // Automatically join the user to the room if they are not already a participant.
+    useEffect(() => {
+        if (user && userData && room && !isParticipant) {
+            const autoJoin = async () => {
+                try {
+                    await joinRoom(room.id, {
+                        uid: user.uid,
+                        username: userData.username,
+                        photoURL: userData.photoURL || null,
+                    });
+                } catch (error: any) {
+                    toast({ variant: 'destructive', description: `Odaya katılırken bir hata oluştu: ${error.message}` });
+                    router.push('/rooms');
+                }
+            };
+            autoJoin();
+        }
+    }, [user, userData, room, isParticipant, router, toast]);
 
     // Firestore Listeners (Room, Messages, Games)
     useEffect(() => {
@@ -299,5 +317,3 @@ export default function RoomPage() {
         </>
     );
 }
-
-    
