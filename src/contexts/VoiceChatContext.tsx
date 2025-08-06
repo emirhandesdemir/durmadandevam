@@ -442,20 +442,22 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         return () => { roomUnsub(); participantsUnsub(); playlistUnsub(); };
     }, [user, activeRoomId, pathname, router, toast, isConnected, _cleanupAndResetState]);
     
-    // Manage peer connections based on participant list
+    // Manage peer connections based on participant list changes.
+    // This is the core logic for establishing connections.
     useEffect(() => {
-        if (!user || !isConnected) return;
+        if (!isConnected || !user) return; // Only run if we are connected to voice
 
         const myId = user.uid;
         const currentPeerIds = new Set(Object.keys(peerConnections.current));
 
         participants.forEach(p => {
-            if (p.uid === myId) return;
+            if (p.uid === myId) return; // Don't connect to self
 
             if (currentPeerIds.has(p.uid)) {
+                // We are already tracking this peer, so remove it from the set of peers to be cleaned up.
                 currentPeerIds.delete(p.uid);
             } else {
-                // New participant, I am the initiator
+                // This is a new participant. As the existing user, I will initiate the connection.
                 const pc = createPeerConnection(p.uid);
                 peerConnections.current[p.uid] = pc;
                 pc.createOffer()
@@ -465,7 +467,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             }
         });
 
-        // Close connections for participants who have left
+        // Any remaining IDs in currentPeerIds are for participants who have left.
         currentPeerIds.forEach(peerId => {
             peerConnections.current[peerId]?.close();
             delete peerConnections.current[peerId];
@@ -474,6 +476,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         });
 
     }, [participants, user, isConnected, createPeerConnection, sendSignal]);
+
 
     // Signal listener effect
     useEffect(() => {
@@ -487,11 +490,10 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                     const from = signal.from;
                     let pc = peerConnections.current[from];
 
-                    if (!pc && isConnected) {
+                    if (!pc) {
                         pc = createPeerConnection(from);
                         peerConnections.current[from] = pc;
                     }
-                    if (!pc) continue;
                     
                     try {
                         if (signal.type === 'offer') {
@@ -500,22 +502,19 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                             await pc.setLocalDescription(answer);
                             await sendSignal(from, 'answer', pc.localDescription!.toJSON());
 
-                            // Process any queued ICE candidates for this peer
                             if (iceCandidateQueue.current[from]) {
                                 iceCandidateQueue.current[from].forEach(candidate => pc.addIceCandidate(new RTCIceCandidate(candidate)));
                                 delete iceCandidateQueue.current[from];
                             }
                         } else if (signal.type === 'answer') {
-                           if (pc.signalingState === "have-local-offer") {
+                           if (pc.signalingState !== 'stable') {
                                 await pc.setRemoteDescription(new RTCSessionDescription(signal.data));
                            }
                         } else if (signal.type === 'ice-candidate') {
                            if (pc.remoteDescription) {
                                 await pc.addIceCandidate(new RTCIceCandidate(signal.data));
                            } else {
-                               if (!iceCandidateQueue.current[from]) {
-                                   iceCandidateQueue.current[from] = [];
-                               }
+                               if (!iceCandidateQueue.current[from]) iceCandidateQueue.current[from] = [];
                                iceCandidateQueue.current[from].push(signal.data);
                            }
                         }
@@ -528,7 +527,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         });
         
         return () => unsubscribe();
-    }, [user, activeRoomId, sendSignal, createPeerConnection, isConnected]);
+    }, [user, activeRoomId, sendSignal, createPeerConnection]);
 
 
     const value = {
