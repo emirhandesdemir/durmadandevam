@@ -1,5 +1,3 @@
-
-
 // src/lib/actions/roomActions.ts
 'use server';
 
@@ -350,24 +348,6 @@ export async function createRoom(
         if (!userDoc.exists()) throw new Error("Kullanıcı bulunamadı.");
         
         const userData = userDoc.data();
-        const isAdmin = userData.role === 'admin';
-        
-        const unlimitedUntil = userData.unlimitedRoomCreationUntil as Timestamp | undefined;
-        const isUnlimited = unlimitedUntil && unlimitedUntil.toDate() > new Date();
-
-        const roomsRef = collection(db, 'rooms');
-        // Only check room limit if user is not admin and not unlimited
-        if (!isAdmin && !isUnlimited) {
-            const existingRoomsQuery = query(
-                roomsRef,
-                where('createdBy.uid', '==', userId),
-                where('expiresAt', '>', Timestamp.now()) 
-            );
-            const existingRoomsSnapshot = await transaction.get(existingRoomsQuery);
-            if (existingRoomsSnapshot.size >= 4) {
-                throw new Error("Aynı anda en fazla 4 aktif odaya sahip olabilirsiniz.");
-            }
-        }
         
         const newRoomRef = doc(collection(db, 'rooms'));
         const durationInMs = 15 * 60 * 1000;
