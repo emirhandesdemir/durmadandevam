@@ -24,372 +24,79 @@ const BOT_USER_INFO = {
     selectedAvatarFrame: 'avatar-frame-tech'
 };
 
-export async function sendRoomMessage(
-    roomId: string, 
-    user: { uid: string; displayName: string | null; photoURL: string | null; selectedAvatarFrame?: string; role?: string; }, 
-    content: string | { sharedPostId: string }
-) {
-    if (!roomId || !user?.uid) {
-        throw new Error("Gerekli bilgiler eksik.");
-    }
-
-    const roomRef = doc(db, 'rooms', roomId);
-    let messageData: Omit<Message, 'id' | 'createdAt'>;
-    let isShareAction = false;
-
-    if (typeof content === 'string') {
-        if (!content.trim()) throw new Error("Mesaj metni boş olamaz.");
-        messageData = {
-            uid: user.uid,
-            username: user.displayName || 'Anonim',
-            photoURL: user.photoURL,
-            text: content,
-            type: 'user',
-            selectedBubble: user.selectedBubble || '',
-            selectedAvatarFrame: user.selectedAvatarFrame || '',
-            role: user.role || 'user',
-        };
-    } else {
-        isShareAction = true;
-        const postSnap = await getDoc(doc(db, 'posts', content.sharedPostId));
-        if (!postSnap.exists()) throw new Error("Paylaşılacak gönderi bulunamadı.");
-        const postData = { id: postSnap.id, ...postSnap.data() } as Post;
-        messageData = {
-            uid: user.uid,
-            username: user.displayName || 'Anonim',
-            photoURL: user.photoURL,
-            type: 'shared_post',
-            text: `${user.displayName} bir gönderi paylaştı.`,
-            sharedPostData: {
-                postId: postData.id,
-                postText: postData.text,
-                postImageUrl: postData.imageUrl,
-                postOwnerUsername: postData.username
-            }
-        };
-    }
-
-    // Fire and forget the main message sending for faster UI response
-    addDoc(collection(db, 'rooms', roomId, 'messages'), {
-        ...messageData,
-        createdAt: serverTimestamp(),
-    });
-
-    // Run background tasks without blocking the return
-    if (typeof content === 'string' && !isShareAction) {
-        (async () => {
-            try {
-                const roomDoc = await getDoc(roomRef);
-                if (!roomDoc.exists()) return;
-                const roomData = roomDoc.data() as Room;
-
-                const isHost = roomData.createdBy.uid === user.uid;
-                const isModerator = roomData.moderators.includes(user.uid);
-                const canUseCommands = isHost || isModerator;
-
-                // Command Handling
-                if (content.startsWith('+') && canUseCommands) {
-                    const [command, ...args] = content.split(' ');
-                    const commandContent = args.join(' ');
-
-                    if (command === '+temizle') {
-                        const messagesRef = collection(db, 'rooms', roomId, 'messages');
-                        const q = query(messagesRef, where('type', '==', 'user'));
-                        const messagesToDelete = await getDocs(q);
-                        const batch = writeBatch(db);
-                        messagesToDelete.forEach(doc => batch.delete(doc.ref));
-                        await batch.commit();
-                        await addSystemMessage(roomId, `🧹 Sohbet, ${user.displayName} tarafından temizlendi.`);
-                        return;
-                    }
-
-                    if (command === '+duyuru') {
-                        if (!commandContent) return; // Don't throw, just ignore
-                        const messagesRef = collection(db, 'rooms', roomId, 'messages');
-                        const newDocRef = await addDoc(messagesRef, {
-                            type: 'announcement',
-                            uid: user.uid,
-                            username: user.displayName,
-                            text: commandContent,
-                            createdAt: serverTimestamp(),
-                        });
-                        await pinMessage(roomId, newDocRef.id, user.uid);
-                        return;
-                    }
-                }
-
-                // AI bot response
-                await triggerBotResponse(roomId, user.uid, content);
-            } catch (e) {
-                console.error("Error in background message processing:", e);
-            }
-        })();
-    }
-
-    revalidatePath(`/rooms/${roomId}`);
-    return { success: true };
-}
-
-
-// This function is not awaited in the main flow to avoid blocking UI.
-export async function triggerBotResponse(roomId: string, messageAuthorId: string, messageText: string) {
-    if (messageAuthorId === BOT_USER_INFO.uid) return;
-
-    // --- Passive XP Gain Logic ---
-    const roomRef = doc(db, 'rooms', roomId);
-    try {
-        const roomDoc = await getDoc(roomRef);
-        if (roomDoc.exists()) {
-            const roomData = roomDoc.data() as Room;
-            const lastGain = (roomData.lastXpGainTimestamp as Timestamp)?.toMillis() || 0;
-            const now = Date.now();
-            const fiveMinutes = 5 * 60 * 1000;
-            
-            // Grant XP if more than 5 minutes have passed since last gain
-            if (now - lastGain > fiveMinutes) {
-                const voiceCount = roomData.voiceParticipantsCount || 0;
-                if (voiceCount > 0) {
-                    const xpGained = voiceCount; // 1 XP per voice participant
-                    
-                    const currentXp = roomData.xp || 0;
-                    const newXp = currentXp + xpGained;
-                    const oldLevelInfo = getRoomLevelInfo(currentXp);
-                    const newLevelInfo = getRoomLevelInfo(newXp);
-                    
-                    const roomUpdates: { [key: string]: any } = {
-                        xp: newXp,
-                        lastXpGainTimestamp: serverTimestamp()
-                    };
-
-                    if (newLevelInfo.level > oldLevelInfo.level) {
-                        roomUpdates.level = newLevelInfo.level;
-                        roomUpdates.xpToNextLevel = newLevelInfo.xpToNextLevel;
-                        await addSystemMessage(roomId, `🎉 Oda aktivite ile seviye atladı! Yeni Seviye: ${newLevelInfo.level}`);
-                    }
-                    
-                    await updateDoc(roomRef, roomUpdates);
-                }
-            }
-        }
-    } catch (error) {
-        console.error("Error during passive XP gain check:", error);
-    }
-    // --- End Passive XP Gain Logic ---
-
-
-    // Determine if the bot should respond
-    const isMentioned = messageText.toLowerCase().includes('@walk');
-    const isQuestion = messageText.includes('?');
-    
-    // Always respond if mentioned. Otherwise, respond based on probability.
-    const shouldRespond = isMentioned || (isQuestion && Math.random() < 0.5) || Math.random() < 0.40;
-    
-    if (!shouldRespond) {
-        return;
-    }
-
-    const messagesRef = collection(db, 'rooms', roomId, 'messages');
-    const q = query(messagesRef, orderBy('createdAt', 'desc'), limit(10));
-    const snapshot = await getDocs(q);
-    const lastMessages = snapshot.docs.map(doc => doc.data() as Message).reverse();
-
-    if (lastMessages.length === 0) return;
-
-    const chatHistory = lastMessages.map(msg => ({
-        role: msg.uid === BOT_USER_INFO.uid ? 'model' : 'user',
-        content: `${msg.username}: ${msg.text || '(resim veya video gönderdi)'}`
-    }));
-
-    try {
-        const aiResponse = await generateRoomResponse({ chatHistory });
-        if (aiResponse) { // Response is now a direct string
-            await addBotMessage(roomId, aiResponse);
-        }
-    } catch (error) {
-        console.error("AI bot response error:", error);
-    }
-}
-
-async function addBotMessage(roomId: string, text: string) {
-    if (!roomId || !text.trim()) return;
-    const messagesRef = collection(db, 'rooms', roomId, 'messages');
-    const botMessage = {
-        type: 'user', // Appear as a user
-        uid: BOT_USER_INFO.uid,
-        username: BOT_USER_INFO.username,
-        photoURL: BOT_USER_INFO.photoURL,
-        text,
-        createdAt: serverTimestamp(),
-        selectedBubble: '',
-        selectedAvatarFrame: BOT_USER_INFO.selectedAvatarFrame,
-        role: BOT_USER_INFO.role,
-    };
-    await addDoc(messagesRef, botMessage);
-}
-
-
-export async function createEventRoom(
-    creatorId: string,
-    roomData: { name: string, description: string, language: string },
-    creatorInfo: { username: string, photoURL: string | null, role: string, selectedAvatarFrame?: string },
-    pin: string
-) {
-    if (process.env.ADMIN_PIN !== pin) {
-        throw new Error("Geçersiz Yönetici PIN'i.");
-    }
-    
-    if (!creatorId) throw new Error("Kullanıcı ID'si gerekli.");
-    if (creatorInfo.role !== 'admin') throw new Error("Bu işlemi yapma yetkiniz yok.");
-
-    const newRoomRef = doc(collection(db, 'rooms'));
-
-    const newRoom: Omit<Room, 'id'> = {
-        name: roomData.name,
-        description: roomData.description,
-        language: roomData.language,
-        type: 'event', // Mark as an event room
-        createdAt: serverTimestamp() as Timestamp,
-        expiresAt: null, // Event rooms do not expire
-        createdBy: {
-            uid: creatorId,
-            username: creatorInfo.username,
-            photoURL: creatorInfo.photoURL,
-            role: creatorInfo.role,
-            selectedAvatarFrame: creatorInfo.selectedAvatarFrame || '',
-        },
-        moderators: [creatorId],
-        participants: [],
-        maxParticipants: 50, // Higher limit for events
-        voiceParticipantsCount: 0,
-        rules: null,
-        welcomeMessage: null,
-        pinnedMessageId: null,
-        level: 1,
-        xp: 0,
-        xpToNextLevel: getRoomLevelInfo(0).xpToNextLevel,
-        lastXpGainTimestamp: null,
-        autoQuizEnabled: true,
-        nextGameTimestamp: Timestamp.fromMillis(Date.now() + 5 * 60 * 1000), // Start first game in 5 mins
-    };
-
-    await setDoc(newRoomRef, newRoom);
-
-    // Create a global announcement
-    const announcementsRef = collection(db, 'announcements');
-    const announcementData: Omit<Announcement, 'id'> = {
-        roomId: newRoomRef.id,
-        roomName: newRoom.name,
-        hostUsername: newRoom.createdBy.username,
-        message: 'Yeni bir etkinlik başladı! Harika ödüller için hemen katıl!',
-        rewardAmount: 50,
-        createdAt: serverTimestamp() as Timestamp,
-        expiresAt: Timestamp.fromMillis(Date.now() + 10 * 60 * 1000), // Announcement lasts for 10 minutes
-    };
-    await addDoc(announcementsRef, announcementData);
-
-
-    return { success: true, roomId: newRoomRef.id };
-}
-
-export async function deleteEventRoom(roomId: string, adminId: string, pin: string) {
-    if (!roomId || !adminId || !pin) throw new Error("Gerekli bilgiler eksik.");
-    
-    if (process.env.ADMIN_PIN !== pin) {
-        throw new Error("Geçersiz Yönetici PIN'i.");
-    }
-
-    const adminUserDoc = await getDoc(doc(db, 'users', adminId));
-    if (!adminUserDoc.exists() || adminUserDoc.data().role !== 'admin') {
-        throw new Error("Bu işlemi yapma yetkiniz yok.");
-    }
-    
-    const roomRef = doc(db, 'rooms', roomId);
-    const roomSnap = await getDoc(roomRef);
-    if (!roomSnap.exists()) return { success: true };
-
-    const roomData = roomSnap.data() as Room;
-    const participantsToReward = roomData.participants || [];
-    const rewardAmount = 10;
-    
-    const batch = writeBatch(db);
-    
-    for (const participant of participantsToReward) {
-        const userRef = doc(db, 'users', participant.uid);
-        batch.update(userRef, { diamonds: increment(rewardAmount) });
-        await createNotification({
-            recipientId: participant.uid,
-            senderId: 'system-event',
-            senderUsername: 'HiweWalk Etkinlik',
-            senderAvatar: null,
-            type: 'event_reward',
-            messageText: `Katıldığınız için teşekkürler! Bizden katılım için ${rewardAmount} elmas kazandınız.`,
-            diamondAmount: rewardAmount,
-            link: '/rooms'
-        });
-    }
-
-    await batch.commit();
-    await deleteRoomWithSubcollections(roomId);
-    
-    return { success: true };
-}
-
 export async function createRoom(
     userId: string,
-    updates: { name: string, description: string, language: string, type?: 'public' | 'event' },
-    creatorInfo: { username: string, photoURL: string | null, role: string, selectedAvatarFrame?: string }
+    roomData: { name: string, description: string, language: string },
+    creatorInfo: { username: string, photoURL: string | null, role: string, selectedAvatarFrame: string }
 ) {
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
     
     const userRef = doc(db, 'users', userId);
+    const roomRef = doc(db, 'rooms', userId); // Use user's UID as the room ID
 
     return await runTransaction(db, async (transaction) => {
         const userDoc = await transaction.get(userRef);
         if (!userDoc.exists()) throw new Error("Kullanıcı bulunamadı.");
-        
         const userData = userDoc.data();
         
-        const newRoomRef = doc(collection(db, 'rooms'));
-        const durationInMs = 15 * 60 * 1000;
+        const roomDoc = await transaction.get(roomRef);
+        const now = Timestamp.now();
+        const twentyMinutesInMs = 20 * 60 * 1000;
+        const twentyFourHoursInMs = 24 * 60 * 60 * 1000;
         
-        const newRoom: Partial<Room> = {
-            name: updates.name,
-            description: updates.description,
-            language: updates.language,
-            type: 'public',
-            createdAt: serverTimestamp() as Timestamp,
-            expiresAt: Timestamp.fromMillis(Date.now() + durationInMs),
-            createdBy: {
-                uid: userId,
-                username: creatorInfo.username,
-                photoURL: creatorInfo.photoURL,
-                role: creatorInfo.role,
-                selectedAvatarFrame: creatorInfo.selectedAvatarFrame || '',
-            },
-            moderators: [userId],
-            participants: [{
-                uid: userId,
-                username: creatorInfo.username,
-                photoURL: creatorInfo.photoURL
-            }],
-            maxParticipants: 9,
-            voiceParticipantsCount: 0,
-            autoQuizEnabled: true,
-            nextGameTimestamp: Timestamp.fromMillis(Date.now() + 5 * 60 * 1000),
-            rules: null,
-            welcomeMessage: null,
-            pinnedMessageId: null,
-            level: 1,
-            xp: 0,
-            xpToNextLevel: getRoomLevelInfo(0).xpToNextLevel,
-            lastXpGainTimestamp: null,
-        };
+        if (roomDoc.exists()) {
+            const roomData = roomDoc.data();
+            const lastFreeActivation = roomData.lastFreeActivation?.toMillis() || 0;
+            if (now.toMillis() - lastFreeActivation < twentyFourHoursInMs) {
+                throw new Error("Günlük ücretsiz oda aktifleştirme hakkınızı zaten kullandınız. Yeni bir hak için lütfen 24 saat bekleyin veya elmasla süre uzatın.");
+            }
+             // Grant another 20 minutes
+             const currentExpiresAt = roomData.expiresAt?.toMillis() || now.toMillis();
+             const newExpiresAt = (currentExpiresAt > now.toMillis() ? currentExpiresAt : now.toMillis()) + twentyMinutesInMs;
 
-        transaction.set(newRoomRef, newRoom);
-        
-        transaction.update(userRef, { lastActionTimestamp: serverTimestamp() });
-        
-        return { success: true, roomId: newRoomRef.id };
+             transaction.update(roomRef, {
+                 expiresAt: Timestamp.fromMillis(newExpiresAt),
+                 lastFreeActivation: serverTimestamp(),
+                 name: roomData.name,
+                 description: roomData.description
+            });
+            return { success: true, roomId: roomRef.id, isNew: false };
+        } else {
+             // Create a new room
+             const newExpiresAt = Timestamp.fromMillis(now.toMillis() + twentyMinutesInMs);
+            const newRoom: Partial<Room> = {
+                name: `${creatorInfo.username}'ın Odası`,
+                description: "Sohbet ve eğlence zamanı!",
+                language: roomData.language,
+                type: 'public',
+                createdAt: serverTimestamp() as Timestamp,
+                expiresAt: newExpiresAt,
+                lastFreeActivation: serverTimestamp() as Timestamp,
+                createdBy: {
+                    uid: userId,
+                    username: creatorInfo.username,
+                    photoURL: creatorInfo.photoURL,
+                    role: creatorInfo.role,
+                    isPremium: userData.premiumUntil && userData.premiumUntil.toDate() > new Date(),
+                    selectedAvatarFrame: creatorInfo.selectedAvatarFrame,
+                },
+                moderators: [userId],
+                participants: [],
+                maxParticipants: 9,
+                voiceParticipantsCount: 0,
+                autoQuizEnabled: true,
+                nextGameTimestamp: Timestamp.fromMillis(Date.now() + 5 * 60 * 1000),
+                rules: null,
+                welcomeMessage: null,
+                pinnedMessageId: null,
+                level: 1,
+                xp: 0,
+                xpToNextLevel: getRoomLevelInfo(0).xpToNextLevel,
+                lastXpGainTimestamp: null,
+            };
+            transaction.set(roomRef, newRoom);
+            return { success: true, roomId: roomRef.id, isNew: true };
+        }
     });
 }
 
@@ -398,7 +105,6 @@ interface UserInfo {
     username: string;
     photoURL?: string | null;
 }
-
 
 export async function addSystemMessage(roomId: string, text: string, transaction?: FirestoreTransaction) {
     if (!roomId || !text) throw new Error("Oda ID'si ve mesaj metni gereklidir.");
@@ -425,7 +131,6 @@ export async function addSystemMessage(roomId: string, text: string, transaction
         return { success: false, error: error.message };
     }
 }
-
 
 export async function deleteRoomAsOwner(roomId: string, userId: string) {
     if (!roomId || !userId) throw new Error("Oda ID'si ve kullanıcı ID'si gereklidir.");
@@ -538,13 +243,19 @@ export async function joinRoom(roomId: string, userInfo: UserInfo) {
         }
 
         const messagesRef = collection(db, "rooms", roomId, "messages");
-        transaction.set(doc(messagesRef), {
-            type: 'system',
-            text: welcomeMessage,
-            createdAt: serverTimestamp(),
-            isJoinMessage: true, // Flag to prevent duplicate messages
-        });
+        const lastMessageSnap = await getDocs(query(messagesRef, where('isJoinMessage', '==', true), orderBy('createdAt', 'desc'), limit(1)));
+        
+        const canSendWelcome = !lastMessageSnap.docs.length || (Date.now() - lastMessageSnap.docs[0].data().createdAt.toMillis()) > 10000;
 
+        if (canSendWelcome) {
+            transaction.set(doc(messagesRef), {
+                type: 'system',
+                text: welcomeMessage,
+                createdAt: serverTimestamp(),
+                isJoinMessage: true,
+            });
+        }
+        
         return { success: true };
     });
 }
@@ -584,7 +295,7 @@ export async function leaveRoom(roomId: string, userId: string, username: string
 export async function sendRoomInvite(
   roomId: string,
   roomName: string,
-  inviter: { uid: string, username: string | null, photoURL: string | null, selectedAvatarFrame?: string },
+  inviter: { uid: string, username: string | null, photoURL: string | null, senderUniqueTag?: number, selectedAvatarFrame?: string },
   inviteeId: string
 ) {
   if (!roomId || !inviter || !inviteeId) throw new Error("Eksik bilgi: Davet gönderilemedi.");
@@ -596,6 +307,7 @@ export async function sendRoomInvite(
     senderUsername: inviter.username || "Biri",
     senderAvatar: inviter.photoURL,
     senderAvatarFrame: inviter.selectedAvatarFrame,
+    senderUniqueTag: inviter.senderUniqueTag,
     type: 'room_invite',
     roomId: roomId,
     roomName: roomName,
@@ -786,15 +498,24 @@ export async function updateModerators(roomId: string, targetUserId: string, act
     }
 }
 
-export async function updateRoomDetails(roomId: string, userId: string, details: { rules?: string, welcomeMessage?: string }) {
+export async function updateRoomDetails(roomId: string, userId: string, details: { name?: string, description?: string, rules?: string, welcomeMessage?: string }) {
     const roomRef = doc(db, 'rooms', roomId);
     const roomDoc = await getDoc(roomRef);
     if (!roomDoc.exists() || roomDoc.data().createdBy.uid !== userId) {
         throw new Error("Bu işlemi yapma yetkiniz yok.");
     }
-    await updateDoc(roomRef, { ...details, hasDetails: !!(details.rules || details.welcomeMessage) });
+    
+    const updates: { [key: string]: any } = { ...details };
+    
+    // Set hasDetails flag if rules or welcomeMessage are being set (and are not empty)
+    if (details.rules !== undefined || details.welcomeMessage !== undefined) {
+        updates.hasDetails = !!(details.rules?.trim() || details.welcomeMessage?.trim() || roomDoc.data().rules || roomDoc.data().welcomeMessage);
+    }
+
+    await updateDoc(roomRef, updates);
     return { success: true };
 }
+
 
 export async function pinMessage(roomId: string, messageId: string, userId: string) {
     const roomRef = doc(db, 'rooms', roomId);
@@ -832,7 +553,6 @@ export async function kickFromVoice(roomId: string, currentUserId: string, targe
 
     const roomRef = doc(db, 'rooms', roomId);
     const targetUserVoiceRef = doc(roomRef, 'voiceParticipants', targetUserId);
-    const voiceStatsRef = doc(db, 'config', 'voiceStats');
 
     try {
         await runTransaction(db, async (transaction) => {
@@ -1058,6 +778,48 @@ export async function controlPlayback(roomId: string, userId: string, control: {
     });
 }
 
+
+export async function handleMatchConfirmation(roomId: string, userId: string, accepted: boolean) {
+    const roomRef = doc(db, 'rooms', roomId);
+
+    await runTransaction(db, async (transaction) => {
+        const roomDoc = await transaction.get(roomRef);
+        if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
+
+        const roomData = roomDoc.data() as Room;
+        if (roomData.type !== 'match') throw new Error("Bu bir eşleşme odası değil.");
+        
+        const currentStatus = roomData.matchConfirmation?.[userId];
+        if (currentStatus !== 'pending') throw new Error("Yanıtınız zaten kaydedildi.");
+
+        const newStatus = accepted ? 'accepted' : 'declined';
+        transaction.update(roomRef, { [`matchConfirmation.${userId}`]: newStatus });
+        
+        // Check if both users have responded
+        const otherUserId = roomData.participants.find(p => p.uid !== userId)?.uid;
+        if (!otherUserId) return; // Should not happen
+
+        const otherUserStatus = roomData.matchConfirmation?.[otherUserId];
+        if (newStatus === 'accepted' && otherUserStatus === 'accepted') {
+            // Both accepted, convert to a permanent private room
+            transaction.update(roomRef, {
+                status: 'converting',
+                type: 'private',
+                expiresAt: deleteField(),
+                confirmationExpiresAt: deleteField(),
+                matchConfirmation: deleteField(),
+            });
+        } else if (newStatus === 'declined' || otherUserStatus === 'declined') {
+            // One declined, mark for deletion
+            transaction.update(roomRef, {
+                status: 'declined',
+                expiresAt: Timestamp.fromMillis(Date.now() + 60 * 1000) // Delete after 1 minute
+            });
+        }
+    });
+
+    return { success: true };
+}
 
 export async function extendRoomFor30Days(roomId: string, userId: string) {
     const roomRef = doc(db, 'rooms', roomId);

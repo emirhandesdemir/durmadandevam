@@ -331,6 +331,7 @@ export interface Room {
     id: string;
     name: string;
     description: string;
+    status?: 'active' | 'converting' | 'declined';
     createdBy: {
         uid: string;
         username: string;
@@ -364,6 +365,7 @@ export interface Room {
     lastXpGainTimestamp: Timestamp | null;
     autoQuizEnabled?: boolean;
     nextGameTimestamp?: Timestamp;
+    lastFreeActivation?: Timestamp;
 }
 
 export interface PlaylistTrack {
@@ -502,6 +504,7 @@ export interface Message {
   createdAt: Timestamp;
   selectedBubble?: string;
   selectedAvatarFrame?: string;
+  role?: 'admin' | 'user';
   portalRoomId?: string;
   portalRoomName?: string;
   gameInviteData?: GameInviteMessageData;
@@ -517,6 +520,31 @@ export interface Message {
       postImageUrl?: string | null;
       postOwnerUsername: string;
   };
+}
+
+
+export interface Call {
+  id: string;
+  callerId: string;
+  callerInfo: {
+    username: string;
+    photoURL: string | null;
+  };
+  receiverId: string;
+  receiverInfo: {
+    username: string;
+    photoURL: string | null;
+  };
+  participantUids: string[];
+  status: 'ringing' | 'active' | 'declined' | 'ended' | 'missed';
+  type: 'video' | 'audio';
+  videoStatus?: { [uid: string]: boolean };
+  offer?: RTCSessionDescriptionInit;
+  answer?: RTCSessionDescriptionInit;
+  createdAt: Timestamp;
+  startedAt?: Timestamp;
+  endedAt?: Timestamp;
+  duration?: string;
 }
 
 

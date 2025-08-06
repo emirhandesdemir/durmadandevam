@@ -21,13 +21,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { deleteRoomAsOwner, extendRoomTime, increaseParticipantLimit, extendRoomFor30Days, updateRoomSettings } from "@/lib/actions/roomActions";
-import { Trash2, Loader2, ShieldAlert, Clock, UserPlus, Gem, CalendarDays, Puzzle, Settings, Zap } from "lucide-react";
+import { deleteRoomAsOwner, extendRoomTime, increaseParticipantLimit, updateRoomDetails } from "@/lib/actions/roomActions";
+import { Trash2, Loader2, ShieldAlert, Clock, UserPlus, Gem, Settings } from "lucide-react";
 import type { Room } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
-import { Switch } from "../ui/switch";
+import { Textarea } from "../ui/textarea";
 import { Label } from "../ui/label";
-import OpenPortalDialog from "./OpenPortalDialog";
+import { Input } from "../ui/input";
 
 interface RoomManagementDialogProps {
   isOpen: boolean;
@@ -55,7 +55,7 @@ const ActionCard = ({ title, description, cost, icon: Icon, action, isLoading, c
 
 
 export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomManagementDialogProps) {
-  const { user, userData, refreshUserData } = useAuth();
+  const { user, userData } = useAuth();
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
   const [showConfirm, setShowConfirm] = useState<(() => void) | null>(null);
@@ -63,12 +63,11 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
 
   const [isExtending, setIsExtending] = useState(false);
   const [isIncreasingLimit, setIsIncreasingLimit] = useState(false);
-  const [isExtending30Days, setIsExtending30Days] = useState(false);
-  const [isSavingSettings, setIsSavingSettings] = useState(false);
-  const [isPortalDialogOpen, setIsPortalDialogOpen] = useState(false);
-  
-  const [autoQuizEnabled, setAutoQuizEnabled] = useState(room?.autoQuizEnabled ?? true);
+  const [isSavingDetails, setIsSavingDetails] = useState(false);
 
+  // Editable details
+  const [name, setName] = useState(room?.name || '');
+  const [description, setDescription] = useState(room?.description || '');
 
   if (!room) return null;
 
@@ -81,6 +80,19 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
     setShowConfirm(() => onConfirm);
   };
 
+  const handleUpdateDetails = async () => {
+      if (!canManage || !room) return;
+      setIsSavingDetails(true);
+      try {
+          await updateRoomDetails(room.id, user!.uid, { name, description });
+          toast({ description: "Oda bilgileri güncellendi." });
+      } catch (error: any) {
+          toast({ variant: 'destructive', description: error.message });
+      } finally {
+          setIsSavingDetails(false);
+      }
+  }
+
   const handleDeleteRoom = async () => {
     if (!room || !user) return;
     setIsDeleting(true);
@@ -88,7 +100,7 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
       await deleteRoomAsOwner(room.id, user.uid);
       toast({
         title: "Oda Silindi",
-        description: `"${room.name}" adlı odanız başarıyla silindi.`,
+        description: `Odanız başarıyla silindi.`,
       });
       setIsOpen(false);
     } catch (error: any) {
@@ -108,7 +120,6 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
       setIsExtending(true);
       try {
           await extendRoomTime(room.id, user.uid);
-          await refreshUserData();
           toast({
               title: "Süre Uzatıldı!",
               description: "Odanızın süresi 20 dakika uzatıldı."
@@ -129,7 +140,6 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
     setIsIncreasingLimit(true);
     try {
         await increaseParticipantLimit(room.id, user.uid);
-        await refreshUserData();
         toast({
             title: "Limit Artırıldı!",
             description: "Katılımcı limiti 1 artırıldı."
@@ -145,40 +155,6 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
     }
   }
 
-  const handleExtendFor30Days = async () => {
-    if (!room || !user) return;
-    setIsExtending30Days(true);
-    try {
-        await extendRoomFor30Days(room.id, user.uid);
-        await refreshUserData();
-        toast({
-            title: "Oda Uzatıldı!",
-            description: "Odanızın süresi 30 gün olarak ayarlandı."
-        });
-        setIsOpen(false);
-    } catch (error: any) {
-        toast({
-            title: "Hata",
-            description: error.message || "Oda süresi uzatılırken bir hata oluştu.",
-            variant: "destructive",
-        });
-    } finally {
-        setIsExtending30Days(false);
-    }
-  }
-  
-  const handleSettingsSave = async () => {
-      if (!room || !user || !canManage) return;
-      setIsSavingSettings(true);
-      try {
-          await updateRoomSettings(room.id, { autoQuizEnabled });
-          toast({ description: "Oda ayarları kaydedildi."})
-      } catch (error: any) {
-           toast({ variant: 'destructive', description: "Ayarlar kaydedilirken hata." });
-      } finally {
-          setIsSavingSettings(false);
-      }
-  }
 
   if (!canManage) return null;
 
@@ -188,46 +164,36 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent>
           <DialogHeader>
-             <DialogTitle className="flex items-center gap-2"><Settings className="h-6 w-6"/>Oda Yönetimi: {room.name}</DialogTitle>
+             <DialogTitle className="flex items-center gap-2"><Settings className="h-6 w-6"/>Oda Yönetimi</DialogTitle>
             <DialogDescription>
               Odanızla ilgili ayarları buradan yapabilirsiniz. Bu işlemler elmas gerektirebilir.
             </DialogDescription>
           </DialogHeader>
 
           <div className="py-4 space-y-4">
-             <div>
-                <h3 className="mb-2 text-sm font-semibold text-muted-foreground">Genel Ayarlar</h3>
-                <div className="space-y-2 rounded-lg border p-4">
-                    <div className="flex items-center justify-between">
-                        <Label htmlFor="auto-quiz" className="font-semibold flex items-center gap-2">
-                            <Puzzle className="h-4 w-4 text-muted-foreground"/>
-                            Otomatik Quizi Etkinleştir
-                        </Label>
-                        <Switch
-                            id="auto-quiz"
-                            checked={autoQuizEnabled}
-                            onCheckedChange={setAutoQuizEnabled}
-                        />
-                    </div>
-                    <Button size="sm" onClick={handleSettingsSave} disabled={isSavingSettings} className="w-full">
-                        {isSavingSettings && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                        Ayarları Kaydet
-                    </Button>
-                </div>
+            <div className="space-y-2">
+                <Label htmlFor="room-name">Oda Adı</Label>
+                <Input id="room-name" value={name} onChange={(e) => setName(e.target.value)} />
             </div>
+             <div className="space-y-2">
+                <Label htmlFor="room-desc">Oda Açıklaması</Label>
+                <Textarea id="room-desc" value={description} onChange={(e) => setDescription(e.target.value)} />
+            </div>
+            <Button onClick={handleUpdateDetails} disabled={isSavingDetails} className="w-full">
+                {isSavingDetails && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                Bilgileri Kaydet
+            </Button>
 
             <div>
-                <h3 className="mb-2 text-sm font-semibold text-muted-foreground">Oda Güçlendirmeleri</h3>
+                <h3 className="mb-2 mt-4 text-sm font-semibold text-muted-foreground">Oda Güçlendirmeleri</h3>
                 <div className="space-y-2">
-                    <ActionCard title="Portal Aç" description="Odanı 5 dk boyunca her yerde duyur" cost={100} icon={Zap} action={() => createConfirmation('Portalı Aç?', 'Bu işlem 100 elmasa mal olacak ve odanızı 5 dakika boyunca tüm odalarda duyuracak. Emin misiniz?', () => setIsPortalDialogOpen(true))} isLoading={false}>Aç</ActionCard>
                     <ActionCard title="Süreyi Uzat" description="Oda kapanma süresine +20 dk ekle" cost={15} icon={Clock} action={() => createConfirmation('Süreyi Uzat?', 'Bu işlem 15 elmasa mal olacak ve odanın kapanma süresine 20 dakika ekleyecek. Emin misiniz?', handleExtendTime)} isLoading={isExtending}>Uzat</ActionCard>
                     <ActionCard title="Katılımcı Artır" description="Maksimum katılımcı limitini +1 artır" cost={5} icon={UserPlus} action={() => createConfirmation('Limiti Artır?', 'Bu işlem 5 elmasa mal olacak ve oda limitini 1 artıracak. Emin misiniz?', handleIncreaseLimit)} isLoading={isIncreasingLimit}>Artır</ActionCard>
-                    <ActionCard title="Odayı 1 Ay Uzat" description="Odanı 30 gün boyunca açık tut" cost={500} icon={CalendarDays} action={() => createConfirmation('30 Gün Uzat?', 'Bu işlem 500 elmasa mal olacak ve odanızın süresini 30 güne ayarlayacak. Emin misiniz?', handleExtendFor30Days)} isLoading={isExtending30Days}>Satın Al</ActionCard>
                 </div>
             </div>
 
             <div>
-                 <h3 className="mb-2 text-sm font-semibold text-destructive">Tehlikeli Alan</h3>
+                 <h3 className="mb-2 mt-4 text-sm font-semibold text-destructive">Tehlikeli Alan</h3>
                  <ActionCard title="Odayı Kalıcı Olarak Sil" description="Bu işlem geri alınamaz" icon={Trash2} action={() => createConfirmation('Odayı Sil?', 'Bu işlem geri alınamaz. Emin misiniz?', handleDeleteRoom)} isLoading={isDeleting} variant="destructive">Sil</ActionCard>
             </div>
           </div>
@@ -253,13 +219,6 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <OpenPortalDialog
-        isOpen={isPortalDialogOpen}
-        onOpenChange={setIsPortalDialogOpen}
-        roomId={room.id}
-        roomName={room.name}
-      />
     </>
   );
 }

@@ -55,12 +55,6 @@ export default function RoomsPage() {
                       onChange={(e) => setSearchTerm(e.target.value)}
                   />
               </div>
-               <Button asChild>
-                 <Link href="/create-room">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Yeni Oda Oluştur
-                 </Link>
-               </Button>
             </div>
 
             <LeadershipBoard />

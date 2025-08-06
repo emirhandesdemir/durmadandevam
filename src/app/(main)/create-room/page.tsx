@@ -1,21 +1,14 @@
-// src/app/(main)/create-room/page.tsx
-import CreateRoomForm from "@/components/rooms/CreateRoomForm";
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
+// This page is no longer needed as room creation is now handled
+// directly from the 'CreateRoomCard' on the rooms page.
+// This file can be safely deleted in a future cleanup.
+'use client';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
-export default function CreateRoomPage() {
-  return (
-    <div className="container mx-auto max-w-2xl py-8">
-       <div className="flex items-center mb-6">
-        <Button asChild variant="ghost" size="icon" className="mr-2">
-            <Link href="/rooms">
-                <ChevronLeft className="h-5 w-5" />
-            </Link>
-        </Button>
-        <h1 className="text-2xl font-bold tracking-tight">Yeni Oda Oluştur</h1>
-      </div>
-      <CreateRoomForm />
-    </div>
-  );
+export default function ObsoleteCreateRoomPage() {
+    const router = useRouter();
+    useEffect(() => {
+        router.replace('/rooms');
+    }, [router]);
+    return null;
 }
