@@ -119,6 +119,7 @@ export default function UsersTable({ users }: UsersTableProps) {
             </TableHeader>
             <TableBody>
                 {users.map((user) => {
+                    if (user.uid === adminUser?.uid) return null; // Do not show the current admin in the list
                     const isPremium = user.premiumUntil && user.premiumUntil.toDate() > new Date();
                     return (
                         <TableRow key={user.uid} className={cn(user.reportCount && user.reportCount > 5 && "bg-destructive/10 hover:bg-destructive/20")}>

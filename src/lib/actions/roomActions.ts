@@ -360,10 +360,15 @@ export async function createRoom(
             throw new Error(`Oda oluşturmak için ${roomCost} elmasa ihtiyacınız var.`);
         }
 
-        const existingRoomsQuery = query(collection(db, 'rooms'), where('createdBy.uid', '==', userId), orderBy('createdAt', 'desc'));
+        const roomsRef = collection(db, 'rooms');
+        const existingRoomsQuery = query(
+            roomsRef,
+            where('createdBy.uid', '==', userId),
+            where('expiresAt', '>', Timestamp.now()) 
+        );
         const existingRoomsSnapshot = await transaction.get(existingRoomsQuery);
         if (!isAdmin && existingRoomsSnapshot.size >= 4) {
-             throw new Error("Aynı anda en fazla 4 odaya sahip olabilirsiniz.");
+             throw new Error("Aynı anda en fazla 4 aktif odaya sahip olabilirsiniz.");
         }
         
         const newRoomRef = doc(collection(db, 'rooms'));
@@ -1133,4 +1138,16 @@ export async function extendRoomFor30Days(roomId: string, userId: string) {
 
     await addSystemMessage(roomId, `✨ Oda süresi 30 gün uzatıldı!`);
     return { success: true };
+}
+
+export async function muteInRoom(roomId: string, targetUserId: string, mute: boolean) {
+    if (!roomId || !targetUserId) throw new Error("Oda ve hedef kullanıcı ID'si gerekli.");
+    const targetUserVoiceRef = doc(db, 'rooms', roomId, 'voiceParticipants', targetUserId);
+    try {
+        await updateDoc(targetUserVoiceRef, { canSpeak: !mute });
+        return { success: true };
+    } catch (error: any) {
+        console.error("Kullanıcı susturulurken hata oluştu:", error);
+        return { success: false, error: "İşlem gerçekleştirilemedi." };
+    }
 }
