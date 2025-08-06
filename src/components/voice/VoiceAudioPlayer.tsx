@@ -1,12 +1,13 @@
 // src/components/voice/VoiceAudioPlayer.tsx
 'use client';
 
-import { useVoiceChat } from '@/contexts/VoiceChatContext';
 import { useEffect, useRef, memo } from 'react';
+import { useVoiceChat } from '@/contexts/VoiceChatContext';
 
 /**
- * This component is responsible for playing the audio streams from remote participants.
- * It remains invisible in the UI.
+ * Bu bileşen, arkaplanda çalışarak diğer kullanıcılardan gelen
+ * ses akışlarını (MediaStream) bir <audio> elementine bağlayıp oynatır.
+ * Arayüzde görünmezdir.
  */
 export default function VoiceAudioPlayer() {
     const { remoteAudioStreams, isSpeakerMuted } = useVoiceChat();
@@ -32,16 +33,13 @@ const AudioElement = memo(({ stream, isMuted }: { stream: MediaStream, isMuted: 
         if (audioElement) {
             // Assign the stream if it's new or has changed.
             if (audioElement.srcObject !== stream) {
-                console.log("Updating audio stream for a remote user.");
                 audioElement.srcObject = stream;
             }
             // Apply the muted state.
             audioElement.muted = isMuted;
         }
-    }, [stream, isMuted]); // Rerun effect if stream or isMuted changes
+    }, [stream, isMuted]);
 
-    // The `key` prop on AudioElement in the parent ensures this component
-    // remounts if a user disconnects and reconnects, getting a fresh audio element.
     return <audio ref={audioRef} autoPlay playsInline />;
 });
 

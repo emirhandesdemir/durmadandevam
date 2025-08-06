@@ -1,9 +1,0 @@
-[{
-  "relation": ["delegate_permission/common.handle_all_urls"],
-  "target": {
-    "namespace": "android_app",
-    "package_name": "tr.com.hiwewalk.app",
-    "sha256_cert_fingerprints":
-    ["Sizin_Google_Play_den_Aldiginiz_SHA256_Parmak_Izi_Buraya_Gelecek"]
-  }
-}]

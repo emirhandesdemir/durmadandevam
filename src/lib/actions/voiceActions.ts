@@ -15,7 +15,6 @@ import {
     setDoc
 } from 'firebase/firestore';
 import type { Room, VoiceParticipant } from '../types';
-import { addSystemMessage } from './roomActions';
 
 interface UserInfo {
     uid: string;
@@ -28,7 +27,7 @@ const voiceStatsRef = doc(db, 'config', 'voiceStats');
 /**
  * Kullanıcının bir odanın sesli sohbetine katılması için sunucu eylemi.
  */
-export async function joinVoiceChat(roomId: string, user: UserInfo, options?: { initialMuteState?: boolean }) {
+export async function joinVoiceChat(roomId: string, user: UserInfo, options: { initialMuteState: boolean }) {
     if (!user || !user.uid) throw new Error("Yetkilendirme hatası: Giriş yapmalısınız.");
 
     const roomRef = doc(db, 'rooms', roomId);
@@ -56,14 +55,14 @@ export async function joinVoiceChat(roomId: string, user: UserInfo, options?: { 
             const voiceCount = roomData.voiceParticipantsCount || 0;
             if (voiceCount >= roomData.maxParticipants) throw new Error("Sesli sohbet dolu.");
             
-            const participantData: Omit<VoiceParticipant, 'isSpeaking'> = {
+            const participantData: Omit<VoiceParticipant, 'isSpeaker'> = {
                 uid: user.uid,
                 username: userData.username || 'Anonim',
                 photoURL: userData.photoURL || null,
                 profileEmoji: userData.profileEmoji || null,
                 role: userData.role || 'user',
                 giftLevel: userData.giftLevel || 0,
-                isMuted: options?.initialMuteState ?? false,
+                isMuted: options.initialMuteState,
                 isSharingScreen: false,
                 isSharingVideo: false,
                 canSpeak: true,
@@ -125,47 +124,8 @@ export async function toggleSelfMute(roomId: string, userId: string, isMuted: bo
     try {
         await updateDoc(userVoiceRef, { 
             isMuted: isMuted,
-            lastActiveAt: serverTimestamp() // Unmuting is an activity
-        });
-        return { success: true };
-    } catch (error: any) { return { success: false, error: error.message }; }
-}
-
-/**
- * Kullanıcının video durumunu günceller.
- */
-export async function toggleVideo(roomId: string, userId: string, isSharing: boolean) {
-    if (!userId) throw new Error("Yetkilendirme hatası.");
-    const userVoiceRef = doc(db, 'rooms', roomId, 'voiceParticipants', userId);
-    try {
-        await updateDoc(userVoiceRef, { 
-            isSharingVideo: isSharing,
             lastActiveAt: serverTimestamp()
         });
         return { success: true };
     } catch (error: any) { return { success: false, error: error.message }; }
-}
-
-
-/**
- * Kullanıcının ekran paylaşım durumunu günceller.
- */
-export async function toggleScreenShare(roomId: string, userId: string, isSharing: boolean) {
-    if (!userId) throw new Error("Yetkilendirme hatası.");
-    const userVoiceRef = doc(db, 'rooms', roomId, 'voiceParticipants', userId);
-    try {
-        await updateDoc(userVoiceRef, { isSharingScreen: isSharing });
-        return { success: true };
-    } catch (error: any) { return { success: false, error: error.message }; }
-}
-
-/**
- * Kullanıcının son aktif zamanını günceller.
- */
-export async function updateLastActive(roomId: string, userId: string) {
-    if (!userId) return;
-    const userVoiceRef = doc(db, 'rooms', roomId, 'voiceParticipants', userId);
-    try {
-        await updateDoc(userVoiceRef, { lastActiveAt: serverTimestamp() });
-    } catch (error) { console.error("Aktivite güncellenirken hata:", error); }
 }

@@ -41,7 +41,7 @@ export default function RoomPage() {
     
     // --- Auth & Contexts ---
     const { user, userData, featureFlags, loading: authLoading } = useAuth();
-    const { setActiveRoomId, participants } = useVoiceChat();
+    const { joinVoice, setActiveRoomId } = useVoiceChat();
 
     // --- Component State ---
     const [room, setRoom] = useState<Room | null>(null);
@@ -63,7 +63,10 @@ export default function RoomPage() {
     const isHost = user?.uid === room?.createdBy.uid;
 
     useEffect(() => {
-        if (roomId) setActiveRoomId(roomId);
+        if (roomId) {
+            setActiveRoomId(roomId);
+            joinVoice({ muted: true });
+        }
         
         // Show welcome dialog for event rooms on first load
         const welcomeKey = `seen_welcome_${roomId}`;
@@ -73,7 +76,8 @@ export default function RoomPage() {
         }
 
         return () => setActiveRoomId(null);
-    }, [roomId, setActiveRoomId, room?.type]);
+    }, [roomId, room?.type, setActiveRoomId, joinVoice]);
+
 
     // Firestore Listeners (Room, Messages, Games)
     useEffect(() => {
