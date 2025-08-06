@@ -14,6 +14,7 @@ import {
     AlertDialogAction,
     AlertDialogCancel,
     AlertDialogContent,
+    AlertDialogDescription,
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
@@ -42,7 +43,7 @@ const ActionCard = ({ title, description, cost, icon: Icon, action, isLoading, c
                 <h4 className="font-bold text-foreground">{title}</h4>
                 <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
                     <p>{description}</p>
-                    {cost !== undefined && <strong className="flex items-center gap-1 text-foreground">· {cost} <Gem className="h-3 w-3 text-cyan-400" /></strong>}
+                    {cost !== undefined && <strong className="flex items-center gap-1">· {cost} <Gem className="h-3 w-3 text-cyan-400" /></strong>}
                 </div>
             </div>
         </div>
