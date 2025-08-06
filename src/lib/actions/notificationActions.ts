@@ -21,7 +21,7 @@ interface CreateNotificationArgs {
   senderUsername: string;
   senderAvatar: string | null;
   senderAvatarFrame?: string;
-  type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'call_incoming' | 'call_missed' | 'dm_message' | 'complete_profile' | 'system' | 'event_reward';
+  type: 'like' | 'comment' | 'follow' | 'follow_accept' | 'room_invite' | 'mention' | 'diamond_transfer' | 'retweet' | 'referral_bonus' | 'dm_message' | 'complete_profile' | 'system' | 'event_reward';
   postId?: string | null;
   postImage?: string | null;
   commentText?: string;
@@ -30,8 +30,6 @@ interface CreateNotificationArgs {
   roomId?: string;
   roomName?: string;
   diamondAmount?: number;
-  callId?: string;
-  callType?: 'video' | 'audio';
   profileEmoji?: string | null;
   senderUniqueTag?: number;
   link?: string;
@@ -108,12 +106,6 @@ export async function createNotification(data: Omit<CreateNotificationArgs, 'id'
         break;
     case 'dm_message':
         link = `/dm/${data.chatId}`;
-        break;
-    case 'call_incoming':
-        link = `/call/${data.callId}`;
-        break;
-    case 'call_missed':
-        link = '/dm';
         break;
     case 'complete_profile':
         link = '/profile/edit';

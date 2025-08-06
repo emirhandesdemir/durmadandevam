@@ -135,17 +135,6 @@ export const sendPushNotification = functions.region("us-central1").firestore
                 body = `${notificationData.senderUsername} gönderinizi retweetledi.`;
                 link = '/notifications';
                 break;
-            case "call_incoming":
-                const callType = notificationData.callType === 'video' ? 'Görüntülü' : 'Sesli';
-                title = `📞 Gelen ${callType} Arama`;
-                body = `${notificationData.senderUsername} sizi arıyor...`;
-                link = `/call/${notificationData.callId || ''}`;
-                break;
-            case "call_missed":
-                title = `📞 Cevapsız Arama`;
-                body = `${notificationData.senderUsername} sizi aradı.`;
-                link = `/dm`; // Link to DM list
-                break;
              case "complete_profile":
                 title = "Profilini Tamamla! ✨";
                 body = "Profiline bir biyografi ekleyerek insanların seni daha iyi tanımasını sağla.";
