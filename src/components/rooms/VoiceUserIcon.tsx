@@ -27,12 +27,14 @@ import {
   UserCheck,
   UserX,
   CameraOff,
-  BadgeCheck
+  BadgeCheck,
+  Star
 } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useRouter } from "next/navigation";
 import { useVoiceChat } from "@/contexts/VoiceChatContext";
+import { Badge } from "../ui/badge";
 
 
 interface VoiceUserIconProps {
@@ -126,11 +128,11 @@ export default function VoiceUserIcon({
   const iconBadgePos = size === 'lg' ? "bottom-1 right-1 p-2" : "bottom-0 right-0 p-1.5";
   const iconSize = size === 'lg' ? "h-5 w-5" : "h-4 w-4";
   
-  const speakingRing = participant.isSpeaker;
+  const isSpeaking = participant.isSpeaking;
   
   const avatarContent = (
     <div className={cn("relative z-[1] border-2 transition-all duration-300 w-full h-full rounded-full overflow-hidden",
-        speakingRing ? "border-green-500 shadow-lg shadow-green-500/50 ring-4 ring-green-500/30" : "border-transparent",
+        isSpeaking ? "border-green-500 shadow-lg shadow-green-500/50 ring-4 ring-green-500/30" : "border-transparent",
     )}>
         {videoStream ? (
             <VideoView stream={videoStream} />
@@ -138,7 +140,7 @@ export default function VoiceUserIcon({
             <Avatar className="w-full h-full">
                 <AvatarImage src={participant.photoURL || undefined} />
                 <AvatarFallback className={cn("bg-muted text-muted-foreground", fallbackTextSize)}>
-                {participant.username?.charAt(0).toUpperCase()}
+                {participant.profileEmoji || participant.username?.charAt(0).toUpperCase()}
                 </AvatarFallback>
             </Avatar>
         )}
@@ -162,37 +164,44 @@ export default function VoiceUserIcon({
           </div>
       </div>
 
-      <div className="flex items-center justify-center gap-1.5 w-full">
-          <p className={cn("font-bold text-foreground truncate", nameSize, size === 'lg' ? 'max-w-[120px]' : 'max-w-[60px]')}>{participant.username}</p>
-           {isParticipantAdmin ? (
-                 <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <BadgeCheck className={cn("text-primary shrink-0", iconSize)} />
-                        </TooltipTrigger>
-                        <TooltipContent><p>Yönetici</p></TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-            ) : isParticipantHost && size === 'sm' ? (
-              <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Crown className={cn("text-yellow-400 shrink-0", iconSize)} />
-                    </TooltipTrigger>
-                    <TooltipContent><p>Oda Sahibi</p></TooltipContent>
-                  </Tooltip>
-              </TooltipProvider>
-          ) : isParticipantModerator && !isParticipantHost && size === 'sm' ? (
-              <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Shield className={cn("text-blue-400 shrink-0", iconSize)} />
-                    </TooltipTrigger>
-                    <TooltipContent><p>Moderatör</p></TooltipContent>
-                  </Tooltip>
-              </TooltipProvider>
-          ) : null}
-      </div>
+       <div className="flex flex-col items-center gap-1">
+            <div className="flex items-center justify-center gap-1.5 w-full">
+                <p className={cn("font-bold truncate transition-colors", nameSize, isSpeaking ? 'text-green-400' : 'text-foreground', size === 'lg' ? 'max-w-[120px]' : 'max-w-[60px]')}>{participant.username}</p>
+                 {isParticipantAdmin ? (
+                       <TooltipProvider delayDuration={0}>
+                          <Tooltip>
+                              <TooltipTrigger asChild>
+                                  <BadgeCheck className={cn("text-primary shrink-0", iconSize)} />
+                              </TooltipTrigger>
+                              <TooltipContent><p>Yönetici</p></TooltipContent>
+                          </Tooltip>
+                      </TooltipProvider>
+                  ) : isParticipantHost && size === 'sm' ? (
+                    <TooltipProvider delayDuration={0}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                              <Crown className={cn("text-yellow-400 shrink-0", iconSize)} />
+                          </TooltipTrigger>
+                          <TooltipContent><p>Oda Sahibi</p></TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                ) : isParticipantModerator && !isParticipantHost && size === 'sm' ? (
+                    <TooltipProvider delayDuration={0}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                              <Shield className={cn("text-blue-400 shrink-0", iconSize)} />
+                          </TooltipTrigger>
+                          <TooltipContent><p>Moderatör</p></TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                ) : null}
+            </div>
+            {participant.giftLevel > 0 && (
+                 <Badge variant="destructive" className="h-5">
+                    <Star className="h-3 w-3 mr-1"/> SV {participant.giftLevel}
+                </Badge>
+            )}
+       </div>
     </div>
   );
 

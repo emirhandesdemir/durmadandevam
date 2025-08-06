@@ -578,7 +578,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
 
     const value = {
-        activeRoom, participants, self, isConnecting, isConnected, isListening: isConnected, isMinimized, isSpeakerMuted, remoteAudioStreams, remoteScreenStreams, remoteVideoStreams, localStream, isSharingScreen, isSharingVideo,
+        activeRoom, participants, self, isConnecting, isConnected, isMinimized, isSpeakerMuted, remoteAudioStreams, remoteScreenStreams, remoteVideoStreams, localStream, isSharingScreen, isSharingVideo,
         setActiveRoomId, joinVoice, leaveRoom: handleLeaveRoom, leaveVoice, toggleSelfMute, toggleSpeakerMute, minimizeRoom, expandRoom, startScreenShare, stopScreenShare, startVideo, stopVideo, switchCamera,
         livePlaylist, currentTrack, isCurrentUserDj, isDjActive,
         addTrackToPlaylist, removeTrackFromPlaylist, togglePlayback, skipTrack
