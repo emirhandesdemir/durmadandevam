@@ -1,3 +1,4 @@
+
 // src/components/voice/VoiceAudioPlayer.tsx
 'use client';
 
@@ -5,9 +6,8 @@ import { useEffect, useRef, memo } from 'react';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
 
 /**
- * Bu bileşen, arkaplanda çalışarak diğer kullanıcılardan gelen
- * ses akışlarını (MediaStream) bir <audio> elementine bağlayıp oynatır.
- * Arayüzde görünmezdir.
+ * This component renders the audio streams from remote participants.
+ * It's kept separate to memoize and prevent unnecessary re-renders of audio elements.
  */
 export default function VoiceAudioPlayer() {
     const { remoteAudioStreams, isSpeakerMuted } = useVoiceChat();
@@ -23,7 +23,8 @@ export default function VoiceAudioPlayer() {
 
 /**
  * A memoized component to render a single <audio> element.
- * It uses a useEffect hook to safely update the srcObject whenever the stream changes.
+ * It uses a useEffect hook to safely update the srcObject whenever the stream changes,
+ * which is crucial for handling stream updates correctly.
  */
 const AudioElement = memo(({ stream, isMuted }: { stream: MediaStream, isMuted: boolean }) => {
     const audioRef = useRef<HTMLAudioElement>(null);
@@ -31,11 +32,11 @@ const AudioElement = memo(({ stream, isMuted }: { stream: MediaStream, isMuted: 
     useEffect(() => {
         const audioElement = audioRef.current;
         if (audioElement) {
-            // Assign the stream if it's new or has changed.
+            // Assign the stream only if it's new or has changed to avoid unnecessary re-assignments.
             if (audioElement.srcObject !== stream) {
                 audioElement.srcObject = stream;
             }
-            // Apply the muted state.
+            // Ensure the muted state is always in sync.
             audioElement.muted = isMuted;
         }
     }, [stream, isMuted]);
