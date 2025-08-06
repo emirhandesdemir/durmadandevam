@@ -1,13 +1,15 @@
 
+      
+// src/contexts/VoiceChatContext.tsx
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, onSnapshot, doc, serverTimestamp, query, where, deleteDoc, addDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, serverTimestamp, query, where, deleteDoc, addDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Room, VoiceParticipant } from '../types';
+import type { Room, VoiceParticipant, PlaylistTrack } from '../types';
 import { joinVoiceChat, leaveVoice, toggleSelfMute as toggleMuteAction, updateVideoStatus } from '@/lib/actions/voiceActions';
-import { leaveRoom } from '@/lib/actions/roomActions';
+import { leaveRoom, addTrackToPlaylist as addTrackAction, removeTrackFromPlaylist as removeTrackAction, controlPlayback as controlPlaybackAction } from '@/lib/actions/roomActions';
 import { useToast } from '@/hooks/use-toast';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -36,7 +38,6 @@ interface VoiceChatContextType {
     leaveRoom: () => Promise<void>;
     leaveVoiceOnly: () => Promise<void>;
     toggleSelfMute: () => Promise<void>;
-    toggleVideo: () => Promise<void>;
     minimizeRoom: () => void;
     expandRoom: () => void;
     toggleSpeakerMute: () => void;
@@ -48,6 +49,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const { user, userData } = useAuth();
     const { toast } = useToast();
     const router = useRouter();
+    const pathname = usePathname();
 
     const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
     const [isMinimized, setIsMinimized] = useState(false);
@@ -63,7 +65,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const peerConnections = useRef<Record<string, RTCPeerConnection>>({});
     const iceCandidateQueues = useRef<Record<string, RTCIceCandidate[]>>({});
     
-    const self = participants.find(p => p.uid === user?.uid);
+    const self = useMemo(() => participants.find(p => p.uid === user?.uid) || null, [participants, user?.uid]);
     const isConnected = !!self;
 
     const cleanupPeerConnection = useCallback((uid: string) => {
@@ -110,7 +112,13 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         peerConnections.current[otherUid] = pc;
         iceCandidateQueues.current[otherUid] = [];
         
-        localStream?.getTracks().forEach(track => pc.addTrack(track, localStream));
+        localStream?.getTracks().forEach(track => {
+            try {
+                pc.addTrack(track, localStream);
+            } catch (e) {
+                console.error(`Error adding track to PC for ${otherUid}:`, e);
+            }
+        });
 
         pc.onicecandidate = event => {
             if (event.candidate) {
@@ -145,7 +153,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 stream.getAudioTracks()[0].enabled = !(options?.muted ?? false);
             }
             setLocalStream(stream);
-            await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: userData.username, photoURL: userData.photoURL }, { initialMuteState: options?.muted ?? false });
+            await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: userData.username, photoURL: userData.photoURL, profileEmoji: userData.profileEmoji, selectedAvatarFrame: userData.selectedAvatarFrame }, { initialMuteState: options?.muted ?? false });
         } catch (error: any) {
             toast({ variant: "destructive", title: "Katılım Başarısız", description: "Mikrofon erişimi reddedildi veya bir hata oluştu." });
             _cleanupAndResetState();
@@ -195,7 +203,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                         if (pc.remoteDescription) {
                             await pc.addIceCandidate(new RTCIceCandidate(signal.data));
                         } else {
-                            iceCandidateQueues.current[signal.from]?.push(new RTCIceCandidate(signal.data));
+                            iceCandidateQueue.current[signal.from]?.push(new RTCIceCandidate(signal.data));
                         }
                     }
                     await deleteDoc(change.doc.ref);
@@ -212,8 +220,10 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
         otherParticipants.forEach(p => {
             if (!peerConnections.current[p.uid]) {
-                const pc = initializePeerConnection(p.uid);
-                if (user.uid > p.uid) { // Polite peer determines initiator
+                // Determine who is the "polite" peer. The one with the greater UID is the initiator.
+                const isInitiator = user.uid > p.uid;
+                if (isInitiator) {
+                    const pc = initializePeerConnection(p.uid);
                     pc.onnegotiationneeded = async () => {
                         try {
                             const offer = await pc.createOffer();
@@ -223,10 +233,14 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                             console.error("Offer creation failed:", e);
                         }
                     };
+                } else {
+                    // The other peer will initiate, so just create the connection object
+                    initializePeerConnection(p.uid);
                 }
             }
         });
 
+        // Clean up connections for users who have left
         Object.keys(peerConnections.current).forEach(uid => {
             if (!otherParticipants.some(p => p.uid === uid)) {
                 cleanupPeerConnection(uid);
@@ -258,7 +272,13 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     }, [self, activeRoomId, localStream]);
     
     const toggleVideo = async () => {
-        // This is now a placeholder as the functionality is temporarily removed for stability.
+        if (!self || !localStream || !activeRoomId) return;
+        const videoTrack = localStream.getVideoTracks()[0];
+        if (videoTrack) {
+            const isEnabled = !videoTrack.enabled;
+            videoTrack.enabled = isEnabled;
+            await updateVideoStatus(activeRoomId, self.uid, isEnabled);
+        }
     };
 
     const minimizeRoom = useCallback(() => setIsMinimized(true), []);
@@ -279,3 +299,4 @@ export const useVoiceChat = () => {
     return context;
 };
 
+    

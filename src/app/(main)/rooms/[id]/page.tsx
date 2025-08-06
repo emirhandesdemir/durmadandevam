@@ -1,3 +1,5 @@
+
+      
 // src/app/(main)/rooms/[id]/page.tsx
 "use client";
 
@@ -297,3 +299,5 @@ export default function RoomPage() {
         </>
     );
 }
+
+    

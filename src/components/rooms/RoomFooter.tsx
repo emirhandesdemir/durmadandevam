@@ -1,3 +1,5 @@
+
+      
 // src/components/rooms/RoomFooter.tsx
 'use client';
 
@@ -97,3 +99,5 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
         </>
     );
 }
+
+    

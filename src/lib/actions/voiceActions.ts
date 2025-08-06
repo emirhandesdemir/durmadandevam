@@ -1,3 +1,5 @@
+
+      
 // src/lib/actions/voiceActions.ts
 'use server';
 
@@ -20,6 +22,8 @@ interface UserInfo {
     uid: string;
     displayName: string | null;
     photoURL: string | null;
+    profileEmoji: string | null;
+    selectedAvatarFrame?: string;
 }
 
 const voiceStatsRef = doc(db, 'config', 'voiceStats');
@@ -36,20 +40,20 @@ export async function joinVoiceChat(roomId: string, user: UserInfo, options: { i
 
     try {
         await runTransaction(db, async (transaction) => {
-            const roomDoc = await transaction.get(roomRef);
+            const [roomDoc, userDbDoc, userVoiceDoc] = await Promise.all([
+                transaction.get(roomRef),
+                transaction.get(userDbRef),
+                transaction.get(userVoiceRef),
+            ]);
+            
             if (!roomDoc.exists()) throw new Error("Oda bulunamadı.");
-
-            const userDbDoc = await transaction.get(userDbRef);
             if (!userDbDoc.exists()) throw new Error("Kullanıcı profili bulunamadı.");
             
-            const userVoiceDoc = await transaction.get(userVoiceRef);
-
             const roomData = roomDoc.data() as Room;
-            const isExpired = roomData.expiresAt && (roomData.expiresAt as Timestamp).toDate() < new Date() && roomData.type !== 'event';
+            const isExpired = roomData.type !== 'event' && roomData.expiresAt && (roomData.expiresAt as Timestamp).toDate() < new Date();
             if(isExpired) throw new Error("Bu odanın süresi dolmuş.");
             
-            const isAlreadyInVoice = userVoiceDoc.exists();
-            if (isAlreadyInVoice) return;
+            if (userVoiceDoc.exists()) return;
 
             const userData = userDbDoc.data();
             const voiceCount = roomData.voiceParticipantsCount || 0;
@@ -87,7 +91,6 @@ export async function joinVoiceChat(roomId: string, user: UserInfo, options: { i
 
 /**
  * Kullanıcının sesli sohbetten ayrılması için sunucu eylemi.
- * Bu fonksiyon sadece sesli sohbetle ilgili verileri temizler.
  */
 export async function leaveVoice(roomId: string, userId: string) {
     if (!userId) throw new Error("Yetkilendirme hatası.");
@@ -129,3 +132,19 @@ export async function toggleSelfMute(roomId: string, userId: string, isMuted: bo
         return { success: true };
     } catch (error: any) { return { success: false, error: error.message }; }
 }
+
+/**
+ * Kullanıcının video durumunu günceller.
+ */
+export async function updateVideoStatus(roomId: string, userId: string, isEnabled: boolean) {
+    if (!userId) throw new Error("Yetkilendirme hatası.");
+    const userVoiceRef = doc(db, 'rooms', roomId, 'voiceParticipants', userId);
+    try {
+        await updateDoc(userVoiceRef, {
+            isSharingVideo: isEnabled
+        });
+        return { success: true };
+    } catch (error: any) { return { success: false, error: error.message }; }
+}
+
+    

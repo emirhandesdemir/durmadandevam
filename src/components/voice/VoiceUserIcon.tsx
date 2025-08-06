@@ -1,3 +1,5 @@
+
+      
 // src/components/voice/VoiceUserIcon.tsx
 "use client";
 
@@ -23,6 +25,10 @@ import {
   Loader2,
   User,
   Shield,
+  VolumeX,
+  UserCheck,
+  UserX,
+  CameraOff,
   BadgeCheck,
   Star
 } from "lucide-react";
@@ -31,6 +37,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useRouter } from "next/navigation";
 import { useVoiceChat } from "@/contexts/VoiceChatContext";
 import { Badge } from "../ui/badge";
+import AvatarWithFrame from "../common/AvatarWithFrame";
+
 
 interface VoiceUserIconProps {
   participant: VoiceParticipant;
@@ -40,6 +48,18 @@ interface VoiceUserIconProps {
   currentUserId: string;
   size?: 'sm' | 'lg';
 }
+
+const VideoView = React.memo(({ stream }: { stream: MediaStream | null }) => {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    useEffect(() => {
+        if (videoRef.current && stream) {
+            videoRef.current.srcObject = stream;
+        }
+    }, [stream]);
+    return <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />;
+});
+VideoView.displayName = 'VideoView';
+
 
 export default function VoiceUserIcon({
   participant,
@@ -52,7 +72,7 @@ export default function VoiceUserIcon({
   const { toast } = useToast();
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
-  const { self } = useVoiceChat();
+  const { localStream, remoteVideoStreams } = useVoiceChat();
 
   const isSelf = participant.uid === currentUserId;
   const isParticipantHost = participant.uid === room.createdBy.uid;
@@ -60,6 +80,10 @@ export default function VoiceUserIcon({
   const isParticipantAdmin = participant.role === 'admin';
 
   const canModerate = isHost || isModerator;
+  
+  const videoStream = participant.isSharingVideo
+    ? (isSelf ? localStream : remoteVideoStreams[participant.uid] || null)
+    : null;
 
   const handleKick = async () => {
     if (!canModerate) return;
@@ -113,12 +137,16 @@ export default function VoiceUserIcon({
     <div className={cn("relative z-[1] border-2 transition-all duration-300 w-full h-full rounded-full overflow-hidden",
         isSpeaking && !participant.isMuted ? "border-green-500 shadow-lg shadow-green-500/50 ring-4 ring-green-500/30" : "border-transparent",
     )}>
-        <Avatar className="w-full h-full">
-            <AvatarImage src={participant.photoURL || undefined} />
-            <AvatarFallback className={cn("bg-muted text-muted-foreground", fallbackTextSize)}>
-            {participant.profileEmoji || participant.username?.charAt(0).toUpperCase()}
-            </AvatarFallback>
-        </Avatar>
+        {videoStream ? (
+            <VideoView stream={videoStream} />
+        ) : (
+            <Avatar className="w-full h-full">
+                <AvatarImage src={participant.photoURL || undefined} />
+                <AvatarFallback className={cn("bg-muted text-muted-foreground", fallbackTextSize)}>
+                {participant.profileEmoji || participant.username?.charAt(0).toUpperCase()}
+                </AvatarFallback>
+            </Avatar>
+        )}
     </div>
   );
 
@@ -126,15 +154,20 @@ export default function VoiceUserIcon({
   const avatar = (
     <div className="relative flex flex-col items-center gap-2">
        <div className={cn("relative", avatarSize)}>
-           <div className={cn("avatar-frame-wrapper w-full h-full", participant.selectedAvatarFrame)}>
-              {avatarContent}
-          </div>
+            <AvatarWithFrame
+                photoURL={participant.photoURL}
+                selectedAvatarFrame={participant.selectedAvatarFrame}
+                className="w-full h-full"
+                fallbackClassName={fallbackTextSize}
+                fallback={participant.profileEmoji || participant.username?.charAt(0).toUpperCase()}
+            />
           <div className={cn("absolute bg-card/70 backdrop-blur-sm rounded-full shadow-md z-10 flex items-center gap-1.5", iconBadgePos)}>
             {participant.isMuted ? (
               <MicOff className={cn(iconSize, "text-destructive")} />
             ) : (
               <Mic className={cn(iconSize, "text-foreground")} />
             )}
+            {participant.isSharingVideo && <CameraOff className={cn(iconSize, "text-blue-400")} />}
           </div>
       </div>
 
@@ -199,3 +232,5 @@ export default function VoiceUserIcon({
       </DropdownMenu>
     );
 }
+
+    
