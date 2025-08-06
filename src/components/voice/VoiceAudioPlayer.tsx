@@ -5,9 +5,8 @@ import { useVoiceChat } from '@/contexts/VoiceChatContext';
 import { useEffect, useRef } from 'react';
 
 /**
- * Bu bileşen, arkaplanda çalışarak diğer kullanıcılardan gelen
- * ses akışlarını (MediaStream) bir <audio> elementine bağlayıp oynatır.
- * Arayüzde görünmezdir.
+ * This component is responsible for playing the audio streams from remote participants.
+ * It remains invisible in the UI.
  */
 export default function VoiceAudioPlayer() {
     const { remoteAudioStreams, isSpeakerMuted } = useVoiceChat();
@@ -21,18 +20,26 @@ export default function VoiceAudioPlayer() {
     );
 }
 
+/**
+ * A memoized component to render a single <audio> element.
+ * It uses a useEffect hook to safely update the srcObject whenever the stream changes.
+ */
 function AudioElement({ stream, isMuted }: { stream: MediaStream, isMuted: boolean }) {
     const audioRef = useRef<HTMLAudioElement>(null);
 
     useEffect(() => {
-        if (audioRef.current && stream) {
-            // Check if the stream is different to avoid unnecessary re-assignments
-            if(audioRef.current.srcObject !== stream) {
-                audioRef.current.srcObject = stream;
+        const audioElement = audioRef.current;
+        if (audioElement) {
+            // Assign the stream if it's new or has changed.
+            if (audioElement.srcObject !== stream) {
+                audioElement.srcObject = stream;
             }
-            audioRef.current.muted = isMuted;
+            // Apply the muted state.
+            audioElement.muted = isMuted;
         }
-    }, [stream, isMuted]);
+    }, [stream, isMuted]); // Rerun effect if stream or isMuted changes
 
+    // The `key` prop on AudioElement in the parent ensures this component
+    // remounts if a user disconnects and reconnects, getting a fresh audio element.
     return <audio ref={audioRef} autoPlay playsInline />;
 }

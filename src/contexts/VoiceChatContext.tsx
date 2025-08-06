@@ -166,14 +166,17 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     const createPeerConnection = useCallback((otherUserId: string): RTCPeerConnection => {
         if (peerConnections.current[otherUserId]) {
-            return peerConnections.current[otherUserId];
+            peerConnections.current[otherUserId].close();
         }
 
         console.log(`Creating new peer connection to ${otherUserId}`);
         const pc = new RTCPeerConnection(ICE_SERVERS);
         
         pc.onicecandidate = event => {
-            if (event.candidate) sendSignal(otherUserId, 'ice-candidate', event.candidate.toJSON());
+            if (event.candidate) {
+                console.log(`Sending ICE candidate to ${otherUserId}`);
+                sendSignal(otherUserId, 'ice-candidate', event.candidate.toJSON());
+            }
         };
         
         pc.ontrack = event => {
@@ -189,7 +192,13 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         };
 
         if (localStream) {
-            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            localStream.getTracks().forEach(track => {
+                 try {
+                    pc.addTrack(track, localStream)
+                } catch(e) {
+                    console.error("Error adding track:", e)
+                }
+            });
         }
 
         peerConnections.current[otherUserId] = pc;
@@ -200,7 +209,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         if (!user || !userData || !activeRoomId || isConnected || isConnecting) return;
         
         setIsConnecting(true);
-        console.log("Joining voice...");
+        console.log("Attempting to join voice...");
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -208,7 +217,9 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 video: false,
             });
             stream.getAudioTracks()[0].enabled = !(options?.muted ?? false);
-            setLocalStream(stream);
+            
+            // Set local stream immediately, so it's available for createPeerConnection
+            setLocalStream(stream); 
             setupSpeakingDetection(stream, user.uid);
 
             await joinVoiceChat(activeRoomId, {
@@ -217,14 +228,18 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 photoURL: userData.photoURL
             }, { initialMuteState: options?.muted ?? false });
 
-            // The participant listener will handle creating connections.
+            // The participant listener will handle creating connections after this user document is created.
+            console.log("Successfully joined voice chat action. Participant listener will now handle connections.");
+
         } catch (error: any) {
+            console.error("Failed to join voice chat:", error);
             toast({ variant: "destructive", title: "Katılım Başarısız", description: "Mikrofon erişimi reddedildi veya bir hata oluştu." });
             _cleanupAndResetState();
         } finally {
             setIsConnecting(false);
         }
     }, [user, userData, activeRoomId, isConnected, isConnecting, toast, _cleanupAndResetState, setupSpeakingDetection]);
+
 
     const leaveVoice = useCallback(async () => {
         if (!user || !activeRoomId) return;
@@ -328,22 +343,28 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                     if (!pc) pc = createPeerConnection(from);
 
                     if (signal.type === 'offer') {
+                        console.log(`Received offer from ${from}`);
                         await pc.setRemoteDescription(new RTCSessionDescription(signal.data));
                         const answer = await pc.createAnswer();
                         await pc.setLocalDescription(answer);
+                        console.log(`Sending answer to ${from}`);
                         await sendSignal(from, 'answer', pc.localDescription!.toJSON());
 
                         if (iceCandidateQueue.current[from]) {
+                            console.log(`Processing ${iceCandidateQueue.current[from].length} queued ICE candidates from ${from}`);
                             iceCandidateQueue.current[from].forEach(candidate => pc.addIceCandidate(new RTCIceCandidate(candidate)));
                             delete iceCandidateQueue.current[from];
                         }
                     } else if (signal.type === 'answer' && pc.signalingState !== 'stable') {
+                        console.log(`Received answer from ${from}`);
                         await pc.setRemoteDescription(new RTCSessionDescription(signal.data));
                     } else if (signal.type === 'ice-candidate') {
-                       if (pc?.remoteDescription) await pc.addIceCandidate(new RTCIceCandidate(signal.data));
-                       else {
+                       if (pc.remoteDescription) {
+                            await pc.addIceCandidate(new RTCIceCandidate(signal.data));
+                       } else {
                            if (!iceCandidateQueue.current[from]) iceCandidateQueue.current[from] = [];
                            iceCandidateQueue.current[from].push(signal.data);
+                           console.log(`Queued ICE candidate from ${from}`);
                        }
                     }
                     await deleteDoc(change.doc.ref);
@@ -359,16 +380,24 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         if (!isConnected || !user) return;
         const myId = user.uid;
 
-        participants.forEach(p => {
-            if (p.uid === myId || peerConnections.current[p.uid]) return;
-            console.log(`New participant ${p.username} found. Initiating connection.`);
-            const pc = createPeerConnection(p.uid);
-            pc.createOffer()
-                .then(offer => pc.setLocalDescription(offer))
-                .then(() => sendSignal(p.uid, 'offer', pc.localDescription!.toJSON()))
-                .catch(e => console.error(`Offer creation failed for ${p.uid}:`, e));
+        const otherParticipants = participants.filter(p => p.uid !== myId);
+        
+        // Connect to new participants
+        otherParticipants.forEach(p => {
+            if (!peerConnections.current[p.uid]) {
+                console.log(`New participant ${p.username} found. Initiating connection.`);
+                const pc = createPeerConnection(p.uid);
+                pc.createOffer()
+                    .then(offer => pc.setLocalDescription(offer))
+                    .then(() => {
+                        console.log(`Sending offer to ${p.uid}`);
+                        return sendSignal(p.uid, 'offer', pc.localDescription!.toJSON());
+                    })
+                    .catch(e => console.error(`Offer creation failed for ${p.uid}:`, e));
+            }
         });
 
+        // Cleanup connections for left participants
         Object.keys(peerConnections.current).forEach(peerId => {
             if (!participants.some(p => p.uid === peerId)) {
                 console.log(`Participant ${peerId} left. Cleaning up connection.`);
