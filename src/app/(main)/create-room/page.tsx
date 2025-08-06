@@ -1,3 +1,4 @@
+// src/app/(main)/create-room/page.tsx
 import CreateRoomForm from "@/components/rooms/CreateRoomForm";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
@@ -5,20 +6,16 @@ import { Button } from "@/components/ui/button";
 
 export default function CreateRoomPage() {
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center p-4 auth-bg">
-      <Button
-        asChild
-        variant="ghost"
-        className="absolute left-4 top-4 md:left-8 md:top-8 rounded-full bg-black/20 text-white backdrop-blur-sm hover:bg-black/30 hover:text-white"
-      >
-        <Link href="/rooms">
-          <ChevronLeft className="mr-2 h-4 w-4" />
-          Geri
-        </Link>
-      </Button>
-      <div className="w-full animate-in zoom-in-95 duration-500">
-        <CreateRoomForm />
+    <div className="container mx-auto max-w-2xl py-8">
+       <div className="flex items-center mb-6">
+        <Button asChild variant="ghost" size="icon" className="mr-2">
+            <Link href="/rooms">
+                <ChevronLeft className="h-5 w-5" />
+            </Link>
+        </Button>
+        <h1 className="text-2xl font-bold tracking-tight">Yeni Oda Oluştur</h1>
       </div>
-    </main>
+      <CreateRoomForm />
+    </div>
   );
 }

@@ -17,17 +17,19 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Gem } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 
@@ -45,6 +47,7 @@ export default function CreateRoomForm() {
     const [isLoading, setIsLoading] = useState(false);
     
     const isAdmin = userData?.role === 'admin';
+    const roomCost = 10;
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -89,73 +92,48 @@ export default function CreateRoomForm() {
     }
 
     return (
-        <Card className="w-full max-w-lg mx-auto shadow-2xl rounded-3xl bg-card/80 backdrop-blur-lg border-white/20">
-            <CardHeader className="text-center">
-                <CardTitle className="text-3xl font-bold text-white">Yeni Bir Oda Oluştur</CardTitle>
-                <CardDescription className="text-base text-white/80">
-                   Arkadaşlarınla sohbet etmek için yeni bir oda başlat.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                        {isAdmin && (
-                            <FormField
-                                control={form.control}
-                                name="type"
-                                render={({ field }) => (
-                                    <FormItem className="space-y-3 p-4 bg-black/20 rounded-xl">
-                                    <FormLabel className="text-white/90">Oda Tipi (Admin)</FormLabel>
-                                    <FormControl>
-                                        <RadioGroup
-                                        onValueChange={field.onChange}
-                                        defaultValue={field.value}
-                                        className="flex flex-col space-y-1 text-white/80"
-                                        >
-                                        <FormItem className="flex items-center space-x-3 space-y-0">
-                                            <FormControl>
-                                            <RadioGroupItem value="public" />
-                                            </FormControl>
-                                            <FormLabel className="font-normal">
-                                            Normal Oda (Süreli)
-                                            </FormLabel>
-                                        </FormItem>
-                                        <FormItem className="flex items-center space-x-3 space-y-0">
-                                            <FormControl>
-                                            <RadioGroupItem value="event" />
-                                            </FormControl>
-                                            <FormLabel className="font-normal">
-                                            Etkinlik Odası (Süresiz & PIN Gerekli)
-                                            </FormLabel>
-                                        </FormItem>
-                                        </RadioGroup>
-                                    </FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        )}
-
+        <Card className="w-full">
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)}>
+                    <CardHeader>
+                        <CardTitle>Oda Detayları</CardTitle>
+                        <CardDescription>
+                           Odanız için bir ad ve açıklama belirleyin.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
                         <FormField control={form.control} name="name" render={({ field }) => (
                             <FormItem>
-                                <FormControl><Input className="rounded-full px-5 py-7 bg-black/30 border-white/20 text-white placeholder:text-white/60 text-base" placeholder="Oda Adı..." {...field} /></FormControl>
-                                <FormMessage className="ml-4 text-red-300" />
+                                <FormLabel>Oda Adı</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Harika odamın adı..." {...field} />
+                                </FormControl>
+                                <FormDescription>Odanızın listede görünecek adı.</FormDescription>
+                                <FormMessage />
                             </FormItem>
                         )} />
                         <FormField control={form.control} name="description" render={({ field }) => (
                             <FormItem>
-                                <FormControl><Input className="rounded-full px-5 py-7 bg-black/30 border-white/20 text-white placeholder:text-white/60 text-base" placeholder="Açıklama..." {...field} /></FormControl>
-                                <FormMessage className="ml-4 text-red-300" />
+                                <FormLabel>Açıklama</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Bu odada neler hakkında konuşulacak?" {...field} />
+                                </FormControl>
+                                <FormDescription>Odanızın konusunu ve amacını açıklayın.</FormDescription>
+                                <FormMessage />
                             </FormItem>
                         )} />
-                        
-                        <Button type="submit" size="lg" className="w-full rounded-full py-7 text-lg font-semibold bg-gradient-to-r from-pink-500 to-yellow-500 text-white shadow-lg transition-transform hover:scale-105 disabled:opacity-75" disabled={isLoading}>
-                             {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-                             Odayı Kur ve Maceraya Başla
+                    </CardContent>
+                    <CardFooter className="flex justify-between items-center">
+                         <div className="text-sm text-muted-foreground">
+                            Maliyet: <strong className="text-primary flex items-center gap-1">{roomCost} <Gem className="h-4 w-4" /></strong>
+                        </div>
+                        <Button type="submit" disabled={isLoading}>
+                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                             Oluştur
                         </Button>
-                    </form>
-                </Form>
-            </CardContent>
+                    </CardFooter>
+                </form>
+            </Form>
         </Card>
     );
 }
