@@ -1,5 +1,3 @@
-
-      
 // src/components/voice/PersistentVoiceBar.tsx
 'use client';
 
@@ -16,8 +14,15 @@ export default function PersistentVoiceBar() {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (isMinimized && activeRoom && pathname.startsWith(`/rooms/${activeRoom.id}`)) {
-      router.replace('/home');
+    // This logic ensures that if the user is minimized and navigates to the room URL manually, the UI expands.
+    if (!isMinimized && activeRoom && pathname.startsWith(`/rooms/${activeRoom.id}`)) {
+      // No need to do anything, already correct state
+    } else if (isMinimized && activeRoom && !pathname.startsWith(`/rooms/${activeRoom.id}`)) {
+      // User is minimized and browsing elsewhere, this is the intended state.
+    } else if (!isMinimized && activeRoom && !pathname.startsWith(`/rooms/${activeRoom.id}`)) {
+      // This case handles when the user navigates away from the room page without using the minimize button.
+      // We should treat this as minimizing.
+      minimizeRoom();
     }
   }, [isMinimized, pathname, router, activeRoom]);
 
@@ -27,6 +32,13 @@ export default function PersistentVoiceBar() {
         router.push(`/rooms/${activeRoom.id}`);
     }
   };
+
+  const minimizeRoom = () => {
+      if (activeRoom) {
+          router.back();
+      }
+  };
+
 
   // The bar should only be visible if the user is in a room AND has minimized it.
   if (!isMinimized || !activeRoom) {
@@ -82,5 +94,3 @@ export default function PersistentVoiceBar() {
     </AnimatePresence>
   );
 }
-
-    

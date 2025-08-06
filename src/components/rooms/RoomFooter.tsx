@@ -1,5 +1,3 @@
-
-      
 // src/components/rooms/RoomFooter.tsx
 'use client';
 
@@ -29,8 +27,6 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
         leaveVoiceOnly,
         self, 
         toggleSelfMute,
-        isSpeakerMuted,
-        toggleSpeakerMute,
     } = useVoiceChat();
     const { user, userData } = useAuth();
     const [isGiftPanelOpen, setIsGiftPanelOpen] = useState(false);
@@ -99,5 +95,3 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
         </>
     );
 }
-
-    

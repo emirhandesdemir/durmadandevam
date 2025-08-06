@@ -1,15 +1,12 @@
-
-      
 // src/contexts/VoiceChatContext.tsx
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, onSnapshot, doc, serverTimestamp, query, where, deleteDoc, addDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Room, VoiceParticipant, PlaylistTrack } from '../types';
-import { joinVoiceChat, leaveVoice, toggleSelfMute as toggleMuteAction, updateVideoStatus } from '@/lib/actions/voiceActions';
-import { leaveRoom, addTrackToPlaylist as addTrackAction, removeTrackFromPlaylist as removeTrackAction, controlPlayback as controlPlaybackAction } from '@/lib/actions/roomActions';
+import type { Room, VoiceParticipant } from '../types';
+import { joinVoiceChat, leaveVoice, toggleSelfMute as toggleMuteAction } from '@/lib/actions/voiceActions';
 import { useToast } from '@/hooks/use-toast';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -49,7 +46,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const { user, userData } = useAuth();
     const { toast } = useToast();
     const router = useRouter();
-    const pathname = usePathname();
 
     const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
     const [isMinimized, setIsMinimized] = useState(false);
@@ -63,7 +59,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const [remoteVideoStreams, setRemoteVideoStreams] = useState<Record<string, MediaStream>>({});
     
     const peerConnections = useRef<Record<string, RTCPeerConnection>>({});
-    const iceCandidateQueues = useRef<Record<string, RTCIceCandidate[]>>({});
     
     const self = useMemo(() => participants.find(p => p.uid === user?.uid) || null, [participants, user?.uid]);
     const isConnected = !!self;
@@ -72,9 +67,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         if (peerConnections.current[uid]) {
             peerConnections.current[uid].close();
             delete peerConnections.current[uid];
-        }
-        if (iceCandidateQueues.current[uid]) {
-            delete iceCandidateQueues.current[uid];
         }
         setRemoteAudioStreams(prev => {
             const newStreams = { ...prev };
@@ -97,32 +89,26 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         setParticipants([]);
     }, [localStream, cleanupPeerConnection]);
 
-    const sendSignal = useCallback(async (to: string, type: string, data: any) => {
-        if (!activeRoomId || !user) return;
-        const signalsRef = collection(db, 'rooms', activeRoomId, 'signals');
-        await addDoc(signalsRef, { to, from: user.uid, type, data, createdAt: serverTimestamp() });
-    }, [activeRoomId, user]);
-    
-    const initializePeerConnection = useCallback((otherUid: string): RTCPeerConnection => {
+    const createPeerConnection = useCallback((otherUid: string, isInitiator: boolean): RTCPeerConnection => {
         if (peerConnections.current[otherUid]) {
             return peerConnections.current[otherUid];
         }
 
         const pc = new RTCPeerConnection(ICE_SERVERS);
         peerConnections.current[otherUid] = pc;
-        iceCandidateQueues.current[otherUid] = [];
-        
+
         localStream?.getTracks().forEach(track => {
             try {
                 pc.addTrack(track, localStream);
             } catch (e) {
-                console.error(`Error adding track to PC for ${otherUid}:`, e);
+                console.error(`Error adding track for ${otherUid}:`, e);
             }
         });
 
         pc.onicecandidate = event => {
             if (event.candidate) {
-                sendSignal(otherUid, 'ice-candidate', event.candidate.toJSON());
+                const signalsRef = collection(db, 'rooms', activeRoomId!, 'signals');
+                addDoc(signalsRef, { to: otherUid, from: user!.uid, type: 'ice-candidate', data: event.candidate.toJSON(), createdAt: serverTimestamp() });
             }
         };
 
@@ -141,19 +127,41 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             }
         };
 
-        return pc;
-    }, [localStream, sendSignal, cleanupPeerConnection]);
+        if(isInitiator) {
+            pc.onnegotiationneeded = async () => {
+                try {
+                    const offer = await pc.createOffer();
+                    await pc.setLocalDescription(offer);
+                    const signalsRef = collection(db, 'rooms', activeRoomId!, 'signals');
+                    await addDoc(signalsRef, { to: otherUid, from: user!.uid, type: 'offer', data: pc.localDescription!.toJSON(), createdAt: serverTimestamp() });
+                } catch(e) {
+                     console.error('Nego error:', e);
+                }
+            }
+        }
 
-    const joinVoice = useCallback(async (options?: { muted?: boolean }) => {
+        return pc;
+    }, [localStream, activeRoomId, user, cleanupPeerConnection]);
+
+    const joinVoice = useCallback(async (options: { muted?: boolean } = {}) => {
         if (!user || !userData || !activeRoomId || isConnected || isConnecting) return;
         setIsConnecting(true);
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-            if (stream.getAudioTracks()[0]) {
-                stream.getAudioTracks()[0].enabled = !(options?.muted ?? false);
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: { 
+                    echoCancellation: true, 
+                    noiseSuppression: true, 
+                    autoGainControl: true 
+                }, 
+                video: false 
+            });
+            
+            if (options.muted && stream.getAudioTracks()[0]) {
+                stream.getAudioTracks()[0].enabled = false;
             }
+
             setLocalStream(stream);
-            await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: userData.username, photoURL: userData.photoURL, profileEmoji: userData.profileEmoji, selectedAvatarFrame: userData.selectedAvatarFrame }, { initialMuteState: options?.muted ?? false });
+            await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: userData.username, photoURL: userData.photoURL, profileEmoji: userData.profileEmoji, selectedAvatarFrame: userData.selectedAvatarFrame }, { initialMuteState: options.muted ?? false });
         } catch (error: any) {
             toast({ variant: "destructive", title: "Katılım Başarısız", description: "Mikrofon erişimi reddedildi veya bir hata oluştu." });
             _cleanupAndResetState();
@@ -162,6 +170,27 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         }
     }, [user, userData, activeRoomId, isConnected, isConnecting, toast, _cleanupAndResetState]);
 
+    const leaveVoiceOnly = useCallback(async () => {
+        if (!user || !activeRoomId) return;
+        await leaveVoice(activeRoomId, user.uid);
+        _cleanupAndResetState();
+    }, [user, activeRoomId, _cleanupAndResetState]);
+    
+    const leaveRoom = useCallback(async () => {
+        await leaveVoiceOnly();
+        router.push('/rooms');
+    }, [leaveVoiceOnly, router]);
+
+    const toggleSelfMute = useCallback(async () => {
+        if (!self || !activeRoomId || !localStream) return;
+        const audioTrack = localStream.getAudioTracks()[0];
+        if (audioTrack) {
+            const newMutedState = !self.isMuted;
+            audioTrack.enabled = !newMutedState;
+            await toggleMuteAction(activeRoomId, self.uid, newMutedState);
+        }
+    }, [self, activeRoomId, localStream]);
+    
     useEffect(() => {
         if (!user || !activeRoomId) {
             _cleanupAndResetState();
@@ -188,23 +217,19 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             for (const change of snapshot.docChanges()) {
                 if (change.type === 'added') {
                     const signal = change.doc.data();
-                    const pc = peerConnections.current[signal.from];
+                    const from = signal.from;
+                    const pc = peerConnections.current[from] || createPeerConnection(from, false);
                     if (signal.type === 'offer') {
-                        const newPc = initializePeerConnection(signal.from);
-                        await newPc.setRemoteDescription(new RTCSessionDescription(signal.data));
-                        const answer = await newPc.createAnswer();
-                        await newPc.setLocalDescription(answer);
-                        await sendSignal(signal.from, 'answer', newPc.localDescription!.toJSON());
-                    } else if (signal.type === 'answer' && pc) {
-                        if (pc.signalingState !== 'stable') {
-                            await pc.setRemoteDescription(new RTCSessionDescription(signal.data));
-                        }
-                    } else if (signal.type === 'ice-candidate' && pc) {
-                        if (pc.remoteDescription) {
-                            await pc.addIceCandidate(new RTCIceCandidate(signal.data));
-                        } else {
-                            iceCandidateQueue.current[signal.from]?.push(new RTCIceCandidate(signal.data));
-                        }
+                        if (pc.signalingState !== 'stable') return;
+                        await pc.setRemoteDescription(new RTCSessionDescription(signal.data));
+                        const answer = await pc.createAnswer();
+                        await pc.setLocalDescription(answer);
+                        const signalsRef = collection(db, 'rooms', activeRoomId!, 'signals');
+                        await addDoc(signalsRef, { to: from, from: user!.uid, type: 'answer', data: pc.localDescription!.toJSON(), createdAt: serverTimestamp() });
+                    } else if (signal.type === 'answer' && pc.signalingState === 'have-local-offer') {
+                        await pc.setRemoteDescription(new RTCSessionDescription(signal.data));
+                    } else if (signal.type === 'ice-candidate') {
+                         await pc.addIceCandidate(new RTCIceCandidate(signal.data));
                     }
                     await deleteDoc(change.doc.ref);
                 }
@@ -212,31 +237,16 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         });
 
         return () => { roomUnsub(); participantsUnsub(); signalsUnsub(); };
-    }, [user, activeRoomId, isConnected, _cleanupAndResetState, initializePeerConnection, sendSignal, router]);
+    }, [user, activeRoomId, isConnected, _cleanupAndResetState, createPeerConnection, router]);
     
      useEffect(() => {
         if (!isConnected || !localStream || !user) return;
         const otherParticipants = participants.filter(p => p.uid !== user.uid);
 
         otherParticipants.forEach(p => {
-            if (!peerConnections.current[p.uid]) {
-                // Determine who is the "polite" peer. The one with the greater UID is the initiator.
-                const isInitiator = user.uid > p.uid;
-                if (isInitiator) {
-                    const pc = initializePeerConnection(p.uid);
-                    pc.onnegotiationneeded = async () => {
-                        try {
-                            const offer = await pc.createOffer();
-                            await pc.setLocalDescription(offer);
-                            await sendSignal(p.uid, 'offer', pc.localDescription!.toJSON());
-                        } catch (e) {
-                            console.error("Offer creation failed:", e);
-                        }
-                    };
-                } else {
-                    // The other peer will initiate, so just create the connection object
-                    initializePeerConnection(p.uid);
-                }
+             // Initiate connection only if user ID is greater (polite peer)
+            if (user.uid > p.uid) {
+                createPeerConnection(p.uid, true);
             }
         });
 
@@ -246,40 +256,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 cleanupPeerConnection(uid);
             }
         });
-    }, [participants, isConnected, user, localStream, initializePeerConnection, sendSignal, cleanupPeerConnection]);
+    }, [participants, isConnected, user, localStream, createPeerConnection, cleanupPeerConnection]);
     
-    const leaveVoiceOnly = useCallback(async () => {
-        if (!user || !activeRoomId) return;
-        await leaveVoice(activeRoomId, user.uid);
-        _cleanupAndResetState();
-    }, [user, activeRoomId, _cleanupAndResetState]);
-    
-    const handleLeaveRoom = useCallback(async () => {
-        if (!user || !activeRoomId) return;
-        await leaveVoiceOnly();
-        await leaveRoom(activeRoomId, user.uid, user.displayName || 'Biri');
-        router.push('/rooms');
-    }, [user, activeRoomId, leaveVoiceOnly, router]);
-
-    const toggleSelfMute = useCallback(async () => {
-        if (!self || !activeRoomId || !localStream) return;
-        const audioTrack = localStream.getAudioTracks()[0];
-        if (audioTrack) {
-            const newMutedState = !self.isMuted;
-            audioTrack.enabled = !newMutedState;
-            await toggleMuteAction(activeRoomId, self.uid, newMutedState);
-        }
-    }, [self, activeRoomId, localStream]);
-    
-    const toggleVideo = async () => {
-        if (!self || !localStream || !activeRoomId) return;
-        const videoTrack = localStream.getVideoTracks()[0];
-        if (videoTrack) {
-            const isEnabled = !videoTrack.enabled;
-            videoTrack.enabled = isEnabled;
-            await updateVideoStatus(activeRoomId, self.uid, isEnabled);
-        }
-    };
 
     const minimizeRoom = useCallback(() => setIsMinimized(true), []);
     const expandRoom = useCallback(() => setIsMinimized(false), []);
@@ -287,7 +265,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     
     const value = {
         activeRoom, participants, self, isConnecting, isConnected, isMinimized, isSpeakerMuted, localStream, remoteAudioStreams, remoteVideoStreams,
-        setActiveRoomId, joinVoice, leaveRoom: handleLeaveRoom, leaveVoiceOnly, toggleSelfMute, toggleSpeakerMute, minimizeRoom, expandRoom, toggleVideo,
+        setActiveRoomId, joinVoice, leaveRoom, leaveVoiceOnly, toggleSelfMute, toggleSpeakerMute, minimizeRoom, expandRoom,
     };
 
     return <VoiceChatContext.Provider value={value}>{children}</VoiceChatContext.Provider>;
@@ -298,5 +276,3 @@ export const useVoiceChat = () => {
     if (context === undefined) throw new Error('useVoiceChat must be used within a VoiceChatProvider');
     return context;
 };
-
-    

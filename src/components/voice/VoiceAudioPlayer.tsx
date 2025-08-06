@@ -1,5 +1,3 @@
-
-      
 // src/components/voice/VoiceAudioPlayer.tsx
 'use client';
 
@@ -46,5 +44,3 @@ const AudioElement = memo(({ stream, isMuted }: { stream: MediaStream, isMuted: 
 });
 
 AudioElement.displayName = 'AudioElement';
-
-    
