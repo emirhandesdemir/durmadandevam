@@ -1,3 +1,4 @@
+
 // src/lib/actions/notificationActions.ts
 'use server';
 
@@ -11,9 +12,14 @@ import {
   getDoc,
   deleteDoc,
   Timestamp,
+  query,
+  where,
+  getDocs,
+  writeBatch
 } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
 import { assignMissingUniqueTag } from './userActions';
+import { deleteCollection } from '../firestoreUtils';
 
 interface CreateNotificationArgs {
   recipientId: string;
@@ -153,4 +159,44 @@ export async function deleteNotification(userId: string, notificationId: string)
         console.error("Bildirim silinirken hata:", error);
         return { success: false, error: "Bildirim silinemedi." };
     }
+}
+
+export async function deleteAllNotifications(userId: string) {
+  if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
+  const notificationsColRef = collection(db, 'users', userId, 'notifications');
+  try {
+    await deleteCollection(notificationsColRef, 50); // Use batched delete utility
+    revalidatePath('/notifications');
+    return { success: true };
+  } catch (error: any) {
+    console.error("Tüm bildirimler silinirken hata:", error);
+    return { success: false, error: "Bildirimler silinemedi." };
+  }
+}
+
+export async function markAllNotificationsAsRead(userId: string) {
+  if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
+  
+  const userRef = doc(db, 'users', userId);
+  const notificationsColRef = collection(userRef, 'notifications');
+  const q = query(notificationsColRef, where('read', '==', false));
+
+  try {
+    const batch = writeBatch(db);
+    const snapshot = await getDocs(q);
+    
+    snapshot.forEach(doc => {
+      batch.update(doc.ref, { read: true });
+    });
+    
+    // Also update the main flag on the user profile
+    batch.update(userRef, { hasUnreadNotifications: false });
+
+    await batch.commit();
+    revalidatePath('/notifications');
+    return { success: true };
+  } catch (error: any) {
+    console.error("Bildirimler okunmuş olarak işaretlenirken hata:", error);
+    return { success: false, error: "İşlem başarısız oldu." };
+  }
 }

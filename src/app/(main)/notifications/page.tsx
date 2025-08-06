@@ -2,12 +2,17 @@
 'use client';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bell, AtSign, Heart, MessageCircle, UserPlus } from 'lucide-react';
+import { Bell, AtSign, Heart, MessageCircle, UserPlus, CheckCheck, Trash2, Loader2 } from 'lucide-react';
 import NotificationList from '@/components/notifications/NotificationList';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { Button } from '@/components/ui/button';
+import { deleteAllNotifications, markAllNotificationsAsRead } from '@/lib/actions/notificationActions';
+import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 /**
  * Bildirimler Sayfası
@@ -18,6 +23,9 @@ import { db } from '@/lib/firebase';
  */
 export default function NotificationsPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [isProcessing, setIsProcessing] = useState<false | 'read' | 'delete'>(false);
+
 
   // Bu sayfa görüntülendiğinde, kullanıcının profilindeki
   // 'hasUnreadNotifications' bayrağını 'false' olarak güncelle.
@@ -31,13 +39,70 @@ export default function NotificationsPage() {
     }
   }, [user]);
 
+  const handleMarkAllRead = async () => {
+    if (!user) return;
+    setIsProcessing('read');
+    try {
+      await markAllNotificationsAsRead(user.uid);
+      toast({ description: "Tüm bildirimler okundu olarak işaretlendi." });
+    } catch (e: any) {
+      toast({ variant: 'destructive', description: "İşlem sırasında bir hata oluştu." });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (!user) return;
+    setIsProcessing('delete');
+    try {
+      await deleteAllNotifications(user.uid);
+      toast({ description: "Tüm bildirimler silindi." });
+    } catch (e: any) {
+      toast({ variant: 'destructive', description: "Bildirimler silinirken bir hata oluştu." });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
 
   return (
     <div className="container mx-auto max-w-3xl py-6">
-      {/* Sayfa Başlığı */}
-      <div className="flex items-center gap-3 mb-6">
-        <Bell className="h-7 w-7" />
-        <h1 className="text-2xl font-bold tracking-tight">Bildirimler</h1>
+      {/* Sayfa Başlığı ve Eylemler */}
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3">
+          <Bell className="h-7 w-7" />
+          <h1 className="text-2xl font-bold tracking-tight">Bildirimler</h1>
+        </div>
+        <div className="flex items-center gap-2">
+           <Button variant="outline" size="sm" onClick={handleMarkAllRead} disabled={isProcessing === 'read'}>
+              {isProcessing === 'read' ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCheck className="mr-2 h-4 w-4"/>}
+              Tümünü Oku
+           </Button>
+           <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" disabled={isProcessing === 'delete'}>
+                    <Trash2 className="mr-2 h-4 w-4"/>
+                    Temizle
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Tüm Bildirimleri Sil?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Bu işlem tüm bildirim geçmişinizi kalıcı olarak silecektir ve geri alınamaz. Devam etmek istediğinizden emin misiniz?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>İptal</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteAll} className="bg-destructive hover:bg-destructive/90">
+                     {isProcessing === 'delete' ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                    Evet, Sil
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+           </AlertDialog>
+        </div>
       </div>
       
       {/* Filtreleme Sekmeleri */}

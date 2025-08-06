@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Firestore ile ilgili genel yardımcı fonksiyonları içerir.
  * Özellikle toplu silme işlemleri için kullanılır.
@@ -43,7 +44,7 @@ async function deleteStorageFolder(folderPath: string) {
  * @param collectionRef Silinecek koleksiyonun referansı.
  * @param batchSize Her bir toplu işlemde silinecek doküman sayısı.
  */
-async function deleteCollection(collectionRef: any, batchSize: number) {
+export async function deleteCollection(collectionRef: any, batchSize: number) {
     const q = query(collectionRef, limit(batchSize));
     const snapshot = await getDocs(q);
 
