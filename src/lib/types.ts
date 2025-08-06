@@ -187,7 +187,6 @@ export interface UserProfile {
     premiumUntil: Timestamp | null;
     isFirstPremium: boolean;
     unlimitedRoomCreationUntil: Timestamp | null;
-    freeRoomCreations?: number;
     profileCompletionNotificationSent: boolean;
     profileCompletionAwarded?: boolean;
     selectedBubble: string;
@@ -589,5 +588,3 @@ export interface FeedSettings {
   hideLikedPosts: boolean;
   hideVideos: boolean;
 }
-
-    

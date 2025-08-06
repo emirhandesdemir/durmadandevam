@@ -183,7 +183,6 @@ export async function updateUserProfile(updates: {
                     premiumUntil: null,
                     isFirstPremium: false,
                     unlimitedRoomCreationUntil: null,
-                    freeRoomCreations: 3,
                     profileCompletionNotificationSent: false,
                     profileCompletionAwarded: false,
                     selectedBubble: '',
@@ -633,5 +632,3 @@ export async function changeUniqueTag(userId: string, newTag: number) {
         return { success: true };
     });
 }
-
-    
