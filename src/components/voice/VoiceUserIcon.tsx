@@ -96,7 +96,7 @@ export default function VoiceUserIcon({
   };
   
   const handleViewProfile = () => {
-      router.push(`/profile/${participant.uid}`);
+      router.push(`/profile/${participant.uniqueTag}`);
   }
 
   const menuContent = (

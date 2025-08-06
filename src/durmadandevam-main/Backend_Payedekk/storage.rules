@@ -1,0 +1,61 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+  
+    // Helper function to check if the user is signed in
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if the user is the owner of the resource
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Default deny all reads and writes
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+    
+    // Rules for user-specific uploads
+    match /upload/{userId}/{allPaths=**} {
+      // Allow read access to anyone (e.g., for profile pictures)
+      allow read: if true;
+      // Allow write access only to the owner of the folder
+      allow write: if isSignedIn() && isOwner(userId);
+    }
+    
+    // More specific rules for user avatars
+    match /upload/avatars/{userId}/avatar.jpg {
+        allow read: if true;
+        allow write: if isSignedIn() && isOwner(userId)
+                    // Check file size (e.g., max 5MB)
+                    && request.resource.size < 5 * 1024 * 1024
+                    // Check content type
+                    && request.resource.contentType.matches('image/.*');
+    }
+    
+    // More specific rules for post images
+    match /upload/posts/{userId}/{imageId} {
+      allow read: if true;
+      allow write: if isSignedIn() && isOwner(userId)
+                    && request.resource.size < 10 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+    }
+    
+    // Rules for Direct Message uploads
+    match /dms/{chatId}/{fileType}/{fileId} {
+        // Only allow access if the user is a participant in the chat
+        // This requires a Firestore read, which can be slow and costly.
+        // A more secure and common pattern is to use unguessable URLs
+        // and handle access control in your application logic.
+        // For simplicity, we allow read/write for any authenticated user here,
+        // relying on the unguessable fileId for privacy.
+        allow read, write: if isSignedIn()
+                          // Security enhancement: check file types and sizes
+                          && (fileType == 'images' || fileType == 'timed_images' || fileType == 'audio')
+                          && request.resource.size < 25 * 1024 * 1024; // 25MB limit
+    }
+  }
+}
