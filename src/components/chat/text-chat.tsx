@@ -8,9 +8,10 @@ import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import Link from 'next/link';
 import Image from 'next/image';
+import useLongPress from '@/hooks/useLongPress';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, Pin, Trash2, Bot, Bell, FileText, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Pin, Trash2, Bot, Bell, FileText, Image as ImageIcon, Copy } from 'lucide-react';
 import type { Message, Room, Post } from '@/lib/types';
 import PortalMessageCard from './PortalMessageCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
@@ -95,6 +96,11 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
     }
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ description: "Kullanıcı ID'si kopyalandı." });
+  };
+
   if (!currentUser) return null;
 
   return (
@@ -160,81 +166,82 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
         const isPrivileged = isParticipantHost || isParticipantModerator;
         
         return (
-          <div key={msg.id} className={cn("flex items-end gap-3 w-full animate-in fade-in slide-in-from-bottom-4 duration-500 group", isCurrentUser && "flex-row-reverse")}>
-             <Link href={!isBot ? `/profile/${msg.uid}` : '#'}>
-                <AvatarWithFrame
-                    photoURL={msg.photoURL}
-                    selectedAvatarFrame={msg.selectedAvatarFrame}
-                    className="h-8 w-8"
-                    fallback={msg.username?.charAt(0).toUpperCase()}
-                />
-            </Link>
-
-            <div className={cn("flex flex-col gap-1 max-w-[70%]", isCurrentUser && "items-end")}>
-                <div className={cn("flex items-center gap-2", isCurrentUser && "flex-row-reverse")}>
-                   <p className={cn("font-bold text-sm", isPrivileged && !isCurrentUser ? "text-amber-500" : "text-foreground", isBot && "text-blue-500")}>{isCurrentUser ? "Siz" : msg.username}</p>
-                   <p className="text-xs text-muted-foreground">
-                     {msg.createdAt ? format((msg.createdAt as Timestamp).toDate(), 'p', { locale: tr }) : ''}
-                   </p>
-                </div>
-
-                <div className="relative group/message">
-                     {msg.selectedBubble && !isBot && (
-                        <div className={`bubble-wrapper ${msg.selectedBubble}`}>
-                            {Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}
-                        </div>
-                    )}
-                    <div className={cn(
-                        "p-3 rounded-2xl relative", 
-                        isCurrentUser 
-                            ? "bg-primary text-primary-foreground rounded-br-none" 
-                            : (isPrivileged
-                                ? "bg-card border-2 border-amber-500/50 rounded-bl-none"
-                                : isBot
-                                    ? "bg-blue-500/10 border border-blue-500/30 rounded-bl-none"
-                                    : "bg-muted rounded-bl-none")
-                    )}>
-                        {isBot && <Bot className="absolute -top-2 -left-2 h-5 w-5 text-blue-500 p-1 bg-background rounded-full" />}
-                        {msg.imageUrl && (
-                            <Image 
-                                src={msg.imageUrl} 
-                                alt={msg.text || "Gönderilen resim"}
-                                width={300}
-                                height={300}
-                                className="rounded-md object-cover max-w-full h-auto"
+           <DropdownMenu key={msg.id}>
+                <DropdownMenuTrigger asChild>
+                    <div className={cn("flex items-end gap-3 w-full animate-in fade-in slide-in-from-bottom-4 duration-500 group", isCurrentUser && "flex-row-reverse")}>
+                        <Link href={!isBot ? `/profile/${msg.uid}` : '#'} onClick={e => e.stopPropagation()}>
+                            <AvatarWithFrame
+                                photoURL={msg.photoURL}
+                                selectedAvatarFrame={msg.selectedAvatarFrame}
+                                className="h-8 w-8"
+                                fallback={msg.username?.charAt(0).toUpperCase()}
                             />
-                        )}
-                        {msg.videoUrl && (
-                            <video src={msg.videoUrl} controls className="w-full max-w-xs rounded-md" />
-                        )}
-                        {msg.text && (
-                            <p className="text-sm break-words whitespace-pre-wrap">{msg.text}</p>
-                        )}
-                    </div>
-                     {isHost && !isBot && (
-                        <div className={cn("absolute top-0 opacity-0 group-hover/message:opacity-100 transition-opacity", isCurrentUser ? "-left-8" : "-right-8")}>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full">
-                                        <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align={isCurrentUser ? "end" : "start"}>
-                                    <DropdownMenuItem onClick={() => handlePinMessage(msg.id)}>
-                                        <Pin className="mr-2 h-4 w-4" />
-                                        <span>Sabitle</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleDeleteByHost(msg.id)} className="text-destructive focus:text-destructive">
-                                        <Trash2 className="mr-2 h-4 w-4"/>
-                                        <span>Mesajı Sil</span>
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                        </Link>
+
+                        <div className={cn("flex flex-col gap-1 max-w-[70%]", isCurrentUser && "items-end")}>
+                            <div className={cn("flex items-center gap-2", isCurrentUser && "flex-row-reverse")}>
+                            <p className={cn("font-bold text-sm", isPrivileged && !isCurrentUser ? "text-amber-500" : "text-foreground", isBot && "text-blue-500")}>{isCurrentUser ? "Siz" : msg.username}</p>
+                            <p className="text-xs text-muted-foreground">
+                                {msg.createdAt ? format((msg.createdAt as Timestamp).toDate(), 'p', { locale: tr }) : ''}
+                            </p>
+                            </div>
+
+                            <div className="relative group/message">
+                                {msg.selectedBubble && !isBot && (
+                                    <div className={`bubble-wrapper ${msg.selectedBubble}`}>
+                                        {Array.from({ length: 5 }).map((_, i) => <div key={i} className="bubble" />)}
+                                    </div>
+                                )}
+                                <div className={cn(
+                                    "p-3 rounded-2xl relative", 
+                                    isCurrentUser 
+                                        ? "bg-primary text-primary-foreground rounded-br-none" 
+                                        : (isPrivileged
+                                            ? "bg-card border-2 border-amber-500/50 rounded-bl-none"
+                                            : isBot
+                                                ? "bg-blue-500/10 border border-blue-500/30 rounded-bl-none"
+                                                : "bg-muted rounded-bl-none")
+                                )}>
+                                    {isBot && <Bot className="absolute -top-2 -left-2 h-5 w-5 text-blue-500 p-1 bg-background rounded-full" />}
+                                    {msg.imageUrl && (
+                                        <Image 
+                                            src={msg.imageUrl} 
+                                            alt={msg.text || "Gönderilen resim"}
+                                            width={300}
+                                            height={300}
+                                            className="rounded-md object-cover max-w-full h-auto"
+                                        />
+                                    )}
+                                    {msg.videoUrl && (
+                                        <video src={msg.videoUrl} controls className="w-full max-w-xs rounded-md" />
+                                    )}
+                                    {msg.text && (
+                                        <p className="text-sm break-words whitespace-pre-wrap">{msg.text}</p>
+                                    )}
+                                </div>
+                            </div>
                         </div>
-                     )}
-                </div>
-            </div>
-          </div>
+                    </div>
+                </DropdownMenuTrigger>
+                 <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => copyToClipboard(`@${msg.uniqueTag || msg.uid}`)}>
+                        <Copy className="mr-2 h-4 w-4" />
+                        <span>ID Kopyala</span>
+                    </DropdownMenuItem>
+                    {isHost && !isBot && (
+                        <>
+                        <DropdownMenuItem onClick={() => handlePinMessage(msg.id)}>
+                            <Pin className="mr-2 h-4 w-4" />
+                            <span>Sabitle</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDeleteByHost(msg.id)} className="text-destructive focus:text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4"/>
+                            <span>Mesajı Sil</span>
+                        </DropdownMenuItem>
+                        </>
+                    )}
+                </DropdownMenuContent>
+            </DropdownMenu>
         );
       })}
     </div>

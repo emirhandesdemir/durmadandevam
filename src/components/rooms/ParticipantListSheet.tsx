@@ -11,7 +11,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Virtuoso } from 'react-virtuoso';
 import type { Room } from "@/lib/types";
-import { Crown, Shield, MoreVertical, UserCog, UserX, Loader2, MicOff, DoorClosed, Ban, User } from "lucide-react";
+import { Crown, Shield, MoreVertical, UserCog, UserX, Loader2, MicOff, DoorClosed, Ban, User, Copy } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
@@ -45,6 +45,11 @@ export default function ParticipantListSheet({ isOpen, onOpenChange, room }: Par
     const isAdmin = userData?.role === 'admin';
     const isCurrentUserModerator = room.moderators?.includes(user?.uid || '');
     const canManage = isHost || isAdmin || isCurrentUserModerator;
+
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+        toast({ description: "Kullanıcı ID'si kopyalandı." });
+    };
 
     const handleAction = async (action: 'mod' | 'unmod' | 'kick' | 'ban' | 'mute', targetUserId: string) => {
         if (!canManage) return;
@@ -129,7 +134,11 @@ export default function ParticipantListSheet({ isOpen, onOpenChange, room }: Par
                                         <DropdownMenuContent>
                                              <DropdownMenuItem onClick={() => router.push(`/profile/${p.uid}`)}>
                                                 <User className="mr-2 h-4 w-4" />
-                                                <span>Profili Gör</span>
+                                                <span>Profili Görüntüle</span>
+                                            </DropdownMenuItem>
+                                             <DropdownMenuItem onClick={() => copyToClipboard(`@${p.uniqueTag || p.uid}`)}>
+                                                <Copy className="mr-2 h-4 w-4" />
+                                                <span>ID Kopyala</span>
                                             </DropdownMenuItem>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuLabel>Oda Yetkileri</DropdownMenuLabel>
