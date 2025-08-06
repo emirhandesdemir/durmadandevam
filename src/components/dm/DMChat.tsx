@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { unblockUser } from '@/lib/actions/userActions';
+import AvatarWithFrame from '../common/AvatarWithFrame';
 
 export interface UserInfo {
   uid: string;
@@ -131,14 +132,14 @@ export default function DMChat({ chatId, partner }: DMChatProps) {
         <Button asChild variant="ghost" size="icon" className="md:hidden rounded-full">
             <Link href="/dm"><ChevronLeft /></Link>
         </Button>
-        <Link href={`/profile/${partner.uid}`} className="flex items-center gap-3">
+        <Link href={`/profile/${partner.uniqueTag}`} className="flex items-center gap-3">
             <div className="relative">
-                <div className={cn("avatar-frame-wrapper", partner.selectedAvatarFrame)}>
-                    <Avatar className="relative z-[1]">
-                        <AvatarImage src={partner.photoURL || undefined} />
-                        <AvatarFallback>{partner.profileEmoji || partner.username.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                </div>
+                <AvatarWithFrame
+                    photoURL={partner.photoURL}
+                    selectedAvatarFrame={partner.selectedAvatarFrame}
+                    className="h-10 w-10"
+                    fallback={partner.profileEmoji || partner.username.charAt(0)}
+                />
                 {partner.isOnline && !isPartnerTyping && (
                     <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" aria-label="Çevrimiçi" />
                 )}

@@ -493,6 +493,7 @@ export interface Message {
   id: string;
   uid: string;
   username: string;
+  uniqueTag?: number;
   photoURL?: string | null;
   text?: string;
   imageUrl?: string;

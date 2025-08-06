@@ -1,4 +1,5 @@
 
+
 // src/lib/actions/roomActions.ts
 'use server';
 
@@ -337,7 +338,7 @@ export async function deleteEventRoom(roomId: string, adminId: string, pin: stri
 
 export async function createRoom(
     userId: string,
-    roomData: { name: string, description: string, language: string, type?: 'public' | 'event' },
+    updates: { name: string, description: string, language: string, type?: 'public' | 'event' },
     creatorInfo: { username: string, photoURL: string | null, role: string, selectedAvatarFrame?: string }
 ) {
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
@@ -368,15 +369,13 @@ export async function createRoom(
         const newRoomRef = doc(collection(db, 'rooms'));
         const durationInMs = 15 * 60 * 1000;
         
-        const isEvent = isAdmin && roomData.type === 'event';
-        
         const newRoom: Partial<Room> = {
-            name: roomData.name,
-            description: roomData.description,
-            language: roomData.language,
-            type: isEvent ? 'event' : 'public',
+            name: updates.name,
+            description: updates.description,
+            language: updates.language,
+            type: 'public',
             createdAt: serverTimestamp() as Timestamp,
-            expiresAt: isEvent ? null : Timestamp.fromMillis(Date.now() + durationInMs),
+            expiresAt: Timestamp.fromMillis(Date.now() + durationInMs),
             createdBy: {
                 uid: userId,
                 username: creatorInfo.username,
@@ -390,7 +389,7 @@ export async function createRoom(
                 username: creatorInfo.username,
                 photoURL: creatorInfo.photoURL
             }],
-            maxParticipants: isEvent ? 50 : 9,
+            maxParticipants: 9,
             voiceParticipantsCount: 0,
             autoQuizEnabled: true,
             nextGameTimestamp: Timestamp.fromMillis(Date.now() + 5 * 60 * 1000),
@@ -405,14 +404,14 @@ export async function createRoom(
 
         transaction.set(newRoomRef, newRoom);
 
-        if (!isAdmin && !isUnlimited && !isEvent) {
+        if (!isAdmin && !isUnlimited) {
             transaction.update(userRef, { 
                 diamonds: increment(-roomCost),
             });
             await logTransaction(transaction, userId, {
                 type: 'room_creation',
                 amount: -roomCost,
-                description: `${roomData.name} odası oluşturma`,
+                description: `${updates.name} odası oluşturma`,
                 roomId: newRoomRef.id
             });
         }
