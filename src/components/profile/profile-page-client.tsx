@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { updateUserProfile } from "@/lib/actions/userActions";
 import { sendPasswordResetEmail } from "firebase/auth";
 import DeleteAccountDialog from './DeleteAccountDialog';
+import BlockedUsersDialog from './BlockedUsersDialog';
 import { Gem, BadgeCheck } from 'lucide-react';
 import { useRouter } from "next/navigation";
 
@@ -52,6 +53,7 @@ export default function ProfilePageClient() {
 
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false);
+    const [isBlockedUsersOpen, setIsBlockedUsersOpen] = useState(false);
 
     const isPremium = userData?.premiumUntil && userData.premiumUntil.toDate() > new Date();
 
@@ -99,6 +101,7 @@ export default function ProfilePageClient() {
                     <SettingsLink href="/profile/privacy" icon={Lock} title="Hesap Gizliliği" value={userData.privateProfile ? 'Gizli' : 'Herkese Açık'}/>
                     <SettingsLink href="/profile/security" icon={KeyRound} title="E-posta & Şifre" />
                     <SettingsLink href="/profile/sessions" icon={Server} title="Oturum Yönetimi" />
+                    <SettingsLink onClick={() => setIsBlockedUsersOpen(true)} icon={UserX} title="Engellenen Hesaplar" />
                 </div>
 
                  <div className="border-b">
@@ -128,6 +131,11 @@ export default function ProfilePageClient() {
              <DeleteAccountDialog
                 isOpen={isDeleteAccountOpen}
                 onOpenChange={setIsDeleteAccountOpen}
+            />
+             <BlockedUsersDialog
+                isOpen={isBlockedUsersOpen}
+                onOpenChange={setIsBlockedUsersOpen}
+                blockedUserIds={userData.blockedUsers || []}
             />
         </>
     );

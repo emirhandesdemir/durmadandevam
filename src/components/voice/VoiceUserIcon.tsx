@@ -197,7 +197,7 @@ export default function VoiceUserIcon({
                 ) : null}
             </div>
             {participant.giftLevel > 0 && (
-                 <Badge variant="destructive" className="h-5">
+                 <Badge variant="destructive" className="h-4">
                     <Star className="h-3 w-3 mr-1"/> SV {participant.giftLevel}
                 </Badge>
             )}
