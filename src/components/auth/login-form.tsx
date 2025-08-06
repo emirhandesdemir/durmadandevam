@@ -31,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff, HelpCircle } from "lucide-react";
 import { Separator } from "../ui/separator";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Geçersiz e-posta adresi." }),
@@ -39,13 +40,13 @@ const formSchema = z.object({
 
 export default function LoginForm() {
     const { toast } = useToast();
+    const { themeSettings } = useAuth();
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
     const [isResetting, setIsResetting] = useState(false); 
     const [showPassword, setShowPassword] = useState(false);
 
     useEffect(() => {
-        // This effect checks if the user was logged out due to being banned.
         if (typeof window !== 'undefined' && localStorage.getItem('isBanned') === 'true') {
             toast({
                 title: "Hesap Askıya Alındı",
@@ -69,7 +70,6 @@ export default function LoginForm() {
         setIsLoading(true);
         try {
             await signInWithEmailAndPassword(auth, values.email, values.password);
-            // SUCCESS: Let AuthProvider handle the redirect after userData is loaded.
         } catch (error: any) {
             console.error("Giriş hatası", error);
             let errorMessage = "Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.";
@@ -129,14 +129,14 @@ export default function LoginForm() {
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
-                <Card className="w-full max-w-sm mx-auto shadow-2xl rounded-2xl bg-card/80 backdrop-blur-lg border-white/20 relative">
+                <Card className="w-full max-w-sm mx-auto rounded-3xl bg-card/80 backdrop-blur-lg border-none shadow-none">
                     <CardHeader className="text-center space-y-4 pt-10">
                          <Button asChild variant="outline" size="sm" className="absolute top-4 right-4 rounded-full">
                             <Link href="/guide">
                                 <HelpCircle className="mr-2 h-4 w-4"/> Kılavuz
                             </Link>
                         </Button>
-                        <Image src="/icons/icon.svg" alt="HiweWalk Logo" width={64} height={64} className="h-16 w-16 mx-auto" />
+                        <Image src={themeSettings?.appLogoUrl || "/icons/icon.svg"} alt="Logo" width={64} height={64} className="h-16 w-16 mx-auto" />
                         <CardTitle className="text-3xl font-bold">Tekrar Hoş Geldin!</CardTitle>
                         <CardDescription>
                             Hesabınıza erişmek için bilgilerinizi girin.
@@ -193,7 +193,7 @@ export default function LoginForm() {
                                         </FormItem>
                                     )}
                                 />
-                                <Button type="submit" className="w-full text-lg font-semibold shadow-lg shadow-primary/30 transition-transform hover:scale-105" disabled={isLoading}>
+                                <Button type="submit" className="w-full text-lg font-semibold clay-button" disabled={isLoading}>
                                     {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
                                     Giriş Yap
                                 </Button>
