@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, onSnapshot, doc, serverTimestamp, query, deleteDoc, addDoc, getDoc, updateDoc, Timestamp, WriteBatch } from 'firebase/firestore';
+import { collection, onSnapshot, doc, serverTimestamp, query, deleteDoc, addDoc, getDoc, updateDoc, Timestamp, WriteBatch, orderBy, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Room, VoiceParticipant, PlaylistTrack } from '../types';
 import { joinVoiceChat, leaveVoice as leaveVoiceAction, toggleSelfMute as toggleMuteAction, toggleScreenShare as toggleScreenShareAction, toggleVideo as toggleVideoAction } from '@/lib/actions/voiceActions';
@@ -280,7 +280,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     const removeTrackFromPlaylist = useCallback(async (trackId: string) => {
         if (!user || !activeRoomId) return;
-        await removeTrackAction(activeRoomId, trackId, user.uid).catch(e => toast({ variant: 'destructive', description: e.message }));
+        await removeTrackAction(roomId, trackId, user.uid).catch(e => toast({ variant: 'destructive', description: e.message }));
     }, [user, activeRoomId, toast]);
 
     const togglePlayback = useCallback(async () => {
