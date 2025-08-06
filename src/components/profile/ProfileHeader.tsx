@@ -157,19 +157,6 @@ export default function ProfileHeader({ profileUser }: ProfileHeaderProps) {
                     </div>
                 </div>
             </div>
-            {isOwnProfile && (
-                 <div className="flex items-center gap-2 mt-2">
-                    <Button asChild size="sm" className="rounded-full">
-                        <Link href="/wallet">
-                            <Gem className="mr-2 h-4 w-4"/>
-                            <span>{currentUserData?.diamonds?.toLocaleString('tr-TR') || 0}</span>
-                        </Link>
-                    </Button>
-                    <Button asChild variant="outline" size="icon" className="rounded-full">
-                        <Link href="/profile"><Settings className="h-5 w-5"/></Link>
-                    </Button>
-                </div>
-            )}
         </div>
         
         {profileUser.bio && <p className="text-sm text-foreground/80">{profileUser.bio}</p>}
