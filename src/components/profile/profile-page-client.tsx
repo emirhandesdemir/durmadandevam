@@ -4,7 +4,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Palette, Loader2, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2, Sliders, Wallet, HelpCircle, EyeOff, Bookmark, History, Bell, Globe, ChevronRight, Lock, KeyRound, Store, Server, ListFilter, AppWindow } from "lucide-react";
+import { LogOut, Palette, Loader2, User as UserIcon, Shield, Crown, Sun, Moon, Laptop, Brush, ShieldOff, X, Camera, ShieldAlert, Trash2, Sliders, Wallet, HelpCircle, EyeOff, Bookmark, History, Bell, Globe, ChevronRight, Lock, KeyRound, Store, Server, ListFilter, AppWindow, UserX } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { auth, db } from "@/lib/firebase";
