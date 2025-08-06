@@ -36,7 +36,6 @@ import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 const formSchema = z.object({
   name: z.string().min(3, { message: "Ad en az 3 karakter olmalıdır." }).max(50, {message: "Ad en fazla 50 karakter olabilir."}),
   description: z.string().min(3, { message: "Açıklama en az 3 karakter olmalıdır." }).max(100, {message: "Açıklama en fazla 100 karakter olabilir."}),
-  type: z.enum(['public', 'event']).optional(),
 });
 
 export default function CreateRoomForm() {
@@ -46,12 +45,11 @@ export default function CreateRoomForm() {
     const { i18n } = useTranslation();
     const [isLoading, setIsLoading] = useState(false);
     
-    const isAdmin = userData?.role === 'admin';
     const roomCost = 10;
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
-        defaultValues: { name: "", description: "", type: "public" },
+        defaultValues: { name: "", description: ""},
     });
 
     async function onSubmit(values: z.infer<typeof formSchema>) {

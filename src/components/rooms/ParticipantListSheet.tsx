@@ -9,21 +9,24 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "../ui/scroll-area";
+import { Virtuoso } from 'react-virtuoso';
 import type { Room } from "@/lib/types";
-import { Crown, Shield, MoreVertical, UserCog, UserX, Loader2 } from "lucide-react";
+import { Crown, Shield, MoreVertical, UserCog, UserX, Loader2, MicOff, DoorClosed, Ban, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "../ui/button";
 import { useState } from "react";
-import { updateModerators } from "@/lib/actions/roomActions";
+import { updateModerators, kickFromRoom, banFromRoom, muteInRoom } from "@/lib/actions/roomActions";
 import { useToast } from "@/hooks/use-toast";
-import { Virtuoso } from 'react-virtuoso';
+import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 
 interface ParticipantListSheetProps {
@@ -35,29 +38,48 @@ interface ParticipantListSheetProps {
 export default function ParticipantListSheet({ isOpen, onOpenChange, room }: ParticipantListSheetProps) {
     const { user, userData } = useAuth();
     const { toast } = useToast();
+    const router = useRouter();
     const [processingId, setProcessingId] = useState<string | null>(null);
 
     const isHost = user?.uid === room?.createdBy.uid;
     const isAdmin = userData?.role === 'admin';
-    const isCurrentUserAdmin = isHost || room.moderators?.includes(user?.uid || '') || isAdmin;
+    const isCurrentUserModerator = room.moderators?.includes(user?.uid || '');
+    const canManage = isHost || isAdmin || isCurrentUserModerator;
 
-    const handleModeratorToggle = async (targetUserId: string, isCurrentlyModerator: boolean) => {
-        if (!isHost) return;
+    const handleAction = async (action: 'mod' | 'unmod' | 'kick' | 'ban' | 'mute', targetUserId: string) => {
+        if (!canManage) return;
         setProcessingId(targetUserId);
         try {
-            await updateModerators(room.id, targetUserId, isCurrentlyModerator ? 'remove' : 'add');
-            toast({ description: `Kullanıcı ${isCurrentlyModerator ? 'moderatörlükten alındı' : 'moderatör yapıldı'}.`})
+            switch(action) {
+                case 'mod':
+                    await updateModerators(room.id, targetUserId, 'add');
+                    toast({ description: "Kullanıcı moderatör yapıldı." });
+                    break;
+                case 'unmod':
+                     await updateModerators(room.id, targetUserId, 'remove');
+                    toast({ description: "Kullanıcının moderatörlüğü alındı." });
+                    break;
+                case 'kick':
+                    await kickFromRoom(room.id, targetUserId);
+                    toast({ description: "Kullanıcı odadan atıldı." });
+                    break;
+                case 'ban':
+                    await banFromRoom(room.id, targetUserId);
+                    toast({ description: "Kullanıcının odaya girişi engellendi." });
+                    break;
+                 case 'mute':
+                    await muteInRoom(room.id, targetUserId, true); // True to mute
+                    toast({ description: "Kullanıcı sesli sohbette susturuldu." });
+                    break;
+            }
         } catch (error: any) {
             toast({ variant: 'destructive', description: error.message });
         } finally {
             setProcessingId(null);
         }
-    }
+    };
     
-    // Filter participants based on room type and user role
-    const displayedParticipants = room.type === 'event' && !isCurrentUserAdmin
-      ? room.participants.filter(p => p.uid === room.createdBy.uid || room.moderators.includes(p.uid))
-      : room.participants;
+    const displayedParticipants = room.participants;
       
     return (
         <Sheet open={isOpen} onOpenChange={onOpenChange}>
@@ -74,12 +96,10 @@ export default function ParticipantListSheet({ isOpen, onOpenChange, room }: Par
                     itemContent={(index, p) => {
                        const isParticipantHost = p.uid === room.createdBy.uid;
                         const isParticipantModerator = room.moderators?.includes(p.uid);
-                        const isParticipantAdminRole = room.createdBy.role === 'admin' && p.uid === room.createdBy.uid;
-                        
+                        const isThisUserMe = p.uid === user?.uid;
+
                         let roleLabel = null;
-                        if (isParticipantAdminRole || (room.type === 'event' && isParticipantHost)) {
-                            roleLabel = <><Shield className="h-3 w-3 text-destructive" /><span>Yönetici</span></>;
-                        } else if (isParticipantHost) {
+                        if (isParticipantHost) {
                             roleLabel = <><Crown className="h-3 w-3 text-yellow-500" /><span>Oda Sahibi</span></>;
                         } else if (isParticipantModerator) {
                             roleLabel = <><Shield className="h-3 w-3 text-blue-500" /><span>Moderatör</span></>;
@@ -99,7 +119,7 @@ export default function ParticipantListSheet({ isOpen, onOpenChange, room }: Par
                                         </div>
                                     )}
                                 </div>
-                                {isHost && !isParticipantHost && (
+                                {canManage && !isThisUserMe && !isParticipantHost && (
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button variant="ghost" size="icon" disabled={processingId === p.uid}>
@@ -107,9 +127,29 @@ export default function ParticipantListSheet({ isOpen, onOpenChange, room }: Par
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent>
-                                            <DropdownMenuItem onClick={() => handleModeratorToggle(p.uid, !!isParticipantModerator)}>
-                                                {isParticipantModerator ? <UserX className="mr-2 h-4 w-4"/> : <UserCog className="mr-2 h-4 w-4"/> }
-                                                <span>{isParticipantModerator ? 'Moderatörlükten Al' : 'Moderatör Yap'}</span>
+                                             <DropdownMenuItem onClick={() => router.push(`/profile/${p.uid}`)}>
+                                                <User className="mr-2 h-4 w-4" />
+                                                <span>Profili Gör</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuLabel>Oda Yetkileri</DropdownMenuLabel>
+                                            {isHost && (
+                                                <DropdownMenuItem onClick={() => handleAction(isParticipantModerator ? 'unmod' : 'mod', p.uid)}>
+                                                    {isParticipantModerator ? <UserX className="mr-2 h-4 w-4"/> : <UserCog className="mr-2 h-4 w-4"/> }
+                                                    <span>{isParticipantModerator ? 'Moderatörlükten Al' : 'Moderatör Yap'}</span>
+                                                </DropdownMenuItem>
+                                            )}
+                                             <DropdownMenuItem onClick={() => handleAction('mute', p.uid)}>
+                                                <MicOff className="mr-2 h-4 w-4"/>
+                                                <span>Sustur</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleAction('kick', p.uid)}>
+                                                <DoorClosed className="mr-2 h-4 w-4"/>
+                                                <span>Odadan At</span>
+                                            </DropdownMenuItem>
+                                             <DropdownMenuItem onClick={() => handleAction('ban', p.uid)} className="text-destructive focus:text-destructive">
+                                                <Ban className="mr-2 h-4 w-4"/>
+                                                <span>Girişi Engelle</span>
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>

@@ -58,7 +58,9 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
   const { user, userData, refreshUserData } = useAuth();
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showConfirm, setShowConfirm] = useState<(() => void) | null>(null);
+  const [confirmDetails, setConfirmDetails] = useState({ title: '', description: '' });
+
   const [isExtending, setIsExtending] = useState(false);
   const [isIncreasingLimit, setIsIncreasingLimit] = useState(false);
   const [isExtending30Days, setIsExtending30Days] = useState(false);
@@ -73,7 +75,11 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
   const isHost = user?.uid === room.createdBy.uid;
   const isAdmin = userData?.role === 'admin';
   const canManage = isHost || isAdmin;
-
+  
+  const createConfirmation = (title: string, description: string, onConfirm: () => void) => {
+    setConfirmDetails({ title, description });
+    setShowConfirm(() => onConfirm);
+  };
 
   const handleDeleteRoom = async () => {
     if (!room || !user) return;
@@ -86,7 +92,6 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
       });
       setIsOpen(false);
     } catch (error: any) {
-      console.error("Oda silinirken hata:", error);
       toast({
         title: "Hata",
         description: error.message || "Oda silinirken bir hata oluştu.",
@@ -94,7 +99,7 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
       });
     } finally {
       setIsDeleting(false);
-      setShowDeleteConfirm(false);
+      setShowConfirm(null);
     }
   };
 
@@ -214,37 +219,36 @@ export default function RoomManagementDialog({ isOpen, setIsOpen, room }: RoomMa
             <div>
                 <h3 className="mb-2 text-sm font-semibold text-muted-foreground">Oda Güçlendirmeleri</h3>
                 <div className="space-y-2">
-                    <ActionCard title="Portal Aç" description="Odanı 5 dk boyunca her yerde duyur" cost={100} icon={Zap} action={() => setIsPortalDialogOpen(true)} isLoading={false}>Aç</ActionCard>
-                    <ActionCard title="Süreyi Uzat" description="Oda kapanma süresine +20 dk ekle" cost={15} icon={Clock} action={handleExtendTime} isLoading={isExtending}>Uzat</ActionCard>
-                    <ActionCard title="Katılımcı Artır" description="Maksimum katılımcı limitini +1 artır" cost={5} icon={UserPlus} action={handleIncreaseLimit} isLoading={isIncreasingLimit}>Artır</ActionCard>
-                    <ActionCard title="Odayı 1 Ay Uzat" description="Odanı 30 gün boyunca açık tut" cost={500} icon={CalendarDays} action={handleExtendFor30Days} isLoading={isExtending30Days}>Satın Al</ActionCard>
+                    <ActionCard title="Portal Aç" description="Odanı 5 dk boyunca her yerde duyur" cost={100} icon={Zap} action={() => createConfirmation('Portalı Aç?', 'Bu işlem 100 elmasa mal olacak ve odanızı 5 dakika boyunca tüm odalarda duyuracak. Emin misiniz?', () => setIsPortalDialogOpen(true))} isLoading={false}>Aç</ActionCard>
+                    <ActionCard title="Süreyi Uzat" description="Oda kapanma süresine +20 dk ekle" cost={15} icon={Clock} action={() => createConfirmation('Süreyi Uzat?', 'Bu işlem 15 elmasa mal olacak ve odanın kapanma süresine 20 dakika ekleyecek. Emin misiniz?', handleExtendTime)} isLoading={isExtending}>Uzat</ActionCard>
+                    <ActionCard title="Katılımcı Artır" description="Maksimum katılımcı limitini +1 artır" cost={5} icon={UserPlus} action={() => createConfirmation('Limiti Artır?', 'Bu işlem 5 elmasa mal olacak ve oda limitini 1 artıracak. Emin misiniz?', handleIncreaseLimit)} isLoading={isIncreasingLimit}>Artır</ActionCard>
+                    <ActionCard title="Odayı 1 Ay Uzat" description="Odanı 30 gün boyunca açık tut" cost={500} icon={CalendarDays} action={() => createConfirmation('30 Gün Uzat?', 'Bu işlem 500 elmasa mal olacak ve odanızın süresini 30 güne ayarlayacak. Emin misiniz?', handleExtendFor30Days)} isLoading={isExtending30Days}>Satın Al</ActionCard>
                 </div>
             </div>
 
             <div>
                  <h3 className="mb-2 text-sm font-semibold text-destructive">Tehlikeli Alan</h3>
-                 <ActionCard title="Odayı Kalıcı Olarak Sil" description="Bu işlem geri alınamaz" icon={Trash2} action={() => setShowDeleteConfirm(true)} isLoading={isDeleting} variant="destructive">Sil</ActionCard>
+                 <ActionCard title="Odayı Kalıcı Olarak Sil" description="Bu işlem geri alınamaz" icon={Trash2} action={() => createConfirmation('Odayı Sil?', 'Bu işlem geri alınamaz. Emin misiniz?', handleDeleteRoom)} isLoading={isDeleting} variant="destructive">Sil</ActionCard>
             </div>
           </div>
         </DialogContent>
       </Dialog>
       
-      {/* Silme Onay Dialogu */}
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+      <AlertDialog open={!!showConfirm} onOpenChange={() => setShowConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2"><ShieldAlert className="text-destructive"/>Emin misiniz?</AlertDialogTitle>
+            <AlertDialogTitle className="flex items-center gap-2"><ShieldAlert className="text-destructive"/>{confirmDetails.title}</AlertDialogTitle>
             <AlertDialogDescription>
-                "{room.name}" odasını kalıcı olarak silmek üzeresiniz. Bu işlemle birlikte odadaki tüm mesajlar ve veriler de kalıcı olarak silinecektir. 
-                <br/><br/>
-                <strong>Bu işlem geri alınamaz.</strong>
+               {confirmDetails.description}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>İptal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteRoom} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
-              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Evet, Odayı Sil
+            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+                if(showConfirm) showConfirm();
+                setShowConfirm(null);
+            }}>
+              Onayla
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
