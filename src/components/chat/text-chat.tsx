@@ -23,6 +23,8 @@ import GameInviteMessage from '../game/GameInviteMessage';
 import GiftMessage from '../gifts/GiftMessage';
 import AvatarWithFrame from '../common/AvatarWithFrame';
 import { useState } from 'react';
+import { getDoc, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import PostViewerDialog from '../posts/PostViewerDialog';
 
 
@@ -100,6 +102,12 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
     navigator.clipboard.writeText(text);
     toast({ description: "Kullanıcı ID'si kopyalandı." });
   };
+  
+  const handlePostClick = async (postId?: string) => {
+    if (!postId) return;
+    const postDoc = await getDoc(doc(db, "posts", postId));
+    if(postDoc.exists()) setSelectedPost({ id: postDoc.id, ...postDoc.data() } as Post)
+  };
 
   if (!currentUser) return null;
 
@@ -144,19 +152,6 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
 
         if (msg.type === 'portal') {
             return <PortalMessageCard key={msg.id} message={msg} />;
-        }
-        
-        if (msg.type === 'shared_post' && msg.sharedPostData) {
-            return (
-                 <SharedPostCard 
-                    key={msg.id} 
-                    postData={msg.sharedPostData} 
-                    onClick={async () => {
-                         const postDoc = await getDoc(doc(db, "posts", msg.sharedPostData!.postId));
-                         if(postDoc.exists()) setSelectedPost({ id: postDoc.id, ...postDoc.data() } as Post)
-                    }} 
-                />
-            )
         }
         
         const isCurrentUser = msg.uid === currentUser.uid;
@@ -217,6 +212,9 @@ export default function TextChat({ messages, loading, room }: TextChatProps) {
                                     )}
                                     {msg.text && (
                                         <p className="text-sm break-words whitespace-pre-wrap">{msg.text}</p>
+                                    )}
+                                    {msg.sharedPostData && (
+                                        <SharedPostCard postData={msg.sharedPostData} onClick={() => handlePostClick(msg.sharedPostData?.postId)} />
                                     )}
                                 </div>
                             </div>

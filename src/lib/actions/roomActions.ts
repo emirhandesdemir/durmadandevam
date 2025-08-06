@@ -35,6 +35,7 @@ export async function sendRoomMessage(
 
     const roomRef = doc(db, 'rooms', roomId);
     let messageData: Omit<Message, 'id' | 'createdAt'>;
+    let isShareAction = false;
 
     if (typeof content === 'string') {
         if (!content.trim()) throw new Error("Mesaj metni boş olamaz.");
@@ -49,14 +50,16 @@ export async function sendRoomMessage(
             role: user.role || 'user',
         };
     } else {
+        isShareAction = true;
         const postSnap = await getDoc(doc(db, 'posts', content.sharedPostId));
         if (!postSnap.exists()) throw new Error("Paylaşılacak gönderi bulunamadı.");
-        const postData = postSnap.data() as Post;
+        const postData = { id: postSnap.id, ...postSnap.data() } as Post;
         messageData = {
             uid: user.uid,
             username: user.displayName || 'Anonim',
             photoURL: user.photoURL,
             type: 'shared_post',
+            text: `${user.displayName} bir gönderi paylaştı.`,
             sharedPostData: {
                 postId: postData.id,
                 postText: postData.text,
@@ -73,7 +76,7 @@ export async function sendRoomMessage(
     });
 
     // Run background tasks without blocking the return
-    if (typeof content === 'string') {
+    if (typeof content === 'string' && !isShareAction) {
         (async () => {
             try {
                 const roomDoc = await getDoc(roomRef);
@@ -353,6 +356,12 @@ export async function createRoom(
 
         if (!isAdmin && !isUnlimited && (userData.diamonds || 0) < roomCost) {
             throw new Error(`Oda oluşturmak için ${roomCost} elmasa ihtiyacınız var.`);
+        }
+
+        const existingRoomsQuery = query(collection(db, 'rooms'), where('createdBy.uid', '==', userId));
+        const existingRoomsSnapshot = await transaction.get(existingRoomsQuery);
+        if (!isAdmin && existingRoomsSnapshot.size >= 4) {
+             throw new Error("Aynı anda en fazla 4 odaya sahip olabilirsiniz.");
         }
         
         const newRoomRef = doc(collection(db, 'rooms'));

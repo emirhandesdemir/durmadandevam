@@ -459,10 +459,10 @@ export interface DirectMessage {
       status: 'started' | 'ended' | 'missed' | 'declined';
       duration?: string;
   };
-   sharedPostData?: {
+  sharedPostData?: {
       postId: string;
       postText?: string;
-      postImageUrl?: string;
+      postImageUrl?: string | null;
       postOwnerUsername: string;
   };
 }
@@ -512,10 +512,10 @@ export interface Message {
       receiverName?: string | null;
       giftId: string;
   };
-  sharedPostData?: {
+   sharedPostData?: {
       postId: string;
       postText?: string;
-      postImageUrl?: string;
+      postImageUrl?: string | null;
       postOwnerUsername: string;
   };
 }
