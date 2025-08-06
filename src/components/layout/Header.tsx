@@ -32,7 +32,7 @@ export default function Header({}: HeaderProps) {
     return (
         <>
             <header className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                <div className="container flex h-14 items-center justify-between">
+                <div className="container flex h-12 items-center justify-between">
                     <Link href="/home" className="flex items-center">
                         <span className="text-xl font-bold tracking-tight">{appName}</span>
                     </Link>

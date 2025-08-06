@@ -41,7 +41,7 @@ export default function PersistentVoiceBar() {
         exit={{ y: 100 }}
         transition={{ type: 'spring', stiffness: 400, damping: 40 }}
         // Position the bar above the main bottom nav
-        className="fixed bottom-20 sm:bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-sm z-40"
+        className="fixed bottom-4 sm:bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-sm z-40"
       >
         <div 
             onClick={handleExpand}

@@ -175,8 +175,8 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
             ref={mainScrollRef}
             className={cn(
               "flex-1 flex flex-col",
-              !isFullPageLayout ? "pt-14" : "", // Add padding top for header
-              isFullPageLayout ? "pb-0" : "pb-16", // Add padding bottom for nav
+              !isFullPageLayout ? "pt-12" : "", // Add padding top for header
+              isFullPageLayout ? "pb-0" : "pb-14", // Add padding bottom for nav
               isFullPageLayout ? "overflow-y-hidden" : "overflow-y-auto"
             )}
         >

@@ -32,7 +32,7 @@ export default function BottomNav() {
   return (
     <>
       <div className="fixed bottom-0 left-0 right-0 z-50 w-full border-t bg-background/95 backdrop-blur-sm">
-          <nav className="mx-auto grid h-16 max-w-lg grid-cols-5 items-center">
+          <nav className="mx-auto grid h-14 max-w-lg grid-cols-5 items-center">
               {navItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = item.href && pathname.startsWith(item.href);
