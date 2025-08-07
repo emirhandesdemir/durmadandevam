@@ -31,15 +31,19 @@ const AudioElement = memo(({ stream, isMuted, volume }: { stream: MediaStream, i
     useEffect(() => {
         const audioElement = audioRef.current;
         if (audioElement) {
-            // Assign the stream only if it's new or has changed to avoid unnecessary re-assignments.
             if (audioElement.srcObject !== stream) {
                 audioElement.srcObject = stream;
             }
-            // Ensure the muted and volume states are always in sync.
-            audioElement.muted = isMuted;
-            audioElement.volume = volume ?? 1;
         }
-    }, [stream, isMuted, volume]);
+    }, [stream]);
+
+    useEffect(() => {
+        const audioElement = audioRef.current;
+        if(audioElement) {
+            audioElement.muted = isMuted;
+            audioElement.volume = volume;
+        }
+    }, [isMuted, volume])
 
     return <audio ref={audioRef} autoPlay playsInline />;
 });
