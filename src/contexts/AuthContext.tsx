@@ -7,7 +7,7 @@ import { doc, onSnapshot, setDoc, serverTimestamp, updateDoc, getDoc, runTransac
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { FeatureFlags, UserProfile, ThemeSettings } from '@/lib/types';
-import { assignMissingUniqueTag, updateUserProfile } from '@/lib/actions/userActions';
+import { updateUserProfile } from '@/lib/actions/userActions';
 import { createNotification } from '@/lib/actions/notificationActions';
 import i18n from '@/lib/i18n';
 import AnimatedLogoLoader from '@/components/common/AnimatedLogoLoader';
@@ -167,9 +167,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (data.isBanned) {
           handleLogout(true);
           return;
-        }
-        if (!data.uniqueTag) {
-            assignMissingUniqueTag(user.uid).catch(console.error);
         }
         
         // Check for email verification award
