@@ -9,12 +9,12 @@ import { useVoiceChat } from '@/contexts/VoiceChatContext';
  * It's kept separate to memoize and prevent unnecessary re-renders of audio elements.
  */
 export default function VoiceAudioPlayer() {
-    const { remoteAudioStreams, isSpeakerMuted } = useVoiceChat();
+    const { remoteAudioStreams, isSpeakerMuted, speakerVolume } = useVoiceChat();
     
     return (
         <div style={{ display: 'none' }}>
             {Object.entries(remoteAudioStreams).map(([uid, stream]) => (
-                <AudioElement key={uid} stream={stream} isMuted={isSpeakerMuted} />
+                <AudioElement key={uid} stream={stream} isMuted={isSpeakerMuted} volume={speakerVolume} />
             ))}
         </div>
     );
@@ -25,7 +25,7 @@ export default function VoiceAudioPlayer() {
  * It uses a useEffect hook to safely update the srcObject whenever the stream changes,
  * which is crucial for handling stream updates correctly.
  */
-const AudioElement = memo(({ stream, isMuted }: { stream: MediaStream, isMuted: boolean }) => {
+const AudioElement = memo(({ stream, isMuted, volume }: { stream: MediaStream, isMuted: boolean, volume: number }) => {
     const audioRef = useRef<HTMLAudioElement>(null);
 
     useEffect(() => {
@@ -35,10 +35,11 @@ const AudioElement = memo(({ stream, isMuted }: { stream: MediaStream, isMuted: 
             if (audioElement.srcObject !== stream) {
                 audioElement.srcObject = stream;
             }
-            // Ensure the muted state is always in sync.
+            // Ensure the muted and volume states are always in sync.
             audioElement.muted = isMuted;
+            audioElement.volume = volume;
         }
-    }, [stream, isMuted]);
+    }, [stream, isMuted, volume]);
 
     return <audio ref={audioRef} autoPlay playsInline />;
 });

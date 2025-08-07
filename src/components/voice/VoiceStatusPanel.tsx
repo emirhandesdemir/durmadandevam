@@ -10,15 +10,23 @@ import {
 } from '@/components/ui/dialog';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
 import { Button } from '../ui/button';
-import { Mic, MicOff, Camera, CameraOff, Wifi, WifiOff, CheckCircle2, AlertCircle, XCircle } from 'lucide-react';
+import { Mic, Wifi, CheckCircle2, AlertCircle, XCircle, Clock, Volume2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Progress } from '../ui/progress';
 import { Separator } from '../ui/separator';
+import { Slider } from '../ui/slider';
+import { Label } from '../ui/label';
 
 interface VoiceStatusPanelProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+const formatDuration = (totalSeconds: number) => {
+    const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+    const seconds = Math.floor(totalSeconds % 60).toString().padStart(2, '0');
+    return `${minutes}:${seconds}`;
 }
 
 const AudioVisualizer = () => {
@@ -59,7 +67,9 @@ const AudioVisualizer = () => {
             if (animationFrameRef.current) {
                 cancelAnimationFrame(animationFrameRef.current);
             }
-            audioContext.close();
+            if (audioContext.state !== 'closed') {
+                audioContext.close();
+            }
         };
     }, [localStream]);
 
@@ -89,6 +99,11 @@ export default function VoiceStatusPanel({ isOpen, onOpenChange }: VoiceStatusPa
     connectionState,
     isConnecting,
     isConnected,
+    sessionDuration,
+    micGain,
+    setMicGain,
+    speakerVolume,
+    setSpeakerVolume,
   } = useVoiceChat();
 
   let statusText = 'Bağlı Değil';
@@ -114,25 +129,29 @@ export default function VoiceStatusPanel({ isOpen, onOpenChange }: VoiceStatusPa
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
-            <div>
-                 <h4 className="text-sm font-semibold mb-2">Mikrofon Testi</h4>
-                 <AudioVisualizer />
-                 <p className="text-xs text-muted-foreground mt-1">Konuştuğunuzda çubuğun hareket ettiğinden emin olun.</p>
+            <div className="space-y-2">
+                 <h4 className="text-sm font-semibold mb-2">Ses Seviyeleri</h4>
+                 <div className="space-y-4 p-3 border rounded-lg">
+                    <div>
+                        <Label htmlFor="mic-gain" className="flex items-center gap-1.5 text-xs font-medium"><Mic className="h-3 w-3" />Mikrofon Hassasiyeti</Label>
+                        <Slider id="mic-gain" value={[micGain]} onValueChange={(v) => setMicGain(v[0])} max={1} step={0.05} />
+                    </div>
+                     <div>
+                        <Label htmlFor="speaker-vol" className="flex items-center gap-1.5 text-xs font-medium"><Volume2 className="h-3 w-3" />Hoparlör Sesi</Label>
+                        <Slider id="speaker-vol" value={[speakerVolume]} onValueChange={(v) => setSpeakerVolume(v[0])} max={1} step={0.05} />
+                    </div>
+                </div>
             </div>
-            
             <Separator />
-
-            <div>
+            <div className="space-y-2">
                  <h4 className="text-sm font-semibold mb-2">İzinler</h4>
                 <div className="space-y-2">
                     <StatusItem label="Mikrofon İzni" status={micPermission === 'granted'} icon={micPermission === 'granted' ? CheckCircle2 : micPermission === 'denied' ? XCircle : AlertCircle} />
                     <StatusItem label="Kamera İzni" status={camPermission === 'granted'} icon={camPermission === 'granted' ? CheckCircle2 : camPermission === 'denied' ? XCircle : AlertCircle} />
                 </div>
             </div>
-
-             <Separator />
-            
-            <div>
+            <Separator />
+            <div className="space-y-2">
                  <h4 className="text-sm font-semibold mb-2">Bağlantı</h4>
                 <div className="flex items-center justify-between">
                     <p className="font-medium text-sm">Oda Bağlantısı</p>
@@ -141,6 +160,10 @@ export default function VoiceStatusPanel({ isOpen, onOpenChange }: VoiceStatusPa
                  <div className="flex items-center justify-between">
                     <p className="font-medium text-sm">WebRTC Durumu</p>
                     <p className="text-sm font-semibold text-muted-foreground capitalize">{connectionState}</p>
+                </div>
+                 <div className="flex items-center justify-between">
+                    <p className="font-medium text-sm">Seste Geçen Süre</p>
+                    <p className="text-sm font-mono font-semibold text-muted-foreground">{formatDuration(sessionDuration)}</p>
                 </div>
             </div>
         </div>
