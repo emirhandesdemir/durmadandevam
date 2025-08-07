@@ -31,14 +31,12 @@ io.on("connection", (socket) => {
   console.log("A client connected:", socket.id);
 
   socket.on('join-room', (roomId, userId) => {
+    const existingUsers = Array.from(socketRooms[roomId] || []).map(sid => socketUserMap[sid]).filter(Boolean);
+    socket.emit('existing-users', existingUsers);
+    
     socket.join(roomId);
 
-    // Notify existing users in the room about the new user
-    if (socketRooms[roomId]) {
-        socketRooms[roomId].forEach(existingSocketId => {
-            io.to(existingSocketId).emit('user-connected', userId);
-        });
-    }
+    socket.to(roomId).emit('user-connected', userId);
     
     if (!socketRooms[roomId]) {
       socketRooms[roomId] = new Set();
@@ -51,11 +49,14 @@ io.on("connection", (socket) => {
 
   socket.on('signal', (data) => {
     // Forward the signal to the target user
-    io.to(data.to).emit('signal', {
-      from: data.from,
-      signal: data.signal,
-      type: data.type
-    });
+    const targetSocketId = Object.keys(socketUserMap).find(sid => socketUserMap[sid] === data.to);
+    if (targetSocketId) {
+        io.to(targetSocketId).emit('signal', {
+            from: data.from,
+            signal: data.signal,
+            type: data.type
+        });
+    }
   });
 
   socket.on('speaking-status', (data) => {

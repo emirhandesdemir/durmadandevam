@@ -208,7 +208,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         }
     }, [user]);
 
-    const createPeerConnection = useCallback((otherUid: string) => {
+    const createPeerConnection = useCallback((otherUid: string, initiator: boolean) => {
         if (peerConnections.current[otherUid] || otherUid === user?.uid) {
              return;
         }
@@ -240,6 +240,17 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 _cleanupPeerConnection(otherUid);
             }
         };
+
+        if (initiator && user) {
+             pc.onnegotiationneeded = async () => {
+                try {
+                    const offer = await pc.createOffer();
+                    await pc.setLocalDescription(offer);
+                    socketRef.current?.emit('signal', { to: otherUid, from: user.uid, type: 'offer', signal: pc.localDescription });
+                } catch(e) { console.error('Negotiation error:', e); }
+            }
+        }
+
         return pc;
 
     }, [user, _cleanupPeerConnection, localStream]);
@@ -284,17 +295,14 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 socketRef.current?.emit('join-room', activeRoomId, user.uid);
             });
             
+             // User B joins, gets a list of existing users (User A)
+            socketRef.current.on('existing-users', (userIds: string[]) => {
+                userIds.forEach(uid => createPeerConnection(uid, true));
+            });
+
+            // User A gets notified that a new user (User B) has connected
             socketRef.current.on('user-connected', (newUserId: string) => {
-                 const pc = createPeerConnection(newUserId);
-                 if (pc && user) {
-                    pc.onnegotiationneeded = async () => {
-                        try {
-                            const offer = await pc.createOffer();
-                            await pc.setLocalDescription(offer);
-                            socketRef.current?.emit('signal', { to: newUserId, from: user.uid, type: 'offer', signal: pc.localDescription });
-                        } catch(e) { console.error('Negotiation error for new user:', e); }
-                    }
-                 }
+                createPeerConnection(newUserId, false);
             });
 
             socketRef.current.on('signal', handleSignal);
@@ -314,7 +322,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         } finally {
             setIsConnecting(false);
         }
-    }, [user, userData, activeRoomId, isConnected, isConnecting, toast, _cleanupAndResetState, createPeerConnection, handleSignal, _cleanupPeerConnection, participants]);
+    }, [user, userData, activeRoomId, isConnected, isConnecting, toast, _cleanupAndResetState, createPeerConnection, handleSignal, _cleanupPeerConnection]);
 
     const leaveVoiceOnly = useCallback(async () => {
         if (!user || !activeRoomId) return;
