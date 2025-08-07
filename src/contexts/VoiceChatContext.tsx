@@ -91,6 +91,11 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const socketRef = useRef<Socket | null>(null);
     const peerConnections = useRef<Record<string, RTCPeerConnection>>({});
     const iceCandidateQueue = useRef<Record<string, RTCIceCandidateInit[]>>({});
+
+    const speakingTimer = useRef<NodeJS.Timeout | null>(null);
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const analyserRef = useRef<AnalyserNode | null>(null);
+    const localSpeakingRef = useRef(false);
     
     const self = useMemo(() => participants.find(p => p.uid === user?.uid) || null, [participants, user?.uid]);
     const isConnected = !!self;
@@ -124,6 +129,13 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         localStream?.getTracks().forEach(track => track.stop());
         setLocalStream(null);
         setIsSharingVideo(false);
+
+        if (audioContextRef.current) {
+            audioContextRef.current.close();
+            audioContextRef.current = null;
+            analyserRef.current = null;
+        }
+        if (speakingTimer.current) clearTimeout(speakingTimer.current);
 
         socketRef.current?.disconnect();
         socketRef.current = null;
@@ -208,6 +220,34 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         }
     }, [localStream, user, _cleanupPeerConnection]);
 
+    const setupSpeakingIndicator = useCallback((stream: MediaStream) => {
+        if (!stream.getAudioTracks().length) return;
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioContextRef.current = audioContext;
+        const source = audioContext.createMediaStreamSource(stream);
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 512;
+        analyser.smoothingTimeConstant = 0.1;
+        source.connect(analyser);
+        analyserRef.current = analyser;
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const speakingThreshold = 20;
+
+        const checkSpeaking = () => {
+            analyser.getByteFrequencyData(dataArray);
+            const average = dataArray.reduce((acc, val) => acc + val, 0) / dataArray.length;
+            const isSpeakingNow = average > speakingThreshold;
+
+            if (isSpeakingNow !== localSpeakingRef.current) {
+                localSpeakingRef.current = isSpeakingNow;
+                socketRef.current?.emit('speaking-status', { uid: user?.uid, isSpeaking: isSpeakingNow });
+            }
+            speakingTimer.current = setTimeout(checkSpeaking, 100);
+        };
+        checkSpeaking();
+    }, [user?.uid]);
+
     const joinVoice = useCallback(async (options: { muted?: boolean } = {}) => {
         if (!user || !userData || !activeRoomId || isConnected || isConnecting) return;
         setIsConnecting(true);
@@ -222,9 +262,9 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             setLocalStream(stream);
 
             await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: userData.username, photoURL: userData.photoURL }, { initialMuteState: options.muted ?? false });
+            setupSpeakingIndicator(stream);
             
-            // Connect to Socket.IO server
-            const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
+            const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://walk-server.onrender.com';
             socketRef.current = io(socketUrl, { transports: ['websocket'] });
 
             socketRef.current.on('connect', () => {
@@ -232,17 +272,18 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             });
 
             socketRef.current.on('user-connected', (newUserId: string) => {
-                 console.log("New user connected, creating peer connection for", newUserId);
                  createPeerConnection(newUserId, true);
             });
 
             socketRef.current.on('signal', handleSignal);
             
             socketRef.current.on('user-disconnected', (disconnectedUserId: string) => {
-                console.log("User disconnected:", disconnectedUserId);
                 _cleanupPeerConnection(disconnectedUserId);
             });
 
+            socketRef.current.on('speaking-status-update', ({ uid, isSpeaking }) => {
+                setParticipants(prev => prev.map(p => p.uid === uid ? { ...p, isSpeaking } : p));
+            });
 
         } catch (error: any) {
             toast({ variant: "destructive", title: "Katılım Başarısız", description: "Mikrofon veya kamera erişimi reddedildi." });
@@ -250,7 +291,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         } finally {
             setIsConnecting(false);
         }
-    }, [user, userData, activeRoomId, isConnected, isConnecting, toast, _cleanupAndResetState, createPeerConnection, handleSignal, _cleanupPeerConnection]);
+    }, [user, userData, activeRoomId, isConnected, isConnecting, toast, _cleanupAndResetState, createPeerConnection, handleSignal, _cleanupPeerConnection, setupSpeakingIndicator]);
 
     const leaveVoiceOnly = useCallback(async () => {
         if (!user || !activeRoomId) return;
@@ -298,7 +339,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         });
         
         return () => { roomUnsub(); participantsUnsub(); };
-    }, [user, activeRoomId, leaveRoom]);
+    }, [user, activeRoomId, leaveRoom, _cleanupAndResetState]);
     
     const minimizeRoom = useCallback(() => setIsMinimized(true), []);
     const expandRoom = useCallback(() => setIsMinimized(false), []);

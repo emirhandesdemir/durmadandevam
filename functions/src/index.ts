@@ -24,6 +24,7 @@ const io = new Server(server, {
 });
 
 const socketRooms: Record<string, Set<string>> = {}; // roomId -> Set<socketId>
+const socketUserMap: Record<string, string> = {}; // socketId -> userId
 
 // Socket.IO bağlantı mantığı
 io.on("connection", (socket) => {
@@ -35,12 +36,13 @@ io.on("connection", (socket) => {
       socketRooms[roomId] = new Set();
     }
     socketRooms[roomId].add(socket.id);
+    socketUserMap[socket.id] = userId; // Map socket ID to user ID
+
     socket.to(roomId).emit('user-connected', userId);
     console.log(`User ${userId} (${socket.id}) joined room ${roomId}`);
   });
 
   socket.on('signal', (data) => {
-    // Sinyali gönderen hariç odadaki diğer herkese gönder
     io.to(data.to).emit('signal', {
       from: data.from,
       signal: data.signal,
@@ -48,10 +50,23 @@ io.on("connection", (socket) => {
     });
   });
 
+  socket.on('speaking-status', (data) => {
+    const { uid, isSpeaking } = data;
+     // Find the room this socket is in
+     for (const roomId in socketRooms) {
+        if (socketRooms[roomId].has(socket.id)) {
+            socket.to(roomId).broadcast.emit('speaking-status-update', { uid, isSpeaking });
+            break;
+        }
+    }
+  });
+
+
   socket.on('leave-room', (roomId, userId) => {
     socket.leave(roomId);
     if (socketRooms[roomId]) {
         socketRooms[roomId].delete(socket.id);
+        delete socketUserMap[socket.id];
     }
     socket.to(roomId).emit('user-disconnected', userId);
     console.log(`User ${userId} (${socket.id}) left room ${roomId}`);
@@ -59,13 +74,16 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     console.log("A client disconnected:", socket.id);
-    // Find which room the socket was in and emit disconnect event
-    for (const roomId in socketRooms) {
-      if (socketRooms[roomId].has(socket.id)) {
-        socketRooms[roomId].delete(socket.id);
-        socket.to(roomId).emit('user-disconnected', socket.id); // Or find a way to map socket.id back to userId
-        break;
-      }
+    const userId = socketUserMap[socket.id];
+    if (userId) {
+        for (const roomId in socketRooms) {
+            if (socketRooms[roomId].has(socket.id)) {
+                socketRooms[roomId].delete(socket.id);
+                socket.to(roomId).emit('user-disconnected', userId);
+                break;
+            }
+        }
+        delete socketUserMap[socket.id];
     }
   });
 });
