@@ -52,13 +52,19 @@ export default function ChatMessageInput({ room, isExpanded, onFocus, onBlur }: 
     setIsSending(true);
     
     try {
-        await sendRoomMessage(room.id, {
-            uid: currentUser.uid,
-            displayName: userData.username,
-            photoURL: userData.photoURL,
-            selectedAvatarFrame: userData.selectedAvatarFrame,
-            role: userData.role,
-        }, message);
+        await sendRoomMessage({
+            roomId: room.id,
+            user: {
+                uid: currentUser.uid,
+                displayName: userData.username,
+                photoURL: userData.photoURL,
+                uniqueTag: userData.uniqueTag,
+                selectedAvatarFrame: userData.selectedAvatarFrame,
+                selectedBubble: userData.selectedBubble,
+                role: userData.role,
+            }, 
+            text: message
+        });
         
         setMessage('');
         onBlur(); // Collapse after sending

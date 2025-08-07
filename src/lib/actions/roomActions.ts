@@ -79,6 +79,59 @@ export async function createRoom(
     });
 }
 
+export async function sendRoomMessage({ roomId, user, text }: { roomId: string, user: { uid: string, displayName: string | null, photoURL: string | null, uniqueTag?: number, selectedBubble?: string, selectedAvatarFrame?: string, role?: 'admin' | 'user' }, text: string }) {
+    if (!user || !user.uid) throw new Error("Yetkilendirme hatası.");
+    if (!text.trim()) throw new Error("Mesaj metni boş olamaz.");
+
+    const batch = writeBatch(db);
+    const roomRef = doc(db, 'rooms', roomId);
+    const messagesColRef = collection(roomRef, "messages");
+    
+    const newMessageRef = doc(messagesColRef);
+    batch.set(newMessageRef, {
+        uid: user.uid,
+        username: user.displayName || "Anonim",
+        uniqueTag: user.uniqueTag || null,
+        photoURL: user.photoURL || '',
+        text: text,
+        createdAt: serverTimestamp(),
+        selectedBubble: user.selectedBubble || '',
+        selectedAvatarFrame: user.selectedAvatarFrame || '',
+        role: user.role || 'user',
+    });
+
+    const userRef = doc(db, 'users', user.uid);
+    batch.update(userRef, { lastActionTimestamp: serverTimestamp() });
+    
+    await batch.commit();
+
+    // Trigger AI response if mentioned, but don't wait for it.
+    if (text.toLowerCase().includes('@walk')) {
+        setTimeout(async () => {
+            try {
+                const historySnapshot = await getDocs(query(messagesColRef, orderBy('createdAt', 'desc'), limit(10)));
+                const chatHistory = historySnapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return { role: data.uid === BOT_USER_INFO.uid ? 'model' as const : 'user' as const, content: `${data.username}: ${data.text}` };
+                }).reverse();
+                
+                const aiResponseText = await generateRoomResponse({ chatHistory });
+
+                if (aiResponseText) {
+                    await addDoc(messagesColRef, {
+                        ...BOT_USER_INFO,
+                        text: aiResponseText,
+                        createdAt: serverTimestamp(),
+                    });
+                }
+            } catch (e) {
+                console.error("AI response error:", e);
+            }
+        }, 500);
+    }
+}
+
+
 interface UserInfo {
     uid: string;
     username: string;
