@@ -175,8 +175,8 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
             ref={mainScrollRef}
             className={cn(
               "flex-1 flex flex-col",
-              !isFullPageLayout ? "pt-12" : "", // Add padding top for header
-              isFullPageLayout ? "pb-0" : "pb-14", // Add padding bottom for nav
+              !isFullPageLayout ? "pt-12" : "",
+              isMinimized ? "pb-32" : (!isFullPageLayout ? "pb-14" : "pb-0"), // Adjust padding for bars
               isFullPageLayout ? "overflow-y-hidden" : "overflow-y-auto"
             )}
         >
@@ -197,7 +197,7 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
               initial={{ y: 0 }}
               animate={{ y: !disableAnimations && isScrolling ? 100 : 0 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="absolute bottom-0 left-0 right-0 z-30"
+              className="fixed bottom-0 left-0 right-0 z-30" // Use fixed positioning
             >
               <BottomNav />
             </motion.div>

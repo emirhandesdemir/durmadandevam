@@ -194,6 +194,14 @@
             { "fieldPath": "to", "order": "ASCENDING" },
             { "fieldPath": "createdAt", "order": "ASCENDING" }
         ]
+    },
+    {
+      "collectionGroup": "voiceParticipants",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "uid", "order": "ASCENDING" },
+        { "fieldPath": "joinedAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [
