@@ -134,11 +134,11 @@ export default function VoiceStatusPanel({ isOpen, onOpenChange }: VoiceStatusPa
                  <div className="space-y-4 p-3 border rounded-lg">
                     <div>
                         <Label htmlFor="mic-gain" className="flex items-center gap-1.5 text-xs font-medium"><Mic className="h-3 w-3" />Mikrofon Hassasiyeti</Label>
-                        <Slider id="mic-gain" value={[micGain]} onValueChange={(v) => setMicGain(v[0])} max={1} step={0.05} />
+                        <Slider id="mic-gain" value={[micGain]} onValueChange={(v) => setMicGain ? setMicGain(v[0]) : null} max={1} step={0.05} />
                     </div>
                      <div>
                         <Label htmlFor="speaker-vol" className="flex items-center gap-1.5 text-xs font-medium"><Volume2 className="h-3 w-3" />Hoparlör Sesi</Label>
-                        <Slider id="speaker-vol" value={[speakerVolume]} onValueChange={(v) => setSpeakerVolume(v[0])} max={1} step={0.05} />
+                        <Slider id="speaker-vol" value={[speakerVolume]} onValueChange={(v) => setSpeakerVolume ? setSpeakerVolume(v[0]) : null} max={1} step={0.05} />
                     </div>
                 </div>
             </div>

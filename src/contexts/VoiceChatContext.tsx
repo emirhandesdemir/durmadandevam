@@ -258,6 +258,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     const setupSpeakingIndicator = useCallback((stream: MediaStream) => {
         if (!stream.getAudioTracks().length) return;
+        
         if(audioContextRef.current && audioContextRef.current.state !== 'closed') {
             audioContextRef.current.close();
         }
@@ -312,6 +313,12 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
             socketRef.current.on('connect', () => {
                 socketRef.current?.emit('join-room', activeRoomId, user.uid);
+                
+                // **THE FIX**: Proactively connect to existing users in the room
+                const otherParticipants = participants.filter(p => p.uid !== user.uid);
+                otherParticipants.forEach(p => {
+                    createPeerConnection(p.uid, true); // true indicates this client is the initiator
+                });
             });
 
             socketRef.current.on('user-connected', (newUserId: string) => {
@@ -339,7 +346,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         } finally {
             setIsConnecting(false);
         }
-    }, [user, userData, activeRoomId, isConnected, isConnecting, toast, _cleanupAndResetState, createPeerConnection, handleSignal, _cleanupPeerConnection, setupSpeakingIndicator]);
+    }, [user, userData, activeRoomId, isConnected, isConnecting, toast, _cleanupAndResetState, createPeerConnection, handleSignal, _cleanupPeerConnection, setupSpeakingIndicator, participants]);
 
     const leaveVoiceOnly = useCallback(async () => {
         if (!user || !activeRoomId) return;

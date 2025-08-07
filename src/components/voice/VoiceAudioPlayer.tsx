@@ -37,7 +37,7 @@ const AudioElement = memo(({ stream, isMuted, volume }: { stream: MediaStream, i
             }
             // Ensure the muted and volume states are always in sync.
             audioElement.muted = isMuted;
-            audioElement.volume = volume;
+            audioElement.volume = volume ?? 1;
         }
     }, [stream, isMuted, volume]);
 
