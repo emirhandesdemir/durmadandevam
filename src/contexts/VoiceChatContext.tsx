@@ -45,7 +45,7 @@ interface VoiceChatContextType {
     speakerVolume: number;
     setSpeakerVolume: React.Dispatch<React.SetStateAction<number>>;
     setActiveRoomId: (id: string | null) => void;
-    joinVoice: (options?: { muted?: boolean }) => Promise<void>;
+    joinVoice: () => Promise<void>;
     leaveRoom: () => Promise<void>;
     leaveVoiceOnly: () => Promise<void>;
     toggleSelfMute: () => Promise<void>;
@@ -272,7 +272,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         }
     }, [localStream]);
 
-
     const joinVoice = useCallback(async (options: { muted?: boolean } = {}) => {
         if (!user || !userData || !activeRoomId || isConnected || isConnecting) return;
         setIsConnecting(true);
@@ -469,3 +468,5 @@ export const useVoiceChat = () => {
     if (context === undefined) throw new Error('useVoiceChat must be used within a VoiceChatProvider');
     return context;
 };
+
+    

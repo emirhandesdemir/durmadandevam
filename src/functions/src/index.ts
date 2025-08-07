@@ -35,14 +35,15 @@ io.on("connection", (socket) => {
     socket.emit('existing-users', existingUsers);
     
     socket.join(roomId);
-
-    socket.to(roomId).emit('user-connected', userId);
     
     if (!socketRooms[roomId]) {
       socketRooms[roomId] = new Set();
     }
     socketRooms[roomId].add(socket.id);
     socketUserMap[socket.id] = userId; 
+
+    // Let others know a new user has joined
+    socket.to(roomId).emit('user-connected', userId);
     
     console.log(`User ${userId} (${socket.id}) joined room ${roomId}`);
   });
@@ -52,7 +53,7 @@ io.on("connection", (socket) => {
     const targetSocketId = Object.keys(socketUserMap).find(sid => socketUserMap[sid] === data.to);
     if (targetSocketId) {
         io.to(targetSocketId).emit('signal', {
-            from: data.from,
+            from: user.uid, // The user who sent the signal
             signal: data.signal,
             type: data.type
         });
@@ -285,3 +286,5 @@ export const onUserDelete = functions.auth.user().onDelete(async (user) => {
     };
      await db.collection("auditLogs").add(log);
 });
+
+    
