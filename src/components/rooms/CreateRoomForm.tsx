@@ -70,7 +70,7 @@ export default function CreateRoomForm() {
 
             toast({
                 title: 'Oda Oluşturuldu!',
-                description: `"${values.name}" odanız oluşturuldu.`,
+                description: `"${values.name}" odanız 20 dakika boyunca aktif.`,
             });
             
             router.push(`/rooms/${result.roomId}`);
@@ -83,50 +83,47 @@ export default function CreateRoomForm() {
                 variant: "destructive",
                 duration: 9000 
             });
+        } finally {
             setIsLoading(false);
         }
     }
 
     return (
-        <Card className="w-full">
-            <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)}>
-                    <CardHeader>
-                        <CardTitle>Oda Detayları</CardTitle>
-                        <CardDescription>
-                           Odanız için bir ad ve açıklama belirleyin.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <FormField control={form.control} name="name" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Oda Adı</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Harika odamın adı..." {...field} />
-                                </FormControl>
-                                <FormDescription>Odanızın listede görünecek adı.</FormDescription>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-                        <FormField control={form.control} name="description" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Açıklama</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Bu odada neler hakkında konuşulacak?" {...field} />
-                                </FormControl>
-                                <FormDescription>Odanızın konusunu ve amacını açıklayın.</FormDescription>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-                    </CardContent>
-                    <CardFooter className="flex justify-end items-center">
-                        <Button type="submit" disabled={isLoading}>
-                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                             Oluştur
-                        </Button>
-                    </CardFooter>
-                </form>
-            </Form>
-        </Card>
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <CardHeader className="p-0">
+                    <CardTitle>Yeni Oda Oluştur</CardTitle>
+                    <CardDescription>
+                        Odanız için bir ad ve açıklama belirleyin. Odanız 20 dakika boyunca aktif olacaktır.
+                    </CardDescription>
+                </CardHeader>
+                <div className="space-y-4">
+                    <FormField control={form.control} name="name" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Oda Adı</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Harika odamın adı..." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="description" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Açıklama</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Bu odada neler hakkında konuşulacak?" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                </div>
+                <CardFooter className="p-0 flex justify-end">
+                    <Button type="submit" disabled={isLoading}>
+                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Oluştur
+                    </Button>
+                </CardFooter>
+            </form>
+        </Form>
     );
 }

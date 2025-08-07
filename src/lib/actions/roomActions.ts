@@ -32,71 +32,50 @@ export async function createRoom(
     if (!userId) throw new Error("Kullanıcı ID'si gerekli.");
     
     const userRef = doc(db, 'users', userId);
-    const roomRef = doc(db, 'rooms', userId); // Use user's UID as the room ID
+    const newRoomRef = doc(collection(db, 'rooms'));
 
     return await runTransaction(db, async (transaction) => {
         const userDoc = await transaction.get(userRef);
         if (!userDoc.exists()) throw new Error("Kullanıcı bulunamadı.");
         const userData = userDoc.data();
         
-        const roomDoc = await transaction.get(roomRef);
-        const now = Timestamp.now();
         const twentyMinutesInMs = 20 * 60 * 1000;
-        const twentyFourHoursInMs = 24 * 60 * 60 * 1000;
+        const newExpiresAt = Timestamp.fromMillis(Date.now() + twentyMinutesInMs);
         
-        if (roomDoc.exists()) {
-            const roomData = roomDoc.data();
-            const lastFreeActivation = roomData.lastFreeActivation?.toMillis() || 0;
-            if (now.toMillis() - lastFreeActivation < twentyFourHoursInMs) {
-                throw new Error("Günlük ücretsiz oda aktifleştirme hakkınızı zaten kullandınız. Yeni bir hak için lütfen 24 saat bekleyin veya elmasla süre uzatın.");
-            }
-             // Grant another 20 minutes
-             const currentExpiresAt = roomData.expiresAt?.toMillis() || now.toMillis();
-             const newExpiresAt = (currentExpiresAt > now.toMillis() ? currentExpiresAt : now.toMillis()) + twentyMinutesInMs;
-
-             transaction.update(roomRef, {
-                 expiresAt: Timestamp.fromMillis(newExpiresAt),
-                 lastFreeActivation: serverTimestamp(),
-                 name: roomData.name,
-                 description: roomData.description
-            });
-            return { success: true, roomId: roomRef.id, isNew: false };
-        } else {
-             // Create a new room
-             const newExpiresAt = Timestamp.fromMillis(now.toMillis() + twentyMinutesInMs);
-            const newRoom: Partial<Room> = {
-                name: `${creatorInfo.username}'ın Odası`,
-                description: "Sohbet ve eğlence zamanı!",
-                language: roomData.language,
-                type: 'public',
-                createdAt: serverTimestamp() as Timestamp,
-                expiresAt: newExpiresAt,
-                lastFreeActivation: serverTimestamp() as Timestamp,
-                createdBy: {
-                    uid: userId,
-                    username: creatorInfo.username,
-                    photoURL: creatorInfo.photoURL,
-                    role: creatorInfo.role,
-                    isPremium: userData.premiumUntil && userData.premiumUntil.toDate() > new Date(),
-                    selectedAvatarFrame: creatorInfo.selectedAvatarFrame,
-                },
-                moderators: [userId],
-                participants: [],
-                maxParticipants: 9,
-                voiceParticipantsCount: 0,
-                autoQuizEnabled: true,
-                nextGameTimestamp: Timestamp.fromMillis(Date.now() + 5 * 60 * 1000),
-                rules: null,
-                welcomeMessage: null,
-                pinnedMessageId: null,
-                level: 1,
-                xp: 0,
-                xpToNextLevel: getRoomLevelInfo(0).xpToNextLevel,
-                lastXpGainTimestamp: null,
-            };
-            transaction.set(roomRef, newRoom);
-            return { success: true, roomId: roomRef.id, isNew: true };
-        }
+        const newRoom: Partial<Room> = {
+            name: roomData.name,
+            description: roomData.description,
+            language: roomData.language,
+            type: 'public',
+            createdAt: serverTimestamp() as Timestamp,
+            expiresAt: newExpiresAt,
+            lastFreeActivation: serverTimestamp() as Timestamp,
+            createdBy: {
+                uid: userId,
+                username: creatorInfo.username,
+                photoURL: creatorInfo.photoURL || null, // Ensure photoURL is not undefined
+                role: creatorInfo.role,
+                isPremium: userData.premiumUntil && userData.premiumUntil.toDate() > new Date(),
+                selectedAvatarFrame: creatorInfo.selectedAvatarFrame,
+            },
+            moderators: [userId],
+            participants: [],
+            maxParticipants: 9,
+            voiceParticipantsCount: 0,
+            autoQuizEnabled: true,
+            nextGameTimestamp: Timestamp.fromMillis(Date.now() + 5 * 60 * 1000),
+            rules: null,
+            welcomeMessage: null,
+            pinnedMessageId: null,
+            level: 1,
+            xp: 0,
+            xpToNextLevel: getRoomLevelInfo(0).xpToNextLevel,
+            lastXpGainTimestamp: null,
+        };
+        
+        transaction.set(newRoomRef, newRoom);
+        
+        return { success: true, roomId: newRoomRef.id, isNew: true };
     });
 }
 
