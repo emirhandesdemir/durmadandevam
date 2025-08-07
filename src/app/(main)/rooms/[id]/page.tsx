@@ -42,7 +42,7 @@ export default function RoomPage() {
     
     // --- Auth & Contexts ---
     const { user, userData, featureFlags, loading: authLoading } = useAuth();
-    const { joinVoice, setActiveRoomId } = useVoiceChat();
+    const { setActiveRoomId } = useVoiceChat();
 
     // --- Component State ---
     const [room, setRoom] = useState<Room | null>(null);
@@ -67,7 +67,6 @@ export default function RoomPage() {
     useEffect(() => {
         if (roomId) {
             setActiveRoomId(roomId);
-            joinVoice({ muted: true });
         }
         
         // Show welcome dialog for event rooms on first load
@@ -78,7 +77,7 @@ export default function RoomPage() {
         }
 
         return () => setActiveRoomId(null);
-    }, [roomId, room?.type, setActiveRoomId, joinVoice]);
+    }, [roomId, room?.type, setActiveRoomId]);
 
     // Automatically join the user to the room if they are not already a participant.
     useEffect(() => {
