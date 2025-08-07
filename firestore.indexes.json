@@ -178,6 +178,14 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+        "collectionGroup": "signals",
+        "queryScope": "COLLECTION_GROUP",
+        "fields": [
+            { "fieldPath": "to", "order": "ASCENDING" },
+            { "fieldPath": "createdAt", "order": "ASCENDING" }
+        ]
     }
   ],
   "fieldOverrides": [

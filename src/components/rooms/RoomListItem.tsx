@@ -69,9 +69,9 @@ export default function RoomListItem({ room }: RoomListItemProps) {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
                 className="w-full"
-                {...longPressEvents}
             >
                 <Card 
+                    onClick={handleCardClick}
                     className={cn(
                         "group overflow-hidden transition-all duration-300 flex flex-col rounded-2xl shadow-lg relative text-white bg-gradient-to-br",
                         gradient,
