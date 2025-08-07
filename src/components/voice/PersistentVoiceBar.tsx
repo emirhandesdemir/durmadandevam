@@ -3,28 +3,14 @@
 
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
 import { Button } from '../ui/button';
-import { Mic, MicOff, PhoneOff, ArrowUpLeft, Loader2, Volume2, VolumeX, Minimize2 } from 'lucide-react';
+import { Mic, MicOff, PhoneOff, ArrowUpLeft, Loader2, Volume2, VolumeX } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import { cn } from '@/lib/utils';
 
 export default function PersistentVoiceBar() {
   const { isConnected, isMinimized, self, activeRoom, toggleSelfMute, leaveRoom, expandRoom, isConnecting, isSpeakerMuted, toggleSpeakerMute } = useVoiceChat();
   const router = useRouter();
   const pathname = usePathname();
-
-  useEffect(() => {
-    // This logic ensures that if the user is minimized and navigates to the room URL manually, the UI expands.
-    if (!isMinimized && activeRoom && pathname.startsWith(`/rooms/${activeRoom.id}`)) {
-      // No need to do anything, already correct state
-    } else if (isMinimized && activeRoom && !pathname.startsWith(`/rooms/${activeRoom.id}`)) {
-      // User is minimized and browsing elsewhere, this is the intended state.
-    } else if (!isMinimized && activeRoom && !pathname.startsWith(`/rooms/${activeRoom.id}`)) {
-      // This case handles when the user navigates away from the room page without using the minimize button.
-      // We should treat this as minimizing.
-    }
-  }, [isMinimized, pathname, router, activeRoom]);
 
   const handleExpand = () => {
     if (activeRoom) {
@@ -41,14 +27,14 @@ export default function PersistentVoiceBar() {
   return (
     <AnimatePresence>
       <motion.div
-        drag
+        drag="y"
+        dragConstraints={{ top: 0, bottom: 0 }}
         dragMomentum={false}
-        initial={{ y: 100 }}
+        initial={{ y: 150 }}
         animate={{ y: 0 }}
-        exit={{ y: 100 }}
+        exit={{ y: 150 }}
         transition={{ type: 'spring', stiffness: 400, damping: 40 }}
-        // Position the bar above the main bottom nav
-        className="fixed bottom-16 left-1/2 -translate-x-1/2 w-[95%] max-w-sm z-40"
+        className="fixed bottom-[65px] left-1/2 -translate-x-1/2 w-[95%] max-w-sm z-40"
       >
         <div 
             className="flex items-center justify-between gap-2 p-2 rounded-2xl bg-card text-card-foreground shadow-2xl border border-primary/20 backdrop-blur-lg"

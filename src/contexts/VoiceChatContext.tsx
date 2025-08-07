@@ -165,12 +165,13 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         if (sessionDurationIntervalRef.current) clearInterval(sessionDurationIntervalRef.current);
         setSessionDuration(0);
 
-        if (audioContextRef.current) {
+        if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
             audioContextRef.current.close();
             audioContextRef.current = null;
-            analyserRef.current = null;
         }
         if (speakingTimer.current) clearTimeout(speakingTimer.current);
+        analyserRef.current = null;
+
 
         socketRef.current?.disconnect();
         socketRef.current = null;
@@ -214,8 +215,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     }, [user]);
 
     const createPeerConnection = useCallback((otherUid: string, isInitiator: boolean) => {
-        if (peerConnections.current[otherUid]) {
-             console.warn(`Peer connection for ${otherUid} already exists. Skipping.`);
+        if (peerConnections.current[otherUid] || otherUid === user?.uid) {
              return;
         }
         
@@ -263,7 +263,9 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         }
 
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        if (audioContext.state === 'closed') return;
         audioContextRef.current = audioContext;
+
         const source = audioContext.createMediaStreamSource(stream);
         const analyser = audioContext.createAnalyser();
         analyser.fftSize = 512;
@@ -275,7 +277,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         const speakingThreshold = 20;
 
         const checkSpeaking = () => {
-            analyser.getByteFrequencyData(dataArray);
+            if (!analyserRef.current) return;
+            analyserRef.current.getByteFrequencyData(dataArray);
             const average = dataArray.reduce((acc, val) => acc + val, 0) / dataArray.length;
             const isSpeakingNow = average > speakingThreshold;
 
@@ -367,6 +370,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (!user || !activeRoomId) {
             _cleanupAndResetState();
+            setParticipants([]);
+            setActiveRoom(null);
             return;
         }
 
@@ -374,19 +379,30 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             if (docSnap.exists()) {
                  setActiveRoom({ id: docSnap.id, ...docSnap.data() } as Room);
             } else {
-                 if (activeRoomId) leaveRoom();
+                 if (activeRoomId) {
+                     toast({ title: "Oda Kapatıldı", description: "Oda sahibi tarafından kapatıldığı veya süresi dolduğu için odadan çıkarıldınız."});
+                     leaveRoom();
+                 }
             }
         });
 
         const participantsUnsub = onSnapshot(collection(db, "rooms", activeRoomId, "voiceParticipants"), snapshot => {
             const fetched = snapshot.docs.map(d => d.data() as VoiceParticipant);
             setParticipants(fetched);
+
+            if (isConnected && !fetched.some(p => p.uid === user.uid)) {
+                _cleanupAndResetState();
+            }
         });
         
         return () => { roomUnsub(); participantsUnsub(); };
-    }, [user, activeRoomId, leaveRoom, _cleanupAndResetState]);
+    }, [user, activeRoomId, isConnected, leaveRoom, _cleanupAndResetState, toast]);
     
-    const minimizeRoom = useCallback(() => setIsMinimized(true), []);
+    const minimizeRoom = useCallback(() => {
+        setIsMinimized(true);
+        router.back();
+    }, [router]);
+    
     const expandRoom = useCallback(() => setIsMinimized(false), []);
     const toggleSpeakerMute = useCallback(() => setIsSpeakerMuted(prev => !prev), []);
     const addTrackToPlaylist = useCallback(async (data: { fileName: string, fileDataUrl: string }) => { if(!user || !activeRoomId || !userData) return; setIsMusicLoading(true); try { await addTrackAction({ roomId: activeRoomId, fileName: data.fileName, fileDataUrl: data.fileDataUrl, }, { uid: user.uid, username: userData.username }); } catch (e: any) { toast({ variant: 'destructive', description: e.message }); } finally { setIsMusicLoading(false); } }, [user, activeRoomId, userData, toast]);

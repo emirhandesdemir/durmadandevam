@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { DirectMessageMetadata } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -40,7 +40,7 @@ export default function ChatList({ selectedChatId }: ChatListProps) {
     const q = query(metadataRef, where('participantUids', 'array-contains', user.uid));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      let chatsData = snapshot.docs.map(doc => ({
+      const chatsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
       } as DirectMessageMetadata));
@@ -66,6 +66,7 @@ export default function ChatList({ selectedChatId }: ChatListProps) {
   }, [user]);
 
   const filteredChats = useMemo(() => {
+    if (!chats) return [];
     return chats.filter(chat => {
       if (!user?.uid) return false;
       const partnerId = chat.participantUids.find(uid => uid !== user.uid);

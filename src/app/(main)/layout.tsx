@@ -107,7 +107,7 @@ function PwaInstallBar() {
 
 function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
   const { user, userData, loading } = useAuth();
-  const { isMinimized } = useVoiceChat();
+  const { isMinimized, activeRoom } = useVoiceChat();
   const { activeNotification } = useInAppNotification();
   const pathname = usePathname();
   const mainScrollRef = useRef<HTMLDivElement>(null);
@@ -142,6 +142,11 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
   if (loading || !user) {
     return null;
   }
+  
+  const isRoomPage = pathname.startsWith('/rooms/');
+  const shouldHideRoomContent = isMinimized && isRoomPage;
+  const showMainContent = !activeRoom || pathname !== `/rooms/${activeRoom.id}` || !isMinimized;
+
 
   const isFullPageLayout = pathname.startsWith('/rooms/') || pathname.startsWith('/dm/') || pathname.startsWith('/call/') || pathname.startsWith('/matchmaking/') || pathname.startsWith('/live') || pathname.startsWith('/explore');
   const isHomePage = pathname === '/home';
@@ -187,7 +192,7 @@ function MainAppLayoutContent({ children }: { children: React.ReactNode }) {
                     !isHomePage && !isFullPageLayout && "p-4"
                 )}
             >
-                {children}
+                 {showMainContent && children}
             </div>
         </main>
         
