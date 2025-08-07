@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, onSnapshot, doc, serverTimestamp, query, where, addDoc, deleteDoc, getDoc, updateDoc, writeBatch, arrayUnion, arrayRemove, setDoc, limit, increment } from 'firebase/firestore';
+import { collection, onSnapshot, doc, serverTimestamp, query, where, addDoc, deleteDoc, getDoc, updateDoc, writeBatch, arrayUnion, arrayRemove, setDoc, limit, increment, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Room, VoiceParticipant, PlaylistTrack } from '../types';
 import { joinVoiceChat, leaveVoice, toggleSelfMute as toggleMuteAction, toggleScreenShare as toggleScreenShareAction, toggleVideo as toggleVideoAction, updateLastActive } from '@/lib/actions/voiceActions';
@@ -39,6 +39,11 @@ interface VoiceChatContextType {
     micPermission: PermissionState | null;
     camPermission: PermissionState | null;
     connectionState: RTCPeerConnectionState;
+    sessionDuration: number;
+    micGain: number;
+    setMicGain: React.Dispatch<React.SetStateAction<number>>;
+    speakerVolume: number;
+    setSpeakerVolume: React.Dispatch<React.SetStateAction<number>>;
     setActiveRoomId: (id: string | null) => void;
     joinVoice: (options?: { muted?: boolean }) => Promise<void>;
     leaveRoom: () => Promise<void>;
@@ -90,6 +95,10 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const [camPermission, setCamPermission] = useState<PermissionState | null>(null);
     const [connectionState, setConnectionState] = useState<RTCPeerConnectionState>('new');
     
+    const [sessionDuration, setSessionDuration] = useState(0);
+    const [micGain, setMicGain] = useState(1);
+    const [speakerVolume, setSpeakerVolume] = useState(1);
+
     // Music Player State
     const [livePlaylist, setLivePlaylist] = useState<PlaylistTrack[]>([]);
     const [isMusicLoading, setIsMusicLoading] = useState(false);
@@ -100,6 +109,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const iceCandidateQueue = useRef<Record<string, RTCIceCandidateInit[]>>({});
 
     const speakingTimer = useRef<NodeJS.Timeout | null>(null);
+    const sessionDurationIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
     const analyserRef = useRef<AnalyserNode | null>(null);
     const localSpeakingRef = useRef(false);
@@ -151,6 +161,9 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         localStream?.getTracks().forEach(track => track.stop());
         setLocalStream(null);
         setIsSharingVideo(false);
+
+        if (sessionDurationIntervalRef.current) clearInterval(sessionDurationIntervalRef.current);
+        setSessionDuration(0);
 
         if (audioContextRef.current) {
             audioContextRef.current.close();
@@ -245,6 +258,10 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     const setupSpeakingIndicator = useCallback((stream: MediaStream) => {
         if (!stream.getAudioTracks().length) return;
+        if(audioContextRef.current && audioContextRef.current.state !== 'closed') {
+            audioContextRef.current.close();
+        }
+
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
         audioContextRef.current = audioContext;
         const source = audioContext.createMediaStreamSource(stream);
@@ -307,6 +324,11 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             socketRef.current.on('speaking-status-update', ({ uid, isSpeaking }) => {
                 setParticipants(prev => prev.map(p => p.uid === uid ? { ...p, isSpeaking } : p));
             });
+            
+            setSessionDuration(0);
+            sessionDurationIntervalRef.current = setInterval(() => {
+                setSessionDuration(prev => prev + 1);
+            }, 1000);
 
         } catch (error: any) {
             toast({ variant: "destructive", title: "Katılım Başarısız", description: "Mikrofon veya kamera erişimi reddedildi." });
@@ -380,7 +402,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     const value = {
         activeRoom, participants, self, isConnecting, isConnected, isMinimized, isSpeakerMuted, localStream, remoteAudioStreams, remoteVideoStreams, isSharingScreen, isSharingVideo, localScreenStream,
-        micPermission, camPermission, connectionState,
+        micPermission, camPermission, connectionState, sessionDuration, micGain, setMicGain, speakerVolume, setSpeakerVolume,
         setActiveRoomId, joinVoice, leaveRoom, leaveVoiceOnly, toggleSelfMute, toggleSpeakerMute, minimizeRoom, expandRoom,
         startScreenShare, stopScreenShare, startVideo, stopVideo, switchCamera,
         livePlaylist, currentTrack, isCurrentUserDj, isDjActive, isMusicLoading,
