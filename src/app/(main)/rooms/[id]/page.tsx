@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useVoiceChat } from '@/contexts/VoiceChatContext';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Signal } from 'lucide-react';
 import TextChat from '@/components/chat/text-chat';
 import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
 import RoomHeader from '@/components/rooms/RoomHeader';
@@ -32,6 +32,8 @@ import MindWarLobby from '@/components/games/mindwar/MindWarLobby';
 import MindWarMainUI from '@/components/games/mindwar/MindWarMainUI';
 import EventWelcomeDialog from '@/components/rooms/EventWelcomeDialog';
 import { joinRoom } from '@/lib/actions/roomActions';
+import { Button } from '@/components/ui/button';
+import VoiceStatusPanel from '@/components/voice/VoiceStatusPanel';
 
 
 export default function RoomPage() {
@@ -42,7 +44,7 @@ export default function RoomPage() {
     
     // --- Auth & Contexts ---
     const { user, userData, featureFlags, loading: authLoading } = useAuth();
-    const { setActiveRoomId } = useVoiceChat();
+    const { setActiveRoomId, isConnected } = useVoiceChat();
 
     // --- Component State ---
     const [room, setRoom] = useState<Room | null>(null);
@@ -53,6 +55,7 @@ export default function RoomPage() {
     const [isGiveawayDialogOpen, setIsGiveawayDialogOpen] = useState(false);
     const [isGameLobbyOpen, setIsGameLobbyOpen] = useState(false);
     const [showEventWelcome, setShowEventWelcome] = useState(false);
+    const [isStatusPanelOpen, setIsStatusPanelOpen] = useState(false);
     const chatScrollRef = useRef<HTMLDivElement>(null);
     
     // --- Game State ---
@@ -260,7 +263,7 @@ export default function RoomPage() {
     return (
         <>
             <EventWelcomeDialog isOpen={showEventWelcome} onOpenChange={setShowEventWelcome} room={room} />
-            <div className={cn("flex flex-col h-full bg-background text-foreground", room.type === 'event' && 'event-room-bg')}>
+            <div className={cn("flex flex-col h-full bg-background text-foreground relative", room.type === 'event' && 'event-room-bg')}>
                  <RoomHeader 
                     room={room} 
                     isHost={isHost} 
@@ -280,6 +283,14 @@ export default function RoomPage() {
                 </>
 
                 <main ref={chatScrollRef} className="flex-1 flex flex-col overflow-y-auto">
+                    {isConnected && (
+                         <div className="absolute top-[80px] right-4 z-20">
+                            <Button variant="secondary" size="icon" className="rounded-full shadow-lg" onClick={() => setIsStatusPanelOpen(true)}>
+                                <Signal />
+                            </Button>
+                        </div>
+                    )}
+
                     {activeMindWarSession && user && userData ? (
                         <div className="p-2 md:p-4">
                             <MindWarMainUI session={activeMindWarSession} currentUser={{uid: user.uid, username: userData.username, photoURL: userData.photoURL || null}} roomId={roomId} />
@@ -312,6 +323,10 @@ export default function RoomPage() {
                 onOpenChange={setIsGameLobbyOpen}
                 roomId={roomId}
                 participants={room.participants || []}
+            />
+            <VoiceStatusPanel 
+                isOpen={isStatusPanelOpen}
+                onOpenChange={setIsStatusPanelOpen}
             />
         </>
     );

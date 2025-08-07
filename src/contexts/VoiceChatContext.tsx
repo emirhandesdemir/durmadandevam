@@ -36,6 +36,9 @@ interface VoiceChatContextType {
     isSharingScreen: boolean;
     isSharingVideo: boolean;
     localScreenStream: MediaStream | null;
+    micPermission: PermissionState | null;
+    camPermission: PermissionState | null;
+    connectionState: RTCPeerConnectionState;
     setActiveRoomId: (id: string | null) => void;
     joinVoice: (options?: { muted?: boolean }) => Promise<void>;
     leaveRoom: () => Promise<void>;
@@ -83,6 +86,10 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const [remoteAudioStreams, setRemoteAudioStreams] = useState<Record<string, MediaStream>>({});
     const [remoteVideoStreams, setRemoteVideoStreams] = useState<Record<string, MediaStream>>({});
     
+    const [micPermission, setMicPermission] = useState<PermissionState | null>(null);
+    const [camPermission, setCamPermission] = useState<PermissionState | null>(null);
+    const [connectionState, setConnectionState] = useState<RTCPeerConnectionState>('new');
+    
     // Music Player State
     const [livePlaylist, setLivePlaylist] = useState<PlaylistTrack[]>([]);
     const [isMusicLoading, setIsMusicLoading] = useState(false);
@@ -113,6 +120,21 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             isPlaying: !!activeRoom.isMusicPlaying
         };
     }, [activeRoom, livePlaylist]);
+
+    // Check permissions
+    useEffect(() => {
+        const checkPermissions = async () => {
+            if (navigator.permissions) {
+                const mic = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+                const cam = await navigator.permissions.query({ name: 'camera' as PermissionName });
+                setMicPermission(mic.state);
+                setCamPermission(cam.state);
+                mic.onchange = () => setMicPermission(mic.state);
+                cam.onchange = () => setCamPermission(cam.state);
+            }
+        };
+        checkPermissions();
+    }, []);
     
     const _cleanupPeerConnection = useCallback((uid: string) => {
         if (peerConnections.current[uid]) {
@@ -204,6 +226,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         };
 
         pc.onconnectionstatechange = () => {
+             setConnectionState(pc.connectionState);
             if (['disconnected', 'failed', 'closed'].includes(pc.connectionState)) {
                 _cleanupPeerConnection(otherUid);
             }
@@ -357,6 +380,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
     const value = {
         activeRoom, participants, self, isConnecting, isConnected, isMinimized, isSpeakerMuted, localStream, remoteAudioStreams, remoteVideoStreams, isSharingScreen, isSharingVideo, localScreenStream,
+        micPermission, camPermission, connectionState,
         setActiveRoomId, joinVoice, leaveRoom, leaveVoiceOnly, toggleSelfMute, toggleSpeakerMute, minimizeRoom, expandRoom,
         startScreenShare, stopScreenShare, startVideo, stopVideo, switchCamera,
         livePlaylist, currentTrack, isCurrentUserDj, isDjActive, isMusicLoading,
