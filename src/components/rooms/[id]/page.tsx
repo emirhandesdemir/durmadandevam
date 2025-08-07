@@ -14,7 +14,7 @@ import ParticipantListSheet from '@/components/rooms/ParticipantListSheet';
 import RoomHeader from '@/components/rooms/RoomHeader';
 
 import type { Room, Message, Giveaway, ActiveGame, GameSettings, ActiveGameSession, MindWarSession, VoiceParticipant } from '@/lib/types';
-import RoomFooter from '@/components/rooms/RoomFooter';
+import RoomFooter from '@/components/voice/RoomFooter';
 import SpeakerLayout from '@/components/rooms/SpeakerLayout';
 import RoomInfoCards from '@/components/rooms/RoomInfoCards';
 import GameResultCard from '@/components/game/GameResultCard';
@@ -34,6 +34,7 @@ import EventWelcomeDialog from '@/components/rooms/EventWelcomeDialog';
 import { joinRoom } from '@/lib/actions/roomActions';
 import { Button } from '@/components/ui/button';
 import VoiceStatusPanel from '@/components/voice/VoiceStatusPanel';
+import ScreenShareView from '@/components/voice/ScreenShareView';
 
 
 export default function RoomPage() {
@@ -44,7 +45,7 @@ export default function RoomPage() {
     
     // --- Auth & Contexts ---
     const { user, userData, featureFlags, loading: authLoading } = useAuth();
-    const { setActiveRoomId, isConnected } = useVoiceChat();
+    const { setActiveRoomId, isConnected, localScreenStream } = useVoiceChat();
 
     // --- Component State ---
     const [room, setRoom] = useState<Room | null>(null);
@@ -273,6 +274,7 @@ export default function RoomPage() {
                 />
                 
                 <>
+                    {localScreenStream && <ScreenShareView stream={localScreenStream} />}
                     {!isSpeakerLayoutCollapsed && (
                          <div
                             className="overflow-hidden"
@@ -284,9 +286,9 @@ export default function RoomPage() {
 
                 <main ref={chatScrollRef} className="flex-1 flex flex-col overflow-y-auto">
                     {isConnected && (
-                         <div className="absolute top-20 right-4 z-20">
-                            <Button variant="ghost" size="sm" className="rounded-full shadow-lg bg-background/50 backdrop-blur-sm" onClick={() => setIsStatusPanelOpen(true)}>
-                                <Signal className="h-4 w-4" />
+                         <div className="absolute top-[80px] right-4 z-20">
+                            <Button variant="secondary" size="icon" className="rounded-full shadow-lg" onClick={() => setIsStatusPanelOpen(true)}>
+                                <Signal />
                             </Button>
                         </div>
                     )}

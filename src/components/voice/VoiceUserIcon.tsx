@@ -160,7 +160,7 @@ export default function VoiceUserIcon({
             ) : (
               <Mic className={cn(iconSize, "text-foreground")} />
             )}
-            {participant.isSharingVideo && <CameraOff className={cn(iconSize, "text-blue-400")} />}
+            {!participant.isSharingVideo && <CameraOff className={cn(iconSize, "text-blue-400")} />}
           </div>
       </div>
 
