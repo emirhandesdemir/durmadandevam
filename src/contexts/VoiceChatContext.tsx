@@ -45,7 +45,7 @@ interface VoiceChatContextType {
     speakerVolume: number;
     setSpeakerVolume: React.Dispatch<React.SetStateAction<number>>;
     setActiveRoomId: (id: string | null) => void;
-    joinVoice: () => Promise<void>;
+    joinVoice: (options?: { muted?: boolean }) => Promise<void>;
     leaveRoom: () => Promise<void>;
     leaveVoiceOnly: () => Promise<void>;
     toggleSelfMute: () => Promise<void>;
@@ -175,53 +175,16 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         setIsConnecting(false);
     }, [localStream, _cleanupPeerConnection]);
 
-    const handleSignal = useCallback(async ({ from, signal, type }: { from: string, signal: any, type: string }) => {
-        const pc = peerConnections.current[from];
-        if (!pc) return;
-
-        try {
-            if (type === 'offer') {
-                if (pc.signalingState !== 'stable') return;
-                await pc.setRemoteDescription(new RTCSessionDescription(signal));
-                const answer = await pc.createAnswer();
-                await pc.setLocalDescription(answer);
-                socketRef.current?.emit('signal', { to: from, from: user!.uid, type: 'answer', signal: pc.localDescription });
-                
-                if (iceCandidateQueue.current[from]) {
-                    iceCandidateQueue.current[from].forEach(candidate => pc.addIceCandidate(new RTCIceCandidate(candidate)));
-                    delete iceCandidateQueue.current[from];
-                }
-            } else if (type === 'answer') {
-                if (pc.signalingState === 'have-local-offer') {
-                    await pc.setRemoteDescription(new RTCSessionDescription(signal));
-                }
-            } else if (type === 'ice-candidate') {
-                 if (pc.remoteDescription) {
-                    await pc.addIceCandidate(new RTCIceCandidate(signal));
-                } else {
-                    if (!iceCandidateQueue.current[from]) iceCandidateQueue.current[from] = [];
-                    iceCandidateQueue.current[from].push(signal);
-                }
-            }
-        } catch (error) {
-            console.error(`Error handling signal type ${type} from ${from}:`, error);
-        }
-    }, [user]);
-
     const createPeerConnection = useCallback((otherUid: string, initiator: boolean) => {
-        if (peerConnections.current[otherUid] || otherUid === user?.uid) {
+        if (peerConnections.current[otherUid] || !user || otherUid === user.uid) {
              return;
         }
         
         const pc = new RTCPeerConnection(ICE_SERVERS);
         peerConnections.current[otherUid] = pc;
         
-        if (localStream) {
-            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-        }
-
         pc.onicecandidate = event => {
-            if (event.candidate && user) {
+            if (event.candidate) {
                 socketRef.current?.emit('signal', { to: otherUid, from: user.uid, type: 'ice-candidate', signal: event.candidate });
             }
         };
@@ -241,8 +204,18 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             }
         };
 
-        if (initiator && user) {
-             pc.onnegotiationneeded = async () => {
+        // Add local tracks if they exist
+        if (localStream) {
+            localStream.getTracks().forEach(track => {
+                try {
+                    pc.addTrack(track, localStream);
+                } catch (e) { console.error("Error adding track:", e)}
+            });
+        }
+       
+        // If we are the initiator, we create the offer
+        if (initiator) {
+            pc.onnegotiationneeded = async () => {
                 try {
                     const offer = await pc.createOffer();
                     await pc.setLocalDescription(offer);
@@ -250,28 +223,41 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 } catch(e) { console.error('Negotiation error:', e); }
             }
         }
-
-        return pc;
-
     }, [user, _cleanupPeerConnection, localStream]);
     
-    useEffect(() => {
-        if (localStream) {
-            for (const uid in peerConnections.current) {
-                const pc = peerConnections.current[uid];
-                const senders = pc.getSenders();
-                localStream.getTracks().forEach(track => {
-                    const sender = senders.find(s => s.track?.kind === track.kind);
-                    if(sender) {
-                        sender.replaceTrack(track).catch(console.error);
-                    } else {
-                        pc.addTrack(track, localStream);
-                    }
-                });
-            }
-        }
-    }, [localStream]);
+     const handleSignal = useCallback(async ({ from, signal, type }: { from: string, signal: any, type: string }) => {
+        const pc = peerConnections.current[from];
+        if (!pc) return;
 
+        try {
+            if (type === 'offer') {
+                if (pc.signalingState !== 'stable') return;
+                await pc.setRemoteDescription(new RTCSessionDescription(signal));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                socketRef.current?.emit('signal', { to: from, from: user!.uid, type: 'answer', signal: pc.localDescription });
+                
+                if (iceCandidateQueue.current[from]) {
+                    iceCandidateQueue.current[from].forEach(candidate => pc.addIceCandidate(new RTCIceCandidate(candidate)));
+                    delete iceCandidateQueue.current[from];
+                }
+            } else if (type === 'answer') {
+                 if (pc.signalingState === 'have-local-offer') {
+                    await pc.setRemoteDescription(new RTCSessionDescription(signal));
+                }
+            } else if (type === 'ice-candidate') {
+                 if (pc.remoteDescription) {
+                    await pc.addIceCandidate(new RTCIceCandidate(signal));
+                } else {
+                    if (!iceCandidateQueue.current[from]) iceCandidateQueue.current[from] = [];
+                    iceCandidateQueue.current[from].push(signal);
+                }
+            }
+        } catch (error) {
+            console.error(`Error handling signal type ${type} from ${from}:`, error);
+        }
+    }, [user]);
+    
     const joinVoice = useCallback(async (options: { muted?: boolean } = {}) => {
         if (!user || !userData || !activeRoomId || isConnected || isConnecting) return;
         setIsConnecting(true);
@@ -294,14 +280,12 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 socketRef.current?.emit('join-room', activeRoomId, user.uid);
             });
             
-             // User B joins, gets a list of existing users (User A)
             socketRef.current.on('existing-users', (userIds: string[]) => {
                 userIds.forEach(uid => createPeerConnection(uid, true));
             });
-
-            // User A gets notified that a new user (User B) has connected
+            
             socketRef.current.on('user-connected', (newUserId: string) => {
-                createPeerConnection(newUserId, false);
+                createPeerConnection(newUserId, true); // The existing user initiates the connection to the new user
             });
 
             socketRef.current.on('signal', handleSignal);
@@ -468,5 +452,3 @@ export const useVoiceChat = () => {
     if (context === undefined) throw new Error('useVoiceChat must be used within a VoiceChatProvider');
     return context;
 };
-
-    

@@ -49,16 +49,19 @@ io.on("connection", (socket) => {
   });
 
   socket.on('signal', (data) => {
-    // Forward the signal to the target user
+    // Find the target socket ID from the user ID
     const targetSocketId = Object.keys(socketUserMap).find(sid => socketUserMap[sid] === data.to);
+    
     if (targetSocketId) {
-        io.to(targetSocketId).emit('signal', {
-            from: user.uid, // The user who sent the signal
-            signal: data.signal,
-            type: data.type
-        });
+      // Forward the signal to the target user, including who it's from
+      io.to(targetSocketId).emit('signal', {
+        from: socketUserMap[socket.id], // The user who sent the signal
+        signal: data.signal,
+        type: data.type
+      });
     }
   });
+
 
   socket.on('speaking-status', (data) => {
     const { uid, isSpeaking } = data;
@@ -286,5 +289,3 @@ export const onUserDelete = functions.auth.user().onDelete(async (user) => {
     };
      await db.collection("auditLogs").add(log);
 });
-
-    
