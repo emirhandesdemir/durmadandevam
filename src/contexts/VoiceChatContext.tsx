@@ -107,7 +107,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     // RTC and Socket State
     const socketRef = useRef<Socket | null>(null);
     const peerConnections = useRef<Record<string, RTCPeerConnection>>({});
-    const iceCandidateQueue = useRef<Record<string, RTCIceCandidateInit[]>>({});
     const sessionDurationIntervalRef = useRef<NodeJS.Timeout | null>(null);
     
     const self = useMemo(() => participants.find(p => p.uid === user?.uid) || null, [participants, user?.uid]);
@@ -164,6 +163,8 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         
         localStream?.getTracks().forEach(track => track.stop());
         setLocalStream(null);
+        localScreenStream?.getTracks().forEach(track => track.stop());
+        setLocalScreenStream(null);
         setIsSharingVideo(false);
 
         if (sessionDurationIntervalRef.current) clearInterval(sessionDurationIntervalRef.current);
@@ -173,9 +174,9 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         socketRef.current = null;
         
         setIsConnecting(false);
-    }, [localStream, _cleanupPeerConnection]);
+    }, [localStream, localScreenStream, _cleanupPeerConnection]);
 
-    const createPeerConnection = useCallback((otherUid: string, initiator: boolean) => {
+    const createPeerConnection = useCallback((otherUid: string) => {
         if (peerConnections.current[otherUid] || !user || otherUid === user.uid) {
              return;
         }
@@ -203,31 +204,14 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 _cleanupPeerConnection(otherUid);
             }
         };
-
-        // Add local tracks if they exist
-        if (localStream) {
-            localStream.getTracks().forEach(track => {
-                try {
-                    pc.addTrack(track, localStream);
-                } catch (e) { console.error("Error adding track:", e)}
-            });
-        }
-       
-        // If we are the initiator, we create the offer
-        if (initiator) {
-            pc.onnegotiationneeded = async () => {
-                try {
-                    const offer = await pc.createOffer();
-                    await pc.setLocalDescription(offer);
-                    socketRef.current?.emit('signal', { to: otherUid, from: user.uid, type: 'offer', signal: pc.localDescription });
-                } catch(e) { console.error('Negotiation error:', e); }
-            }
-        }
-    }, [user, _cleanupPeerConnection, localStream]);
+        return pc;
+    }, [user, _cleanupPeerConnection]);
     
      const handleSignal = useCallback(async ({ from, signal, type }: { from: string, signal: any, type: string }) => {
-        const pc = peerConnections.current[from];
-        if (!pc) return;
+        let pc = peerConnections.current[from];
+        if (!pc) {
+           pc = createPeerConnection(from)!;
+        }
 
         try {
             if (type === 'offer') {
@@ -237,10 +221,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 await pc.setLocalDescription(answer);
                 socketRef.current?.emit('signal', { to: from, from: user!.uid, type: 'answer', signal: pc.localDescription });
                 
-                if (iceCandidateQueue.current[from]) {
-                    iceCandidateQueue.current[from].forEach(candidate => pc.addIceCandidate(new RTCIceCandidate(candidate)));
-                    delete iceCandidateQueue.current[from];
-                }
             } else if (type === 'answer') {
                  if (pc.signalingState === 'have-local-offer') {
                     await pc.setRemoteDescription(new RTCSessionDescription(signal));
@@ -248,15 +228,30 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             } else if (type === 'ice-candidate') {
                  if (pc.remoteDescription) {
                     await pc.addIceCandidate(new RTCIceCandidate(signal));
-                } else {
-                    if (!iceCandidateQueue.current[from]) iceCandidateQueue.current[from] = [];
-                    iceCandidateQueue.current[from].push(signal);
                 }
             }
         } catch (error) {
             console.error(`Error handling signal type ${type} from ${from}:`, error);
         }
-    }, [user]);
+    }, [user, createPeerConnection]);
+
+    // This effect ensures that whenever localStream changes, it's added to all existing peer connections.
+    useEffect(() => {
+        if (localStream) {
+            for (const peerId in peerConnections.current) {
+                const pc = peerConnections.current[peerId];
+                const senders = pc.getSenders();
+                senders.forEach(sender => {
+                    if (sender.track?.kind === 'audio') {
+                        pc.removeTrack(sender);
+                    }
+                });
+                localStream.getAudioTracks().forEach(track => {
+                    pc.addTrack(track, localStream);
+                });
+            }
+        }
+    }, [localStream]);
     
     const joinVoice = useCallback(async (options: { muted?: boolean } = {}) => {
         if (!user || !userData || !activeRoomId || isConnected || isConnecting) return;
@@ -273,19 +268,37 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
             await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: userData.username, photoURL: userData.photoURL }, { initialMuteState: options.muted ?? false });
             
-            const socketUrl = 'https://walk-server.onrender.com';
+            const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://walk-server.onrender.com';
             socketRef.current = io(socketUrl, { transports: ['websocket'] });
 
             socketRef.current.on('connect', () => {
                 socketRef.current?.emit('join-room', activeRoomId, user.uid);
             });
             
+            // New user receives the list of existing users and initiates connection to them
             socketRef.current.on('existing-users', (userIds: string[]) => {
-                userIds.forEach(uid => createPeerConnection(uid, true));
+                userIds.forEach(uid => {
+                    const pc = createPeerConnection(uid);
+                    if (pc) {
+                         pc.createOffer()
+                            .then(offer => pc.setLocalDescription(offer))
+                            .then(() => {
+                                socketRef.current?.emit('signal', { to: uid, from: user.uid, type: 'offer', signal: pc.localDescription });
+                            });
+                    }
+                });
             });
             
+            // An existing user gets notified of a new user and initiates connection
             socketRef.current.on('user-connected', (newUserId: string) => {
-                createPeerConnection(newUserId, true); // The existing user initiates the connection to the new user
+                 const pc = createPeerConnection(newUserId);
+                 if(pc) {
+                     pc.createOffer()
+                        .then(offer => pc.setLocalDescription(offer))
+                        .then(() => {
+                             socketRef.current?.emit('signal', { to: newUserId, from: user.uid, type: 'offer', signal: pc.localDescription });
+                        });
+                 }
             });
 
             socketRef.current.on('signal', handleSignal);
@@ -380,8 +393,26 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     const removeTrackFromPlaylist = useCallback(async (trackId: string) => { if (!user || !activeRoomId) return; setIsMusicLoading(true); try { await removeTrackAction(activeRoomId, trackId, user.uid); } catch(e: any) { toast({ variant: 'destructive', description: e.message }); } finally { setIsMusicLoading(false); } }, [user, activeRoomId, toast]);
     const togglePlayback = useCallback(async () => { if (!user || !activeRoomId || (!isCurrentUserDj && isDjActive)) return; setIsMusicLoading(true); try { await controlPlaybackAction(activeRoomId, user.uid, { action: 'toggle' }); } catch (e: any) { toast({ variant: 'destructive', description: e.message }); } finally { setIsMusicLoading(false); } }, [user, activeRoomId, isCurrentUserDj, isDjActive, toast]);
     const skipTrack = useCallback(async (direction: 'next' | 'previous') => { if (!user || !activeRoomId || !isCurrentUserDj) return; setIsMusicLoading(true); try { await controlPlaybackAction(activeRoomId, user.uid, { action: 'skip', direction }); } catch(e: any) { toast({ variant: 'destructive', description: e.message }); } finally { setIsMusicLoading(false); } }, [user, activeRoomId, isCurrentUserDj, toast]);
-    const stopScreenShare = useCallback(async () => { if (!user || !activeRoomId || !localScreenStream) return; }, [user, activeRoomId, localScreenStream]);
-    const startScreenShare = useCallback(async () => { if (!user || !activeRoomId || isSharingScreen || !localStream) return; }, [user, activeRoomId, isSharingScreen, localStream]);
+    
+    const startScreenShare = useCallback(async () => {
+        if (!isConnected || isSharingScreen) return;
+        try {
+            const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+            setLocalScreenStream(stream);
+            for (const peerId in peerConnections.current) {
+                const pc = peerConnections.current[peerId];
+                stream.getTracks().forEach(track => pc.addTrack(track, stream));
+            }
+        } catch (error) {
+            console.error("Ekran paylaşımı başlatılamadı:", error);
+        }
+    }, [isConnected, isSharingScreen]);
+
+    const stopScreenShare = useCallback(async () => {
+        if (!localScreenStream) return;
+        localScreenStream.getTracks().forEach(track => track.stop());
+        setLocalScreenStream(null);
+    }, [localScreenStream]);
     
     const stopVideo = useCallback(async () => {
         if (!self || !activeRoomId || !localStream || !isSharingVideo) return;
