@@ -9,7 +9,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 export default function PersistentVoiceBar() {
-  const { isConnected, isMinimized, self, activeRoom, toggleSelfMute, leaveVoice, expandRoom, isConnecting, isSpeakerMuted, toggleSpeakerMute } = useVoiceChat();
+  const { isConnected, isMinimized, self, activeRoom, toggleSelfMute, leaveRoom, expandRoom, isConnecting, isSpeakerMuted, toggleSpeakerMute } = useVoiceChat();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -85,7 +85,7 @@ export default function PersistentVoiceBar() {
                 <Button onClick={toggleSpeakerMute} variant="secondary" size="icon" className="rounded-full h-11 w-11">
                     {isSpeakerMuted ? <VolumeX className="h-5 w-5"/> : <Volume2 className="h-5 w-5" />}
                 </Button>
-                <Button onClick={leaveVoice} variant="destructive" size="icon" className="rounded-full h-11 w-11">
+                <Button onClick={leaveRoom} variant="destructive" size="icon" className="rounded-full h-11 w-11">
                     <PhoneOff className="h-5 w-5" />
                 </Button>
             </div>
