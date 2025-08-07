@@ -222,18 +222,14 @@ export async function joinRoom(roomId: string, userInfo: UserInfo) {
         }
 
         const messagesRef = collection(db, "rooms", roomId, "messages");
-        const lastMessageSnap = await getDocs(query(messagesRef, where('isJoinMessage', '==', true), orderBy('createdAt', 'desc'), limit(1)));
         
-        const canSendWelcome = !lastMessageSnap.docs.length || (Date.now() - lastMessageSnap.docs[0].data().createdAt.toMillis()) > 10000;
-
-        if (canSendWelcome) {
-            transaction.set(doc(messagesRef), {
-                type: 'system',
-                text: welcomeMessage,
-                createdAt: serverTimestamp(),
-                isJoinMessage: true,
-            });
-        }
+        // Simplified: always send a welcome message. The query was causing issues.
+        transaction.set(doc(messagesRef), {
+            type: 'system',
+            text: welcomeMessage,
+            createdAt: serverTimestamp(),
+            isJoinMessage: true,
+        });
         
         return { success: true };
     });
