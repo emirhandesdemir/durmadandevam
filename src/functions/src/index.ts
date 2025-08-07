@@ -31,8 +31,11 @@ io.on("connection", (socket) => {
   console.log("A client connected:", socket.id);
 
   socket.on('join-room', (roomId, userId) => {
-    const existingUsers = Array.from(socketRooms[roomId] || []).map(sid => socketUserMap[sid]).filter(Boolean);
-    socket.emit('existing-users', existingUsers);
+    // Notify the new user about existing users.
+    const existingUserIds = Array.from(socketRooms[roomId] || [])
+      .map(sid => socketUserMap[sid])
+      .filter(uid => uid && uid !== userId); // Exclude self
+    socket.emit('existing-users', existingUserIds);
     
     socket.join(roomId);
     
@@ -42,7 +45,7 @@ io.on("connection", (socket) => {
     socketRooms[roomId].add(socket.id);
     socketUserMap[socket.id] = userId; 
 
-    // Let others know a new user has joined
+    // Let others know a new user has joined so they can initiate a connection.
     socket.to(roomId).emit('user-connected', userId);
     
     console.log(`User ${userId} (${socket.id}) joined room ${roomId}`);
@@ -55,7 +58,7 @@ io.on("connection", (socket) => {
     if (targetSocketId) {
       // Forward the signal to the target user, including who it's from
       io.to(targetSocketId).emit('signal', {
-        from: socketUserMap[socket.id], // The user who sent the signal
+        from: userMap[socket.id], // The user who sent the signal
         signal: data.signal,
         type: data.type
       });

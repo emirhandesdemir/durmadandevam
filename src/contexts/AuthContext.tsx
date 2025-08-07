@@ -135,6 +135,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 ipAddress: getIpAddress()
             }
         }).catch(console.error);
+      } else {
+        // Clear user data on logout
+        setUserData(null);
       }
 
     });

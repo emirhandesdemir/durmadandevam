@@ -159,6 +159,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const _cleanupAndResetState = useCallback(() => {
+        console.log("Cleaning up voice chat state...");
         Object.keys(peerConnections.current).forEach(_cleanupPeerConnection);
         
         localStream?.getTracks().forEach(track => track.stop());
@@ -174,6 +175,9 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         socketRef.current = null;
         
         setIsConnecting(false);
+        setParticipants([]);
+        setActiveRoom(null);
+
     }, [localStream, localScreenStream, _cleanupPeerConnection]);
 
     const createPeerConnection = useCallback((otherUid: string) => {
@@ -185,7 +189,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         peerConnections.current[otherUid] = pc;
         
         pc.onicecandidate = event => {
-            if (event.candidate) {
+            if (event.candidate && socketRef.current?.connected) {
                 socketRef.current?.emit('signal', { to: otherUid, from: user.uid, type: 'ice-candidate', signal: event.candidate });
             }
         };
@@ -204,10 +208,22 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 _cleanupPeerConnection(otherUid);
             }
         };
+        
+        if (localStream) {
+            localStream.getTracks().forEach(track => {
+                pc.addTrack(track, localStream);
+            });
+        }
+        if (localScreenStream) {
+             localScreenStream.getTracks().forEach(track => {
+                pc.addTrack(track, localScreenStream);
+            });
+        }
         return pc;
-    }, [user, _cleanupPeerConnection]);
+    }, [user, localStream, localScreenStream, _cleanupPeerConnection]);
     
      const handleSignal = useCallback(async ({ from, signal, type }: { from: string, signal: any, type: string }) => {
+        if (!user) return;
         let pc = peerConnections.current[from];
         if (!pc) {
            pc = createPeerConnection(from)!;
@@ -219,7 +235,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
                 await pc.setRemoteDescription(new RTCSessionDescription(signal));
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
-                socketRef.current?.emit('signal', { to: from, from: user!.uid, type: 'answer', signal: pc.localDescription });
+                socketRef.current?.emit('signal', { to: from, from: user.uid, type: 'answer', signal: pc.localDescription });
                 
             } else if (type === 'answer') {
                  if (pc.signalingState === 'have-local-offer') {
@@ -235,24 +251,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         }
     }, [user, createPeerConnection]);
 
-    // This effect ensures that whenever localStream changes, it's added to all existing peer connections.
-    useEffect(() => {
-        if (localStream) {
-            for (const peerId in peerConnections.current) {
-                const pc = peerConnections.current[peerId];
-                const senders = pc.getSenders();
-                senders.forEach(sender => {
-                    if (sender.track?.kind === 'audio') {
-                        pc.removeTrack(sender);
-                    }
-                });
-                localStream.getAudioTracks().forEach(track => {
-                    pc.addTrack(track, localStream);
-                });
-            }
-        }
-    }, [localStream]);
-    
     const joinVoice = useCallback(async (options: { muted?: boolean } = {}) => {
         if (!user || !userData || !activeRoomId || isConnected || isConnecting) return;
         setIsConnecting(true);
@@ -268,37 +266,30 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
 
             await joinVoiceChat(activeRoomId, { uid: user.uid, displayName: userData.username, photoURL: userData.photoURL }, { initialMuteState: options.muted ?? false });
             
-            const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://walk-server.onrender.com';
+            const socketUrl = 'https://walk-server.onrender.com';
             socketRef.current = io(socketUrl, { transports: ['websocket'] });
 
             socketRef.current.on('connect', () => {
                 socketRef.current?.emit('join-room', activeRoomId, user.uid);
             });
             
-            // New user receives the list of existing users and initiates connection to them
+            // New user joins, server sends back a list of existing users to connect to.
             socketRef.current.on('existing-users', (userIds: string[]) => {
-                userIds.forEach(uid => {
-                    const pc = createPeerConnection(uid);
+                userIds.forEach(otherUid => {
+                    const pc = createPeerConnection(otherUid);
                     if (pc) {
                          pc.createOffer()
                             .then(offer => pc.setLocalDescription(offer))
                             .then(() => {
-                                socketRef.current?.emit('signal', { to: uid, from: user.uid, type: 'offer', signal: pc.localDescription });
+                                socketRef.current?.emit('signal', { to: otherUid, from: user.uid, type: 'offer', signal: pc.localDescription });
                             });
                     }
                 });
             });
             
-            // An existing user gets notified of a new user and initiates connection
+            // An existing user gets notified of a new user and initiates the connection.
             socketRef.current.on('user-connected', (newUserId: string) => {
-                 const pc = createPeerConnection(newUserId);
-                 if(pc) {
-                     pc.createOffer()
-                        .then(offer => pc.setLocalDescription(offer))
-                        .then(() => {
-                             socketRef.current?.emit('signal', { to: newUserId, from: user.uid, type: 'offer', signal: pc.localDescription });
-                        });
-                 }
+                 createPeerConnection(newUserId);
             });
 
             socketRef.current.on('signal', handleSignal);
@@ -330,7 +321,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
         const currentPath = pathname;
         await leaveVoiceOnly();
         setActiveRoomId(null);
-        setActiveRoom(null);
+        setIsMinimized(false);
         if (currentPath.startsWith('/rooms/')) {
             router.push('/rooms');
         }
@@ -352,8 +343,6 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (!user || !activeRoomId) {
             _cleanupAndResetState();
-            setParticipants([]);
-            setActiveRoom(null);
             return;
         }
 
@@ -361,7 +350,7 @@ export function VoiceChatProvider({ children }: { children: ReactNode }) {
             if (docSnap.exists()) {
                  setActiveRoom({ id: docSnap.id, ...docSnap.data() } as Room);
             } else {
-                 if (activeRoomId && pathname.startsWith('/rooms/')) {
+                 if (activeRoomId && pathname.startsWith(`/rooms/${activeRoomId}`)) {
                      toast({ title: "Oda Kapatıldı", description: "Oda sahibi tarafından kapatıldığı veya süresi dolduğu için odadan çıkarıldınız."});
                      leaveRoom();
                  }
