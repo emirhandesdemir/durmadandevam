@@ -125,14 +125,6 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
                                                             <Button onClick={handleScreenShare} variant="ghost" size="icon" className="rounded-full">
                                                                 {isSharingScreen ? <ScreenShareOff className="text-destructive"/> : <ScreenShare />}
                                                             </Button>
-                                                            {/*
-                                                            <Button onClick={handleMusicButtonClick} variant="ghost" size="icon" className="rounded-full">
-                                                                <Music />
-                                                            </Button>
-                                                            */}
-                                                            <Button onClick={onGameLobbyOpen} variant="ghost" size="icon" className="rounded-full">
-                                                                <BrainCircuit />
-                                                            </Button>
                                                             {isHost && (
                                                                 <Button onClick={onGiveawayOpen} variant="ghost" size="icon" className="rounded-full text-yellow-400">
                                                                     <Gift />
@@ -143,7 +135,7 @@ export default function RoomFooter({ room, onGameLobbyOpen, onGiveawayOpen }: Ro
                                                 </Popover>
                                             </>
                                         ) : (
-                                             <Button onClick={() => joinVoice()} disabled={isConnecting} className="rounded-full font-semibold px-4 bg-gradient-to-r from-red-500 to-blue-600 text-white shadow-lg hover:scale-105 transition-transform shrink-0">
+                                             <Button onClick={() => joinVoice()} disabled={isConnecting} className="rounded-full font-semibold px-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg hover:scale-105 transition-transform shrink-0">
                                                 {isConnecting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Mic className="mr-2 h-5 w-5" />}
                                                 Sese Katıl
                                             </Button>

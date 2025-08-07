@@ -3,10 +3,104 @@
 // anlık bildirim gönderme gibi işlemleri gerçekleştirir.
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import * as http from "http";
+import { Server } from "socket.io";
+import * as cors from "cors";
 
 // Firebase Admin SDK'sını başlat.
 admin.initializeApp();
 const db = admin.firestore();
+
+// Socket.IO için CORS ayarları
+const corsHandler = cors({ origin: true });
+
+// HTTP sunucusu ve Socket.IO örneği oluşturma
+const server = http.createServer();
+const io = new Server(server, {
+    cors: {
+        origin: "*", // Geliştirme için geniş, canlı ortamda kısıtlanmalı
+        methods: ["GET", "POST"]
+    }
+});
+
+const socketRooms: Record<string, Set<string>> = {}; // roomId -> Set<socketId>
+const socketUserMap: Record<string, string> = {}; // socketId -> userId
+
+// Socket.IO bağlantı mantığı
+io.on("connection", (socket) => {
+  console.log("A client connected:", socket.id);
+
+  socket.on('join-room', (roomId, userId) => {
+    socket.join(roomId);
+
+    // Notify existing users in the room about the new user
+    if (socketRooms[roomId]) {
+        socketRooms[roomId].forEach(existingSocketId => {
+            io.to(existingSocketId).emit('user-connected', userId);
+        });
+    }
+    
+    if (!socketRooms[roomId]) {
+      socketRooms[roomId] = new Set();
+    }
+    socketRooms[roomId].add(socket.id);
+    socketUserMap[socket.id] = userId; 
+    
+    console.log(`User ${userId} (${socket.id}) joined room ${roomId}`);
+  });
+
+  socket.on('signal', (data) => {
+    // Forward the signal to the target user
+    io.to(data.to).emit('signal', {
+      from: data.from,
+      signal: data.signal,
+      type: data.type
+    });
+  });
+
+  socket.on('speaking-status', (data) => {
+    const { uid, isSpeaking } = data;
+     // Find the room this socket is in and broadcast
+     for (const roomId in socketRooms) {
+        if (socketRooms[roomId].has(socket.id)) {
+            socket.to(roomId).broadcast.emit('speaking-status-update', { uid, isSpeaking });
+            break;
+        }
+    }
+  });
+
+
+  socket.on('leave-room', (roomId, userId) => {
+    socket.leave(roomId);
+    if (socketRooms[roomId]) {
+        socketRooms[roomId].delete(socket.id);
+        delete socketUserMap[socket.id];
+    }
+    socket.to(roomId).emit('user-disconnected', userId);
+    console.log(`User ${userId} (${socket.id}) left room ${roomId}`);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("A client disconnected:", socket.id);
+    const userId = socketUserMap[socket.id];
+    if (userId) {
+        for (const roomId in socketRooms) {
+            if (socketRooms[roomId].has(socket.id)) {
+                socketRooms[roomId].delete(socket.id);
+                socket.to(roomId).emit('user-disconnected', userId);
+                break;
+            }
+        }
+        delete socketUserMap[socket.id];
+    }
+  });
+});
+
+export const socket = functions.https.onRequest((req, res) => {
+  corsHandler(req, res, () => {
+    server.emit("request", req, res);
+  });
+});
 
 /**
  * 'broadcasts' koleksiyonuna yeni bir belge eklendiğinde tetiklenir.
@@ -35,7 +129,7 @@ export const onBroadcastCreate = functions.region("us-central1").firestore
         }
 
         const message: admin.messaging.MulticastMessage = {
-            tokens: [...new Set(tokens)], // Remove duplicate tokens
+            tokens: [...new Set(tokens)],
             notification: {
                 title: title,
                 body: body,
