@@ -53,9 +53,9 @@ export async function createRoom(
             createdBy: {
                 uid: userId,
                 username: creatorInfo.username,
-                photoURL: creatorInfo.photoURL || null, // Ensure photoURL is not undefined
+                photoURL: creatorInfo.photoURL || null,
                 role: creatorInfo.role,
-                isPremium: userData.premiumUntil && userData.premiumUntil.toDate() > new Date(),
+                isPremium: !!(userData.premiumUntil && userData.premiumUntil.toDate() > new Date()),
                 selectedAvatarFrame: creatorInfo.selectedAvatarFrame,
             },
             moderators: [userId],
