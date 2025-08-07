@@ -3,10 +3,78 @@
 // anlık bildirim gönderme gibi işlemleri gerçekleştirir.
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import * as http from "http";
+import { Server } from "socket.io";
+import * as cors from "cors";
 
 // Firebase Admin SDK'sını başlat.
 admin.initializeApp();
 const db = admin.firestore();
+
+// Socket.IO için CORS ayarları
+const corsHandler = cors({ origin: true });
+
+// HTTP sunucusu ve Socket.IO örneği oluşturma
+const server = http.createServer();
+const io = new Server(server, {
+    cors: {
+        origin: "*", // Geliştirme için geniş, canlı ortamda kısıtlanmalı
+        methods: ["GET", "POST"]
+    }
+});
+
+const socketRooms: Record<string, Set<string>> = {}; // roomId -> Set<socketId>
+
+// Socket.IO bağlantı mantığı
+io.on("connection", (socket) => {
+  console.log("A client connected:", socket.id);
+
+  socket.on('join-room', (roomId, userId) => {
+    socket.join(roomId);
+    if (!socketRooms[roomId]) {
+      socketRooms[roomId] = new Set();
+    }
+    socketRooms[roomId].add(socket.id);
+    socket.to(roomId).emit('user-connected', userId);
+    console.log(`User ${userId} (${socket.id}) joined room ${roomId}`);
+  });
+
+  socket.on('signal', (data) => {
+    // Sinyali gönderen hariç odadaki diğer herkese gönder
+    io.to(data.to).emit('signal', {
+      from: data.from,
+      signal: data.signal,
+      type: data.type
+    });
+  });
+
+  socket.on('leave-room', (roomId, userId) => {
+    socket.leave(roomId);
+    if (socketRooms[roomId]) {
+        socketRooms[roomId].delete(socket.id);
+    }
+    socket.to(roomId).emit('user-disconnected', userId);
+    console.log(`User ${userId} (${socket.id}) left room ${roomId}`);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("A client disconnected:", socket.id);
+    // Find which room the socket was in and emit disconnect event
+    for (const roomId in socketRooms) {
+      if (socketRooms[roomId].has(socket.id)) {
+        socketRooms[roomId].delete(socket.id);
+        socket.to(roomId).emit('user-disconnected', socket.id); // Or find a way to map socket.id back to userId
+        break;
+      }
+    }
+  });
+});
+
+export const socket = functions.https.onRequest((req, res) => {
+  corsHandler(req, res, () => {
+    server.emit("request", req, res);
+  });
+});
 
 /**
  * 'broadcasts' koleksiyonuna yeni bir belge eklendiğinde tetiklenir.
@@ -35,7 +103,7 @@ export const onBroadcastCreate = functions.region("us-central1").firestore
         }
 
         const message: admin.messaging.MulticastMessage = {
-            tokens: [...new Set(tokens)], // Remove duplicate tokens
+            tokens: [...new Set(tokens)],
             notification: {
                 title: title,
                 body: body,
@@ -134,17 +202,6 @@ export const sendPushNotification = functions.region("us-central1").firestore
                 title = "Yeni Retweet 🔁";
                 body = `${notificationData.senderUsername} gönderinizi retweetledi.`;
                 link = '/notifications';
-                break;
-            case "call_incoming":
-                const callType = notificationData.callType === 'video' ? 'Görüntülü' : 'Sesli';
-                title = `📞 Gelen ${callType} Arama`;
-                body = `${notificationData.senderUsername} sizi arıyor...`;
-                link = `/call/${notificationData.callId || ''}`;
-                break;
-            case "call_missed":
-                title = `📞 Cevapsız Arama`;
-                body = `${notificationData.senderUsername} sizi aradı.`;
-                link = `/dm`; // Link to DM list
                 break;
              case "complete_profile":
                 title = "Profilini Tamamla! ✨";
